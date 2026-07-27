@@ -1,0 +1,146 @@
+# clang-format for dunya-renderer.
+#
+# Base is Google (2-space indent, 80 columns, attached braces) because it is
+# the closest match to the style already in src/. Everything below is a
+# deliberate deviation or an explicit pin -- options left implicit inherit
+# Google's value and can drift when the bundled clang-format is upgraded.
+#
+# Formatter: the clang-format shipped inside the ms-vscode.cpptools extension
+# (22.1.3 at time of writing). Run repo-wide with:
+#   clang-format -i $(git ls-files '*.cc' '*.h' '*.ih')
+
+Language: Cpp
+BasedOnStyle: Google
+Standard: c++20
+
+# ---------------------------------------------------------------- width ----
+# The length limit. 80 is not nostalgia: it is what makes side-by-side diffs
+# and split editors readable, and it forces long expressions to be named
+# instead of chained.
+ColumnLimit: 80
+IndentWidth: 2
+TabWidth: 2
+UseTab: Never
+# Continuation lines indent by 2, not Google's 4 -- matches existing src/.
+ContinuationIndentWidth: 2
+
+# ------------------------------------------------------------ wrapping ----
+# BlockIndent: when a call does not fit, every argument goes on its own
+# indented line and the closing paren lands on a line of its own. This is
+# already the shape of the SwapChain/Renderer constructions in main.cc.
+AlignAfterOpenBracket: BlockIndent
+# Never pack multiple arguments per line once a break is needed -- a vertical
+# list is scannable and produces one-line diffs when an argument changes.
+BinPackArguments: false
+BinPackParameters: false
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+# Operators lead the continuation line, so the eye can scan the operator
+# column of a multi-line condition instead of hunting line ends.
+BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializers: BeforeColon
+PackConstructorInitializers: NextLine
+BreakTemplateDeclarations: Yes
+# Long string literals get split at the column limit rather than overflowing.
+BreakStringLiterals: true
+
+# ------------------------------------------------------- one-line forms ----
+# Everything that hides control flow on a single line is banned: a body on its
+# own line is one you can breakpoint, and one that shows up as its own line in
+# a diff. Empty function bodies are the sole exception.
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortEnumsOnASingleLine: false
+AllowShortLambdasOnASingleLine: Inline
+
+# --------------------------------------------------------------- braces ----
+BreakBeforeBraces: Attach
+# Adds the braces a single-statement if/for/while left out. This is the
+# goto-fail defence: a later added second statement cannot silently fall
+# outside the branch.
+InsertBraces: true
+Cpp11BracedListStyle: true
+
+# ------------------------------------------------------------ alignment ----
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignEscapedNewlines: Left
+AlignOperands: Align
+AlignTrailingComments:
+  Kind: Always
+  OverEmptyLines: 0
+# Google infers * / & placement per file; pin it instead so a file written in
+# the wrong style gets corrected rather than ratified.
+DerivePointerAlignment: false
+PointerAlignment: Left
+ReferenceAlignment: Pointer
+# const/constexpr placement is left exactly as written: Brokken teaches east
+# const, the tutorial sources are west const, and this file does not pick that
+# fight. Set to Left or Right when you decide.
+QualifierAlignment: Leave
+
+# ------------------------------------------------------------- spacing ----
+SpaceAfterCStyleCast: false
+SpaceAfterTemplateKeyword: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 2
+SpacesInAngles: Never
+SpacesInContainerLiterals: false
+SpacesInParens: Never
+SpacesInSquareBrackets: false
+
+# ------------------------------------------------------ vertical space ----
+MaxEmptyLinesToKeep: 1
+KeepEmptyLines:
+  AtEndOfFile: false
+  AtStartOfBlock: false
+# A blank line between consecutive function definitions, always. The .cc files
+# here are flat lists of definitions; this is what makes them skimmable.
+SeparateDefinitionBlocks: Always
+EmptyLineBeforeAccessModifier: LogicalBlock
+AccessModifierOffset: -2
+IndentAccessModifiers: false
+IndentCaseLabels: true
+IndentCaseBlocks: false
+IndentGotoLabels: false
+IndentPPDirectives: BeforeHash
+NamespaceIndentation: None
+FixNamespaceComments: true
+CompactNamespaces: false
+
+# ------------------------------------------------------------ comments ----
+# Comments obey ColumnLimit too -- a 200-column comment is exactly as
+# unreadable as a 200-column expression.
+ReflowComments: Always
+
+# ------------------------------------------------------------- includes ----
+# Deliberately NOT sorted. Include order is load-bearing in this repo:
+# GLFW_INCLUDE_VULKAN must precede <GLFW/glfw3.h>, and the
+# STB_IMAGE_IMPLEMENTATION / TINYOBJLOADER_IMPLEMENTATION defines must precede
+# their headers. A formatter that reorders those turns a save into a build
+# break. Order includes by hand; keep the .ih files as the single place that
+# decides it.
+SortIncludes: Never
+IncludeBlocks: Preserve
+SortUsingDeclarations: LexicographicNumeric
+
+# ------------------------------------------------------------ penalties ----
+# Breaking *before* a `.member` is the ugliest wrap clang-format knows -- it
+# strands `.count()` on its own line under a block-indented call. Price it out
+# so the formatter breaks the arguments instead.
+PenaltyBreakBeforeMemberAccess: 2000
+PenaltyReturnTypeOnItsOwnLine: 1000
+
+# ---------------------------------------------------------------- misc ----
+InsertNewlineAtEOF: true
+RemoveSemicolon: false
+LineEnding: DeriveLF
