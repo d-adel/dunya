@@ -1,7 +1,7 @@
 #include "descriptors.ih"
 
 Descriptors::Descriptors(const Device& device, const Texture& texture)
-    : m_device(device.device()) {
+    : m_device(device.vkDevice()) {
   createDescriptorSetLayout();
   createUniformBuffers(device);
   createDescriptorPool();
@@ -75,7 +75,7 @@ void Descriptors::createUniformBuffers(const Device& device) {
     );
 
     vkMapMemory(
-      device.device(),
+      device.vkDevice(),
       m_uniformBuffers[i].memory(),
       0,
       bufferSize,

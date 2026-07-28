@@ -1,7 +1,7 @@
 #include "texture.ih"
 
 Texture::Texture(const Device& device, const std::string& filename)
-    : m_device(device.device()) {
+    : m_device(device.vkDevice()) {
   createTextureImage(device, filename);
   createTextureSampler(device.physicalDevice());
 }

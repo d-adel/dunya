@@ -1,26 +1,20 @@
 #pragma once
 
-#include <GLFW/glfw3.h>
+#include <vulkan/vulkan.h>
 #include "swapchain/swapchain.h"
-#include "buffer/buffer.h"
-#include "pipeline/pipeline.h"
-#include "vertex/vertex.h"
-#include "descriptors/descriptors.h"
-#include "depthimage/depthimage.h"
-#include "mesh/mesh.h"
+#include "scene/scene.h"
 #include "ubo/ubo.h"
 
 #include <vector>
 
-const int MAX_FRAMES_IN_FLIGHT = 2;
+constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 
 class Renderer {
 public:
   Renderer(
     const Device& device,
     const VkSurfaceKHR& surface,
-    uint32_t imageCount,
-    Mesh& mesh
+    uint32_t imageCount
   );
   Renderer(Renderer const&) = delete;
   Renderer& operator=(Renderer const&) = delete;
@@ -28,9 +22,7 @@ public:
 
   bool drawFrame(
     const SwapChain& swapChain,
-    const Pipeline& pipeline,
-    Descriptors& descriptors,
-    const DepthImage& depthImage,
+    Scene& scene,
     const UniformBufferObject& ubo
   );
 
@@ -40,17 +32,11 @@ private:
     const VkSurfaceKHR& surface
   );
   void createCommandBuffer();
-  template<typename T>
-  Buffer createBuffer(
-    const Device& device,
-    const std::vector<T>& objVec,
-    VkBufferUsageFlags usage
-  );
+
   void createSyncObjects(uint32_t imageCount);
   void recordCommandBuffer(
-    const SwapChain& SwapChain,
-    const DepthImage& depthImage,
-    const Pipeline& pipeline,
+    const SwapChain& swapChain,
+    const Scene& scene,
     const std::vector<VkDescriptorSet>& descriptorSets
   );
 
@@ -65,7 +51,4 @@ private:
   VkDevice m_device;
   uint32_t m_imageIndex;
   uint32_t m_currentFrame = 0;
-
-  // std::vector<Mesh> m_meshes;
-  Mesh m_mesh;
 };

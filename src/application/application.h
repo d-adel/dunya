@@ -1,24 +1,12 @@
 #pragma once
 
-#include "glfwlibrary/glfwlibrary.h"
-#include "instance/instance.h"
-#include "window/window.h"
-#include "surface/surface.h"
-#include "device/device.h"
+#include "context/context.h"
 #include "swapchain/swapchain.h"
-#include "pipeline/pipeline.h"
+#include "scene/scene.h"
 #include "renderer/renderer.h"
-#include "descriptors/descriptors.h"
-#include "texture/texture.h"
-#include "depthimage/depthimage.h"
-#include "mesh/mesh.h"
 #include "ubo/ubo.h"
 #include "camera/camera.h"
 #include "input/input.h"
-
-const std::vector<char const*> validationLayers = {
-  "VK_LAYER_KHRONOS_validation"
-};
 
 class Application {
 public:
@@ -37,19 +25,11 @@ private:
   void handleKeyEvent(const KeyEvent& event);
   bool acceptsInput() const noexcept;
 
-  GLFWLibrary m_glfwLib;
-  Window m_window;
+  Context m_context;
   Input m_input;
   Camera m_camera;
-  Instance m_instance;
-  Surface m_surface;
-  Device m_device;
   SwapChain m_swapChain;
-  DepthImage m_depthImage;
-  Texture m_texture;
-  Mesh m_mesh;
-  Descriptors m_descriptors;
-  Pipeline m_pipeline;
+  Scene m_scene;
   Renderer m_renderer;
 
   CameraInput m_cameraInput;

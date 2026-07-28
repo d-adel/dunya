@@ -1,6 +1,6 @@
 #pragma once
 
-#include <GLFW/glfw3.h>
+#include <vulkan/vulkan.h>
 #include <optional>
 #include <vector>
 
@@ -39,11 +39,11 @@ public:
   Device& operator=(Device const&) = delete;
   ~Device();
 
-  const VkDevice& device() const noexcept;
+  const VkDevice& vkDevice() const noexcept;
   const VkPhysicalDevice& physicalDevice() const noexcept;
   const VkQueue& graphicsQueue() const noexcept;
   const VkQueue& presentQueue() const noexcept;
-  void waitIdle();
+  void waitIdle() const;
 
   uint32_t findMemoryType(
     uint32_t typeFilter,

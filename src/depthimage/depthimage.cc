@@ -1,12 +1,16 @@
 #include "depthimage.ih"
 
 DepthImage::DepthImage(const Device& device, const VkExtent2D& swapChainExtent)
-    : m_device(device.device()) {
+    : m_device(device.vkDevice()) {
   recreate(device, swapChainExtent);
 }
 
 const Image& DepthImage::image() const noexcept {
   return m_depthImage;
+}
+
+VkImage DepthImage::vkImage() const noexcept {
+  return m_depthImage.image();
 }
 
 const VkFormat& DepthImage::format() const noexcept {

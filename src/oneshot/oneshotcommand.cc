@@ -13,7 +13,7 @@ void OneShotCommand::start(const Device& device) {
   poolInfo.queueFamilyIndex = device.graphicsFamilyIndex();
 
   if (
-    vkCreateCommandPool(device.device(), &poolInfo, nullptr, &m_commandPool)
+    vkCreateCommandPool(device.vkDevice(), &poolInfo, nullptr, &m_commandPool)
     != VK_SUCCESS
   ) {
     throw std::runtime_error(
@@ -27,7 +27,7 @@ void OneShotCommand::start(const Device& device) {
   allocInfo.commandPool = m_commandPool;
   allocInfo.commandBufferCount = 1;
 
-  vkAllocateCommandBuffers(device.device(), &allocInfo, &m_commandBuffer);
+  vkAllocateCommandBuffers(device.vkDevice(), &allocInfo, &m_commandBuffer);
 
   VkCommandBufferBeginInfo beginInfo{};
   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -47,6 +47,6 @@ void OneShotCommand::submit(const Device& device) const {
   vkQueueSubmit(device.graphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE);
   vkQueueWaitIdle(device.graphicsQueue());
 
-  vkFreeCommandBuffers(device.device(), m_commandPool, 1, &m_commandBuffer);
-  vkDestroyCommandPool(device.device(), m_commandPool, nullptr);
+  vkFreeCommandBuffers(device.vkDevice(), m_commandPool, 1, &m_commandBuffer);
+  vkDestroyCommandPool(device.vkDevice(), m_commandPool, nullptr);
 }

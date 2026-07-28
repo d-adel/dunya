@@ -3,18 +3,21 @@
 #include "device/device.h"
 #include "image/image.h"
 
-#include <GLFW/glfw3.h>
+#include <vulkan/vulkan.h>
 #include <utility>
 
 class DepthImage {
 public:
+  DepthImage() = default;
   DepthImage(const Device& device, const VkExtent2D& swapChainExtent);
 
   DepthImage(const DepthImage&) = delete;
   DepthImage& operator=(const DepthImage&) = delete;
+  // DepthImage& operator=(DepthImage&&) = default;
 
   ~DepthImage() = default;
 
+  VkImage vkImage() const noexcept;
   const Image& image() const noexcept;
   const VkFormat& format() const noexcept;
 

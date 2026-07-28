@@ -4,7 +4,7 @@ static std::vector<char> readFile(const std::string& filename) {
   std::ifstream file(filename, std::ios::ate | std::ios::binary);
 
   if (!file.is_open()) {
-    throw std::runtime_error("failed to open file!");
+    throw std::runtime_error("Failed to open file");
   }
 
   size_t fileSize = (size_t)file.tellg();
@@ -20,12 +20,11 @@ static std::vector<char> readFile(const std::string& filename) {
 
 Pipeline::Pipeline(
   const VkDevice& device,
-  const VkFormat& swapChainImageFormat,
   const Descriptors& descriptors,
-  const VkFormat& depthImageFormat
+  const SwapChain& swapChain
 )
-    : m_device(device), m_swapChainImageFormat(swapChainImageFormat) {
-  createGraphicsPipeline(descriptors, depthImageFormat);
+    : m_device(device), m_swapChainImageFormat(swapChain.imageFormat()) {
+  createGraphicsPipeline(descriptors, swapChain.depthImage().format());
 }
 
 Pipeline::~Pipeline() {

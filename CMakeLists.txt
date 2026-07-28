@@ -73,6 +73,8 @@ add_executable(${PROJECT_NAME}
     src/input/input.cc
     src/application/application.cc
     src/glfwlibrary/glfwlibrary.cc
+    src/context/context.cc
+    src/scene/scene.cc
 )
 
 # Configuration

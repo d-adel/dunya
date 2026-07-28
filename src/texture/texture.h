@@ -3,7 +3,7 @@
 #include "device/device.h"
 #include "image/image.h"
 
-#include <GLFW/glfw3.h>
+#include <vulkan/vulkan.h>
 #include <stb_image.h>
 #include <utility>
 #include <string>

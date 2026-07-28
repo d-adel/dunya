@@ -6,7 +6,7 @@ Buffer::Buffer(
   VkBufferUsageFlags usage,
   VkMemoryPropertyFlags properties
 )
-    : m_device(device.device()), m_physicalDevice(device.physicalDevice()) {
+    : m_device(device.vkDevice()), m_physicalDevice(device.physicalDevice()) {
   createBuffer(device, size, usage, properties);
 }
 

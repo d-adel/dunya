@@ -37,9 +37,9 @@ Image::Image(
   VkMemoryPropertyFlags properties,
   VkImageAspectFlags aspect
 )
-    : m_device(device.device()) {
+    : m_device(device.vkDevice()) {
   createImage(device, width, height, format, tiling, usage, properties);
-  m_imageView = createImageView(device.device(), m_image, format, aspect);
+  m_imageView = createImageView(device.vkDevice(), m_image, format, aspect);
 }
 
 Image::Image(Image&& other) noexcept
@@ -119,13 +119,14 @@ void Image::createImage(
   imageInfo.flags = 0;  // Optional
 
   if (
-    vkCreateImage(device.device(), &imageInfo, nullptr, &m_image) != VK_SUCCESS
+    vkCreateImage(device.vkDevice(), &imageInfo, nullptr, &m_image)
+    != VK_SUCCESS
   ) {
     throw std::runtime_error("Failed to create image");
   }
 
   VkMemoryRequirements memRequirements;
-  vkGetImageMemoryRequirements(device.device(), m_image, &memRequirements);
+  vkGetImageMemoryRequirements(device.vkDevice(), m_image, &memRequirements);
 
   VkMemoryAllocateInfo allocInfo{};
   allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -134,13 +135,13 @@ void Image::createImage(
     device.findMemoryType(memRequirements.memoryTypeBits, properties);
 
   if (
-    vkAllocateMemory(device.device(), &allocInfo, nullptr, &m_imageMemory)
+    vkAllocateMemory(device.vkDevice(), &allocInfo, nullptr, &m_imageMemory)
     != VK_SUCCESS
   ) {
     throw std::runtime_error("Failed to allocate image memory");
   }
 
-  vkBindImageMemory(device.device(), m_image, m_imageMemory, 0);
+  vkBindImageMemory(device.vkDevice(), m_image, m_imageMemory, 0);
 }
 
 void Image::transition(

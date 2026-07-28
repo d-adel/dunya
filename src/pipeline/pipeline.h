@@ -1,8 +1,9 @@
 #pragma once
 
+#include "swapchain/swapchain.h"
 #include "descriptors/descriptors.h"
 
-#include <GLFW/glfw3.h>
+#include <vulkan/vulkan.h>
 #include <vector>
 #include <string>
 
@@ -10,9 +11,8 @@ class Pipeline {
 public:
   Pipeline(
     const VkDevice& device,
-    const VkFormat& swapChainImageFormat,
     const Descriptors& descriptors,
-    const VkFormat& depthImageFormat
+    const SwapChain& swapChain
   );
   Pipeline(Pipeline const&) = delete;
   Pipeline& operator=(Pipeline const&) = delete;

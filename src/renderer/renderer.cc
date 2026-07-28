@@ -3,13 +3,11 @@
 Renderer::Renderer(
   const Device& device,
   const VkSurfaceKHR& surface,
-  uint32_t imageCount,
-  Mesh& mesh
+  uint32_t imageCount
 )
-    : m_device(device.device()),
+    : m_device(device.vkDevice()),
       m_graphicsQueue(device.graphicsQueue()),
-      m_presentQueue(device.presentQueue()),
-      m_mesh(std::move(mesh)) {
+      m_presentQueue(device.presentQueue()) {
   createCommandPool(device.physicalDevice(), surface);
   createCommandBuffer();
   createSyncObjects(imageCount);
@@ -115,8 +113,7 @@ void Renderer::createSyncObjects(uint32_t imageCount) {
 
 void Renderer::recordCommandBuffer(
   const SwapChain& swapChain,
-  const DepthImage& depthImage,
-  const Pipeline& pipeline,
+  const Scene& scene,
   const std::vector<VkDescriptorSet>& descriptorSets
 ) {
   VkCommandBufferBeginInfo beginInfo{};
@@ -152,7 +149,7 @@ void Renderer::recordCommandBuffer(
                               | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
   depthBarrier.dstAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT
                                | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-  depthBarrier.image = depthImage.image().image();
+  depthBarrier.image = swapChain.depthImage().vkImage();
   depthBarrier.subresourceRange = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1};
   depthBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
   depthBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -175,7 +172,7 @@ void Renderer::recordCommandBuffer(
 
   VkRenderingAttachmentInfo depthAttachmentInfo{};
   depthAttachmentInfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-  depthAttachmentInfo.imageView = depthImage.image().imageView();
+  depthAttachmentInfo.imageView = swapChain.depthImage().image().imageView();
   depthAttachmentInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
   depthAttachmentInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
   depthAttachmentInfo.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -183,7 +180,7 @@ void Renderer::recordCommandBuffer(
 
   VkRenderingInfo renderingInfo{};
   renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-  renderingInfo.renderArea = {{0, 0}, swapChain.swapChainExtent()};
+  renderingInfo.renderArea = {{0, 0}, swapChain.extent()};
   renderingInfo.layerCount = 1;
   renderingInfo.colorAttachmentCount = 1;
   renderingInfo.pColorAttachments = &attachmentInfo;
@@ -194,24 +191,24 @@ void Renderer::recordCommandBuffer(
   vkCmdBindPipeline(
     m_commandBuffers[m_currentFrame],
     VK_PIPELINE_BIND_POINT_GRAPHICS,
-    pipeline.graphicsPipeline()
+    scene.pipeline().graphicsPipeline()
   );
 
   VkViewport viewport{};
   viewport.x = 0.0f;
   viewport.y = 0.0f;
-  viewport.width = (float)swapChain.swapChainExtent().width;
-  viewport.height = (float)swapChain.swapChainExtent().height;
+  viewport.width = (float)swapChain.extent().width;
+  viewport.height = (float)swapChain.extent().height;
   viewport.minDepth = 0.0f;
   viewport.maxDepth = 1.0f;
   vkCmdSetViewport(m_commandBuffers[m_currentFrame], 0, 1, &viewport);
 
   VkRect2D scissor{};
   scissor.offset = {0, 0};
-  scissor.extent = swapChain.swapChainExtent();
+  scissor.extent = swapChain.extent();
   vkCmdSetScissor(m_commandBuffers[m_currentFrame], 0, 1, &scissor);
 
-  VkBuffer vertexBuffers[] = {m_mesh.vertexBuffer().buffer()};
+  VkBuffer vertexBuffers[] = {scene.mesh().vertexBuffer().buffer()};
   VkDeviceSize offsets[] = {0};
   vkCmdBindVertexBuffers(
     m_commandBuffers[m_currentFrame],
@@ -222,7 +219,7 @@ void Renderer::recordCommandBuffer(
   );
   vkCmdBindIndexBuffer(
     m_commandBuffers[m_currentFrame],
-    m_mesh.indexBuffer().buffer(),
+    scene.mesh().indexBuffer().buffer(),
     0,
     VK_INDEX_TYPE_UINT32
   );
@@ -230,7 +227,7 @@ void Renderer::recordCommandBuffer(
   vkCmdBindDescriptorSets(
     m_commandBuffers[m_currentFrame],
     VK_PIPELINE_BIND_POINT_GRAPHICS,
-    pipeline.pipelineLayout(),
+    scene.pipeline().pipelineLayout(),
     0,
     1,
     &descriptorSets[m_currentFrame],
@@ -240,7 +237,7 @@ void Renderer::recordCommandBuffer(
 
   vkCmdDrawIndexed(
     m_commandBuffers[m_currentFrame],
-    static_cast<uint32_t>(m_mesh.indexCount()),
+    static_cast<uint32_t>(scene.mesh().indexCount()),
     1,
     0,
     0,
@@ -283,9 +280,7 @@ void Renderer::recordCommandBuffer(
 
 bool Renderer::drawFrame(
   const SwapChain& swapChain,
-  const Pipeline& pipeline,
-  Descriptors& descriptors,
-  const DepthImage& depthImage,
+  Scene& scene,
   const UniformBufferObject& ubo
 ) {
   vkWaitForFences(
@@ -314,14 +309,9 @@ bool Renderer::drawFrame(
   vkResetFences(m_device, 1, &m_inFlightFences[m_currentFrame]);
 
   vkResetCommandBuffer(m_commandBuffers[m_currentFrame], 0);
-  recordCommandBuffer(
-    swapChain,
-    depthImage,
-    pipeline,
-    descriptors.descriptorSets()
-  );
+  recordCommandBuffer(swapChain, scene, scene.descriptors().descriptorSets());
 
-  descriptors.update(m_currentFrame, ubo);
+  scene.descriptors().update(m_currentFrame, ubo);
 
   VkSubmitInfo2 submitInfo2{};
   submitInfo2.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;

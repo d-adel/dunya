@@ -3,6 +3,33 @@
     "*.ih": "cpp"
   },
   "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+  // Dev builds use Ninja, in their own directory. Two reasons: Ninja emits a
+  // compile_commands.json (the Visual Studio generator never does, whatever
+  // CMAKE_EXPORT_COMPILE_COMMANDS says), which is what stops IntelliSense
+  // inventing include paths; and it rebuilds this project faster than MSBuild.
+  // The VS-generator tree in build/ stays as-is -- that is the path the README
+  // documents and the one verification builds use.
+  "cmake.generator": "Ninja",
+  "cmake.buildDirectory": "${workspaceFolder}/build-ninja",
+  // Fallback for files the provider cannot place (a new .cc not yet in any
+  // target, a header opened before the first configure). Harmless when the
+  // provider does know the file -- the provider wins.
+  "C_Cpp.default.compileCommands": "${workspaceFolder}/build-ninja/compile_commands.json",
+  // The SDK include arrives from an imported target, so CMake marks it system
+  // and MSVC spells it -external:I, which not every cpptools version parses as
+  // an include path. Listing it plainly costs nothing and removes the doubt.
+  // Only consulted when the provider has nothing to say about a file (before
+  // the first configure of a build directory, or for a file not in a target).
+  // FetchContent puts the dependencies under the build tree, so they have to
+  // be listed here too or glm/glfw/stb resolve to nothing.
+  "C_Cpp.default.includePath": [
+    "${workspaceFolder}/src",
+    "${env:VULKAN_SDK}/Include",
+    "${workspaceFolder}/build-ninja/_deps/glm-src",
+    "${workspaceFolder}/build-ninja/_deps/glfw-src/include",
+    "${workspaceFolder}/build-ninja/_deps/stb-src",
+    "${workspaceFolder}/build-ninja/_deps/tinyobjloader-src"
+  ],
   "glsllint.glslangValidatorArgs": [
     "--target-env",
     "vulkan1.4"

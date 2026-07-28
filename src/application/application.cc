@@ -1,31 +1,13 @@
 #include "application.ih"
 
 Application::Application()
-    : m_input(m_window.handle()),
-      m_instance(validationLayers),
-      m_surface(m_instance.handle(), m_window.handle()),
-      m_device(m_instance.handle(), m_surface.handle()),
-      m_swapChain(
-        m_device.device(),
-        m_device.physicalDevice(),
-        m_surface.handle(),
-        m_window.handle()
-      ),
-      m_depthImage(m_device, m_swapChain.swapChainExtent()),
-      m_texture(m_device, "textures/viking_room.png"),
-      m_mesh(m_device, "models/viking_room.obj"),
-      m_descriptors(m_device, m_texture),
-      m_pipeline(
-        m_device.device(),
-        m_swapChain.imageFormat(),
-        m_descriptors,
-        m_depthImage.format()
-      ),
+    : m_input(m_context.window().handle()),
+      m_swapChain(m_context),
+      m_scene(m_context, m_swapChain),
       m_renderer(
-        m_device,
-        m_surface.handle(),
-        m_swapChain.imageCount(),
-        m_mesh
+        m_context.device(),
+        m_context.surface().handle(),
+        m_swapChain.imageCount()
       ),
       m_cameraInput({}),
       m_prevAcceptsInput(false)
@@ -42,13 +24,13 @@ Application::~Application() {
 
 void Application::start() {
   glfwSetInputMode(
-    m_window.handle(),
+    m_context.window().handle(),
     GLFW_CURSOR,
     acceptsInput() ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL
   );
 
   double prevTime = glfwGetTime();
-  while (!glfwWindowShouldClose(m_window.handle())) {
+  while (!glfwWindowShouldClose(m_context.window().handle())) {
     double now = glfwGetTime();
     float dt = static_cast<float>(now - prevTime);
     prevTime = now;
@@ -79,27 +61,20 @@ void Application::start() {
 
     ubo.view = m_camera.viewMatrix();
 
-    float aspect = static_cast<float>(m_swapChain.swapChainExtent().width)
-                   / static_cast<float>(m_swapChain.swapChainExtent().height);
+    float aspect = static_cast<float>(m_swapChain.extent().width)
+                   / static_cast<float>(m_swapChain.extent().height);
 
     ubo.proj = m_camera.projectionMatrix(aspect);
 
     if (
-      m_window.takeResized()
-      || m_renderer.drawFrame(
-        m_swapChain,
-        m_pipeline,
-        m_descriptors,
-        m_depthImage,
-        ubo
-      )
+      m_context.window().takeResized()
+      || m_renderer.drawFrame(m_swapChain, m_scene, ubo)
     ) {
       m_swapChain.recreate();
-      m_depthImage.recreate(m_device, m_swapChain.swapChainExtent());
     }
   }
 
-  m_device.waitIdle();
+  m_context.device().waitIdle();
 }
 
 void Application::clearCameraInput() noexcept {
@@ -107,7 +82,7 @@ void Application::clearCameraInput() noexcept {
 }
 
 bool Application::acceptsInput() const noexcept {
-  return m_input.enabled() && m_window.focused();
+  return m_input.enabled() && m_context.window().focused();
 }
 
 void Application::handleKeyEvent(const KeyEvent& event) {
@@ -117,7 +92,7 @@ void Application::handleKeyEvent(const KeyEvent& event) {
     clearCameraInput();
 
     glfwSetInputMode(
-      m_window.handle(),
+      m_context.window().handle(),
       GLFW_CURSOR,
       acceptsInput() ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL
     );

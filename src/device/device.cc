@@ -97,7 +97,7 @@ Device::~Device() {
   vkDestroyDevice(m_device, nullptr);
 }
 
-const VkDevice& Device::device() const noexcept {
+const VkDevice& Device::vkDevice() const noexcept {
   return m_device;
 }
 
@@ -113,7 +113,7 @@ const VkQueue& Device::presentQueue() const noexcept {
   return m_presentQueue;
 }
 
-void Device::waitIdle() {
+void Device::waitIdle() const {
   vkDeviceWaitIdle(m_device);
 }
 
