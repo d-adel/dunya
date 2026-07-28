@@ -5,6 +5,9 @@
 #include "mesh/mesh.h"
 #include "descriptors/descriptors.h"
 #include "pipeline/pipeline.h"
+#include "frame/frame.h"
+
+#include <glm/glm.hpp>
 
 class Scene {
 public:
@@ -16,16 +19,18 @@ public:
   Scene(Scene&&) = delete;
   Scene& operator=(Scene&&) = delete;
 
-  const Mesh& mesh() const noexcept;
-
   const Descriptors& descriptors() const noexcept;
   Descriptors& descriptors();
 
   const Pipeline& pipeline() const noexcept;
 
+  Frame frameContext(glm::mat4 view, glm::mat4 proj) const;
+
 private:
   Texture m_texture;
-  Mesh m_mesh;
   Descriptors m_descriptors;
   Pipeline m_pipeline;
+
+  std::vector<Mesh> m_meshes;
+  std::vector<DrawItem> m_drawItems;
 };

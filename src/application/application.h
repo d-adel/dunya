@@ -4,7 +4,6 @@
 #include "swapchain/swapchain.h"
 #include "scene/scene.h"
 #include "renderer/renderer.h"
-#include "ubo/ubo.h"
 #include "camera/camera.h"
 #include "input/input.h"
 

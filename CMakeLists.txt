@@ -75,6 +75,7 @@ add_executable(${PROJECT_NAME}
     src/glfwlibrary/glfwlibrary.cc
     src/context/context.cc
     src/scene/scene.cc
+    src/frame/frame.cc
 )
 
 # Configuration

@@ -150,12 +150,17 @@ void Pipeline::createGraphicsPipeline(
   colorBlending.blendConstants[2] = 0.0f;  // Optional
   colorBlending.blendConstants[3] = 0.0f;  // Optional
 
+  VkPushConstantRange pushConstant{};
+  pushConstant.offset = 0;
+  pushConstant.size = sizeof(glm::mat4);
+  pushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
   VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
   pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
   pipelineLayoutInfo.setLayoutCount = 1;
   pipelineLayoutInfo.pSetLayouts = &descriptors.descriptorSetLayout();
-  pipelineLayoutInfo.pushConstantRangeCount = 0;
-  pipelineLayoutInfo.pPushConstantRanges = nullptr;
+  pipelineLayoutInfo.pushConstantRangeCount = 1;
+  pipelineLayoutInfo.pPushConstantRanges = &pushConstant;
 
   if (
     vkCreatePipelineLayout(
@@ -235,7 +240,7 @@ VkShaderModule Pipeline::createShaderModule(const std::vector<char>& code) {
     vkCreateShaderModule(m_device, &createInfo, nullptr, &shaderModule)
     != VK_SUCCESS
   ) {
-    throw std::runtime_error("failed to create shader module!");
+    throw std::runtime_error("Failed to create shader module");
   }
 
   return shaderModule;

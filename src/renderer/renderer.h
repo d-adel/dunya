@@ -2,8 +2,10 @@
 
 #include <vulkan/vulkan.h>
 #include "swapchain/swapchain.h"
-#include "scene/scene.h"
+#include "pipeline/pipeline.h"
+#include "descriptors/descriptors.h"
 #include "ubo/ubo.h"
+#include "frame/frame.h"
 
 #include <vector>
 
@@ -13,6 +15,8 @@ class Renderer {
 public:
   Renderer(
     const Device& device,
+    const Pipeline& pipeline,
+    Descriptors& descriptors,
     const VkSurfaceKHR& surface,
     uint32_t imageCount
   );
@@ -20,11 +24,7 @@ public:
   Renderer& operator=(Renderer const&) = delete;
   ~Renderer();
 
-  bool drawFrame(
-    const SwapChain& swapChain,
-    Scene& scene,
-    const UniformBufferObject& ubo
-  );
+  bool drawFrame(const SwapChain& swapChain, const Frame& frameContext);
 
 private:
   void createCommandPool(
@@ -36,8 +36,7 @@ private:
   void createSyncObjects(uint32_t imageCount);
   void recordCommandBuffer(
     const SwapChain& swapChain,
-    const Scene& scene,
-    const std::vector<VkDescriptorSet>& descriptorSets
+    const Frame& frameContext
   );
 
   VkCommandPool m_commandPool;
@@ -51,4 +50,7 @@ private:
   VkDevice m_device;
   uint32_t m_imageIndex;
   uint32_t m_currentFrame = 0;
+
+  const Pipeline& m_pipeline;
+  Descriptors& m_descriptors;
 };

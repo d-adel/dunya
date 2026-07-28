@@ -2,10 +2,14 @@
 
 Renderer::Renderer(
   const Device& device,
+  const Pipeline& pipeline,
+  Descriptors& descriptors,
   const VkSurfaceKHR& surface,
   uint32_t imageCount
 )
     : m_device(device.vkDevice()),
+      m_pipeline(pipeline),
+      m_descriptors(descriptors),
       m_graphicsQueue(device.graphicsQueue()),
       m_presentQueue(device.presentQueue()) {
   createCommandPool(device.physicalDevice(), surface);
@@ -113,8 +117,7 @@ void Renderer::createSyncObjects(uint32_t imageCount) {
 
 void Renderer::recordCommandBuffer(
   const SwapChain& swapChain,
-  const Scene& scene,
-  const std::vector<VkDescriptorSet>& descriptorSets
+  const Frame& frameContext
 ) {
   VkCommandBufferBeginInfo beginInfo{};
   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -191,7 +194,7 @@ void Renderer::recordCommandBuffer(
   vkCmdBindPipeline(
     m_commandBuffers[m_currentFrame],
     VK_PIPELINE_BIND_POINT_GRAPHICS,
-    scene.pipeline().graphicsPipeline()
+    m_pipeline.graphicsPipeline()
   );
 
   VkViewport viewport{};
@@ -208,41 +211,56 @@ void Renderer::recordCommandBuffer(
   scissor.extent = swapChain.extent();
   vkCmdSetScissor(m_commandBuffers[m_currentFrame], 0, 1, &scissor);
 
-  VkBuffer vertexBuffers[] = {scene.mesh().vertexBuffer().buffer()};
-  VkDeviceSize offsets[] = {0};
-  vkCmdBindVertexBuffers(
-    m_commandBuffers[m_currentFrame],
-    0,
-    1,
-    vertexBuffers,
-    offsets
-  );
-  vkCmdBindIndexBuffer(
-    m_commandBuffers[m_currentFrame],
-    scene.mesh().indexBuffer().buffer(),
-    0,
-    VK_INDEX_TYPE_UINT32
-  );
-
   vkCmdBindDescriptorSets(
     m_commandBuffers[m_currentFrame],
     VK_PIPELINE_BIND_POINT_GRAPHICS,
-    scene.pipeline().pipelineLayout(),
+    m_pipeline.pipelineLayout(),
     0,
     1,
-    &descriptorSets[m_currentFrame],
+    &m_descriptors.descriptorSets()[m_currentFrame],
     0,
     nullptr
   );
 
-  vkCmdDrawIndexed(
-    m_commandBuffers[m_currentFrame],
-    static_cast<uint32_t>(scene.mesh().indexCount()),
-    1,
-    0,
-    0,
-    0
-  );
+  for (const auto& item : frameContext.drawItems) {
+    assert(item.meshIndex < frameContext.meshes.size());
+
+    VkBuffer vertexBuffers[] = {
+      frameContext.meshes[item.meshIndex].vertexBuffer().buffer()
+    };
+    VkDeviceSize offsets[] = {0};
+    vkCmdBindVertexBuffers(
+      m_commandBuffers[m_currentFrame],
+      0,
+      1,
+      vertexBuffers,
+      offsets
+    );
+    vkCmdBindIndexBuffer(
+      m_commandBuffers[m_currentFrame],
+      frameContext.meshes[item.meshIndex].indexBuffer().buffer(),
+      0,
+      VK_INDEX_TYPE_UINT32
+    );
+
+    vkCmdPushConstants(
+      m_commandBuffers[m_currentFrame],
+      m_pipeline.pipelineLayout(),
+      VK_SHADER_STAGE_VERTEX_BIT,
+      0,
+      sizeof(glm::mat4),
+      &item.model
+    );
+
+    vkCmdDrawIndexed(
+      m_commandBuffers[m_currentFrame],
+      static_cast<uint32_t>(frameContext.meshes[item.meshIndex].indexCount()),
+      1,
+      0,
+      0,
+      0
+    );
+  }
 
   vkCmdEndRendering(m_commandBuffers[m_currentFrame]);
 
@@ -280,8 +298,7 @@ void Renderer::recordCommandBuffer(
 
 bool Renderer::drawFrame(
   const SwapChain& swapChain,
-  Scene& scene,
-  const UniformBufferObject& ubo
+  const Frame& frameContext
 ) {
   vkWaitForFences(
     m_device,
@@ -309,9 +326,13 @@ bool Renderer::drawFrame(
   vkResetFences(m_device, 1, &m_inFlightFences[m_currentFrame]);
 
   vkResetCommandBuffer(m_commandBuffers[m_currentFrame], 0);
-  recordCommandBuffer(swapChain, scene, scene.descriptors().descriptorSets());
+  recordCommandBuffer(swapChain, frameContext);
 
-  scene.descriptors().update(m_currentFrame, ubo);
+  UniformBufferObject ubo{};
+  ubo.view = frameContext.view;
+  ubo.proj = frameContext.proj;
+
+  m_descriptors.update(m_currentFrame, ubo);
 
   VkSubmitInfo2 submitInfo2{};
   submitInfo2.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;

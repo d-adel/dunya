@@ -6,6 +6,8 @@ Application::Application()
       m_scene(m_context, m_swapChain),
       m_renderer(
         m_context.device(),
+        m_scene.pipeline(),
+        m_scene.descriptors(),
         m_context.surface().handle(),
         m_swapChain.imageCount()
       ),
@@ -52,23 +54,17 @@ void Application::start() {
       m_camera.update(dt, m_cameraInput);
     }
 
-    UniformBufferObject ubo{};
-    ubo.model = glm::rotate(
-      glm::mat4(1.0f),
-      glm::radians(-90.0f),
-      glm::vec3(1.0f, 0.0f, 0.0f)
-    );
-
-    ubo.view = m_camera.viewMatrix();
-
     float aspect = static_cast<float>(m_swapChain.extent().width)
                    / static_cast<float>(m_swapChain.extent().height);
 
-    ubo.proj = m_camera.projectionMatrix(aspect);
+    auto frameContext = m_scene.frameContext(
+      m_camera.viewMatrix(),
+      m_camera.projectionMatrix(aspect)
+    );
 
     if (
       m_context.window().takeResized()
-      || m_renderer.drawFrame(m_swapChain, m_scene, ubo)
+      || m_renderer.drawFrame(m_swapChain, frameContext)
     ) {
       m_swapChain.recreate();
     }
