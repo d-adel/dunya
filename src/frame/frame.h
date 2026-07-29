@@ -1,6 +1,7 @@
 #pragma once
 
 #include "mesh/mesh.h"
+#include "pipeline/pipeline.h"
 
 #include <glm/glm.hpp>
 #include <span>
@@ -13,6 +14,8 @@ struct DrawItem {
 struct Frame {
   glm::mat4 view = glm::mat4(1.0f);
   glm::mat4 proj = glm::mat4(1.0f);
+  glm::vec4 cameraPos = glm::vec4(1.0f);
   std::span<const DrawItem> drawItems = {};
   std::span<const Mesh> meshes = {};
+  PipelineType mode = PipelineType::Mesh;
 };

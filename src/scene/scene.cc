@@ -1,9 +1,8 @@
 #include "scene.ih"
 
-Scene::Scene(const Context& context, const SwapChain& swapChain)
+Scene::Scene(const Context& context)
     : m_texture(context.device(), "textures/viking_room.png"),
-      m_descriptors(context.device(), m_texture),
-      m_pipeline(context.device().vkDevice(), m_descriptors, swapChain) {
+      m_descriptors(context.device(), m_texture) {
   glm::mat4 model = glm::rotate(
     glm::mat4(1.0f),
     glm::radians(-90.0f),
@@ -26,12 +25,9 @@ Descriptors& Scene::descriptors() {
   return m_descriptors;
 }
 
-const Pipeline& Scene::pipeline() const noexcept {
-  return m_pipeline;
-}
-
-Frame Scene::frameContext(glm::mat4 view, glm::mat4 proj) const {
+void Scene::augmentFrameContext(Frame& frameContext) const {
   std::span<const DrawItem> data(m_drawItems);
   std::span<const Mesh> meshes(m_meshes);
-  return Frame{view, proj, data, meshes};
+  frameContext.drawItems = data;
+  frameContext.meshes = meshes;
 }

@@ -15,7 +15,8 @@ class Renderer {
 public:
   Renderer(
     const Device& device,
-    const Pipeline& pipeline,
+    const Pipeline& meshPipeline,
+    const Pipeline& fieldPipeline,
     Descriptors& descriptors,
     const VkSurfaceKHR& surface,
     uint32_t imageCount
@@ -51,6 +52,7 @@ private:
   uint32_t m_imageIndex;
   uint32_t m_currentFrame = 0;
 
-  const Pipeline& m_pipeline;
+  const Pipeline& m_meshPipeline;
+  const Pipeline& m_fieldPipeline;
   Descriptors& m_descriptors;
 };

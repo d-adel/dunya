@@ -2,13 +2,15 @@
 
 Renderer::Renderer(
   const Device& device,
-  const Pipeline& pipeline,
+  const Pipeline& meshPipeline,
+  const Pipeline& fieldPipeline,
   Descriptors& descriptors,
   const VkSurfaceKHR& surface,
   uint32_t imageCount
 )
     : m_device(device.vkDevice()),
-      m_pipeline(pipeline),
+      m_meshPipeline(meshPipeline),
+      m_fieldPipeline(fieldPipeline),
       m_descriptors(descriptors),
       m_graphicsQueue(device.graphicsQueue()),
       m_presentQueue(device.presentQueue()) {
@@ -191,10 +193,13 @@ void Renderer::recordCommandBuffer(
 
   vkCmdBeginRendering(m_commandBuffers[m_currentFrame], &renderingInfo);
 
+  const Pipeline& pipeline = (frameContext.mode == PipelineType::Mesh)
+                               ? m_meshPipeline
+                               : m_fieldPipeline;
   vkCmdBindPipeline(
     m_commandBuffers[m_currentFrame],
     VK_PIPELINE_BIND_POINT_GRAPHICS,
-    m_pipeline.graphicsPipeline()
+    pipeline.pipeline()
   );
 
   VkViewport viewport{};
@@ -211,55 +216,74 @@ void Renderer::recordCommandBuffer(
   scissor.extent = swapChain.extent();
   vkCmdSetScissor(m_commandBuffers[m_currentFrame], 0, 1, &scissor);
 
-  vkCmdBindDescriptorSets(
-    m_commandBuffers[m_currentFrame],
-    VK_PIPELINE_BIND_POINT_GRAPHICS,
-    m_pipeline.pipelineLayout(),
-    0,
-    1,
-    &m_descriptors.descriptorSets()[m_currentFrame],
-    0,
-    nullptr
-  );
-
-  for (const auto& item : frameContext.drawItems) {
-    assert(item.meshIndex < frameContext.meshes.size());
-
-    VkBuffer vertexBuffers[] = {
-      frameContext.meshes[item.meshIndex].vertexBuffer().buffer()
+  if (frameContext.mode == PipelineType::Field) {
+    FieldPushConstants constants{
+      glm::inverse(frameContext.proj * frameContext.view),
+      frameContext.cameraPos
     };
-    VkDeviceSize offsets[] = {0};
-    vkCmdBindVertexBuffers(
-      m_commandBuffers[m_currentFrame],
-      0,
-      1,
-      vertexBuffers,
-      offsets
-    );
-    vkCmdBindIndexBuffer(
-      m_commandBuffers[m_currentFrame],
-      frameContext.meshes[item.meshIndex].indexBuffer().buffer(),
-      0,
-      VK_INDEX_TYPE_UINT32
-    );
 
     vkCmdPushConstants(
       m_commandBuffers[m_currentFrame],
-      m_pipeline.pipelineLayout(),
-      VK_SHADER_STAGE_VERTEX_BIT,
+      pipeline.pipelineLayout(),
+      VK_SHADER_STAGE_FRAGMENT_BIT,
       0,
-      sizeof(glm::mat4),
-      &item.model
+      sizeof(FieldPushConstants),
+      &constants
     );
 
-    vkCmdDrawIndexed(
+    vkCmdDraw(m_commandBuffers[m_currentFrame], 3, 1, 0, 0);
+  } else if (frameContext.mode == PipelineType::Mesh) {
+    vkCmdBindDescriptorSets(
       m_commandBuffers[m_currentFrame],
-      static_cast<uint32_t>(frameContext.meshes[item.meshIndex].indexCount()),
+      VK_PIPELINE_BIND_POINT_GRAPHICS,
+      pipeline.pipelineLayout(),
+      0,
       1,
+      &m_descriptors.descriptorSets()[m_currentFrame],
       0,
-      0,
-      0
+      nullptr
     );
+    for (const auto& item : frameContext.drawItems) {
+      assert(item.meshIndex < frameContext.meshes.size());
+
+      VkBuffer vertexBuffers[] = {
+        frameContext.meshes[item.meshIndex].vertexBuffer().buffer()
+      };
+      VkDeviceSize offsets[] = {0};
+      vkCmdBindVertexBuffers(
+        m_commandBuffers[m_currentFrame],
+        0,
+        1,
+        vertexBuffers,
+        offsets
+      );
+      vkCmdBindIndexBuffer(
+        m_commandBuffers[m_currentFrame],
+        frameContext.meshes[item.meshIndex].indexBuffer().buffer(),
+        0,
+        VK_INDEX_TYPE_UINT32
+      );
+
+      vkCmdPushConstants(
+        m_commandBuffers[m_currentFrame],
+        pipeline.pipelineLayout(),
+        VK_SHADER_STAGE_VERTEX_BIT,
+        0,
+        sizeof(glm::mat4),
+        &item.model
+      );
+
+      vkCmdDrawIndexed(
+        m_commandBuffers[m_currentFrame],
+        static_cast<uint32_t>(frameContext.meshes[item.meshIndex].indexCount()),
+        1,
+        0,
+        0,
+        0
+      );
+    }
+  } else {
+    throw std::invalid_argument("Uknown pipeline type");
   }
 
   vkCmdEndRendering(m_commandBuffers[m_currentFrame]);
@@ -328,11 +352,13 @@ bool Renderer::drawFrame(
   vkResetCommandBuffer(m_commandBuffers[m_currentFrame], 0);
   recordCommandBuffer(swapChain, frameContext);
 
-  UniformBufferObject ubo{};
-  ubo.view = frameContext.view;
-  ubo.proj = frameContext.proj;
+  if (frameContext.mode == PipelineType::Mesh) {
+    UniformBufferObject ubo{};
+    ubo.view = frameContext.view;
+    ubo.proj = frameContext.proj;
 
-  m_descriptors.update(m_currentFrame, ubo);
+    m_descriptors.update(m_currentFrame, ubo);
+  }
 
   VkSubmitInfo2 submitInfo2{};
   submitInfo2.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;

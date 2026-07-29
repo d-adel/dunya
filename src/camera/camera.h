@@ -37,6 +37,7 @@ public:
   glm::mat4 viewMatrix() const;
   glm::mat4 rotationMatrix() const;
   glm::mat4 projectionMatrix(float aspect) const;
+  glm::vec4 position() const;
 
   void update(float dt, CameraInput input);
 

@@ -6,6 +6,7 @@
 #include "renderer/renderer.h"
 #include "camera/camera.h"
 #include "input/input.h"
+#include "frame/frame.h"
 
 class Application {
 public:
@@ -29,10 +30,22 @@ private:
   Camera m_camera;
   SwapChain m_swapChain;
   Scene m_scene;
+  Pipeline m_meshPipeline;
+  Pipeline m_fieldPipeline;
   Renderer m_renderer;
 
   CameraInput m_cameraInput;
   bool m_prevAcceptsInput;
+  Frame m_frameContext{};
 
   EventDispatcher::SubscriptionId m_keySubscription{};
 };
+
+constexpr PipelineType nextPipelineType(PipelineType current) noexcept {
+  using Value = std::underlying_type_t<PipelineType>;
+
+  const auto next =
+    (static_cast<Value>(current) + 1) % static_cast<Value>(PipelineType::Count);
+
+  return static_cast<PipelineType>(next);
+}

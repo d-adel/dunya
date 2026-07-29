@@ -1,5 +1,6 @@
 #include "pipeline.h"
 #include "vertex/vertex.h"
+#include "field/field.h"
 #include <fstream>
 #include <stdexcept>
 #include <filesystem>

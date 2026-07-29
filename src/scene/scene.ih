@@ -1,4 +1,5 @@
 #include "scene.h"
+#include "frame/frame.h"
 #include "context/context.h"
 #include <span>
 #include <vector>

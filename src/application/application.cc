@@ -3,10 +3,23 @@
 Application::Application()
     : m_input(m_context.window().handle()),
       m_swapChain(m_context),
-      m_scene(m_context, m_swapChain),
+      m_scene(m_context),
+      m_meshPipeline(
+        PipelineType::Mesh,
+        m_context.device().vkDevice(),
+        m_scene.descriptors(),
+        m_swapChain
+      ),
+      m_fieldPipeline(
+        PipelineType::Field,
+        m_context.device().vkDevice(),
+        m_scene.descriptors(),
+        m_swapChain
+      ),
       m_renderer(
         m_context.device(),
-        m_scene.pipeline(),
+        m_meshPipeline,
+        m_fieldPipeline,
         m_scene.descriptors(),
         m_context.surface().handle(),
         m_swapChain.imageCount()
@@ -57,14 +70,14 @@ void Application::start() {
     float aspect = static_cast<float>(m_swapChain.extent().width)
                    / static_cast<float>(m_swapChain.extent().height);
 
-    auto frameContext = m_scene.frameContext(
-      m_camera.viewMatrix(),
-      m_camera.projectionMatrix(aspect)
-    );
+    m_frameContext.proj = m_camera.projectionMatrix(aspect);
+    m_frameContext.view = m_camera.viewMatrix();
+    m_frameContext.cameraPos = m_camera.position();
+    m_scene.augmentFrameContext(m_frameContext);
 
     if (
       m_context.window().takeResized()
-      || m_renderer.drawFrame(m_swapChain, frameContext)
+      || m_renderer.drawFrame(m_swapChain, m_frameContext)
     ) {
       m_swapChain.recreate();
     }
@@ -94,6 +107,12 @@ void Application::handleKeyEvent(const KeyEvent& event) {
     );
   }
 
+  if (event.key == GLFW_KEY_P && event.type == KeyEventType::SinglePressed) {
+    m_frameContext.mode = nextPipelineType(m_frameContext.mode);
+    std::cout << "Pipeline mode switched to:" << (int)m_frameContext.mode
+              << '\n';
+  }
+
   bool* state = nullptr;
 
   switch (event.key) {
@@ -120,7 +139,6 @@ void Application::handleKeyEvent(const KeyEvent& event) {
     case GLFW_KEY_Q:
       state = &m_cameraInput.down;
       break;
-
     default:
       return;
   }

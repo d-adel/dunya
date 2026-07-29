@@ -1,6 +1,6 @@
 #include "camera.ih"
 
-Camera::Camera() : m_position(glm::vec3(0, 0, 5)), m_velocity(glm::vec3(0.f)) {}
+Camera::Camera() : m_position(glm::vec3(0, 0, 2)), m_velocity(glm::vec3(0.f)) {}
 
 void Camera::update(float dt, CameraInput input) {
   m_velocity.z = (float)(input.back - input.forward);
@@ -15,7 +15,7 @@ void Camera::update(float dt, CameraInput input) {
 
   glm::mat4 cameraRotation = rotationMatrix();
   m_position +=
-    glm::vec3(cameraRotation * glm::vec4(m_velocity * 0.5f, 0.f)) * dt;
+    glm::vec3(cameraRotation * glm::vec4(m_velocity * 0.9f, 0.f)) * dt;
 }
 
 glm::mat4 Camera::viewMatrix() const {
@@ -38,4 +38,8 @@ glm::mat4 Camera::projectionMatrix(float aspect) const {
   projection[1][1] *= -1;
 
   return projection;
+}
+
+glm::vec4 Camera::position() const {
+  return glm::vec4(m_position, 1.0f);
 }

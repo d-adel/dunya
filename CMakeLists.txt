@@ -76,6 +76,7 @@ add_executable(${PROJECT_NAME}
     src/context/context.cc
     src/scene/scene.cc
     src/frame/frame.cc
+    src/field/field.cc
 )
 
 # Configuration

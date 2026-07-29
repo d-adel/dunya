@@ -19,33 +19,72 @@ static std::vector<char> readFile(const std::string& filename) {
 }
 
 Pipeline::Pipeline(
+  PipelineType type,
   const VkDevice& device,
   const Descriptors& descriptors,
   const SwapChain& swapChain
 )
     : m_device(device), m_swapChainImageFormat(swapChain.imageFormat()) {
-  createGraphicsPipeline(descriptors, swapChain.depthImage().format());
+  create(type, descriptors, swapChain.depthImage().format());
 }
 
 Pipeline::~Pipeline() {
-  vkDestroyPipeline(m_device, m_graphicsPipeline, nullptr);
+  vkDestroyPipeline(m_device, m_pipeline, nullptr);
   vkDestroyPipelineLayout(m_device, m_pipelineLayout, nullptr);
 }
 
-const VkPipeline& Pipeline::graphicsPipeline() const noexcept {
-  return m_graphicsPipeline;
+const VkPipeline& Pipeline::pipeline() const noexcept {
+  return m_pipeline;
 }
 
 const VkPipelineLayout& Pipeline::pipelineLayout() const noexcept {
   return m_pipelineLayout;
 }
 
-void Pipeline::createGraphicsPipeline(
+void Pipeline::create(
+  PipelineType type,
   const Descriptors& descriptors,
   const VkFormat& depthImageFormat
 ) {
-  auto vertShaderCode = readFile("shaders/shader.vert.spv");
-  auto fragShaderCode = readFile("shaders/shader.frag.spv");
+  PipelineConfig config{};
+  auto bindingDescription = Vertex::getBindingDescription();
+
+  switch (type) {
+    case PipelineType::Mesh:
+      config.vertexShader = "shaders/shader.vert.spv";
+      config.fragmentShader = "shaders/shader.frag.spv";
+      config.bindingDescriptions =
+        std::span<const VkVertexInputBindingDescription>(
+          &bindingDescription,
+          1
+        );
+      config.attributeDescriptions = Vertex::getAttributeDescriptions();
+      config.cullMode = VK_CULL_MODE_BACK_BIT;
+      config.depthTestEnable = VK_TRUE;
+      config.depthWriteEnable = VK_TRUE;
+      config.descriptorSetLayout = descriptors.descriptorSetLayout();
+      config.setLayoutCount = 1;
+      config.pushConstantSize = sizeof(glm::mat4);
+      config.pushConstantStageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+      break;
+
+    case PipelineType::Field:
+      config.vertexShader = "shaders/field-shader.vert.spv";
+      config.fragmentShader = "shaders/field-shader.frag.spv";
+      config.cullMode = VK_CULL_MODE_NONE;
+      config.depthTestEnable = VK_FALSE;
+      config.depthWriteEnable = VK_FALSE;
+      config.descriptorSetLayout = VK_NULL_HANDLE;
+      config.setLayoutCount = 0;
+      config.pushConstantSize = sizeof(FieldPushConstants);
+      config.pushConstantStageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+      break;
+    default:
+      throw std::invalid_argument("Unknown pipeline type");
+  }
+
+  auto vertShaderCode = readFile(config.vertexShader);
+  auto fragShaderCode = readFile(config.fragmentShader);
 
   VkShaderModule vertexShaderModule = createShaderModule(vertShaderCode);
   VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
@@ -81,17 +120,18 @@ void Pipeline::createGraphicsPipeline(
   dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
   dynamicState.pDynamicStates = dynamicStates.data();
 
-  auto bindingDescription = Vertex::getBindingDescription();
-  auto attributeDescriptions = Vertex::getAttributeDescriptions();
-
   VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
   vertexInputInfo.sType =
     VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-  vertexInputInfo.vertexBindingDescriptionCount = 1;
+
+  vertexInputInfo.vertexBindingDescriptionCount =
+    static_cast<uint32_t>(config.bindingDescriptions.size());
   vertexInputInfo.vertexAttributeDescriptionCount =
-    static_cast<uint32_t>(attributeDescriptions.size());
-  vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-  vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+    static_cast<uint32_t>(config.attributeDescriptions.size());
+  vertexInputInfo.pVertexBindingDescriptions =
+    config.bindingDescriptions.data();
+  vertexInputInfo.pVertexAttributeDescriptions =
+    config.attributeDescriptions.data();
 
   VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
   inputAssembly.sType =
@@ -109,7 +149,7 @@ void Pipeline::createGraphicsPipeline(
   rasterizer.depthClampEnable = VK_FALSE;
   rasterizer.rasterizerDiscardEnable = VK_FALSE;
   rasterizer.lineWidth = 1.0f;
-  rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+  rasterizer.cullMode = config.cullMode;
   rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
   rasterizer.depthBiasEnable = VK_FALSE;
   rasterizer.depthBiasConstantFactor = 0.0f;
@@ -152,13 +192,13 @@ void Pipeline::createGraphicsPipeline(
 
   VkPushConstantRange pushConstant{};
   pushConstant.offset = 0;
-  pushConstant.size = sizeof(glm::mat4);
-  pushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+  pushConstant.size = config.pushConstantSize;
+  pushConstant.stageFlags = config.pushConstantStageFlags;
 
   VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
   pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-  pipelineLayoutInfo.setLayoutCount = 1;
-  pipelineLayoutInfo.pSetLayouts = &descriptors.descriptorSetLayout();
+  pipelineLayoutInfo.setLayoutCount = config.setLayoutCount;
+  pipelineLayoutInfo.pSetLayouts = &config.descriptorSetLayout;
   pipelineLayoutInfo.pushConstantRangeCount = 1;
   pipelineLayoutInfo.pPushConstantRanges = &pushConstant;
 
@@ -183,8 +223,8 @@ void Pipeline::createGraphicsPipeline(
   VkPipelineDepthStencilStateCreateInfo depthStencil{};
   depthStencil.sType =
     VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-  depthStencil.depthTestEnable = VK_TRUE;
-  depthStencil.depthWriteEnable = VK_TRUE;
+  depthStencil.depthTestEnable = config.depthTestEnable;
+  depthStencil.depthWriteEnable = config.depthWriteEnable;
   depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
   depthStencil.depthBoundsTestEnable = VK_FALSE;
   depthStencil.minDepthBounds = 0.0f;  // Optional
@@ -218,7 +258,7 @@ void Pipeline::createGraphicsPipeline(
       1,
       &pipelineInfo,
       nullptr,
-      &m_graphicsPipeline
+      &m_pipeline
     )
     != VK_SUCCESS
   ) {
