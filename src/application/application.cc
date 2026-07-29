@@ -25,7 +25,8 @@ Application::Application()
         m_swapChain.imageCount()
       ),
       m_cameraInput({}),
-      m_prevAcceptsInput(false)
+      m_prevAcceptsInput(false),
+      m_reloadRequested(false)
 
 {
   m_keySubscription = EventDispatcher::instance().subscribe<KeyEvent>(
@@ -45,12 +46,37 @@ void Application::start() {
   );
 
   double prevTime = glfwGetTime();
+  double pipelineReloadCheck = 0;
   while (!glfwWindowShouldClose(m_context.window().handle())) {
     double now = glfwGetTime();
     float dt = static_cast<float>(now - prevTime);
     prevTime = now;
 
     glfwPollEvents();
+
+    bool checkReady = now - pipelineReloadCheck > 0.5;
+
+    if (checkReady) {
+      pipelineReloadCheck = now;
+    }
+
+    if (m_reloadRequested || checkReady) {
+      if (m_reloadRequested) {
+        m_reloadRequested = false;
+        m_context.device().waitIdle();
+        m_meshPipeline.reload();
+        m_fieldPipeline.reload();
+      } else {
+        if (m_meshPipeline.sourcesChanged()) {
+          m_context.device().waitIdle();
+          m_meshPipeline.reload();
+        }
+        if (m_fieldPipeline.sourcesChanged()) {
+          m_context.device().waitIdle();
+          m_fieldPipeline.reload();
+        }
+      }
+    }
 
     bool curAcceptsInput = acceptsInput();
 
@@ -111,6 +137,11 @@ void Application::handleKeyEvent(const KeyEvent& event) {
     m_frameContext.mode = nextPipelineType(m_frameContext.mode);
     std::cout << "Pipeline mode switched to:" << (int)m_frameContext.mode
               << '\n';
+  }
+
+  if (event.key == GLFW_KEY_R && event.type == KeyEventType::SinglePressed) {
+    m_reloadRequested = true;
+    return;
   }
 
   bool* state = nullptr;

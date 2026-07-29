@@ -2,7 +2,7 @@
 
 Descriptors::Descriptors(const Device& device, const Texture& texture)
     : m_device(device.vkDevice()) {
-  createDescriptorSetLayout();
+  createSetLayout();
   createUniformBuffers(device);
   createDescriptorPool();
   createDescriptorSets(texture);
@@ -18,11 +18,11 @@ const std::vector<VkDescriptorSet>& Descriptors::
   return m_descriptorSets;
 }
 
-const VkDescriptorSetLayout& Descriptors::descriptorSetLayout() const noexcept {
+const VkDescriptorSetLayout& Descriptors::setLayout() const noexcept {
   return m_descriptorSetLayout;
 }
 
-void Descriptors::createDescriptorSetLayout() {
+void Descriptors::createSetLayout() {
   VkDescriptorSetLayoutBinding uboLayoutBinding{};
   uboLayoutBinding.binding = 0;
   uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;

@@ -37,6 +37,7 @@ private:
   CameraInput m_cameraInput;
   bool m_prevAcceptsInput;
   Frame m_frameContext{};
+  bool m_reloadRequested;
 
   EventDispatcher::SubscriptionId m_keySubscription{};
 };

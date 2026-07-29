@@ -21,10 +21,10 @@ public:
   void update(uint32_t currentFrame, const UniformBufferObject& ubo);
 
   const std::vector<VkDescriptorSet>& descriptorSets() const noexcept;
-  const VkDescriptorSetLayout& descriptorSetLayout() const noexcept;
+  const VkDescriptorSetLayout& setLayout() const noexcept;
 
 private:
-  void createDescriptorSetLayout();
+  void createSetLayout();
   void createUniformBuffers(const Device& device);
   void createDescriptorPool();
   void createDescriptorSets(const Texture& texture);

@@ -18,14 +18,28 @@ static std::vector<char> readFile(const std::string& filename) {
   return buffer;
 }
 
+static bool compileShader(
+  const std::string& source,
+  const std::string& output
+) {
+  const std::string command =
+    "\"\"" GLSLC_PATH "\" \"" + source + "\" -o \"" + output + "\"\"";
+
+  return std::system(command.c_str()) == 0;
+}
+
 Pipeline::Pipeline(
   PipelineType type,
   const VkDevice& device,
   const Descriptors& descriptors,
   const SwapChain& swapChain
 )
-    : m_device(device), m_swapChainImageFormat(swapChain.imageFormat()) {
-  create(type, descriptors, swapChain.depthImage().format());
+    : m_device(device),
+      m_swapChainImageFormat(swapChain.imageFormat()),
+      m_setLayout(descriptors.setLayout()),
+      m_type(type),
+      m_depthImageFormat(swapChain.depthImage().format()) {
+  create();
 }
 
 Pipeline::~Pipeline() {
@@ -41,50 +55,147 @@ const VkPipelineLayout& Pipeline::pipelineLayout() const noexcept {
   return m_pipelineLayout;
 }
 
-void Pipeline::create(
-  PipelineType type,
-  const Descriptors& descriptors,
-  const VkFormat& depthImageFormat
-) {
-  PipelineConfig config{};
-  auto bindingDescription = Vertex::getBindingDescription();
-
-  switch (type) {
+void Pipeline::makeConfig() {
+  switch (m_type) {
     case PipelineType::Mesh:
-      config.vertexShader = "shaders/shader.vert.spv";
-      config.fragmentShader = "shaders/shader.frag.spv";
-      config.bindingDescriptions =
-        std::span<const VkVertexInputBindingDescription>(
-          &bindingDescription,
-          1
-        );
-      config.attributeDescriptions = Vertex::getAttributeDescriptions();
-      config.cullMode = VK_CULL_MODE_BACK_BIT;
-      config.depthTestEnable = VK_TRUE;
-      config.depthWriteEnable = VK_TRUE;
-      config.descriptorSetLayout = descriptors.descriptorSetLayout();
-      config.setLayoutCount = 1;
-      config.pushConstantSize = sizeof(glm::mat4);
-      config.pushConstantStageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+      m_config.vert = SHADER_SOURCE_DIR "/shader.vert";
+      m_config.frag = SHADER_SOURCE_DIR "/shader.frag";
+      m_config.vertexShader = "shaders/shader.vert.spv";
+      m_config.fragmentShader = "shaders/shader.frag.spv";
+      m_config.bindingDescriptions = {Vertex::getBindingDescription()};
+
+      auto attDesc = Vertex::getAttributeDescriptions();
+      m_config.attributeDescriptions.assign(attDesc.begin(), attDesc.end());
+      m_config.cullMode = VK_CULL_MODE_BACK_BIT;
+      m_config.depthTestEnable = VK_TRUE;
+      m_config.depthWriteEnable = VK_TRUE;
+      m_config.descriptorSetLayout = m_setLayout;
+      m_config.setLayoutCount = 1;
+      m_config.pushConstantSize = sizeof(glm::mat4);
+      m_config.pushConstantStageFlags = VK_SHADER_STAGE_VERTEX_BIT;
       break;
 
     case PipelineType::Field:
-      config.vertexShader = "shaders/field-shader.vert.spv";
-      config.fragmentShader = "shaders/field-shader.frag.spv";
-      config.cullMode = VK_CULL_MODE_NONE;
-      config.depthTestEnable = VK_FALSE;
-      config.depthWriteEnable = VK_FALSE;
-      config.descriptorSetLayout = VK_NULL_HANDLE;
-      config.setLayoutCount = 0;
-      config.pushConstantSize = sizeof(FieldPushConstants);
-      config.pushConstantStageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+      m_config.vert = SHADER_SOURCE_DIR "/field-shader.vert";
+      m_config.frag = SHADER_SOURCE_DIR "/field-shader.frag";
+      m_config.vertexShader = "shaders/field-shader.vert.spv";
+      m_config.fragmentShader = "shaders/field-shader.frag.spv";
+      m_config.cullMode = VK_CULL_MODE_NONE;
+      m_config.depthTestEnable = VK_FALSE;
+      m_config.depthWriteEnable = VK_FALSE;
+      m_config.descriptorSetLayout = VK_NULL_HANDLE;
+      m_config.setLayoutCount = 0;
+      m_config.pushConstantSize = sizeof(FieldPushConstants);
+      m_config.pushConstantStageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
       break;
     default:
       throw std::invalid_argument("Unknown pipeline type");
   }
+}
 
-  auto vertShaderCode = readFile(config.vertexShader);
-  auto fragShaderCode = readFile(config.fragmentShader);
+void Pipeline::create() {
+  makeConfig();
+  m_pipelineLayout = buildPipelineLayout();
+
+  if (m_pipelineLayout == VK_NULL_HANDLE) {
+    throw std::runtime_error("Failed to create pipeline layout");
+  }
+
+  m_pipeline = buildPipeline();
+  if (m_pipeline == VK_NULL_HANDLE) {
+    throw std::runtime_error("Failed to create pipeline");
+  }
+
+  m_vertTime = std::filesystem::last_write_time(m_config.vert);
+  m_fragTime = std::filesystem::last_write_time(m_config.frag);
+}
+
+bool Pipeline::sourcesChanged() const {
+  std::error_code ec;
+  auto vertTime = std::filesystem::last_write_time(m_config.vert, ec);
+  if (ec) {
+    return false;
+  }
+  auto fragTime = std::filesystem::last_write_time(m_config.frag, ec);
+  if (ec) {
+    return false;
+  }
+
+  return vertTime != m_vertTime || fragTime != m_fragTime;
+}
+
+void Pipeline::reload() {
+  if (
+    compileShader(m_config.vert, m_config.vertexShader) == false
+    || compileShader(m_config.frag, m_config.fragmentShader) == false
+  ) {
+    std::cout << "Shader compilation failed\n";
+    return;
+  }
+
+  vkDestroyPipeline(m_device, m_pipeline, nullptr);
+  m_pipeline = VK_NULL_HANDLE;
+
+  makeConfig();
+  m_pipeline = buildPipeline();
+  if (m_pipeline == VK_NULL_HANDLE) {
+    std::cout << "Pipeline build failed on reload\n";
+  }
+
+  m_vertTime = std::filesystem::last_write_time(m_config.vert);
+  m_fragTime = std::filesystem::last_write_time(m_config.frag);
+}
+
+VkShaderModule Pipeline::createShaderModule(const std::vector<char>& code) {
+  VkShaderModuleCreateInfo createInfo{};
+  createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+  createInfo.codeSize = code.size();
+  createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
+
+  VkShaderModule shaderModule;
+  if (
+    vkCreateShaderModule(m_device, &createInfo, nullptr, &shaderModule)
+    != VK_SUCCESS
+  ) {
+    throw std::runtime_error("Failed to create shader module");
+  }
+
+  return shaderModule;
+}
+
+VkPipelineLayout Pipeline::buildPipelineLayout() {
+  VkPipelineLayout pipelineLayout;
+
+  VkPushConstantRange pushConstant{};
+  pushConstant.offset = 0;
+  pushConstant.size = m_config.pushConstantSize;
+  pushConstant.stageFlags = m_config.pushConstantStageFlags;
+
+  VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+  pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+  pipelineLayoutInfo.setLayoutCount = m_config.setLayoutCount;
+  pipelineLayoutInfo.pSetLayouts = &m_config.descriptorSetLayout;
+  pipelineLayoutInfo.pushConstantRangeCount = 1;
+  pipelineLayoutInfo.pPushConstantRanges = &pushConstant;
+
+  if (
+    vkCreatePipelineLayout(
+      m_device,
+      &pipelineLayoutInfo,
+      nullptr,
+      &pipelineLayout
+    )
+    != VK_SUCCESS
+  ) {
+    return VK_NULL_HANDLE;
+  }
+
+  return pipelineLayout;
+}
+
+VkPipeline Pipeline::buildPipeline() {
+  auto vertShaderCode = readFile(m_config.vertexShader);
+  auto fragShaderCode = readFile(m_config.fragmentShader);
 
   VkShaderModule vertexShaderModule = createShaderModule(vertShaderCode);
   VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
@@ -125,13 +236,13 @@ void Pipeline::create(
     VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
   vertexInputInfo.vertexBindingDescriptionCount =
-    static_cast<uint32_t>(config.bindingDescriptions.size());
+    static_cast<uint32_t>(m_config.bindingDescriptions.size());
   vertexInputInfo.vertexAttributeDescriptionCount =
-    static_cast<uint32_t>(config.attributeDescriptions.size());
+    static_cast<uint32_t>(m_config.attributeDescriptions.size());
   vertexInputInfo.pVertexBindingDescriptions =
-    config.bindingDescriptions.data();
+    m_config.bindingDescriptions.data();
   vertexInputInfo.pVertexAttributeDescriptions =
-    config.attributeDescriptions.data();
+    m_config.attributeDescriptions.data();
 
   VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
   inputAssembly.sType =
@@ -149,7 +260,7 @@ void Pipeline::create(
   rasterizer.depthClampEnable = VK_FALSE;
   rasterizer.rasterizerDiscardEnable = VK_FALSE;
   rasterizer.lineWidth = 1.0f;
-  rasterizer.cullMode = config.cullMode;
+  rasterizer.cullMode = m_config.cullMode;
   rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
   rasterizer.depthBiasEnable = VK_FALSE;
   rasterizer.depthBiasConstantFactor = 0.0f;
@@ -190,41 +301,17 @@ void Pipeline::create(
   colorBlending.blendConstants[2] = 0.0f;  // Optional
   colorBlending.blendConstants[3] = 0.0f;  // Optional
 
-  VkPushConstantRange pushConstant{};
-  pushConstant.offset = 0;
-  pushConstant.size = config.pushConstantSize;
-  pushConstant.stageFlags = config.pushConstantStageFlags;
-
-  VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-  pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-  pipelineLayoutInfo.setLayoutCount = config.setLayoutCount;
-  pipelineLayoutInfo.pSetLayouts = &config.descriptorSetLayout;
-  pipelineLayoutInfo.pushConstantRangeCount = 1;
-  pipelineLayoutInfo.pPushConstantRanges = &pushConstant;
-
-  if (
-    vkCreatePipelineLayout(
-      m_device,
-      &pipelineLayoutInfo,
-      nullptr,
-      &m_pipelineLayout
-    )
-    != VK_SUCCESS
-  ) {
-    throw std::runtime_error("Failed to create pipeline layout");
-  }
-
   VkPipelineRenderingCreateInfo renderingCreateInfo{};
   renderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
   renderingCreateInfo.colorAttachmentCount = 1;
   renderingCreateInfo.pColorAttachmentFormats = &m_swapChainImageFormat;
-  renderingCreateInfo.depthAttachmentFormat = depthImageFormat;
+  renderingCreateInfo.depthAttachmentFormat = m_depthImageFormat;
 
   VkPipelineDepthStencilStateCreateInfo depthStencil{};
   depthStencil.sType =
     VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-  depthStencil.depthTestEnable = config.depthTestEnable;
-  depthStencil.depthWriteEnable = config.depthWriteEnable;
+  depthStencil.depthTestEnable = m_config.depthTestEnable;
+  depthStencil.depthWriteEnable = m_config.depthWriteEnable;
   depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
   depthStencil.depthBoundsTestEnable = VK_FALSE;
   depthStencil.minDepthBounds = 0.0f;  // Optional
@@ -251,6 +338,7 @@ void Pipeline::create(
   pipelineInfo.basePipelineIndex = -1;               // Optional
   pipelineInfo.pDepthStencilState = &depthStencil;
 
+  VkPipeline pipeline;
   if (
     vkCreateGraphicsPipelines(
       m_device,
@@ -258,30 +346,15 @@ void Pipeline::create(
       1,
       &pipelineInfo,
       nullptr,
-      &m_pipeline
+      &pipeline
     )
     != VK_SUCCESS
   ) {
-    throw std::runtime_error("Failed to create graphics pipeline");
+    return VK_NULL_HANDLE;
   }
 
   vkDestroyShaderModule(m_device, vertexShaderModule, nullptr);
   vkDestroyShaderModule(m_device, fragShaderModule, nullptr);
-}
 
-VkShaderModule Pipeline::createShaderModule(const std::vector<char>& code) {
-  VkShaderModuleCreateInfo createInfo{};
-  createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-  createInfo.codeSize = code.size();
-  createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
-
-  VkShaderModule shaderModule;
-  if (
-    vkCreateShaderModule(m_device, &createInfo, nullptr, &shaderModule)
-    != VK_SUCCESS
-  ) {
-    throw std::runtime_error("Failed to create shader module");
-  }
-
-  return shaderModule;
+  return pipeline;
 }

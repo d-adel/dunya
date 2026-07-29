@@ -8,6 +8,7 @@
 #include <vector>
 #include <string>
 #include <span>
+#include <filesystem>
 
 enum class PipelineType {
   Mesh,
@@ -16,11 +17,13 @@ enum class PipelineType {
 };
 
 struct PipelineConfig {
+  std::string vert;
+  std::string frag;
   std::string vertexShader;
   std::string fragmentShader;
 
-  std::span<const VkVertexInputBindingDescription> bindingDescriptions{};
-  std::span<const VkVertexInputAttributeDescription> attributeDescriptions{};
+  std::vector<VkVertexInputBindingDescription> bindingDescriptions{};
+  std::vector<VkVertexInputAttributeDescription> attributeDescriptions{};
 
   VkCullModeFlags cullMode = VK_CULL_MODE_NONE;
 
@@ -49,16 +52,27 @@ public:
   const VkPipeline& pipeline() const noexcept;
   const VkPipelineLayout& pipelineLayout() const noexcept;
 
+  void reload();
+  bool sourcesChanged() const;
+
 private:
-  void create(
-    PipelineType type,
-    const Descriptors& descriptors,
-    const VkFormat& depthImageFormat
-  );
+  void makeConfig();
+  VkPipeline buildPipeline();
+  VkPipelineLayout buildPipelineLayout();
+
+  void create();
   VkShaderModule createShaderModule(const std::vector<char>& code);
-  VkPipelineLayout m_pipelineLayout;
-  VkPipeline m_pipeline;
+  VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
+  VkPipeline m_pipeline = VK_NULL_HANDLE;
 
   VkDevice m_device = VK_NULL_HANDLE;
   VkFormat m_swapChainImageFormat;
+  PipelineConfig m_config{};
+
+  VkDescriptorSetLayout m_setLayout;
+  VkFormat m_depthImageFormat;
+  PipelineType m_type;
+
+  std::filesystem::file_time_type m_vertTime;
+  std::filesystem::file_time_type m_fragTime;
 };

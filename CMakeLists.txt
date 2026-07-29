@@ -19,6 +19,15 @@ set(GLFW_BUILD_DOCS OFF)
 set(GLFW_BUILD_TESTS OFF)
 set(GLFW_BUILD_EXAMPLES OFF)
 
+# Shaders
+set(SHADER_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/shaders")
+set(SHADER_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/shaders")
+
+# Textures
+set(TEXTURE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/textures")
+
+# Models
+set(MODEL_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/models")
 
 # Fetch glm
 FetchContent_Declare(
@@ -79,25 +88,6 @@ add_executable(${PROJECT_NAME}
     src/field/field.cc
 )
 
-# Configuration
-target_compile_definitions(${PROJECT_NAME} PRIVATE
-    GLFW_INCLUDE_VULKAN
-    GLM_FORCE_RADIANS
-    GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
-    GLM_FORCE_DEPTH_ZERO_TO_ONE
-    GLM_ENABLE_EXPERIMENTAL
-)
-
-# Shaders
-set(SHADER_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/shaders")
-set(SHADER_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/shaders")
-
-# Textures
-set(TEXTURE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/textures")
-
-# Models
-set(MODEL_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/models")
-
 find_program(
     GLSLC_EXECUTABLE
     NAMES glslc
@@ -105,6 +95,17 @@ find_program(
         "$ENV{VULKAN_SDK}/Bin"
         "$ENV{VULKAN_SDK}/bin"
     REQUIRED
+)
+
+# Configuration
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    GLFW_INCLUDE_VULKAN
+    GLM_FORCE_RADIANS
+    GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
+    GLM_FORCE_DEPTH_ZERO_TO_ONE
+    GLM_ENABLE_EXPERIMENTAL
+    SHADER_SOURCE_DIR=\"${SHADER_SOURCE_DIR}\"
+    GLSLC_PATH=\"${GLSLC_EXECUTABLE}\"
 )
 
 file(
