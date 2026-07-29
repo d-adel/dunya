@@ -42,7 +42,7 @@ public:
   Pipeline(
     PipelineType type,
     const VkDevice& device,
-    const Descriptors& descriptors,
+    const VkDescriptorSetLayout& setLayout,
     const SwapChain& swapChain
   );
   Pipeline(Pipeline const&) = delete;

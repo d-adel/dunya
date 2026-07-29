@@ -86,6 +86,7 @@ add_executable(${PROJECT_NAME}
     src/scene/scene.cc
     src/frame/frame.cc
     src/field/field.cc
+    src/fieldpass/fieldpass.cc
 )
 
 find_program(

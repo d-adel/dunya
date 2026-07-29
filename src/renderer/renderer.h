@@ -6,6 +6,7 @@
 #include "descriptors/descriptors.h"
 #include "ubo/ubo.h"
 #include "frame/frame.h"
+#include "fieldpass/fieldpass.h"
 
 #include <vector>
 
@@ -15,6 +16,7 @@ class Renderer {
 public:
   Renderer(
     const Device& device,
+    FieldPass& fieldPass,
     const Pipeline& meshPipeline,
     const Pipeline& fieldPipeline,
     Descriptors& descriptors,
@@ -55,4 +57,5 @@ private:
   const Pipeline& m_meshPipeline;
   const Pipeline& m_fieldPipeline;
   Descriptors& m_descriptors;
+  FieldPass& m_fieldPass;
 };

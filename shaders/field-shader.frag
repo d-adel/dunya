@@ -1,22 +1,29 @@
 #version 450
 
-layout(push_constant) uniform PushConstantsBlock
-{
-    mat4 inverseViewProj;
-    vec4 cameraPos;
-} pushConstants;
-
-layout(location = 0) in vec4 ndc;
-layout(location = 0) out vec4 outColor;
-
-const vec3 sphereCenter = vec3(0.0, 0.0, 0.0);
-const vec3 boxCenter = vec3(1.2, 0.0, 0.0);
-const vec3 planeCenter = vec3(0.0, -2.0, 0.0);
-const float radius = 1.0;
+const int MAX_PRIMITIVES = 128;
 const float eps = 0.001;
 const int maxIter = 800;
 const float normalSampleOffset = 0.01;
 const float bias = 0.01;
+
+struct Primitive {
+  mat4 inverseModel;
+  vec4 shape;
+  uvec4 shapeConfig;
+};
+
+layout(std140, set = 0, binding = 0) uniform
+FieldScene { Primitive primitives[MAX_PRIMITIVES]; } scene;
+
+layout(push_constant) uniform PushConstantsBlock
+{
+    mat4 inverseViewProj;
+    vec4 cameraPos;
+    uint primitivesCount;
+} pushConstants;
+
+layout(location = 0) in vec4 ndc;
+layout(location = 0) out vec4 outColor;
 
 float smin(float a, float b, float k)
 {
@@ -43,51 +50,49 @@ float sdPlane(vec3 p, vec3 p0, vec3 n) {
     return dot(n, p - p0);
 }
 
-float minDistSphere(vec3 p) {
-  return distance(p, sphereCenter) - radius;
-}
-
-float minDistBox(vec3 p)
-{
-    return sdBox(
-        p,
-        boxCenter,
-        vec3(0.5, 0.5, 0.5)
-    );
-}
-
-float minDistPlane(vec3 p) {
-  return sdPlane(
-    p,
-    planeCenter,
-    vec3(0, 1.0, 0.0)
-  );
-}
-
-float shapeUnion(vec3 p) {
-  return min(minDistSphere(p), minDistBox(p));
-}
-
-float smoothUnion(vec3 p) {
-  return smin(minDistSphere(p), minDistBox(p), 0.4);
-}
-
-float shapeIntersection(vec3 p) {
-  return max(minDistSphere(p), minDistBox(p));
-}
-
-float shapeSubstraction(vec3 p) {
-  return max(minDistSphere(p), -minDistBox(p));
-}
-
 vec2 minMat(vec2 a, vec2 b) {
   return a.x < b.x ? a : b;
 }
 
+float primitiveDistance(vec3 p, Primitive prim) {
+  vec3 local = ((prim.inverseModel) * vec4(p, 1.0)).xyz;
+  switch(prim.shapeConfig.x) {
+    case 0u:
+      return length(local) - prim.shape.x;
+    case 1u:
+      return sdBox(local, vec3(0), prim.shape.xyz);
+    case 2u:
+      return local.y;
+    default:
+      return 1e9;
+  }
+}
+
 vec2 sceneDistance(vec3 p) {
-  vec2 a = vec2(smoothUnion(p), 0);
-  vec2 b = vec2(minDistPlane(p), 1);
-  return minMat(a, b);
+  vec2 acc = vec2(1e9, 0);
+  for (int i = 0; i < pushConstants.primitivesCount; ++i) {
+    vec2 cur = vec2(primitiveDistance(p, scene.primitives[i]),
+    float(scene.primitives[i].shapeConfig.y));
+    switch(scene.primitives[i].shapeConfig.z) {
+      case 1u:
+        {
+          float k = scene.primitives[i].shape.w;
+          acc = vec2(smin(acc.x, cur.x, k), acc.x < cur.x ? acc.y : cur.y);
+        }
+        break;
+      case 2u:
+        acc = acc.x > cur.x ? acc : cur;
+        break;
+      case 3u:
+        acc = vec2(max(acc.x, -cur.x), acc.y);
+        break;
+      default:
+        acc = minMat(acc, cur);
+        break;
+    }
+  }
+
+  return acc;
 }
 
 vec3 estimateNormal(vec3 p)

@@ -203,7 +203,7 @@ VkPresentModeKHR SwapChain::chooseSwapPresentMode(
 ) {
   // Later use VK_PRESENT_MODE_MAILBOX_KHR for better performance
   for (const auto& availablePresentMode : availablePresentModes) {
-    if (availablePresentMode == VK_PRESENT_MODE_FIFO_KHR) {
+    if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
       return availablePresentMode;
     }
   }

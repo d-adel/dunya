@@ -31,12 +31,12 @@ static bool compileShader(
 Pipeline::Pipeline(
   PipelineType type,
   const VkDevice& device,
-  const Descriptors& descriptors,
+  const VkDescriptorSetLayout& setLayout,
   const SwapChain& swapChain
 )
     : m_device(device),
       m_swapChainImageFormat(swapChain.imageFormat()),
-      m_setLayout(descriptors.setLayout()),
+      m_setLayout(setLayout),
       m_type(type),
       m_depthImageFormat(swapChain.depthImage().format()) {
   create();
@@ -83,8 +83,8 @@ void Pipeline::makeConfig() {
       m_config.cullMode = VK_CULL_MODE_NONE;
       m_config.depthTestEnable = VK_FALSE;
       m_config.depthWriteEnable = VK_FALSE;
-      m_config.descriptorSetLayout = VK_NULL_HANDLE;
-      m_config.setLayoutCount = 0;
+      m_config.descriptorSetLayout = m_setLayout;
+      m_config.setLayoutCount = 1;
       m_config.pushConstantSize = sizeof(FieldPushConstants);
       m_config.pushConstantStageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
       break;

@@ -2,6 +2,7 @@
 
 Renderer::Renderer(
   const Device& device,
+  FieldPass& fieldPass,
   const Pipeline& meshPipeline,
   const Pipeline& fieldPipeline,
   Descriptors& descriptors,
@@ -9,6 +10,7 @@ Renderer::Renderer(
   uint32_t imageCount
 )
     : m_device(device.vkDevice()),
+      m_fieldPass(fieldPass),
       m_meshPipeline(meshPipeline),
       m_fieldPipeline(fieldPipeline),
       m_descriptors(descriptors),
@@ -219,8 +221,20 @@ void Renderer::recordCommandBuffer(
   if (frameContext.mode == PipelineType::Field) {
     FieldPushConstants constants{
       glm::inverse(frameContext.proj * frameContext.view),
-      frameContext.cameraPos
+      frameContext.cameraPos,
+      static_cast<uint32_t>(m_fieldPass.primitives().size())
     };
+
+    vkCmdBindDescriptorSets(
+      m_commandBuffers[m_currentFrame],
+      VK_PIPELINE_BIND_POINT_GRAPHICS,
+      pipeline.pipelineLayout(),
+      0,
+      1,
+      &m_fieldPass.descriptorSet(),
+      0,
+      nullptr
+    );
 
     vkCmdPushConstants(
       m_commandBuffers[m_currentFrame],
