@@ -8,42 +8,6 @@ everything else.
 
 ![Textured OBJ mesh with depth and diffuse lighting](screenshots/viking-room.png)
 
-## What it does
-
-- **Dynamic rendering** (`vkCmdBeginRendering`) — no render pass, no
-  framebuffer objects. Swapchain image layout transitions
-  (`UNDEFINED → COLOR_ATTACHMENT_OPTIMAL → PRESENT_SRC_KHR`) are written as
-  explicit `VkImageMemoryBarrier2`s with per-barrier stage and access masks.
-- **Frames in flight** — two frames in flight with fences, one
-  image-available semaphore per frame and one render-finished semaphore *per
-  swapchain image*, submitted through `vkQueueSubmit2`.
-- **Resize-safe swapchain** — recreated on `VK_ERROR_OUT_OF_DATE_KHR`,
-  `VK_SUBOPTIMAL_KHR` or a framebuffer-size callback; blocks cleanly while the
-  window is minimised.
-- **Indexed meshes from OBJ** — tinyobjloader, vertices deduplicated through a
-  hash map, uploaded to device-local memory via staging buffers. Memory type
-  selection is hand-written against `VkPhysicalDeviceMemoryProperties`.
-- **Textures** — stb_image → staging buffer → `VK_IMAGE_TILING_OPTIMAL` image,
-  with the layout transitions and buffer-to-image copy done through one-shot
-  command buffers; sampled with a linear filter.
-- **Depth buffering** — dedicated depth image and view, cleared per frame,
-  `VK_COMPARE_OP_LESS`, transitioned into `DEPTH_ATTACHMENT_OPTIMAL` alongside
-  the colour barrier.
-- **MVP uniforms** — one uniform buffer per frame in flight, persistently
-  mapped, bound through a descriptor set together with the combined image
-  sampler.
-- **Fly camera** — quaternion yaw/pitch (pitch clamped to ±89°), perspective
-  projection with the Vulkan Y-flip and `GLM_FORCE_DEPTH_ZERO_TO_ONE`.
-- **Input system** — a per-key state machine producing `Pressed`, `Released`,
-  `SinglePressed`, `DoublePressed`, `Hold` and `Repeat` events with
-  configurable timings, delivered through a small type-indexed event
-  dispatcher. Input is focus-gated: alt-tabbing away releases the cursor and
-  drops held movement instead of stranding it.
-- **Diffuse lighting** — `max(0, N·L)` against a fixed directional light, in
-  GLSL, over the sampled albedo.
-- **Validation layers are always on**, in every configuration. A validation
-  message is treated as a bug, not a warning.
-
 ## Requirements
 
 - **LunarG Vulkan SDK** (developed against 1.4.350) with `VULKAN_SDK` set. It
@@ -75,76 +39,6 @@ Shaders are compiled to SPIR-V by `glslc` as a CMake build step (never by
 hand), and the compiled shaders, textures and models are copied next to the
 executable after every build, so the program must be run from its own output
 directory.
-
-## Controls
-
-| Input | Action |
-|---|---|
-| `W` / `A` / `S` / `D` | Move forward / left / back / right |
-| `E` / `Q` | Move up / down |
-| Mouse | Look |
-| `Esc` | Toggle input capture (releases the cursor) |
-
-Losing window focus suspends camera input and restores the cursor; regaining
-it resets the cursor delta so the view never jumps.
-
-## Architecture notes
-
-**One owner per resource.** Every Vulkan handle lives in a class that creates
-it in its constructor and destroys it in its destructor: `Instance`,
-`Surface`, `Device`, `SwapChain`, `Pipeline`, `Buffer`, `Image`, `Texture`,
-`DepthImage`, `Descriptors`, `Renderer`. Nothing calls `vkDestroy*` from
-application code, and there is no cleanup function to forget.
-
-**Rule of five below, rule of zero above.** Move constructors and move
-assignment are written by hand only in the classes that directly own raw
-handles — `Buffer` and `Image`. Classes composed of those (`Mesh`, `Texture`,
-`DepthImage`) get correct moves for free and are immune to the
-forgotten-member bug that hand-written moves invite.
-
-**Member declaration order is the initialisation order.** `Application` is
-composition and nothing else, and the order its members are declared in is
-load-bearing: `GLFWLibrary` is declared first so that `glfwInit()` happens
-before any window exists and `glfwTerminate()` happens after every GLFW-owning
-member is already destroyed. A constructor body runs *after* its members are
-built and a destructor body runs *before* they are destroyed, so a library
-lifetime can never live in a function body — it has to be a member.
-
-**Levels and deltas are different things.** A held key is state that survives
-across frames and is cleared by a release event; a cursor movement describes
-exactly one frame and is meaningless in the next. The cursor is therefore
-sampled unconditionally — even while input is gated — so that its baseline can
-never go stale, and only *consumption* is gated. Key presses are gated;
-releases never are, since dropping a release strands the state it was supposed
-to end.
-
-**Swapchain-owned handles are never cached.** Anything that a `recreate()` can
-replace — images, image views, extent — is queried live or passed as a
-parameter. A cached copy of a recreatable handle is a use-after-free with a
-delay.
-
-## Known limitations
-
-This is v0.1, and it is honest about what it is not:
-
-- The scene is hardcoded — a single mesh and texture, chosen in
-  `Application`'s constructor. There is no scene graph, no material system and
-  no asset pipeline.
-- No mipmaps and no MSAA; the sampler runs at a single LOD with anisotropy
-  disabled.
-- The normal matrix is `mat3(model)`, which is correct only for rotation and
-  uniform scale. A non-uniformly scaled model would light incorrectly.
-- One hardcoded directional light and a small constant ambient term. No
-  specular, no shadows, no point lights.
-
-## Next
-
-Beyond v0.1 the project moves toward **fields as an alternative spatial
-representation next to triangle meshes**: an analytic SDF ray marcher as a
-second pipeline composed into the same scene with correct depth interaction,
-then CPU-side field queries, a small fixed-timestep physics prototype, and
-editable fields where a single edit is reflected in both CPU collision and GPU
-rendering.
 
 ## Credits and references
 
