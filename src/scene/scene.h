@@ -2,7 +2,7 @@
 
 #include "texture/texture.h"
 #include "mesh/mesh.h"
-#include "descriptors/descriptors.h"
+#include "meshpass/meshpass.h"
 #include "frame/frame.h"
 
 #include <glm/glm.hpp>
@@ -17,14 +17,14 @@ public:
   Scene(Scene&&) = delete;
   Scene& operator=(Scene&&) = delete;
 
-  const Descriptors& descriptors() const noexcept;
-  Descriptors& descriptors();
+  const MeshPass& meshPass() const noexcept;
+  MeshPass& meshPass();
 
   void augmentFrameContext(Frame& frameContext) const;
 
 private:
   Texture m_texture;
-  Descriptors m_descriptors;
+  MeshPass m_meshPass;
 
   std::vector<Mesh> m_meshes;
   std::vector<DrawItem> m_drawItems;

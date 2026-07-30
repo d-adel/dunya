@@ -69,7 +69,7 @@ add_executable(${PROJECT_NAME}
     src/buffer/buffer.cc
     src/vertex/vertex.cc
     src/ubo/ubo.cc
-    src/descriptors/descriptors.cc
+    src/meshpass/meshpass.cc
     src/descriptorgroup/descriptorgroup.cc
     src/image/image.cc
     src/oneshot/oneshotcommand.cc

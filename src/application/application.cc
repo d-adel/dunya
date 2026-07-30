@@ -8,7 +8,7 @@ Application::Application()
       m_meshPipeline(
         PipelineType::Mesh,
         m_context.device().vkDevice(),
-        m_scene.descriptors().setLayout(),
+        m_scene.meshPass().setLayout(),
         m_swapChain
       ),
       m_fieldPipeline(
@@ -22,7 +22,7 @@ Application::Application()
         m_fieldPass,
         m_meshPipeline,
         m_fieldPipeline,
-        m_scene.descriptors(),
+        m_scene.meshPass(),
         m_context.surface().handle(),
         m_swapChain.imageCount()
       ),

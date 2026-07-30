@@ -2,7 +2,7 @@
 
 Scene::Scene(const Context& context)
     : m_texture(context.device(), "textures/viking_room.png"),
-      m_descriptors(context.device(), m_texture) {
+      m_meshPass(context.device(), m_texture) {
   glm::mat4 model = glm::rotate(
     glm::mat4(1.0f),
     glm::radians(-90.0f),
@@ -17,12 +17,12 @@ Scene::Scene(const Context& context)
   m_drawItems.emplace_back(DrawItem({0, model2}));
 }
 
-const Descriptors& Scene::descriptors() const noexcept {
-  return m_descriptors;
+const MeshPass& Scene::meshPass() const noexcept {
+  return m_meshPass;
 }
 
-Descriptors& Scene::descriptors() {
-  return m_descriptors;
+MeshPass& Scene::meshPass() {
+  return m_meshPass;
 }
 
 void Scene::augmentFrameContext(Frame& frameContext) const {

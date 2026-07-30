@@ -1,7 +1,7 @@
 #pragma once
 
 #include "swapchain/swapchain.h"
-#include "descriptors/descriptors.h"
+#include "meshpass/meshpass.h"
 #include "vertex/vertex.h"
 
 #include <vulkan/vulkan.h>

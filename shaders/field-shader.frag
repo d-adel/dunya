@@ -46,10 +46,6 @@ float sdBox(vec3 p, vec3 center, vec3 halfSize)
     return outsideDistance + insideDistance;
 }
 
-float sdPlane(vec3 p, vec3 p0, vec3 n) {
-    return dot(n, p - p0);
-}
-
 vec2 minMat(vec2 a, vec2 b) {
   return a.x < b.x ? a : b;
 }

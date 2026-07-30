@@ -1,6 +1,6 @@
-#include "descriptors.ih"
+#include "meshpass.ih"
 
-Descriptors::Descriptors(const Device& device, const Texture& texture)
+MeshPass::MeshPass(const Device& device, const Texture& texture)
     : m_group(
         device,
         MAX_FRAMES_IN_FLIGHT,
@@ -11,19 +11,19 @@ Descriptors::Descriptors(const Device& device, const Texture& texture)
           texture.sampler()}}
       ) {}
 
-void Descriptors::update(
+void MeshPass::update(
   uint32_t currentFrame,
   const UniformBufferObject& ubo
 ) {
   m_group.write(0, currentFrame, &ubo, sizeof(ubo));
 }
 
-const VkDescriptorSet& Descriptors::descriptorSet(
+const VkDescriptorSet& MeshPass::descriptorSet(
   uint32_t frame
 ) const noexcept {
   return m_group.descriptorSet(frame);
 }
 
-const VkDescriptorSetLayout& Descriptors::setLayout() const noexcept {
+const VkDescriptorSetLayout& MeshPass::setLayout() const noexcept {
   return m_group.setLayout();
 }

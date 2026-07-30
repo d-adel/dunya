@@ -5,7 +5,7 @@ Renderer::Renderer(
   FieldPass& fieldPass,
   const Pipeline& meshPipeline,
   const Pipeline& fieldPipeline,
-  Descriptors& descriptors,
+  MeshPass& meshPass,
   const VkSurfaceKHR& surface,
   uint32_t imageCount
 )
@@ -13,7 +13,7 @@ Renderer::Renderer(
       m_fieldPass(fieldPass),
       m_meshPipeline(meshPipeline),
       m_fieldPipeline(fieldPipeline),
-      m_descriptors(descriptors),
+      m_meshPass(meshPass),
       m_graphicsQueue(device.graphicsQueue()),
       m_presentQueue(device.presentQueue()) {
   createCommandPool(device.physicalDevice(), surface);
@@ -226,7 +226,7 @@ void Renderer::recordCommandBuffer(
       m_meshPipeline.pipelineLayout(),
       0,
       1,
-      &m_descriptors.descriptorSet(m_currentFrame),
+      &m_meshPass.descriptorSet(m_currentFrame),
       0,
       nullptr
     );
@@ -378,7 +378,7 @@ bool Renderer::drawFrame(
     ubo.view = frameContext.view;
     ubo.proj = frameContext.proj;
 
-    m_descriptors.update(m_currentFrame, ubo);
+    m_meshPass.update(m_currentFrame, ubo);
   }
 
   VkSubmitInfo2 submitInfo2{};

@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.h>
 #include "swapchain/swapchain.h"
 #include "pipeline/pipeline.h"
-#include "descriptors/descriptors.h"
+#include "meshpass/meshpass.h"
 #include "ubo/ubo.h"
 #include "frame/frame.h"
 #include "fieldpass/fieldpass.h"
@@ -19,7 +19,7 @@ public:
     FieldPass& fieldPass,
     const Pipeline& meshPipeline,
     const Pipeline& fieldPipeline,
-    Descriptors& descriptors,
+    MeshPass& meshPass,
     const VkSurfaceKHR& surface,
     uint32_t imageCount
   );
@@ -56,6 +56,6 @@ private:
 
   const Pipeline& m_meshPipeline;
   const Pipeline& m_fieldPipeline;
-  Descriptors& m_descriptors;
+  MeshPass& m_meshPass;
   FieldPass& m_fieldPass;
 };

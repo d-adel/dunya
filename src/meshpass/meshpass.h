@@ -7,16 +7,16 @@
 
 #include <cstdint>
 
-class Descriptors {
+class MeshPass {
 public:
-  Descriptors(const Device& device, const Texture& texture);
+  MeshPass(const Device& device, const Texture& texture);
 
-  Descriptors(Descriptors const&) = delete;
-  Descriptors& operator=(Descriptors const&) = delete;
-  Descriptors(Descriptors&&) = delete;
-  Descriptors& operator=(Descriptors&&) = delete;
+  MeshPass(MeshPass const&) = delete;
+  MeshPass& operator=(MeshPass const&) = delete;
+  MeshPass(MeshPass&&) = delete;
+  MeshPass& operator=(MeshPass&&) = delete;
 
-  ~Descriptors() = default;
+  ~MeshPass() = default;
 
   void update(uint32_t currentFrame, const UniformBufferObject& ubo);
 
