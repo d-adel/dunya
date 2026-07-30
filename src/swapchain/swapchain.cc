@@ -23,6 +23,19 @@ void SwapChain::cleanup() {
   vkDestroySwapchainKHR(m_context.device().vkDevice(), m_swapChain, nullptr);
 }
 
+void SwapChain::setUncapped(bool uncapped) {
+  if (m_uncapped == uncapped) {
+    return;
+  }
+
+  m_uncapped = uncapped;
+  recreate();
+}
+
+bool SwapChain::uncapped() const noexcept {
+  return m_uncapped;
+}
+
 const VkSwapchainKHR& SwapChain::handle() const noexcept {
   return m_swapChain;
 }
@@ -201,14 +214,20 @@ VkSurfaceFormatKHR SwapChain::chooseSwapSurfaceFormat(
 VkPresentModeKHR SwapChain::chooseSwapPresentMode(
   const std::vector<VkPresentModeKHR>& availablePresentModes
 ) {
-  // Later use VK_PRESENT_MODE_MAILBOX_KHR for better performance
+  if (m_uncapped) {
+    for (const auto& availablePresentMode : availablePresentModes) {
+      if (availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR) {
+        return availablePresentMode;
+      }
+    }
+  }
+
   for (const auto& availablePresentMode : availablePresentModes) {
     if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
       return availablePresentMode;
     }
   }
 
-  // Preferred on mobile devices
   return VK_PRESENT_MODE_FIFO_KHR;
 }
 

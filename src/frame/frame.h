@@ -17,5 +17,5 @@ struct Frame {
   glm::vec4 cameraPos = glm::vec4(1.0f);
   std::span<const DrawItem> drawItems = {};
   std::span<const Mesh> meshes = {};
-  PipelineType mode = PipelineType::Mesh;
+  PipelineType mode = PipelineType::Both;
 };

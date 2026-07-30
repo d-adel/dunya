@@ -56,8 +56,12 @@ const VkPipelineLayout& Pipeline::pipelineLayout() const noexcept {
 }
 
 void Pipeline::makeConfig() {
+  VkPushConstantRange pushConstant{};
+
+  m_config.pushConstantRanges.clear();
+
   switch (m_type) {
-    case PipelineType::Mesh:
+    case PipelineType::Mesh: {
       m_config.vert = SHADER_SOURCE_DIR "/shader.vert";
       m_config.frag = SHADER_SOURCE_DIR "/shader.frag";
       m_config.vertexShader = "shaders/shader.vert.spv";
@@ -71,22 +75,25 @@ void Pipeline::makeConfig() {
       m_config.depthWriteEnable = VK_TRUE;
       m_config.descriptorSetLayout = m_setLayout;
       m_config.setLayoutCount = 1;
-      m_config.pushConstantSize = sizeof(glm::mat4);
-      m_config.pushConstantStageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-      break;
 
+      pushConstant.offset = 0;
+      pushConstant.size = sizeof(glm::mat4);
+      pushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+      m_config.pushConstantRanges.push_back(pushConstant);
+      break;
+    }
     case PipelineType::Field:
       m_config.vert = SHADER_SOURCE_DIR "/field-shader.vert";
       m_config.frag = SHADER_SOURCE_DIR "/field-shader.frag";
       m_config.vertexShader = "shaders/field-shader.vert.spv";
       m_config.fragmentShader = "shaders/field-shader.frag.spv";
       m_config.cullMode = VK_CULL_MODE_NONE;
-      m_config.depthTestEnable = VK_FALSE;
-      m_config.depthWriteEnable = VK_FALSE;
+      m_config.depthTestEnable = VK_TRUE;
+      m_config.depthWriteEnable = VK_TRUE;
       m_config.descriptorSetLayout = m_setLayout;
       m_config.setLayoutCount = 1;
-      m_config.pushConstantSize = sizeof(FieldPushConstants);
-      m_config.pushConstantStageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
       break;
     default:
       throw std::invalid_argument("Unknown pipeline type");
@@ -166,17 +173,13 @@ VkShaderModule Pipeline::createShaderModule(const std::vector<char>& code) {
 VkPipelineLayout Pipeline::buildPipelineLayout() {
   VkPipelineLayout pipelineLayout;
 
-  VkPushConstantRange pushConstant{};
-  pushConstant.offset = 0;
-  pushConstant.size = m_config.pushConstantSize;
-  pushConstant.stageFlags = m_config.pushConstantStageFlags;
-
   VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
   pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
   pipelineLayoutInfo.setLayoutCount = m_config.setLayoutCount;
   pipelineLayoutInfo.pSetLayouts = &m_config.descriptorSetLayout;
-  pipelineLayoutInfo.pushConstantRangeCount = 1;
-  pipelineLayoutInfo.pPushConstantRanges = &pushConstant;
+  pipelineLayoutInfo.pushConstantRangeCount =
+    static_cast<uint32_t>(m_config.pushConstantRanges.size());
+  pipelineLayoutInfo.pPushConstantRanges = m_config.pushConstantRanges.data();
 
   if (
     vkCreatePipelineLayout(

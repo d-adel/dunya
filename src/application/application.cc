@@ -49,10 +49,27 @@ void Application::start() {
 
   double prevTime = glfwGetTime();
   double pipelineReloadCheck = 0;
+  double statWindowStart = prevTime;
+  uint32_t statFrames = 0;
   while (!glfwWindowShouldClose(m_context.window().handle())) {
     double now = glfwGetTime();
     float dt = static_cast<float>(now - prevTime);
     prevTime = now;
+
+    ++statFrames;
+    if (now - statWindowStart >= 1.0) {
+      const double elapsed = now - statWindowStart;
+      const double msPerFrame = (elapsed * 1000.0) / statFrames;
+
+      std::cout << modeName(m_frameContext.mode) << "  "
+                << m_swapChain.extent().width << "x"
+                << m_swapChain.extent().height << "  " << std::fixed
+                << std::setprecision(2) << msPerFrame << " ms  "
+                << std::setprecision(0) << (statFrames / elapsed) << " fps\n";
+
+      statWindowStart = now;
+      statFrames = 0;
+    }
 
     glfwPollEvents();
 
@@ -137,12 +154,21 @@ void Application::handleKeyEvent(const KeyEvent& event) {
 
   if (event.key == GLFW_KEY_P && event.type == KeyEventType::SinglePressed) {
     m_frameContext.mode = nextPipelineType(m_frameContext.mode);
-    std::cout << "Pipeline mode switched to:" << (int)m_frameContext.mode
+    std::cout << "Pipeline mode switched to: " << (int)m_frameContext.mode
               << '\n';
   }
 
   if (event.key == GLFW_KEY_R && event.type == KeyEventType::SinglePressed) {
     m_reloadRequested = true;
+    return;
+  }
+
+  if (event.key == GLFW_KEY_V && event.type == KeyEventType::SinglePressed) {
+    m_context.device().waitIdle();
+    m_swapChain.setUncapped(!m_swapChain.uncapped());
+    std::cout << "Present mode: "
+              << (m_swapChain.uncapped() ? "immediate" : "fifo/mailbox")
+              << '\n';
     return;
   }
 
@@ -194,13 +220,15 @@ std::vector<Primitive> Application::createPrimitives() {
   std::vector<Primitive> primitives;
 
   Primitive sphere{};
-  sphere.inverseModel = glm::mat4(1.0f);
+  sphere.inverseModel = glm::inverse(
+    glm::translate(glm::mat4(1.0f), glm::vec3(1.0f, 0.45f, 0.0f))
+  );
   sphere.shape = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
   sphere.shapeConfig = glm::uvec4(0, 0, 0, 0);
 
   Primitive box{};
   box.inverseModel = glm::inverse(
-    glm::translate(glm::mat4(1.0f), glm::vec3(1.2f, 0.0f, 0.0f))
+    glm::translate(glm::mat4(1.0f), glm::vec3(1.8f, 0.0f, 0.0f))
     * glm::rotate(
       glm::mat4(1.0f),
       glm::radians(30.0f),

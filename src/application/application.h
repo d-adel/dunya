@@ -47,6 +47,19 @@ private:
   EventDispatcher::SubscriptionId m_keySubscription{};
 };
 
+constexpr const char* modeName(PipelineType type) noexcept {
+  switch (type) {
+    case PipelineType::Mesh:
+      return "mesh ";
+    case PipelineType::Field:
+      return "field";
+    case PipelineType::Both:
+      return "both ";
+    default:
+      return "?    ";
+  }
+}
+
 constexpr PipelineType nextPipelineType(PipelineType current) noexcept {
   using Value = std::underlying_type_t<PipelineType>;
 

@@ -27,6 +27,9 @@ struct CameraInput {
 
 class Camera {
 public:
+  static constexpr float nearPlane = 0.1f;
+  static constexpr float farPlane = 10000.0f;
+
   Camera();
 
   Camera(const Camera&) = delete;

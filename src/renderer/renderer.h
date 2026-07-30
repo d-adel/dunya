@@ -8,9 +8,9 @@
 #include "frame/frame.h"
 #include "fieldpass/fieldpass.h"
 
-#include <vector>
+#include "config/config.h"
 
-constexpr int MAX_FRAMES_IN_FLIGHT = 2;
+#include <vector>
 
 class Renderer {
 public:

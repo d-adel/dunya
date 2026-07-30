@@ -195,15 +195,6 @@ void Renderer::recordCommandBuffer(
 
   vkCmdBeginRendering(m_commandBuffers[m_currentFrame], &renderingInfo);
 
-  const Pipeline& pipeline = (frameContext.mode == PipelineType::Mesh)
-                               ? m_meshPipeline
-                               : m_fieldPipeline;
-  vkCmdBindPipeline(
-    m_commandBuffers[m_currentFrame],
-    VK_PIPELINE_BIND_POINT_GRAPHICS,
-    pipeline.pipeline()
-  );
-
   VkViewport viewport{};
   viewport.x = 0.0f;
   viewport.y = 0.0f;
@@ -218,45 +209,28 @@ void Renderer::recordCommandBuffer(
   scissor.extent = swapChain.extent();
   vkCmdSetScissor(m_commandBuffers[m_currentFrame], 0, 1, &scissor);
 
-  if (frameContext.mode == PipelineType::Field) {
-    FieldPushConstants constants{
-      glm::inverse(frameContext.proj * frameContext.view),
-      frameContext.cameraPos,
-      static_cast<uint32_t>(m_fieldPass.primitives().size())
-    };
+  bool drawMeshes = frameContext.mode == PipelineType::Mesh
+                    || frameContext.mode == PipelineType::Both;
+  bool drawField = frameContext.mode == PipelineType::Field
+                   || frameContext.mode == PipelineType::Both;
+  if (drawMeshes) {
+    vkCmdBindPipeline(
+      m_commandBuffers[m_currentFrame],
+      VK_PIPELINE_BIND_POINT_GRAPHICS,
+      m_meshPipeline.pipeline()
+    );
 
     vkCmdBindDescriptorSets(
       m_commandBuffers[m_currentFrame],
       VK_PIPELINE_BIND_POINT_GRAPHICS,
-      pipeline.pipelineLayout(),
+      m_meshPipeline.pipelineLayout(),
       0,
       1,
-      &m_fieldPass.descriptorSet(),
+      &m_descriptors.descriptorSet(m_currentFrame),
       0,
       nullptr
     );
 
-    vkCmdPushConstants(
-      m_commandBuffers[m_currentFrame],
-      pipeline.pipelineLayout(),
-      VK_SHADER_STAGE_FRAGMENT_BIT,
-      0,
-      sizeof(FieldPushConstants),
-      &constants
-    );
-
-    vkCmdDraw(m_commandBuffers[m_currentFrame], 3, 1, 0, 0);
-  } else if (frameContext.mode == PipelineType::Mesh) {
-    vkCmdBindDescriptorSets(
-      m_commandBuffers[m_currentFrame],
-      VK_PIPELINE_BIND_POINT_GRAPHICS,
-      pipeline.pipelineLayout(),
-      0,
-      1,
-      &m_descriptors.descriptorSets()[m_currentFrame],
-      0,
-      nullptr
-    );
     for (const auto& item : frameContext.drawItems) {
       assert(item.meshIndex < frameContext.meshes.size());
 
@@ -280,7 +254,7 @@ void Renderer::recordCommandBuffer(
 
       vkCmdPushConstants(
         m_commandBuffers[m_currentFrame],
-        pipeline.pipelineLayout(),
+        m_meshPipeline.pipelineLayout(),
         VK_SHADER_STAGE_VERTEX_BIT,
         0,
         sizeof(glm::mat4),
@@ -296,8 +270,38 @@ void Renderer::recordCommandBuffer(
         0
       );
     }
-  } else {
-    throw std::invalid_argument("Uknown pipeline type");
+  }
+
+  if (drawField) {
+    const glm::mat4 viewProj = frameContext.proj * frameContext.view;
+
+    const FieldFrame fieldFrame{
+      glm::inverse(viewProj),
+      viewProj,
+      frameContext.cameraPos,
+      glm::uvec4(m_fieldPass.primitiveCount(), 0, 0, 0)
+    };
+
+    m_fieldPass.update(m_currentFrame, fieldFrame);
+
+    vkCmdBindPipeline(
+      m_commandBuffers[m_currentFrame],
+      VK_PIPELINE_BIND_POINT_GRAPHICS,
+      m_fieldPipeline.pipeline()
+    );
+
+    vkCmdBindDescriptorSets(
+      m_commandBuffers[m_currentFrame],
+      VK_PIPELINE_BIND_POINT_GRAPHICS,
+      m_fieldPipeline.pipelineLayout(),
+      0,
+      1,
+      &m_fieldPass.descriptorSet(m_currentFrame),
+      0,
+      nullptr
+    );
+
+    vkCmdDraw(m_commandBuffers[m_currentFrame], 3, 1, 0, 0);
   }
 
   vkCmdEndRendering(m_commandBuffers[m_currentFrame]);
@@ -366,7 +370,10 @@ bool Renderer::drawFrame(
   vkResetCommandBuffer(m_commandBuffers[m_currentFrame], 0);
   recordCommandBuffer(swapChain, frameContext);
 
-  if (frameContext.mode == PipelineType::Mesh) {
+  if (
+    frameContext.mode == PipelineType::Mesh
+    || frameContext.mode == PipelineType::Both
+  ) {
     UniformBufferObject ubo{};
     ubo.view = frameContext.view;
     ubo.proj = frameContext.proj;

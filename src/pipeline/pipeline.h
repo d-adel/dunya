@@ -13,6 +13,7 @@
 enum class PipelineType {
   Mesh,
   Field,
+  Both,
   Count
 };
 
@@ -32,9 +33,7 @@ struct PipelineConfig {
 
   uint32_t setLayoutCount = 0;
   VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
-
-  uint32_t pushConstantSize = 0;
-  VkShaderStageFlags pushConstantStageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+  std::vector<VkPushConstantRange> pushConstantRanges{};
 };
 
 class Pipeline {

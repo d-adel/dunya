@@ -70,6 +70,7 @@ add_executable(${PROJECT_NAME}
     src/vertex/vertex.cc
     src/ubo/ubo.cc
     src/descriptors/descriptors.cc
+    src/descriptorgroup/descriptorgroup.cc
     src/image/image.cc
     src/oneshot/oneshotcommand.cc
     src/texture/stb_image_impl.cc

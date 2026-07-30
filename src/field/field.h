@@ -21,10 +21,11 @@
  * .w = bias
  */
 
-struct FieldPushConstants {
+struct FieldFrame {
   glm::mat4 inverseViewProj;
+  glm::mat4 viewProj;
   glm::vec4 cameraPos;
-  glm::uint primitivesCount;
+  glm::uvec4 primitiveCount;
 };
 
 struct Primitive {

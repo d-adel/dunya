@@ -1,0 +1,6 @@
+#include "descriptorgroup.h"
+
+#include <cassert>
+#include <cstring>
+#include <stdexcept>
+#include <utility>

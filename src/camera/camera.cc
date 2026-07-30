@@ -33,7 +33,7 @@ glm::mat4 Camera::rotationMatrix() const {
 
 glm::mat4 Camera::projectionMatrix(float aspect) const {
   glm::mat4 projection =
-    glm::perspective(glm::radians(70.f), aspect, 0.1f, 10000.f);
+    glm::perspective(glm::radians(70.f), aspect, nearPlane, farPlane);
 
   projection[1][1] *= -1;
 
@@ -41,5 +41,5 @@ glm::mat4 Camera::projectionMatrix(float aspect) const {
 }
 
 glm::vec4 Camera::position() const {
-  return glm::vec4(m_position, 1.0f);
+  return glm::vec4(m_position, nearPlane);
 }

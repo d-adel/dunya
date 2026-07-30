@@ -15,12 +15,12 @@ struct Primitive {
 layout(std140, set = 0, binding = 0) uniform
 FieldScene { Primitive primitives[MAX_PRIMITIVES]; } scene;
 
-layout(push_constant) uniform PushConstantsBlock
-{
-    mat4 inverseViewProj;
-    vec4 cameraPos;
-    uint primitivesCount;
-} pushConstants;
+layout(std140, set = 0, binding = 1) uniform FieldFrame {
+  mat4 inverseViewProj;
+  mat4 viewProj;
+  vec4 cameraPos;
+  uvec4 primitiveCount;
+} frame;
 
 layout(location = 0) in vec4 ndc;
 layout(location = 0) out vec4 outColor;
@@ -70,7 +70,7 @@ float primitiveDistance(vec3 p, Primitive prim) {
 
 vec2 sceneDistance(vec3 p) {
   vec2 acc = vec2(1e9, 0);
-  for (int i = 0; i < pushConstants.primitivesCount; ++i) {
+  for (uint i = 0u; i < frame.primitiveCount.x; ++i) {
     vec2 cur = vec2(primitiveDistance(p, scene.primitives[i]),
     float(scene.primitives[i].shapeConfig.y));
     switch(scene.primitives[i].shapeConfig.z) {
@@ -110,7 +110,7 @@ vec3 estimateNormal(vec3 p)
 
 bool march(vec3 origin, vec3 direction, out vec3 hitPosition, out float materialId)
 {
-    float distanceTravelled = 0.0;
+    float distanceTravelled = 0;
 
     for (int i = 0; i < maxIter; ++i)
     {
@@ -138,33 +138,52 @@ bool march(vec3 origin, vec3 direction, out vec3 hitPosition, out float material
     return false;
 }
 
+vec3 albedo(float materialId) {
+  if (int(materialId + 0.5) == 0) {
+    return vec3(0.5, 0.0, 0.3);
+  } else {
+    return vec3(0.7, 0.6, 0.3);
+  }
+}
+
 void main()
 {
+
+    vec2 inside = sceneDistance(frame.cameraPos.xyz);
+    if (inside.x <= frame.cameraPos.w) {
+      gl_FragDepth = 0.0;
+      outColor = vec4(albedo(inside.y), 1);
+      return;
+    }
+
     vec4 clipPosition = vec4(ndc.xy, 1.0, 1.0);
 
     vec4 worldPosition =
-        pushConstants.inverseViewProj * clipPosition;
+        frame.inverseViewProj * clipPosition;
 
     worldPosition /= worldPosition.w;
 
     vec3 direction = normalize(
-        worldPosition.xyz - pushConstants.cameraPos.xyz
+        worldPosition.xyz - frame.cameraPos.xyz
     );
 
     vec3 hitPosition;
     float materialId;
-    if (march(pushConstants.cameraPos.xyz, direction, hitPosition, materialId))
+    if (march(frame.cameraPos.xyz, direction, hitPosition, materialId))
     {
+      vec3 surfaceAlbedo = albedo(materialId);
+
+      vec4 clip = frame.viewProj * vec4(hitPosition, 1.0);
+      float depth = clip.z / clip.w;
+      if (depth <= 0 || isinf(depth) || isnan(depth)) {
+        discard;
+      }
+      gl_FragDepth = depth;
+
       vec3 lightDir = normalize(vec3(0.4, 1.0, 0.6));
       vec3 normal = estimateNormal(hitPosition);
       float diffuse = max(0.0, dot(normal, lightDir));
 
-      vec3 albedo;
-      if (int(materialId + 0.5) == 0) {
-        albedo = vec3(0.5, 0.0, 0.3);
-      } else {
-        albedo = vec3(0.7, 0.6, 0.3);
-      }
 
       vec3 shadowHit;
       bool shadowed = false;
@@ -176,11 +195,11 @@ void main()
 
       float ambient = 0.005;
 
-      vec3 color = vec3(albedo * (ambient + diffuse * (shadowed ? 0.0 : 1.0)));
+      vec3 color = vec3(surfaceAlbedo * (ambient + diffuse * (shadowed ? 0.0 : 1.0)));
       outColor = vec4(color, 1.0);
     }
     else
     {
-        outColor = vec4(0.01, 0.01, 0.01, 1.0);
+        discard;
     }
 }

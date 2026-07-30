@@ -12,6 +12,9 @@ public:
   ~SwapChain();
 
   void recreate();
+  void setUncapped(bool uncapped);
+  bool uncapped() const noexcept;
+
   const VkSwapchainKHR& handle() const noexcept;
   const DepthImage& depthImage() const noexcept;
   const VkFormat& imageFormat() const noexcept;
@@ -40,4 +43,5 @@ private:
   DepthImage m_depthImage;
   std::vector<VkImage> m_images;
   std::vector<VkImageView> m_imageViews;
+  bool m_uncapped = false;
 };
