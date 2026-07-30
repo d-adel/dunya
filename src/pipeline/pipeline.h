@@ -31,8 +31,7 @@ struct PipelineConfig {
   VkBool32 depthTestEnable = VK_TRUE;
   VkBool32 depthWriteEnable = VK_TRUE;
 
-  uint32_t setLayoutCount = 0;
-  VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
+  std::vector<VkDescriptorSetLayout> setLayouts{};
   std::vector<VkPushConstantRange> pushConstantRanges{};
 };
 
@@ -41,7 +40,7 @@ public:
   Pipeline(
     PipelineType type,
     const VkDevice& device,
-    const VkDescriptorSetLayout& setLayout,
+    const std::vector<VkDescriptorSetLayout>& setLayouts,
     const SwapChain& swapChain
   );
   Pipeline(Pipeline const&) = delete;
@@ -68,7 +67,7 @@ private:
   VkFormat m_swapChainImageFormat;
   PipelineConfig m_config{};
 
-  VkDescriptorSetLayout m_setLayout;
+  std::vector<VkDescriptorSetLayout> m_setLayouts;
   VkFormat m_depthImageFormat;
   PipelineType m_type;
 

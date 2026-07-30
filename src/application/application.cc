@@ -4,17 +4,18 @@ Application::Application()
     : m_input(m_context.window().handle()),
       m_swapChain(m_context),
       m_scene(m_context),
-      m_fieldPass(m_context.device(), Application::createPrimitives()),
+      m_meshPass(m_context.device()),
+      m_fieldPass(m_context.device(), m_scene.primitives()),
       m_meshPipeline(
         PipelineType::Mesh,
         m_context.device().vkDevice(),
-        m_scene.meshPass().setLayout(),
+        std::vector<VkDescriptorSetLayout>{m_meshPass.setLayout()},
         m_swapChain
       ),
       m_fieldPipeline(
         PipelineType::Field,
         m_context.device().vkDevice(),
-        m_fieldPass.setLayout(),
+        std::vector<VkDescriptorSetLayout>{m_fieldPass.setLayout()},
         m_swapChain
       ),
       m_renderer(
@@ -22,7 +23,7 @@ Application::Application()
         m_fieldPass,
         m_meshPipeline,
         m_fieldPipeline,
-        m_scene.meshPass(),
+        m_meshPass,
         m_context.surface().handle(),
         m_swapChain.imageCount()
       ),
@@ -115,10 +116,12 @@ void Application::start() {
     float aspect = static_cast<float>(m_swapChain.extent().width)
                    / static_cast<float>(m_swapChain.extent().height);
 
+    // ---------- Frame context ----------
     m_frameContext.proj = m_camera.projectionMatrix(aspect);
     m_frameContext.view = m_camera.viewMatrix();
     m_frameContext.cameraPos = m_camera.position();
     m_scene.augmentFrameContext(m_frameContext);
+    // -----------------------------------
 
     if (
       m_context.window().takeResized()
@@ -214,39 +217,4 @@ void Application::handleKeyEvent(const KeyEvent& event) {
     default:
       break;
   }
-}
-
-std::vector<Primitive> Application::createPrimitives() {
-  std::vector<Primitive> primitives;
-
-  Primitive sphere{};
-  sphere.inverseModel = glm::inverse(
-    glm::translate(glm::mat4(1.0f), glm::vec3(1.0f, 0.45f, 0.0f))
-  );
-  sphere.shape = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
-  sphere.shapeConfig = glm::uvec4(0, 0, 0, 0);
-
-  Primitive box{};
-  box.inverseModel = glm::inverse(
-    glm::translate(glm::mat4(1.0f), glm::vec3(1.8f, 0.0f, 0.0f))
-    * glm::rotate(
-      glm::mat4(1.0f),
-      glm::radians(30.0f),
-      glm::vec3(0.0f, 1.0f, 0.0f)
-    )
-  );
-  box.shape = glm::vec4(0.5f, 0.5f, 0.5f, 0.4f);
-  box.shapeConfig = glm::uvec4(1, 0, 1, 0);
-
-  Primitive plane{};
-  plane.inverseModel =
-    glm::inverse(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -2.0f, 0.0f)));
-  plane.shape = glm::vec4(0.0f);
-  plane.shapeConfig = glm::uvec4(2, 1, 0, 0);
-
-  primitives.push_back(sphere);
-  primitives.push_back(box);
-  primitives.push_back(plane);
-
-  return primitives;
 }

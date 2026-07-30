@@ -31,12 +31,12 @@ static bool compileShader(
 Pipeline::Pipeline(
   PipelineType type,
   const VkDevice& device,
-  const VkDescriptorSetLayout& setLayout,
+  const std::vector<VkDescriptorSetLayout>& setLayouts,
   const SwapChain& swapChain
 )
     : m_device(device),
       m_swapChainImageFormat(swapChain.imageFormat()),
-      m_setLayout(setLayout),
+      m_setLayouts(setLayouts),
       m_type(type),
       m_depthImageFormat(swapChain.depthImage().format()) {
   create();
@@ -73,8 +73,7 @@ void Pipeline::makeConfig() {
       m_config.cullMode = VK_CULL_MODE_BACK_BIT;
       m_config.depthTestEnable = VK_TRUE;
       m_config.depthWriteEnable = VK_TRUE;
-      m_config.descriptorSetLayout = m_setLayout;
-      m_config.setLayoutCount = 1;
+      m_config.setLayouts = m_setLayouts;
 
       pushConstant.offset = 0;
       pushConstant.size = sizeof(glm::mat4);
@@ -91,8 +90,7 @@ void Pipeline::makeConfig() {
       m_config.cullMode = VK_CULL_MODE_NONE;
       m_config.depthTestEnable = VK_TRUE;
       m_config.depthWriteEnable = VK_TRUE;
-      m_config.descriptorSetLayout = m_setLayout;
-      m_config.setLayoutCount = 1;
+      m_config.setLayouts = m_setLayouts;
 
       break;
     default:
@@ -175,8 +173,9 @@ VkPipelineLayout Pipeline::buildPipelineLayout() {
 
   VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
   pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-  pipelineLayoutInfo.setLayoutCount = m_config.setLayoutCount;
-  pipelineLayoutInfo.pSetLayouts = &m_config.descriptorSetLayout;
+  pipelineLayoutInfo.setLayoutCount =
+    static_cast<uint32_t>(m_config.setLayouts.size());
+  pipelineLayoutInfo.pSetLayouts = m_config.setLayouts.data();
   pipelineLayoutInfo.pushConstantRangeCount =
     static_cast<uint32_t>(m_config.pushConstantRanges.size());
   pipelineLayoutInfo.pPushConstantRanges = m_config.pushConstantRanges.data();

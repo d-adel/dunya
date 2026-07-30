@@ -1,11 +1,11 @@
 #pragma once
 
-#include "texture/texture.h"
+#include "field/field.h"
 #include "mesh/mesh.h"
-#include "meshpass/meshpass.h"
 #include "frame/frame.h"
 
 #include <glm/glm.hpp>
+#include <vector>
 
 class Scene {
 public:
@@ -17,15 +17,14 @@ public:
   Scene(Scene&&) = delete;
   Scene& operator=(Scene&&) = delete;
 
-  const MeshPass& meshPass() const noexcept;
-  MeshPass& meshPass();
-
   void augmentFrameContext(Frame& frameContext) const;
 
-private:
-  Texture m_texture;
-  MeshPass m_meshPass;
+  const std::vector<Primitive>& primitives() const noexcept;
 
+private:
+  static std::vector<Primitive> createPrimitives();
+
+  std::vector<Primitive> m_primitives;
   std::vector<Mesh> m_meshes;
   std::vector<DrawItem> m_drawItems;
 };

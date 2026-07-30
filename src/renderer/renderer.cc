@@ -279,7 +279,7 @@ void Renderer::recordCommandBuffer(
       glm::inverse(viewProj),
       viewProj,
       frameContext.cameraPos,
-      glm::uvec4(m_fieldPass.primitiveCount(), 0, 0, 0)
+      glm::uvec4(frameContext.primitives.size(), 0, 0, 0)
     };
 
     m_fieldPass.update(m_currentFrame, fieldFrame);

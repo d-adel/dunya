@@ -2,7 +2,7 @@
 
 FieldPass::FieldPass(
   const Device& device,
-  const std::vector<Primitive>& primitives
+  std::span<const Primitive> primitives
 )
     : m_group(
         device,
@@ -12,8 +12,7 @@ FieldPass::FieldPass(
           VK_SHADER_STAGE_FRAGMENT_BIT,
           false},
          {1, sizeof(FieldFrame), VK_SHADER_STAGE_FRAGMENT_BIT, true}}
-      ),
-      m_primitiveCount(static_cast<uint32_t>(primitives.size())) {
+      ) {
   if (primitives.size() > MAX_PRIMITIVES) {
     throw std::runtime_error("More primitives than the field buffer holds");
   }
@@ -29,12 +28,6 @@ const VkDescriptorSetLayout& FieldPass::setLayout() const noexcept {
   return m_group.setLayout();
 }
 
-const VkDescriptorSet& FieldPass::descriptorSet(
-  uint32_t frame
-) const noexcept {
+const VkDescriptorSet& FieldPass::descriptorSet(uint32_t frame) const noexcept {
   return m_group.descriptorSet(frame);
-}
-
-uint32_t FieldPass::primitiveCount() const noexcept {
-  return m_primitiveCount;
 }

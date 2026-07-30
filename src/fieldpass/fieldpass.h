@@ -5,13 +5,13 @@
 #include "field/field.h"
 
 #include <cstdint>
-#include <vector>
+#include <span>
 
 constexpr uint32_t MAX_PRIMITIVES = 128;
 
 class FieldPass {
 public:
-  FieldPass(const Device& device, const std::vector<Primitive>& primitives);
+  FieldPass(const Device& device, std::span<const Primitive> primitives);
 
   FieldPass(const FieldPass&) = delete;
   FieldPass& operator=(const FieldPass&) = delete;
@@ -24,9 +24,7 @@ public:
 
   const VkDescriptorSetLayout& setLayout() const noexcept;
   const VkDescriptorSet& descriptorSet(uint32_t frame) const noexcept;
-  uint32_t primitiveCount() const noexcept;
 
 private:
   DescriptorGroup m_group;
-  uint32_t m_primitiveCount;
 };

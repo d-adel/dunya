@@ -9,7 +9,7 @@
 
 class MeshPass {
 public:
-  MeshPass(const Device& device, const Texture& texture);
+  MeshPass(const Device& device);
 
   MeshPass(MeshPass const&) = delete;
   MeshPass& operator=(MeshPass const&) = delete;
@@ -24,5 +24,6 @@ public:
   const VkDescriptorSetLayout& setLayout() const noexcept;
 
 private:
+  Texture m_texture;
   DescriptorGroup m_group;
 };

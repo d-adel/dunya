@@ -2,6 +2,7 @@
 
 #include "mesh/mesh.h"
 #include "pipeline/pipeline.h"
+#include "field/field.h"
 
 #include <glm/glm.hpp>
 #include <span>
@@ -17,5 +18,6 @@ struct Frame {
   glm::vec4 cameraPos = glm::vec4(1.0f);
   std::span<const DrawItem> drawItems = {};
   std::span<const Mesh> meshes = {};
+  std::span<const Primitive> primitives = {};
   PipelineType mode = PipelineType::Both;
 };

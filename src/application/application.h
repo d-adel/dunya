@@ -7,6 +7,7 @@
 #include "camera/camera.h"
 #include "input/input.h"
 #include "frame/frame.h"
+#include "meshpass/meshpass.h"
 #include "fieldpass/fieldpass.h"
 #include "field/field.h"
 
@@ -23,8 +24,6 @@ public:
   void clearCameraInput() noexcept;
   void start();
 
-  static std::vector<Primitive> createPrimitives();
-
 private:
   void handleKeyEvent(const KeyEvent& event);
   bool acceptsInput() const noexcept;
@@ -34,6 +33,7 @@ private:
   Camera m_camera;
   SwapChain m_swapChain;
   Scene m_scene;
+  MeshPass m_meshPass;
   FieldPass m_fieldPass;
   Pipeline m_meshPipeline;
   Pipeline m_fieldPipeline;
