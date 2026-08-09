@@ -7,9 +7,16 @@ DescriptorGroup::DescriptorGroup(
   std::vector<ImageBinding> images
 )
     : m_device(device.vkDevice()), m_frameCount(frameCount) {
+  for (const auto& image : images) {
+    if (image.elements.size() > image.capacity) {
+      throw std::runtime_error(
+        "Number of image bindings larger than the current capacity"
+      );
+    }
+  }
   createSetLayout(buffers, images);
   createBuffers(device, buffers);
-  createPool(buffers.size(), images.size());
+  createPool(buffers.size(), images);
   createSets(images);
 }
 
@@ -53,7 +60,9 @@ void DescriptorGroup::createSetLayout(
   const std::vector<ImageBinding>& images
 ) {
   std::vector<VkDescriptorSetLayoutBinding> bindings;
+  std::vector<VkDescriptorBindingFlags> bindingFlags;
   bindings.reserve(buffers.size() + images.size());
+  bindingFlags.reserve(buffers.size() + images.size());
 
   for (const BufferBinding& buffer : buffers) {
     VkDescriptorSetLayoutBinding layoutBinding{};
@@ -64,23 +73,47 @@ void DescriptorGroup::createSetLayout(
     layoutBinding.pImmutableSamplers = nullptr;
 
     bindings.push_back(layoutBinding);
+    bindingFlags.push_back(0);
   }
 
   for (const ImageBinding& image : images) {
     VkDescriptorSetLayoutBinding layoutBinding{};
     layoutBinding.binding = image.binding;
     layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    layoutBinding.descriptorCount = 1;
+    layoutBinding.descriptorCount = image.capacity;
     layoutBinding.stageFlags = image.stages;
     layoutBinding.pImmutableSamplers = nullptr;
 
     bindings.push_back(layoutBinding);
+    bindingFlags.push_back(
+      VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT
+      | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT
+    );
   }
+
+  VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsInfo{};
+  bindingFlagsInfo.sType =
+    VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+  bindingFlagsInfo.pBindingFlags = bindingFlags.data();
+  bindingFlagsInfo.bindingCount = static_cast<uint32_t>(bindingFlags.size());
+
+  bool hasUpdateAfterBindBit = std::any_of(
+    bindingFlags.begin(),
+    bindingFlags.end(),
+    [](VkDescriptorBindingFlags n) {
+      return (n & VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT) != 0;
+    }
+  );
 
   VkDescriptorSetLayoutCreateInfo layoutInfo{};
   layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
   layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
   layoutInfo.pBindings = bindings.data();
+  layoutInfo.flags =
+    hasUpdateAfterBindBit
+      ? VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT
+      : 0;
+  layoutInfo.pNext = &bindingFlagsInfo;
 
   if (
     vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_setLayout)
@@ -134,7 +167,10 @@ void DescriptorGroup::createBuffers(
   }
 }
 
-void DescriptorGroup::createPool(size_t bufferCount, size_t imageCount) {
+void DescriptorGroup::createPool(
+  size_t bufferCount,
+  const std::vector<ImageBinding>& images
+) {
   std::vector<VkDescriptorPoolSize> poolSizes;
 
   if (bufferCount > 0) {
@@ -146,11 +182,16 @@ void DescriptorGroup::createPool(size_t bufferCount, size_t imageCount) {
     poolSizes.push_back(poolSize);
   }
 
-  if (imageCount > 0) {
+  size_t totalCapacity = 0;
+  for (const auto& item : images) {
+    totalCapacity += item.capacity;
+  }
+
+  if (totalCapacity > 0) {
     VkDescriptorPoolSize poolSize{};
     poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSize.descriptorCount = static_cast<uint32_t>(imageCount) * m_frameCount;
-
+    poolSize.descriptorCount =
+      static_cast<uint32_t>(totalCapacity) * m_frameCount;
     poolSizes.push_back(poolSize);
   }
 
@@ -159,6 +200,7 @@ void DescriptorGroup::createPool(size_t bufferCount, size_t imageCount) {
   poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
   poolInfo.pPoolSizes = poolSizes.data();
   poolInfo.maxSets = m_frameCount;
+  poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
 
   if (
     vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_pool) != VK_SUCCESS
@@ -184,13 +226,18 @@ void DescriptorGroup::createSets(const std::vector<ImageBinding>& images) {
     throw std::runtime_error("Failed to allocate descriptor sets");
   }
 
+  size_t totalCapacity = 0;
+  for (const auto& item : images) {
+    totalCapacity += item.capacity;
+  }
+
   for (uint32_t frame = 0; frame < m_frameCount; ++frame) {
-    std::vector<VkDescriptorBufferInfo> bufferInfos;
     std::vector<VkDescriptorImageInfo> imageInfos;
     std::vector<VkWriteDescriptorSet> writes;
+    std::vector<VkDescriptorBufferInfo> bufferInfos;
 
     bufferInfos.reserve(m_slots.size());
-    imageInfos.reserve(images.size());
+    imageInfos.reserve(totalCapacity);
     writes.reserve(m_slots.size() + images.size());
 
     for (const Slot& slot : m_slots) {
@@ -200,6 +247,10 @@ void DescriptorGroup::createSets(const std::vector<ImageBinding>& images) {
       bufferInfo.range = slot.size;
 
       bufferInfos.push_back(bufferInfo);
+    }
+
+    for (size_t i = 0; i < m_slots.size(); ++i) {
+      const Slot& slot = m_slots[i];
 
       VkWriteDescriptorSet write{};
       write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -208,18 +259,28 @@ void DescriptorGroup::createSets(const std::vector<ImageBinding>& images) {
       write.dstArrayElement = 0;
       write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
       write.descriptorCount = 1;
-      write.pBufferInfo = &bufferInfos.back();
+      write.pBufferInfo = bufferInfos.data() + i;
 
       writes.push_back(write);
     }
 
+    size_t offset = 0;
     for (const ImageBinding& image : images) {
-      VkDescriptorImageInfo imageInfo{};
-      imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-      imageInfo.imageView = image.view;
-      imageInfo.sampler = image.sampler;
+      size_t count = image.elements.size();
 
-      imageInfos.push_back(imageInfo);
+      if (count <= 0) {
+        continue;
+      }
+
+      for (const auto& element : image.elements) {
+        VkDescriptorImageInfo imageInfo{};
+        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+        imageInfo.imageView = element.view;
+        imageInfo.sampler = element.sampler;
+
+        imageInfos.push_back(imageInfo);
+      }
 
       VkWriteDescriptorSet write{};
       write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -227,10 +288,11 @@ void DescriptorGroup::createSets(const std::vector<ImageBinding>& images) {
       write.dstBinding = image.binding;
       write.dstArrayElement = 0;
       write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-      write.descriptorCount = 1;
-      write.pImageInfo = &imageInfos.back();
+      write.descriptorCount = static_cast<uint32_t>(count);
+      write.pImageInfo = imageInfos.data() + offset;
 
       writes.push_back(write);
+      offset += count;
     }
 
     vkUpdateDescriptorSets(

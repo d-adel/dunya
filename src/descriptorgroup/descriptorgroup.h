@@ -17,11 +17,16 @@ public:
     bool perFrame = true;
   };
 
+  struct CombinedImageSampler {
+    VkImageView view = VK_NULL_HANDLE;
+    VkSampler sampler = VK_NULL_HANDLE;
+  };
+
   struct ImageBinding {
     uint32_t binding = 0;
     VkShaderStageFlags stages = 0;
-    VkImageView view = VK_NULL_HANDLE;
-    VkSampler sampler = VK_NULL_HANDLE;
+    std::vector<CombinedImageSampler> elements{};
+    uint32_t capacity = 0;
   };
 
   DescriptorGroup(
@@ -60,7 +65,7 @@ private:
     const Device& device,
     const std::vector<BufferBinding>& buffers
   );
-  void createPool(size_t bufferCount, size_t imageCount);
+  void createPool(size_t bufferCount, const std::vector<ImageBinding>& images);
   void createSets(const std::vector<ImageBinding>& images);
 
   VkDevice m_device = VK_NULL_HANDLE;

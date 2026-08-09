@@ -8,8 +8,8 @@ MeshPass::MeshPass(const Device& device)
         {{0, sizeof(UniformBufferObject), VK_SHADER_STAGE_VERTEX_BIT, true}},
         {{1,
           VK_SHADER_STAGE_FRAGMENT_BIT,
-          m_texture.image().imageView(),
-          m_texture.sampler()}}
+          {{m_texture.image().imageView(), m_texture.sampler()}},
+          MAX_TEXTURES}}
       ) {}
 
 void MeshPass::update(uint32_t currentFrame, const UniformBufferObject& ubo) {

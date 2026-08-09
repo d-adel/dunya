@@ -256,10 +256,16 @@ void Device::createLogicalDevice() {
 
   VkPhysicalDeviceFeatures deviceFeatures{};
 
+  VkPhysicalDeviceVulkan12Features features12{};
+  features12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+  features12.descriptorBindingPartiallyBound = VK_TRUE;
+  features12.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
+
   VkPhysicalDeviceVulkan13Features features13{};
   features13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
   features13.dynamicRendering = VK_TRUE;
   features13.synchronization2 = VK_TRUE;
+  features13.pNext = &features12;
 
   VkDeviceCreateInfo createInfo{};
   createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -337,12 +343,19 @@ bool Device::checkDeviceFeatureSupport(VkPhysicalDevice device) {
   VkPhysicalDeviceFeatures2 physicalDeviceFeatures = {};
   physicalDeviceFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 
+  VkPhysicalDeviceVulkan12Features features12{};
+  features12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+
   VkPhysicalDeviceVulkan13Features features13 = {};
   features13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+  features13.pNext = &features12;
+
   physicalDeviceFeatures.pNext = &features13;
   vkGetPhysicalDeviceFeatures2(device, &physicalDeviceFeatures);
 
   return features13.dynamicRendering == VK_TRUE
          && features13.synchronization2 == VK_TRUE
-         && physicalDeviceFeatures.features.samplerAnisotropy == VK_TRUE;
+         && physicalDeviceFeatures.features.samplerAnisotropy == VK_TRUE
+         && features12.descriptorBindingPartiallyBound == VK_TRUE
+         && features12.descriptorBindingSampledImageUpdateAfterBind == VK_TRUE;
 }

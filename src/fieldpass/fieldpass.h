@@ -7,8 +7,6 @@
 #include <cstdint>
 #include <span>
 
-constexpr uint32_t MAX_PRIMITIVES = 128;
-
 class FieldPass {
 public:
   FieldPass(const Device& device, std::span<const Primitive> primitives);
