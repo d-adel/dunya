@@ -65,16 +65,18 @@ add_executable(${PROJECT_NAME}
     src/surface/surface.cc
     src/swapchain/swapchain.cc
     src/pipeline/pipeline.cc
+    src/shadermodule/shadermodule.cc
     src/renderer/renderer.cc
     src/buffer/buffer.cc
     src/vertex/vertex.cc
-    src/ubo/ubo.cc
-    src/meshpass/meshpass.cc
+    src/frameglobals/frameglobals.cc
+    src/resourcetable/resourcetable.cc
     src/descriptorgroup/descriptorgroup.cc
     src/image/image.cc
     src/oneshot/oneshotcommand.cc
     src/texture/stb_image_impl.cc
     src/texture/texture.cc
+    src/sampler/sampler.cc
     src/depthimage/depthimage.cc
     src/mesh/tiny_obj_loader_impl.cc
     src/mesh/mesh.cc

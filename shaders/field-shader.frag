@@ -1,6 +1,7 @@
 #version 450
 
 const int MAX_PRIMITIVES = 128;
+const int MAX_MATERIALS = 64;
 const float eps = 0.001;
 const int maxIter = 800;
 const float normalSampleOffset = 0.01;
@@ -12,13 +13,46 @@ struct Primitive {
   uvec4 shapeConfig;
 };
 
-layout(std140, set = 0, binding = 0) uniform
+struct Material {
+  vec4 baseColor;
+  vec4 emissive;
+
+  float metallic;
+  float roughness;
+  float normalScale;
+  float occlusionStrength;
+
+  float alphaCutoff;
+  uint flags;
+  uint baseColorTexture;
+  uint baseColorSampler;
+
+  uint metallicRoughnessTexture;
+  uint metallicRoughnessSampler;
+  uint normalTexture;
+  uint normalSampler;
+
+  uint occlusionTexture;
+  uint occlusionSampler;
+  uint emissiveTexture;
+  uint emissiveSampler;
+};
+
+layout(std140, set = 1, binding = 0) uniform
+MaterialTable { Material materials[MAX_MATERIALS]; } materialTable;
+
+layout(std140, set = 0, binding = 0) uniform CameraUniform {
+  mat4 view;
+  mat4 proj;
+  mat4 viewProj;
+  mat4 inverseViewProj;
+  vec4 position;
+} camera;
+
+layout(std140, set = 2, binding = 0) uniform
 FieldScene { Primitive primitives[MAX_PRIMITIVES]; } scene;
 
-layout(std140, set = 0, binding = 1) uniform FieldFrame {
-  mat4 inverseViewProj;
-  mat4 viewProj;
-  vec4 cameraPos;
+layout(std140, set = 2, binding = 1) uniform FieldFrame {
   uvec4 primitiveCount;
 } frame;
 
@@ -135,18 +169,14 @@ bool march(vec3 origin, vec3 direction, out vec3 hitPosition, out float material
 }
 
 vec3 albedo(float materialId) {
-  if (int(materialId + 0.5) == 0) {
-    return vec3(0.5, 0.0, 0.3);
-  } else {
-    return vec3(0.7, 0.6, 0.3);
-  }
+  return materialTable.materials[uint(materialId + 0.5)].baseColor.rgb;
 }
 
 void main()
 {
 
-    vec2 inside = sceneDistance(frame.cameraPos.xyz);
-    if (inside.x <= frame.cameraPos.w) {
+    vec2 inside = sceneDistance(camera.position.xyz);
+    if (inside.x <= camera.position.w) {
       gl_FragDepth = 0.0;
       outColor = vec4(albedo(inside.y), 1);
       return;
@@ -155,21 +185,21 @@ void main()
     vec4 clipPosition = vec4(ndc.xy, 1.0, 1.0);
 
     vec4 worldPosition =
-        frame.inverseViewProj * clipPosition;
+        camera.inverseViewProj * clipPosition;
 
     worldPosition /= worldPosition.w;
 
     vec3 direction = normalize(
-        worldPosition.xyz - frame.cameraPos.xyz
+        worldPosition.xyz - camera.position.xyz
     );
 
     vec3 hitPosition;
     float materialId;
-    if (march(frame.cameraPos.xyz, direction, hitPosition, materialId))
+    if (march(camera.position.xyz, direction, hitPosition, materialId))
     {
       vec3 surfaceAlbedo = albedo(materialId);
 
-      vec4 clip = frame.viewProj * vec4(hitPosition, 1.0);
+      vec4 clip = camera.viewProj * vec4(hitPosition, 1.0);
       float depth = clip.z / clip.w;
       if (depth <= 0 || isinf(depth) || isnan(depth)) {
         discard;

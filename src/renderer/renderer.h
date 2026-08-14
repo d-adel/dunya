@@ -3,8 +3,8 @@
 #include <vulkan/vulkan.h>
 #include "swapchain/swapchain.h"
 #include "pipeline/pipeline.h"
-#include "meshpass/meshpass.h"
-#include "ubo/ubo.h"
+#include "resourcetable/resourcetable.h"
+#include "frameglobals/frameglobals.h"
 #include "frame/frame.h"
 #include "fieldpass/fieldpass.h"
 
@@ -17,9 +17,10 @@ public:
   Renderer(
     const Device& device,
     FieldPass& fieldPass,
+    FrameGlobals& frameGlobals,
     const Pipeline& meshPipeline,
     const Pipeline& fieldPipeline,
-    MeshPass& meshPass,
+    ResourceTable& resourceTable,
     const VkSurfaceKHR& surface,
     uint32_t imageCount
   );
@@ -56,6 +57,7 @@ private:
 
   const Pipeline& m_meshPipeline;
   const Pipeline& m_fieldPipeline;
-  MeshPass& m_meshPass;
+  ResourceTable& m_resourceTable;
   FieldPass& m_fieldPass;
+  FrameGlobals& m_frameGlobals;
 };

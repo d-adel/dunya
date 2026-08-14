@@ -1,14 +1,27 @@
 #pragma once
 
 #include "swapchain/swapchain.h"
-#include "meshpass/meshpass.h"
+#include "shadermodule/shadermodule.h"
 #include "vertex/vertex.h"
 
 #include <vulkan/vulkan.h>
+#include <glm/glm.hpp>
+#include <cstddef>
+#include <cstdint>
 #include <vector>
 #include <string>
 #include <span>
 #include <filesystem>
+
+struct MeshPushConstants {
+  glm::mat4 model;
+  uint32_t materialIndex;
+};
+
+static_assert(
+  offsetof(MeshPushConstants, materialIndex) == 64,
+  "The push constant block must match its declaration in both mesh shaders"
+);
 
 enum class PipelineType {
   Mesh,
@@ -59,7 +72,8 @@ private:
   VkPipelineLayout buildPipelineLayout();
 
   void create();
-  VkShaderModule createShaderModule(const std::vector<char>& code);
+  void destroy() noexcept;
+
   VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
   VkPipeline m_pipeline = VK_NULL_HANDLE;
 

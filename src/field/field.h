@@ -22,9 +22,6 @@
  */
 
 struct FieldFrame {
-  glm::mat4 inverseViewProj;
-  glm::mat4 viewProj;
-  glm::vec4 cameraPos;
   glm::uvec4 primitiveCount;
 };
 

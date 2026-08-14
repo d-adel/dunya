@@ -7,8 +7,9 @@
 #include "camera/camera.h"
 #include "input/input.h"
 #include "frame/frame.h"
-#include "meshpass/meshpass.h"
+#include "resourcetable/resourcetable.h"
 #include "fieldpass/fieldpass.h"
+#include "frameglobals/frameglobals.h"
 #include "field/field.h"
 
 class Application {
@@ -33,7 +34,8 @@ private:
   Camera m_camera;
   SwapChain m_swapChain;
   Scene m_scene;
-  MeshPass m_meshPass;
+  FrameGlobals m_frameGlobals;
+  ResourceTable m_resourceTable;
   FieldPass m_fieldPass;
   Pipeline m_meshPipeline;
   Pipeline m_fieldPipeline;

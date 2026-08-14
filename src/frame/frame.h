@@ -9,6 +9,7 @@
 
 struct DrawItem {
   uint32_t meshIndex;
+  uint32_t materialIndex;
   glm::mat4 model;
 };
 

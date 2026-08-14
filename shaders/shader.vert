@@ -1,9 +1,12 @@
 #version 450
 
-layout(binding = 0) uniform UniformBufferObject {
+layout(set = 0, binding = 0) uniform CameraUniform {
     mat4 view;
     mat4 proj;
-} ubo;
+    mat4 viewProj;
+    mat4 inverseViewProj;
+    vec4 position;
+} camera;
 
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inColor;
@@ -17,10 +20,11 @@ layout(location = 2) out vec3 fragNormal;
 layout (push_constant) uniform constants
 {
   mat4 model;
+  uint materialIndex;
 } PushConstants;
 
 void main() {
-    gl_Position = ubo.proj * ubo.view * PushConstants.model * vec4(inPosition, 1.0);
+    gl_Position = camera.proj * camera.view * PushConstants.model * vec4(inPosition, 1.0);
     fragColor = inColor;
     fragTexCoord = inTexCoord;
     fragNormal =  mat3(PushConstants.model) * inNormal;

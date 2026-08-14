@@ -3,17 +3,19 @@
 Renderer::Renderer(
   const Device& device,
   FieldPass& fieldPass,
+  FrameGlobals& frameGlobals,
   const Pipeline& meshPipeline,
   const Pipeline& fieldPipeline,
-  MeshPass& meshPass,
+  ResourceTable& resourceTable,
   const VkSurfaceKHR& surface,
   uint32_t imageCount
 )
     : m_device(device.vkDevice()),
       m_fieldPass(fieldPass),
+      m_frameGlobals(frameGlobals),
       m_meshPipeline(meshPipeline),
       m_fieldPipeline(fieldPipeline),
-      m_meshPass(meshPass),
+      m_resourceTable(resourceTable),
       m_graphicsQueue(device.graphicsQueue()),
       m_presentQueue(device.presentQueue()) {
   createCommandPool(device.physicalDevice(), surface);
@@ -213,22 +215,28 @@ void Renderer::recordCommandBuffer(
                     || frameContext.mode == PipelineType::Both;
   bool drawField = frameContext.mode == PipelineType::Field
                    || frameContext.mode == PipelineType::Both;
+
+  const std::array<VkDescriptorSet, 2> sharedSets = {
+    m_frameGlobals.descriptorSet(m_currentFrame),
+    m_resourceTable.descriptorSet(m_currentFrame)
+  };
+
+  vkCmdBindDescriptorSets(
+    m_commandBuffers[m_currentFrame],
+    VK_PIPELINE_BIND_POINT_GRAPHICS,
+    m_meshPipeline.pipelineLayout(),
+    0,
+    static_cast<uint32_t>(sharedSets.size()),
+    sharedSets.data(),
+    0,
+    nullptr
+  );
+
   if (drawMeshes) {
     vkCmdBindPipeline(
       m_commandBuffers[m_currentFrame],
       VK_PIPELINE_BIND_POINT_GRAPHICS,
       m_meshPipeline.pipeline()
-    );
-
-    vkCmdBindDescriptorSets(
-      m_commandBuffers[m_currentFrame],
-      VK_PIPELINE_BIND_POINT_GRAPHICS,
-      m_meshPipeline.pipelineLayout(),
-      0,
-      1,
-      &m_meshPass.descriptorSet(m_currentFrame),
-      0,
-      nullptr
     );
 
     for (const auto& item : frameContext.drawItems) {
@@ -252,13 +260,16 @@ void Renderer::recordCommandBuffer(
         VK_INDEX_TYPE_UINT32
       );
 
+      const MeshPushConstants pushConstants{item.model, item.materialIndex};
+
       vkCmdPushConstants(
         m_commandBuffers[m_currentFrame],
         m_meshPipeline.pipelineLayout(),
-        VK_SHADER_STAGE_VERTEX_BIT,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         0,
-        sizeof(glm::mat4),
-        &item.model
+        offsetof(MeshPushConstants, materialIndex)
+          + sizeof(MeshPushConstants::materialIndex),
+        &pushConstants
       );
 
       vkCmdDrawIndexed(
@@ -273,12 +284,7 @@ void Renderer::recordCommandBuffer(
   }
 
   if (drawField) {
-    const glm::mat4 viewProj = frameContext.proj * frameContext.view;
-
     const FieldFrame fieldFrame{
-      glm::inverse(viewProj),
-      viewProj,
-      frameContext.cameraPos,
       glm::uvec4(frameContext.primitives.size(), 0, 0, 0)
     };
 
@@ -294,7 +300,7 @@ void Renderer::recordCommandBuffer(
       m_commandBuffers[m_currentFrame],
       VK_PIPELINE_BIND_POINT_GRAPHICS,
       m_fieldPipeline.pipelineLayout(),
-      0,
+      2,
       1,
       &m_fieldPass.descriptorSet(m_currentFrame),
       0,
@@ -368,18 +374,20 @@ bool Renderer::drawFrame(
   vkResetFences(m_device, 1, &m_inFlightFences[m_currentFrame]);
 
   vkResetCommandBuffer(m_commandBuffers[m_currentFrame], 0);
+
+  const glm::mat4 cameraViewProj = frameContext.proj * frameContext.view;
+
+  const CameraUniform camera{
+    frameContext.view,
+    frameContext.proj,
+    cameraViewProj,
+    glm::inverse(cameraViewProj),
+    frameContext.cameraPos
+  };
+
+  m_frameGlobals.update(m_currentFrame, camera);
+
   recordCommandBuffer(swapChain, frameContext);
-
-  if (
-    frameContext.mode == PipelineType::Mesh
-    || frameContext.mode == PipelineType::Both
-  ) {
-    UniformBufferObject ubo{};
-    ubo.view = frameContext.view;
-    ubo.proj = frameContext.proj;
-
-    m_meshPass.update(m_currentFrame, ubo);
-  }
 
   VkSubmitInfo2 submitInfo2{};
   submitInfo2.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;

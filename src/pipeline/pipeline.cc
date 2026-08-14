@@ -39,12 +39,24 @@ Pipeline::Pipeline(
       m_setLayouts(setLayouts),
       m_type(type),
       m_depthImageFormat(swapChain.depthImage().format()) {
-  create();
+  try {
+    create();
+  } catch (...) {
+    destroy();
+    throw;
+  }
 }
 
 Pipeline::~Pipeline() {
+  destroy();
+}
+
+void Pipeline::destroy() noexcept {
   vkDestroyPipeline(m_device, m_pipeline, nullptr);
+  m_pipeline = VK_NULL_HANDLE;
+
   vkDestroyPipelineLayout(m_device, m_pipelineLayout, nullptr);
+  m_pipelineLayout = VK_NULL_HANDLE;
 }
 
 const VkPipeline& Pipeline::pipeline() const noexcept {
@@ -76,8 +88,10 @@ void Pipeline::makeConfig() {
       m_config.setLayouts = m_setLayouts;
 
       pushConstant.offset = 0;
-      pushConstant.size = sizeof(glm::mat4);
-      pushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+      pushConstant.size = offsetof(MeshPushConstants, materialIndex)
+                          + sizeof(MeshPushConstants::materialIndex);
+      pushConstant.stageFlags =
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
       m_config.pushConstantRanges.push_back(pushConstant);
       break;
@@ -92,6 +106,13 @@ void Pipeline::makeConfig() {
       m_config.depthWriteEnable = VK_TRUE;
       m_config.setLayouts = m_setLayouts;
 
+      pushConstant.offset = 0;
+      pushConstant.size = offsetof(MeshPushConstants, materialIndex)
+                          + sizeof(MeshPushConstants::materialIndex);
+      pushConstant.stageFlags =
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+
+      m_config.pushConstantRanges.push_back(pushConstant);
       break;
     default:
       throw std::invalid_argument("Unknown pipeline type");
@@ -151,23 +172,6 @@ void Pipeline::reload() {
   m_fragTime = std::filesystem::last_write_time(m_config.frag);
 }
 
-VkShaderModule Pipeline::createShaderModule(const std::vector<char>& code) {
-  VkShaderModuleCreateInfo createInfo{};
-  createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-  createInfo.codeSize = code.size();
-  createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
-
-  VkShaderModule shaderModule;
-  if (
-    vkCreateShaderModule(m_device, &createInfo, nullptr, &shaderModule)
-    != VK_SUCCESS
-  ) {
-    throw std::runtime_error("Failed to create shader module");
-  }
-
-  return shaderModule;
-}
-
 VkPipelineLayout Pipeline::buildPipelineLayout() {
   VkPipelineLayout pipelineLayout;
 
@@ -199,15 +203,15 @@ VkPipeline Pipeline::buildPipeline() {
   auto vertShaderCode = readFile(m_config.vertexShader);
   auto fragShaderCode = readFile(m_config.fragmentShader);
 
-  VkShaderModule vertexShaderModule = createShaderModule(vertShaderCode);
-  VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
+  ShaderModule vertexShaderModule(m_device, vertShaderCode);
+  ShaderModule fragShaderModule(m_device, fragShaderCode);
 
   // Vertex module
   VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
   vertShaderStageInfo.sType =
     VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
   vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-  vertShaderStageInfo.module = vertexShaderModule;
+  vertShaderStageInfo.module = vertexShaderModule.handle();
   vertShaderStageInfo.pName = "main";
 
   // Fragment module
@@ -215,7 +219,7 @@ VkPipeline Pipeline::buildPipeline() {
   fragShaderStageInfo.sType =
     VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
   fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-  fragShaderStageInfo.module = fragShaderModule;
+  fragShaderStageInfo.module = fragShaderModule.handle();
   fragShaderStageInfo.pName = "main";
 
   std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages{
@@ -354,9 +358,6 @@ VkPipeline Pipeline::buildPipeline() {
   ) {
     return VK_NULL_HANDLE;
   }
-
-  vkDestroyShaderModule(m_device, vertexShaderModule, nullptr);
-  vkDestroyShaderModule(m_device, fragShaderModule, nullptr);
 
   return pipeline;
 }

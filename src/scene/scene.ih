@@ -1,4 +1,8 @@
 #include "scene.h"
 #include "frame/frame.h"
 #include "context/context.h"
+#include "config/config.h"
+
+#include <array>
+#include <cstdint>
 #include <span>

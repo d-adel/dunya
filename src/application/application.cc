@@ -4,26 +4,40 @@ Application::Application()
     : m_input(m_context.window().handle()),
       m_swapChain(m_context),
       m_scene(m_context),
-      m_meshPass(m_context.device()),
+      m_frameGlobals(m_context.device()),
+      m_resourceTable(
+        m_context.device(),
+        m_scene.textures(),
+        m_scene.samplers(),
+        m_scene.materials()
+      ),
       m_fieldPass(m_context.device(), m_scene.primitives()),
       m_meshPipeline(
         PipelineType::Mesh,
         m_context.device().vkDevice(),
-        std::vector<VkDescriptorSetLayout>{m_meshPass.setLayout()},
+        std::vector<VkDescriptorSetLayout>{
+          m_frameGlobals.setLayout(),
+          m_resourceTable.setLayout()
+        },
         m_swapChain
       ),
       m_fieldPipeline(
         PipelineType::Field,
         m_context.device().vkDevice(),
-        std::vector<VkDescriptorSetLayout>{m_fieldPass.setLayout()},
+        std::vector<VkDescriptorSetLayout>{
+          m_frameGlobals.setLayout(),
+          m_resourceTable.setLayout(),
+          m_fieldPass.setLayout()
+        },
         m_swapChain
       ),
       m_renderer(
         m_context.device(),
         m_fieldPass,
+        m_frameGlobals,
         m_meshPipeline,
         m_fieldPipeline,
-        m_meshPass,
+        m_resourceTable,
         m_context.surface().handle(),
         m_swapChain.imageCount()
       ),
