@@ -44,8 +44,8 @@ Image::Image(
 
 Image::Image(Image&& other) noexcept
     : m_image(std::exchange(other.m_image, VK_NULL_HANDLE)),
-      m_imageMemory(std::exchange(other.m_imageMemory, VK_NULL_HANDLE)),
       m_imageView(std::exchange(other.m_imageView, VK_NULL_HANDLE)),
+      m_imageMemory(std::exchange(other.m_imageMemory, VK_NULL_HANDLE)),
       m_device(std::exchange(other.m_device, VK_NULL_HANDLE)) {}
 
 Image& Image::operator=(Image&& other) noexcept {
@@ -141,7 +141,12 @@ void Image::createImage(
     throw std::runtime_error("Failed to allocate image memory");
   }
 
-  vkBindImageMemory(device.vkDevice(), m_image, m_imageMemory, 0);
+  if (
+    vkBindImageMemory(device.vkDevice(), m_image, m_imageMemory, 0)
+    != VK_SUCCESS
+  ) {
+    throw std::runtime_error("Failed to bind image memory");
+  }
 }
 
 void Image::transition(

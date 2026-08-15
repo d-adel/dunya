@@ -4,6 +4,7 @@
 
 #include <vulkan/vulkan.h>
 
+#include <stdexcept>
 #include <utility>
 
 class Buffer {
@@ -59,7 +60,13 @@ void Buffer::fill(const std::vector<T>& data) {
   VkDeviceSize bufferSize = sizeof(data[0]) * data.size();
 
   void* objData;
-  vkMapMemory(m_device, m_bufferMemory, 0, bufferSize, 0, &objData);
+  if (
+    vkMapMemory(m_device, m_bufferMemory, 0, bufferSize, 0, &objData)
+    != VK_SUCCESS
+  ) {
+    throw std::runtime_error("Failed to map buffer memory");
+  }
+
   memcpy(objData, data.data(), (size_t)bufferSize);
   vkUnmapMemory(m_device, m_bufferMemory);
 }

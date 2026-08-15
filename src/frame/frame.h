@@ -19,6 +19,6 @@ struct Frame {
   glm::vec4 cameraPos = glm::vec4(1.0f);
   std::span<const DrawItem> drawItems = {};
   std::span<const Mesh> meshes = {};
-  std::span<const Primitive> primitives = {};
+  std::span<const dunya::field::Primitive> primitives = {};
   PipelineType mode = PipelineType::Both;
 };

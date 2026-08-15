@@ -6,9 +6,9 @@ layout(location = 2) in vec3 fragNormal;
 
 layout(location = 0) out vec4 outColor;
 
-const int MAX_TEXTURES = 16;
-const int MAX_SAMPLERS = 8;
-const int MAX_MATERIALS = 64;
+const int MAX_TEXTURES = DUNYA_MAX_TEXTURES;
+const int MAX_SAMPLERS = DUNYA_MAX_SAMPLERS;
+const int MAX_MATERIALS = DUNYA_MAX_MATERIALS;
 
 struct Material {
   vec4 baseColor;

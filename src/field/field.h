@@ -1,6 +1,10 @@
 #pragma once
 #include "glm/glm.hpp"
 
+#include <cstdint>
+
+namespace dunya::field {
+
 /* Shape parameter conventions
  * Sphere: (radius, -)
  * Box: (halfExtents.xyz -)
@@ -14,19 +18,25 @@
  * subtraction)
  */
 
-/* Config parameter marching
- * .x = epsilon
- * .y = maxIter
- * .z = sampleOffset
- * .w = bias
+/* Transforms are rigid. Sphere tracing and continuous collision both need the
+ * returned distance to be a lower bound on the distance to the surface, and a
+ * non-uniform scale in inverseModel breaks that.
  */
-
-struct FieldFrame {
-  glm::uvec4 primitiveCount;
-};
 
 struct Primitive {
   glm::mat4 inverseModel;
   glm::vec4 shape;
   glm::uvec4 shapeConfig;
 };
+
+static_assert(
+  sizeof(Primitive) == 96,
+  "Primitive must keep the std140 layout the field shader indexes by"
+);
+
+struct FieldSample {
+  float distance = 0.0f;
+  uint32_t material = 0;
+};
+
+}  // namespace dunya::field

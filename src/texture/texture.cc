@@ -56,14 +56,20 @@ void Texture::createTextureImage(
   );
 
   void* data;
-  vkMapMemory(
-    device.vkDevice(),
-    stagingBuffer.memory(),
-    0,
-    imageSize,
-    0,
-    &data
-  );
+  if (
+    vkMapMemory(
+      device.vkDevice(),
+      stagingBuffer.memory(),
+      0,
+      imageSize,
+      0,
+      &data
+    )
+    != VK_SUCCESS
+  ) {
+    throw std::runtime_error("Failed to map texture staging memory");
+  }
+
   memcpy(data, pixels, static_cast<size_t>(imageSize));
   vkUnmapMemory(device.vkDevice(), stagingBuffer.memory());
 

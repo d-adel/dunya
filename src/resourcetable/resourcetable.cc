@@ -47,6 +47,38 @@ ResourceTable::ResourceTable(
     throw std::runtime_error("More materials than the material table holds");
   }
 
+  // PARTIALLY_BOUND makes an unwritten array slot undefined rather than an
+  // error, so an out-of-range index here would sample garbage silently.
+  for (const Material& material : materials) {
+    const std::array<uint32_t, 5> images{
+      material.baseColorTexture,
+      material.metallicRoughnessTexture,
+      material.normalTexture,
+      material.occlusionTexture,
+      material.emissiveTexture
+    };
+
+    for (uint32_t image : images) {
+      if (image >= textures.size()) {
+        throw std::runtime_error("Material names a texture slot with no image");
+      }
+    }
+
+    const std::array<uint32_t, 5> used{
+      material.baseColorSampler,
+      material.metallicRoughnessSampler,
+      material.normalSampler,
+      material.occlusionSampler,
+      material.emissiveSampler
+    };
+
+    for (uint32_t index : used) {
+      if (index >= samplers.size()) {
+        throw std::runtime_error("Material names a sampler slot with none");
+      }
+    }
+  }
+
   m_group.write(0, 0, materials.data(), materials.size_bytes());
 }
 

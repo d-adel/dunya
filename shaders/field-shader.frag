@@ -1,7 +1,7 @@
 #version 450
 
-const int MAX_PRIMITIVES = 128;
-const int MAX_MATERIALS = 64;
+const int MAX_PRIMITIVES = DUNYA_MAX_PRIMITIVES;
+const int MAX_MATERIALS = DUNYA_MAX_MATERIALS;
 const float eps = 0.001;
 const int maxIter = 800;
 const float normalSampleOffset = 0.01;

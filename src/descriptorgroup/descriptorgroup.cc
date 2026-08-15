@@ -28,7 +28,7 @@ DescriptorGroup::DescriptorGroup(
   createBuffers(device, buffers);
 
   if (buffers.empty() && sampledImages.empty() && samplers.empty()) {
-    return;
+    throw std::runtime_error("A descriptor group needs at least one binding");
   }
 
   createPool(buffers.size(), sampledImages, samplers);
@@ -61,7 +61,10 @@ void DescriptorGroup::write(
       continue;
     }
 
-    assert(size <= slot.size);
+    if (size > slot.size) {
+      throw std::runtime_error("Write larger than the binding it targets");
+    }
+
     memcpy(slot.mapped.at(slot.perFrame ? frame : 0), data, size);
 
     return;
@@ -246,7 +249,13 @@ void DescriptorGroup::createPool(
   poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
   poolInfo.pPoolSizes = poolSizes.data();
   poolInfo.maxSets = m_frameCount;
-  poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
+
+  // Only the array bindings ask for update-after-bind, so a group without one
+  // should not carry the flag; a layout created without the matching bit
+  // cannot be allocated from a pool that has it.
+  poolInfo.flags = (sampledImageCapacity > 0 || samplerCapacity > 0)
+                     ? VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT
+                     : 0;
 
   if (
     vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_pool) != VK_SUCCESS
@@ -324,7 +333,7 @@ void DescriptorGroup::createSets(
     for (const SampledImageBinding& sampledImage : sampledImages) {
       const size_t count = sampledImage.elements.size();
 
-      if (count == 0) {
+      if (count == 0u) {
         continue;
       }
 

@@ -22,8 +22,8 @@ static bool compileShader(
   const std::string& source,
   const std::string& output
 ) {
-  const std::string command =
-    "\"\"" GLSLC_PATH "\" \"" + source + "\" -o \"" + output + "\"\"";
+  const std::string command = "\"\"" GLSLC_PATH "\" " GLSLC_DEFINES " \""
+                              + source + "\" -o \"" + output + "\"\"";
 
   return std::system(command.c_str()) == 0;
 }
@@ -159,14 +159,28 @@ void Pipeline::reload() {
     return;
   }
 
-  vkDestroyPipeline(m_device, m_pipeline, nullptr);
-  m_pipeline = VK_NULL_HANDLE;
-
   makeConfig();
-  m_pipeline = buildPipeline();
-  if (m_pipeline == VK_NULL_HANDLE) {
-    std::cout << "Pipeline build failed on reload\n";
+
+  // Build first, swap second: the old pipeline stays bound and usable unless a
+  // replacement actually exists. buildPipeline reads the .spv from disk, so it
+  // throws when a file is missing, and a throw out of here would leave the
+  // frame loop with no pipeline and unwind out of main.
+  VkPipeline rebuilt = VK_NULL_HANDLE;
+
+  try {
+    rebuilt = buildPipeline();
+  } catch (const std::exception& e) {
+    std::cout << "Pipeline reload failed: " << e.what() << '\n';
+    return;
   }
+
+  if (rebuilt == VK_NULL_HANDLE) {
+    std::cout << "Pipeline build failed on reload\n";
+    return;
+  }
+
+  vkDestroyPipeline(m_device, m_pipeline, nullptr);
+  m_pipeline = rebuilt;
 
   m_vertTime = std::filesystem::last_write_time(m_config.vert);
   m_fragTime = std::filesystem::last_write_time(m_config.frag);

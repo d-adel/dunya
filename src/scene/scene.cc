@@ -1,5 +1,7 @@
 #include "scene.ih"
 
+using dunya::field::Primitive;
+
 Scene::Scene(const Context& context)
     : m_primitives(createPrimitives()),
       m_materials(createMaterials()),

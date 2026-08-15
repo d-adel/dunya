@@ -20,7 +20,7 @@ public:
     FrameGlobals& frameGlobals,
     const Pipeline& meshPipeline,
     const Pipeline& fieldPipeline,
-    ResourceTable& resourceTable,
+    const ResourceTable& resourceTable,
     const VkSurfaceKHR& surface,
     uint32_t imageCount
   );
@@ -57,7 +57,7 @@ private:
 
   const Pipeline& m_meshPipeline;
   const Pipeline& m_fieldPipeline;
-  ResourceTable& m_resourceTable;
+  const ResourceTable& m_resourceTable;
   FieldPass& m_fieldPass;
   FrameGlobals& m_frameGlobals;
 };

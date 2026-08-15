@@ -94,7 +94,9 @@ void Buffer::createBuffer(
     throw std::runtime_error("failed to allocate buffer memory!");
   }
 
-  vkBindBufferMemory(m_device, m_buffer, m_bufferMemory, 0);
+  if (vkBindBufferMemory(m_device, m_buffer, m_bufferMemory, 0) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to bind buffer memory");
+  }
 }
 
 void Buffer::copyTo(

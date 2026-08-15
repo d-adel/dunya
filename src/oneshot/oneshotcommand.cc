@@ -27,25 +27,42 @@ void OneShotCommand::start(const Device& device) {
   allocInfo.commandPool = m_commandPool;
   allocInfo.commandBufferCount = 1;
 
-  vkAllocateCommandBuffers(device.vkDevice(), &allocInfo, &m_commandBuffer);
+  if (
+    vkAllocateCommandBuffers(device.vkDevice(), &allocInfo, &m_commandBuffer)
+    != VK_SUCCESS
+  ) {
+    throw std::runtime_error("Failed to allocate one shot command buffer");
+  }
 
   VkCommandBufferBeginInfo beginInfo{};
   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
   beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-  vkBeginCommandBuffer(m_commandBuffer, &beginInfo);
+  if (vkBeginCommandBuffer(m_commandBuffer, &beginInfo) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to begin one shot command buffer");
+  }
 }
 
 void OneShotCommand::submit(const Device& device) const {
-  vkEndCommandBuffer(m_commandBuffer);
+  if (vkEndCommandBuffer(m_commandBuffer) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to end one shot command buffer");
+  }
 
   VkSubmitInfo submitInfo{};
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
   submitInfo.commandBufferCount = 1;
   submitInfo.pCommandBuffers = &m_commandBuffer;
 
-  vkQueueSubmit(device.graphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE);
-  vkQueueWaitIdle(device.graphicsQueue());
+  if (
+    vkQueueSubmit(device.graphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE)
+    != VK_SUCCESS
+  ) {
+    throw std::runtime_error("Failed to submit one shot command buffer");
+  }
+
+  if (vkQueueWaitIdle(device.graphicsQueue()) != VK_SUCCESS) {
+    throw std::runtime_error("Failed waiting for the one shot command buffer");
+  }
 
   vkFreeCommandBuffers(device.vkDevice(), m_commandPool, 1, &m_commandBuffer);
   vkDestroyCommandPool(device.vkDevice(), m_commandPool, nullptr);

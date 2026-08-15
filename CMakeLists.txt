@@ -23,6 +23,27 @@ set(GLFW_BUILD_EXAMPLES OFF)
 set(SHADER_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/shaders")
 set(SHADER_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/shaders")
 
+# Capacities the C++ side and the shaders must agree on to the number. They live
+# here rather than in config.h because this is the only place that can reach
+# both compilers; drift between them does not fail to build, it corrupts an
+# std140 stride or indexes past an array.
+set(DUNYA_MAX_PRIMITIVES 128)
+set(DUNYA_MAX_TEXTURES 16)
+set(DUNYA_MAX_SAMPLERS 8)
+set(DUNYA_MAX_MATERIALS 64)
+
+set(SHADER_DEFINES
+    "-DDUNYA_MAX_PRIMITIVES=${DUNYA_MAX_PRIMITIVES}"
+    "-DDUNYA_MAX_TEXTURES=${DUNYA_MAX_TEXTURES}"
+    "-DDUNYA_MAX_SAMPLERS=${DUNYA_MAX_SAMPLERS}"
+    "-DDUNYA_MAX_MATERIALS=${DUNYA_MAX_MATERIALS}"
+)
+
+# The same flags as one string, so the runtime hot-reload path can pass exactly
+# what the build passed. A reloaded shader compiled with different capacities
+# would disagree with the buffers already bound to it.
+string(JOIN " " SHADER_DEFINES_ARGS ${SHADER_DEFINES})
+
 # Textures
 set(TEXTURE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/textures")
 
@@ -56,6 +77,12 @@ FetchContent_MakeAvailable(glfw glm stb tinyobjloader)
 # Find Vulkan SDK
 find_package(Vulkan REQUIRED)
 
+# Field evaluation, free of Vulkan so the tests can link it alone
+add_subdirectory(src/field)
+
+enable_testing()
+add_subdirectory(tests)
+
 # Define executable and link libraries
 add_executable(${PROJECT_NAME}
     src/main.cc
@@ -88,7 +115,6 @@ add_executable(${PROJECT_NAME}
     src/context/context.cc
     src/scene/scene.cc
     src/frame/frame.cc
-    src/field/field.cc
     src/fieldpass/fieldpass.cc
 )
 
@@ -102,14 +128,18 @@ find_program(
 )
 
 # Configuration
+# The GLM_* defines are not repeated here: they arrive as usage requirements
+# from dunya::field, which is the only way both sides are guaranteed to agree
+# on glm's type layout.
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     GLFW_INCLUDE_VULKAN
-    GLM_FORCE_RADIANS
-    GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
-    GLM_FORCE_DEPTH_ZERO_TO_ONE
-    GLM_ENABLE_EXPERIMENTAL
     SHADER_SOURCE_DIR=\"${SHADER_SOURCE_DIR}\"
     GLSLC_PATH=\"${GLSLC_EXECUTABLE}\"
+    GLSLC_DEFINES=\"${SHADER_DEFINES_ARGS}\"
+    DUNYA_MAX_PRIMITIVES=${DUNYA_MAX_PRIMITIVES}
+    DUNYA_MAX_TEXTURES=${DUNYA_MAX_TEXTURES}
+    DUNYA_MAX_SAMPLERS=${DUNYA_MAX_SAMPLERS}
+    DUNYA_MAX_MATERIALS=${DUNYA_MAX_MATERIALS}
 )
 
 file(
@@ -141,6 +171,7 @@ foreach(SHADER_SOURCE IN LISTS SHADER_SOURCES)
 
         COMMAND
             "${GLSLC_EXECUTABLE}"
+            ${SHADER_DEFINES}
             "${SHADER_SOURCE}"
             -o "${SHADER_OUTPUT}"
 
@@ -166,7 +197,12 @@ if (MSVC)
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
-target_link_libraries(${PROJECT_NAME} PRIVATE glfw Vulkan::Vulkan glm::glm)
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    glfw
+    Vulkan::Vulkan
+    glm::glm
+    dunya::field
+)
 target_include_directories(${PROJECT_NAME} PRIVATE src ${stb_SOURCE_DIR} ${tinyobjloader_SOURCE_DIR})
 
 add_custom_command(

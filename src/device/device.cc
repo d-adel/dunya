@@ -6,41 +6,70 @@ SwapChainSupportDetails querySwapChainSupport(
 ) {
   SwapChainSupportDetails details;
 
-  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
-    device,
-    surface,
-    &details.capabilities
-  );
+  if (
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+      device,
+      surface,
+      &details.capabilities
+    )
+    != VK_SUCCESS
+  ) {
+    throw std::runtime_error("Failed to query surface capabilities");
+  }
 
   uint32_t formatCount;
-  vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
+  if (
+    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr)
+    != VK_SUCCESS
+  ) {
+    throw std::runtime_error("Failed to count surface formats");
+  }
 
   if (formatCount != 0) {
     details.formats.resize(formatCount);
-    vkGetPhysicalDeviceSurfaceFormatsKHR(
-      device,
-      surface,
-      &formatCount,
-      details.formats.data()
-    );
+
+    // VK_INCOMPLETE is a success code but means the list was truncated, so
+    // anything other than VK_SUCCESS is a short read here.
+    if (
+      vkGetPhysicalDeviceSurfaceFormatsKHR(
+        device,
+        surface,
+        &formatCount,
+        details.formats.data()
+      )
+      != VK_SUCCESS
+    ) {
+      throw std::runtime_error("Failed to enumerate surface formats");
+    }
   }
 
   uint32_t presentModeCount;
-  vkGetPhysicalDeviceSurfacePresentModesKHR(
-    device,
-    surface,
-    &presentModeCount,
-    nullptr
-  );
-
-  if (presentModeCount != 0) {
-    details.presentModes.resize(presentModeCount);
+  if (
     vkGetPhysicalDeviceSurfacePresentModesKHR(
       device,
       surface,
       &presentModeCount,
-      details.presentModes.data()
-    );
+      nullptr
+    )
+    != VK_SUCCESS
+  ) {
+    throw std::runtime_error("Failed to count surface present modes");
+  }
+
+  if (presentModeCount != 0) {
+    details.presentModes.resize(presentModeCount);
+
+    if (
+      vkGetPhysicalDeviceSurfacePresentModesKHR(
+        device,
+        surface,
+        &presentModeCount,
+        details.presentModes.data()
+      )
+      != VK_SUCCESS
+    ) {
+      throw std::runtime_error("Failed to enumerate surface present modes");
+    }
   }
 
   return details;
@@ -114,7 +143,9 @@ const VkQueue& Device::presentQueue() const noexcept {
 }
 
 void Device::waitIdle() const {
-  vkDeviceWaitIdle(m_device);
+  if (vkDeviceWaitIdle(m_device) != VK_SUCCESS) {
+    throw std::runtime_error("Failed waiting for the device to go idle");
+  }
 }
 
 uint32_t Device::findMemoryType(

@@ -7,9 +7,16 @@
 #include <cstdint>
 #include <span>
 
+struct FieldFrame {
+  glm::uvec4 primitiveCount;
+};
+
 class FieldPass {
 public:
-  FieldPass(const Device& device, std::span<const Primitive> primitives);
+  FieldPass(
+    const Device& device,
+    std::span<const dunya::field::Primitive> primitives
+  );
 
   FieldPass(const FieldPass&) = delete;
   FieldPass& operator=(const FieldPass&) = delete;

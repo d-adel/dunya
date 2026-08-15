@@ -6,18 +6,18 @@ Renderer::Renderer(
   FrameGlobals& frameGlobals,
   const Pipeline& meshPipeline,
   const Pipeline& fieldPipeline,
-  ResourceTable& resourceTable,
+  const ResourceTable& resourceTable,
   const VkSurfaceKHR& surface,
   uint32_t imageCount
 )
-    : m_device(device.vkDevice()),
-      m_fieldPass(fieldPass),
-      m_frameGlobals(frameGlobals),
+    : m_graphicsQueue(device.graphicsQueue()),
+      m_presentQueue(device.presentQueue()),
+      m_device(device.vkDevice()),
       m_meshPipeline(meshPipeline),
       m_fieldPipeline(fieldPipeline),
       m_resourceTable(resourceTable),
-      m_graphicsQueue(device.graphicsQueue()),
-      m_presentQueue(device.presentQueue()) {
+      m_fieldPass(fieldPass),
+      m_frameGlobals(frameGlobals) {
   createCommandPool(device.physicalDevice(), surface);
   createCommandBuffer();
   createSyncObjects(imageCount);
@@ -348,13 +348,18 @@ bool Renderer::drawFrame(
   const SwapChain& swapChain,
   const Frame& frameContext
 ) {
-  vkWaitForFences(
-    m_device,
-    1,
-    &m_inFlightFences[m_currentFrame],
-    VK_TRUE,
-    UINT64_MAX
-  );
+  if (
+    vkWaitForFences(
+      m_device,
+      1,
+      &m_inFlightFences[m_currentFrame],
+      VK_TRUE,
+      UINT64_MAX
+    )
+    != VK_SUCCESS
+  ) {
+    throw std::runtime_error("Failed waiting for the in flight fence");
+  }
 
   VkResult result = vkAcquireNextImageKHR(
     m_device,
@@ -371,9 +376,15 @@ bool Renderer::drawFrame(
     throw std::runtime_error("Failed to acquire swap chain image");
   }
 
-  vkResetFences(m_device, 1, &m_inFlightFences[m_currentFrame]);
+  if (
+    vkResetFences(m_device, 1, &m_inFlightFences[m_currentFrame]) != VK_SUCCESS
+  ) {
+    throw std::runtime_error("Failed to reset the in flight fence");
+  }
 
-  vkResetCommandBuffer(m_commandBuffers[m_currentFrame], 0);
+  if (vkResetCommandBuffer(m_commandBuffers[m_currentFrame], 0) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to reset the command buffer");
+  }
 
   const glm::mat4 cameraViewProj = frameContext.proj * frameContext.view;
 

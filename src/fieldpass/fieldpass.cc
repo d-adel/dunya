@@ -1,8 +1,10 @@
 #include "fieldpass.ih"
 
+using dunya::field::Primitive;
+
 FieldPass::FieldPass(
   const Device& device,
-  std::span<const Primitive> primitives
+  std::span<const dunya::field::Primitive> primitives
 )
     : m_group(
         device,
