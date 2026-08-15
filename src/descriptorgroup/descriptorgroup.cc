@@ -194,7 +194,7 @@ void DescriptorGroup::createSetLayout(
   bindingFlagsInfo.pBindingFlags = bindingFlags.data();
   bindingFlagsInfo.bindingCount = static_cast<uint32_t>(bindingFlags.size());
 
-  bool hasUpdateAfterBindBit = std::any_of(
+  m_updateAfterBind = std::any_of(
     bindingFlags.begin(),
     bindingFlags.end(),
     [](VkDescriptorBindingFlags n) {
@@ -207,7 +207,7 @@ void DescriptorGroup::createSetLayout(
   layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
   layoutInfo.pBindings = bindings.data();
   layoutInfo.flags =
-    hasUpdateAfterBindBit
+    m_updateAfterBind
       ? VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT
       : 0;
   layoutInfo.pNext = &bindingFlagsInfo;
@@ -347,11 +347,9 @@ void DescriptorGroup::createPool(
   poolInfo.pPoolSizes = poolSizes.data();
   poolInfo.maxSets = m_frameCount;
 
-  // Only the array bindings ask for update-after-bind, so a group without one
-  // should not carry the flag; a layout created without the matching bit
-  // cannot be allocated from a pool that has it.
-  poolInfo.flags = (sampledImageCapacity > 0 || samplerCapacity > 0
-                    || storageImageCapacity > 0)
+  // The same decision the layout made, not a second reading of it: a layout
+  // carrying the bit may only be allocated from a pool carrying it.
+  poolInfo.flags = m_updateAfterBind
                      ? VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT
                      : 0;
 

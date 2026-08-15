@@ -63,18 +63,33 @@ Application::~Application() {
 }
 
 StartupOptions::StartupOptions(std::span<char*> arguments) {
-  // Element zero is the executable, and an unrecognised argument is ignored
-  // rather than fatal: this is a harness, and refusing to launch over a typo
-  // would cost more than the measurement it was asked for.
+  // Element zero is the executable. Anything unrecognised is refused rather
+  // than ignored: a mistyped flag would otherwise run happily and measure the
+  // opposite of what was asked, which is worse than not launching.
   for (size_t i = 1; i < arguments.size(); ++i) {
     const std::string argument = arguments[i];
 
-    if (argument == "--sampled") {
-      sampled = true;
+    if (argument == "--analytic") {
+      analytic = true;
     } else if (argument == "--verify-bake") {
       verifyBake = true;
-    } else if (argument == "--carves" && i + 1 < arguments.size()) {
-      carves = static_cast<uint32_t>(std::stoul(arguments[++i]));
+    } else if (argument == "--carves") {
+      if (i + 1 >= arguments.size()) {
+        throw std::runtime_error("--carves needs a count");
+      }
+
+      const std::string count = arguments[++i];
+
+      if (count.find_first_not_of("0123456789") != std::string::npos) {
+        throw std::runtime_error("--carves needs a count, got: " + count);
+      }
+
+      carves = static_cast<uint32_t>(std::stoul(count));
+    } else {
+      throw std::runtime_error(
+        "Unknown argument: " + argument
+        + "\nUsage: DunyaRenderer [--analytic] [--carves N] [--verify-bake]"
+      );
     }
   }
 }
@@ -93,9 +108,9 @@ void Application::start(const StartupOptions& options) {
     stressField(options.carves);
   }
 
-  if (options.sampled) {
-    m_frameContext.fieldRepresentation = FIELD_SAMPLED;
-    std::cout << "Field representation: sampled\n";
+  if (options.analytic) {
+    m_frameContext.fieldRepresentation = FIELD_ANALYTIC;
+    std::cout << "Field representation: analytic\n";
   }
 
   bool bakeCheckPending = options.verifyBake;
@@ -390,19 +405,6 @@ void Application::handleKeyEvent(const KeyEvent& event) {
 
   if (event.key == GLFW_KEY_B && event.type == KeyEventType::SinglePressed) {
     stressField(10);
-    return;
-  }
-
-  if (event.key == GLFW_KEY_G && event.type == KeyEventType::SinglePressed) {
-    m_frameContext.fieldRepresentation =
-      m_frameContext.fieldRepresentation == FIELD_ANALYTIC ? FIELD_SAMPLED
-                                                           : FIELD_ANALYTIC;
-
-    std::cout << "Field representation: "
-              << (m_frameContext.fieldRepresentation == FIELD_ANALYTIC
-                    ? "analytic"
-                    : "sampled")
-              << '\n';
     return;
   }
 

@@ -23,7 +23,5 @@ struct Frame {
   std::span<const dunya::field::Primitive> primitives = {};
   PipelineType mode = PipelineType::Both;
 
-  // Which field representation the march evaluates. The two exist side by side
-  // so they can be compared on the same scene rather than across two builds.
-  uint32_t fieldRepresentation = FIELD_ANALYTIC;
+  uint32_t fieldRepresentation = FIELD_SAMPLED;
 };

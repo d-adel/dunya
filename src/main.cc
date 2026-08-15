@@ -2,8 +2,12 @@
 
 int main(int argc, char** argv) {
   try {
+    // Parsed before the device and the scene exist, so a mistyped flag costs a
+    // message rather than a full startup.
+    const StartupOptions options{std::span(argv, argc)};
+
     Application application;
-    application.start(StartupOptions(std::span(argv, argc)));
+    application.start(options);
   } catch (const std::exception& e) {
     std::cerr << e.what() << '\n';
     return 1;

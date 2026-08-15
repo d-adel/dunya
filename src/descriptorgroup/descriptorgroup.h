@@ -118,6 +118,13 @@ private:
   VkDescriptorSetLayout m_setLayout = VK_NULL_HANDLE;
   VkDescriptorPool m_pool = VK_NULL_HANDLE;
 
+  // Decided once by createSetLayout from the binding flags it actually used,
+  // because a layout carrying the bit can only be allocated from a pool that
+  // carries it too. Re-deriving it in createPool would be a second source of
+  // truth for one decision, and the two would drift the moment a binding kind
+  // changes its flags - which storage images already did.
+  bool m_updateAfterBind = false;
+
   std::vector<VkDescriptorSet> m_sets;
   std::vector<Slot> m_slots;
 };
