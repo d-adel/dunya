@@ -26,6 +26,7 @@ constexpr uint32_t UNION = 0;
 constexpr uint32_t SMOOTH_UNION = 1;
 constexpr uint32_t INTERSECTION = 2;
 constexpr uint32_t SUBTRACTION = 3;
+constexpr uint32_t SMOOTH_SUBTRACTION = 4;
 
 Primitive makePrimitive(
   uint32_t type,
@@ -74,9 +75,12 @@ TEST_CASE("Primitive keeps the layout the shader indexes by", "[field]") {
 }
 
 TEST_CASE("bounds culling does not change the field", "[field][bounds]") {
-  // Two spheres, a smooth-union blob and a carve, so every skip condition is
-  // exercised, then the same scene with bounds filled in. Culling is only ever
-  // allowed to save work, so every sample has to agree exactly.
+  // Two spheres, a smooth-union blob, a hard carve and a smooth carve, so
+  // every skip condition is exercised, then the same scene with bounds filled
+  // in. Culling is only ever allowed to save work, so every sample has to agree
+  // exactly. The smooth carve is the one that catches a bound that forgot to
+  // carry its blend radius: it starts rounding k before the cutter arrives, so
+  // a bound sized to the bare radius would skip it while it still had work.
   std::vector<Primitive> unbounded{
     makePrimitive(SPHERE, glm::vec3(0.0f), glm::vec4(1.0f, 0, 0, 0), 3, UNION),
     makePrimitive(
@@ -92,6 +96,13 @@ TEST_CASE("bounds culling does not change the field", "[field][bounds]") {
       glm::vec4(0.4f, 0, 0, 0),
       7,
       SUBTRACTION
+    ),
+    makePrimitive(
+      SPHERE,
+      glm::vec3(-0.6f, 0.0f, 0.5f),
+      glm::vec4(0.45f, 0.0f, 0.0f, 0.3f),
+      11,
+      SMOOTH_SUBTRACTION
     ),
     makePrimitive(
       SPHERE,
@@ -303,6 +314,55 @@ TEST_CASE("subtraction keeps the accumulated material", "[field][csg]") {
 
   REQUIRE_THAT(result.distance, WithinAbs(0.5f, ANALYTIC_TOLERANCE));
   REQUIRE(result.material == 3);
+}
+
+TEST_CASE("smooth subtraction rounds where the hard one creases", "[field][csg]") {
+  // A unit sphere with a smaller sphere cut out of it, k = 0.5. At radius 0.75
+  // the accumulated distance is -0.25 and the cutter's is +0.25, so the two
+  // arguments of the smooth max are equal: h is 0.5 and the blend adds
+  // k*h*(1-h) = 0.125 to the hard answer. Hand-computed, the same way the
+  // smooth union case is, because the whole point is that this agrees with the
+  // shader's arithmetic and not merely with itself.
+  const Primitive solid =
+    makePrimitive(SPHERE, glm::vec3(0.0f), glm::vec4(1.0f, 0, 0, 0), 3, UNION);
+
+  const std::vector<Primitive> hard{
+    solid,
+    makePrimitive(
+      SPHERE,
+      glm::vec3(0.0f),
+      glm::vec4(0.5f, 0.0f, 0.0f, 0.5f),
+      8,
+      SUBTRACTION
+    )
+  };
+
+  const std::vector<Primitive> smooth{
+    solid,
+    makePrimitive(
+      SPHERE,
+      glm::vec3(0.0f),
+      glm::vec4(0.5f, 0.0f, 0.0f, 0.5f),
+      8,
+      SMOOTH_SUBTRACTION
+    )
+  };
+
+  const glm::vec3 probe(0.75f, 0.0f, 0.0f);
+
+  REQUIRE_THAT(distanceAt(hard, probe), WithinAbs(-0.25f, ANALYTIC_TOLERANCE));
+  REQUIRE_THAT(
+    distanceAt(smooth, probe),
+    WithinAbs(-0.125f, ANALYTIC_TOLERANCE)
+  );
+
+  // Smooth max sits above hard max, so a smooth carve removes slightly more.
+  // That is the one place it is less conservative than the hard op, and worth
+  // pinning rather than rediscovering as a march artifact.
+  REQUIRE(distanceAt(smooth, probe) > distanceAt(hard, probe));
+
+  // A subtraction of either kind keeps what it cut into.
+  REQUIRE(dunya::field::sample(smooth, probe).material == 3);
 }
 
 TEST_CASE("smooth union blends by the shader's smin", "[field][csg]") {

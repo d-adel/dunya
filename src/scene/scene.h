@@ -25,9 +25,14 @@ public:
   // Appends a sphere at the hit point. Returns false when the array is full,
   // which is a refusal rather than a corruption: the GPU buffer is a fixed
   // capacity and silently wrapping or dropping would be the worse answer.
+  //
+  // blend is the radius over which a smooth operation rounds, and is read only
+  // by the smooth ops. It is a parameter rather than a policy chosen here
+  // because the caller is what knows whether it is editing or benchmarking.
   bool addPrimitive(
     const glm::vec3& centre,
     float radius,
+    float blend,
     uint32_t material,
     uint32_t operation
   );

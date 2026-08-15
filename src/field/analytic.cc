@@ -61,8 +61,11 @@ bool skippable(
       return bound > accumulated;
 
     // Subtraction is max(acc, -cur), which only bites when the cutter reaches
-    // within the accumulated distance.
+    // within the accumulated distance. The smooth one bites k sooner, and that
+    // k is already folded into the stored radius by updateBounds, so the two
+    // share this test rather than needing a second one.
     case 3u:
+    case 4u:
       return bound >= -accumulated;
 
     // Intersection takes a max, so an arbitrarily distant primitive still
@@ -95,7 +98,15 @@ void updateBounds(Primitive& primitive) {
       break;
   }
 
-  if (radius > 0.0f && primitive.shapeConfig.z == 1u) {
+  // A blend reaches further than the shape does, in both directions: a smooth
+  // union pulls the surface toward a neighbour that has not touched it yet, and
+  // a smooth subtraction starts rounding before the cutter arrives. Either way
+  // the primitive matters k earlier than its own radius says, so the bound has
+  // to carry k or skippable() will cull one that still had work to do.
+  if (
+    radius > 0.0f
+    && (primitive.shapeConfig.z == 1u || primitive.shapeConfig.z == 4u)
+  ) {
     radius += primitive.shape.w;
   }
 
@@ -164,6 +175,26 @@ FieldSample sample(
       case 3u:
         accumulated = {
           std::max(accumulated.distance, -current.distance),
+          accumulated.material
+        };
+        break;
+
+      // Smooth subtraction, which is smooth max applied to the negated cutter:
+      // smax(a, b, k) = -smin(-a, -b, k), and b is -cur, so the inner negation
+      // cancels. One blend primitive, used both ways.
+      //
+      // Where a hard subtraction leaves a crease at every intersection circle,
+      // this rounds it - and a crease is what shading shows, because a normal
+      // is a derivative (idiom 31). It costs a little conservatism: smax sits
+      // up to k/4 above the hard max, so unlike smin it is not automatically a
+      // safe under-estimate for sphere tracing.
+      case 4u:
+        accumulated = {
+          -smoothMin(
+            -accumulated.distance,
+            current.distance,
+            primitive.shape.w
+          ),
           accumulated.material
         };
         break;

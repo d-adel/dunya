@@ -241,8 +241,11 @@ void Application::handleMouseButtonEvent(const MouseButtonEvent& event) {
     return;
   }
 
+  // Both smooth: a stamp meets the one before it at a crease, and that is what
+  // shading shows, whichever direction the material moved.
   editField(
-    (event.mods & GLFW_MOD_SHIFT) != 0 ? FIELD_OP_UNION : FIELD_OP_SUBTRACTION
+    (event.mods & GLFW_MOD_SHIFT) != 0 ? FIELD_OP_SMOOTH_UNION
+                                       : FIELD_OP_SMOOTH_SUBTRACTION
   );
 }
 
@@ -297,12 +300,26 @@ void Application::editField(uint32_t operation) {
     return;
   }
 
-  // Centred on the surface a carve only takes a shallow bite, because half the
-  // sphere sits in empty space. Pushing it along the ray by its own radius puts
-  // the whole sphere inside the material, so repeated clicks tunnel through.
-  const glm::vec3 centre = operation == FIELD_OP_SUBTRACTION
-                             ? hit->position + ray.direction * EDIT_RADIUS
-                             : hit->position;
+  /* Place the sphere so that its far wall lands exactly one advance past the
+   * surface, which is what makes a click move the surface by EDIT_ADVANCE.
+   *
+   * For a carve that means pulling it back out of the material toward the eye;
+   * for an add, pushing it in. Same distance, opposite sign, because a carve
+   * moves the surface away from the eye and an add moves it toward.
+   *
+   * The offset is bounded by the radius at both ends, and both ends are
+   * degenerate. Push a carve a full radius in and the clicked point lands
+   * exactly *on* the cutter, so its distance there is zero, so max(acc, -0)
+   * leaves the field untouched: the surface does not move where it was aimed,
+   * the next march finds the same point, and clicking repeatedly appends
+   * identical primitives and does nothing. Pull it a full radius out and the
+   * cutter no longer reaches the surface at all. Everything useful is strictly
+   * between, and which point in between is EDIT_ADVANCE's decision.
+   */
+  const float offset = EDIT_RADIUS - EDIT_ADVANCE;
+  const glm::vec3 centre = fieldOpRemovesMaterial(operation)
+                             ? hit->position - ray.direction * offset
+                             : hit->position + ray.direction * offset;
 
   // What the CPU thinks is there before the edit. At the surface this should
   // read about zero, which is the agreement between the ray the CPU marched
@@ -312,7 +329,10 @@ void Application::editField(uint32_t operation) {
   const float centreBefore =
     dunya::field::sample(m_scene.primitives(), centre).distance;
 
-  if (!m_scene.addPrimitive(centre, EDIT_RADIUS, hit->material, operation)) {
+  if (
+    !m_scene
+       .addPrimitive(centre, EDIT_RADIUS, EDIT_BLEND, hit->material, operation)
+  ) {
     std::cout << "Primitive budget full, edit refused\n";
     return;
   }
@@ -333,7 +353,7 @@ void Application::editField(uint32_t operation) {
     )
       .count();
 
-  std::cout << (operation == FIELD_OP_SUBTRACTION ? "carve" : "add  ")
+  std::cout << (fieldOpRemovesMaterial(operation) ? "carve" : "add  ")
             << "  surface " << std::fixed << std::setprecision(4)
             << surfaceDistance << "  centre " << std::setprecision(3)
             << centreBefore << " -> " << centreAfter << "  upload "
@@ -369,9 +389,14 @@ void Application::stressField(uint32_t count) {
       * glm::vec3(0.8191725f, 0.6710436f, 0.5497005f)
     );
 
+    // Deliberately the hard op with no blend, unlike a click. M17's comparison
+    // table was measured with this, and a smooth carve costs an extra smin per
+    // primitive per sample, so quietly changing it here would move published
+    // numbers without saying so.
     if (!m_scene.addPrimitive(
           extent->minimum + span * at,
           EDIT_RADIUS,
+          0.0f,
           0,
           FIELD_OP_SUBTRACTION
         )) {

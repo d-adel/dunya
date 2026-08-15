@@ -71,6 +71,7 @@ bool skippable(vec3 p, Primitive prim, float acc) {
     case 1u:
       return bound > acc;
     case 3u:
+    case 4u:
       return bound >= -acc;
     default:
       return false;
@@ -117,6 +118,11 @@ vec2 foldDistance(vec3 p, uint count, bool unboundedOnly) {
         break;
       case 3u:
         acc = vec2(max(acc.x, -cur.x), acc.y);
+        break;
+      // smax(a, b, k) = -smin(-a, -b, k), with b = -cur so the inner negation
+      // cancels. Mirrors case 4u in analytic.cc.
+      case 4u:
+        acc = vec2(-smin(-acc.x, cur.x, prim.shape.w), acc.y);
         break;
       default:
         acc = minMat(acc, cur);

@@ -24,6 +24,7 @@ Scene::Scene(const Context& context)
 bool Scene::addPrimitive(
   const glm::vec3& centre,
   float radius,
+  float blend,
   uint32_t material,
   uint32_t operation
 ) {
@@ -34,7 +35,7 @@ bool Scene::addPrimitive(
   Primitive primitive{};
   primitive.inverseModel =
     glm::inverse(glm::translate(glm::mat4(1.0f), centre));
-  primitive.shape = glm::vec4(radius, 0.0f, 0.0f, 0.0f);
+  primitive.shape = glm::vec4(radius, 0.0f, 0.0f, blend);
   primitive.shapeConfig = glm::uvec4(0, material, operation, 0);
   dunya::field::updateBounds(primitive);
 
