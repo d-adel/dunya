@@ -27,6 +27,10 @@ public:
 
   void update(uint32_t frame, const FieldFrame& frameData);
 
+  // Stages the whole array. The group carries it into each frame's own copy,
+  // so this is safe to call while frames are in flight.
+  void uploadPrimitives(std::span<const dunya::field::Primitive> primitives);
+
   const VkDescriptorSetLayout& setLayout() const noexcept;
   const VkDescriptorSet& descriptorSet(uint32_t frame) const noexcept;
 

@@ -16,10 +16,13 @@ Input::Input(GLFWwindow* window, KeyTiming timing)
   s_inputs.emplace(m_window, this);
   glfwGetCursorPos(m_window, &m_cursor.x, &m_cursor.y);
   m_previousKeyCallback = glfwSetKeyCallback(m_window, &Input::keyCallback);
+  m_previousMouseButtonCallback =
+    glfwSetMouseButtonCallback(m_window, &Input::mouseButtonCallback);
 }
 
 Input::~Input() {
   if (m_window != nullptr) {
+    glfwSetMouseButtonCallback(m_window, m_previousMouseButtonCallback);
     glfwSetKeyCallback(m_window, m_previousKeyCallback);
 
     s_inputs.erase(m_window);
@@ -133,6 +136,38 @@ void Input::keyCallback(
 
   if (input->m_previousKeyCallback != nullptr) {
     input->m_previousKeyCallback(window, key, scancode, action, mods);
+  }
+}
+
+void Input::mouseButtonCallback(
+  GLFWwindow* window,
+  int button,
+  int action,
+  int mods
+) {
+  const auto it = s_inputs.find(window);
+
+  if (it == s_inputs.end()) {
+    return;
+  }
+
+  Input* input = it->second;
+
+  // Only press and release exist for buttons; there is no repeat, so this
+  // needs none of the timing the key path carries.
+  if (action == GLFW_PRESS || action == GLFW_RELEASE) {
+    EventDispatcher::instance().dispatch(
+      MouseButtonEvent{
+        .button = button,
+        .type = action == GLFW_PRESS ? MouseButtonEventType::Pressed
+                                     : MouseButtonEventType::Released,
+        .mods = mods
+      }
+    );
+  }
+
+  if (input->m_previousMouseButtonCallback != nullptr) {
+    input->m_previousMouseButtonCallback(window, button, action, mods);
   }
 }
 

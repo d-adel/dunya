@@ -22,6 +22,16 @@ public:
 
   void augmentFrameContext(Frame& frameContext) const;
 
+  // Appends a sphere at the hit point. Returns false when the array is full,
+  // which is a refusal rather than a corruption: the GPU buffer is a fixed
+  // capacity and silently wrapping or dropping would be the worse answer.
+  bool addPrimitive(
+    const glm::vec3& centre,
+    float radius,
+    uint32_t material,
+    uint32_t operation
+  );
+
   const std::vector<dunya::field::Primitive>& primitives() const noexcept;
   const std::vector<Material>& materials() const noexcept;
   const std::vector<Texture>& textures() const noexcept;

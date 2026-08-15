@@ -1,4 +1,5 @@
 #include "scene.h"
+#include "field/analytic.h"
 #include "frame/frame.h"
 #include "context/context.h"
 #include "config/config.h"

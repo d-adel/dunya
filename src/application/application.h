@@ -27,6 +27,9 @@ public:
 
 private:
   void handleKeyEvent(const KeyEvent& event);
+  void handleMouseButtonEvent(const MouseButtonEvent& event);
+  void setLookMode(bool looking);
+  void editField(uint32_t operation);
   bool acceptsInput() const noexcept;
 
   Context m_context;
@@ -43,10 +46,14 @@ private:
 
   CameraInput m_cameraInput;
   bool m_prevAcceptsInput;
+  // Unity scene-view model: the cursor is visible and clickable by default, and
+  // only becomes a look control while the right button is held.
+  bool m_looking = false;
   Frame m_frameContext{};
   bool m_reloadRequested;
 
   EventDispatcher::SubscriptionId m_keySubscription{};
+  EventDispatcher::SubscriptionId m_mouseSubscription{};
 };
 
 constexpr const char* modeName(PipelineType type) noexcept {

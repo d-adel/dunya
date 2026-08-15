@@ -3,6 +3,7 @@
 
 add_library(dunya_field STATIC
     analytic.cc
+    raycast.cc
 )
 
 add_library(dunya::field ALIAS dunya_field)
@@ -21,6 +22,14 @@ target_compile_definitions(dunya_field PUBLIC
     GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
     GLM_FORCE_DEPTH_ZERO_TO_ONE
     GLM_ENABLE_EXPERIMENTAL
+
+    # The shaders are compiled with these same values; see the parent
+    # CMakeLists. PUBLIC because they appear in default arguments in headers.
+    DUNYA_MARCH_EPSILON=${DUNYA_MARCH_EPSILON}
+    DUNYA_MARCH_MAX_ITERATIONS=${DUNYA_MARCH_MAX_ITERATIONS}
+    DUNYA_MARCH_MAX_DISTANCE=${DUNYA_MARCH_MAX_DISTANCE}
+    DUNYA_GRADIENT_EPSILON=${DUNYA_GRADIENT_EPSILON}
+    DUNYA_MARCH_OMEGA=${DUNYA_MARCH_OMEGA}
 )
 
 if (MSVC)

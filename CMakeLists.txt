@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.28)
+﻿cmake_minimum_required(VERSION 3.28)
 
 project(DunyaRenderer VERSION 0.0 LANGUAGES CXX)
 
@@ -32,11 +32,32 @@ set(DUNYA_MAX_TEXTURES 16)
 set(DUNYA_MAX_SAMPLERS 8)
 set(DUNYA_MAX_MATERIALS 64)
 
+# Marching parameters, for the same reason: a CPU query and the drawn image have
+# to agree about where a surface is, or a click carves somewhere other than
+# where the crosshair pointed.
+set(DUNYA_MARCH_EPSILON 0.001f)
+set(DUNYA_MARCH_MAX_ITERATIONS 800)
+set(DUNYA_SHADOW_MAX_DISTANCE 20.0f)
+set(DUNYA_MARCH_MAX_DISTANCE 100.0f)
+set(DUNYA_GRADIENT_EPSILON 0.01f)
+
+# Over-relaxation multiplier for sphere tracing. Helps most when the distance
+# estimator is conservative, which subtraction's max(a, -b) makes ours.
+set(DUNYA_MARCH_OMEGA 1.2f)
+set(DUNYA_SHADOW_SHARPNESS 12.0f)
+
 set(SHADER_DEFINES
     "-DDUNYA_MAX_PRIMITIVES=${DUNYA_MAX_PRIMITIVES}"
     "-DDUNYA_MAX_TEXTURES=${DUNYA_MAX_TEXTURES}"
     "-DDUNYA_MAX_SAMPLERS=${DUNYA_MAX_SAMPLERS}"
     "-DDUNYA_MAX_MATERIALS=${DUNYA_MAX_MATERIALS}"
+    "-DDUNYA_MARCH_EPSILON=${DUNYA_MARCH_EPSILON}"
+    "-DDUNYA_MARCH_MAX_ITERATIONS=${DUNYA_MARCH_MAX_ITERATIONS}"
+    "-DDUNYA_MARCH_MAX_DISTANCE=${DUNYA_MARCH_MAX_DISTANCE}"
+    "-DDUNYA_SHADOW_MAX_DISTANCE=${DUNYA_SHADOW_MAX_DISTANCE}"
+    "-DDUNYA_GRADIENT_EPSILON=${DUNYA_GRADIENT_EPSILON}"
+    "-DDUNYA_MARCH_OMEGA=${DUNYA_MARCH_OMEGA}"
+    "-DDUNYA_SHADOW_SHARPNESS=${DUNYA_SHADOW_SHARPNESS}"
 )
 
 # The same flags as one string, so the runtime hot-reload path can pass exactly

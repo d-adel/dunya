@@ -9,7 +9,10 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(field_tests
     field_tests.cc
+    raycast_tests.cc
 )
+
+target_include_directories(field_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 
 target_link_libraries(field_tests PRIVATE dunya::field Catch2::Catch2WithMain)
 

@@ -36,7 +36,7 @@ ResourceTable::ResourceTable(
         {{0,
           MAX_MATERIALS * sizeof(Material),
           VK_SHADER_STAGE_FRAGMENT_BIT,
-          false}},
+          DescriptorGroup::BufferUpdate::Static}},
         {{1, VK_SHADER_STAGE_FRAGMENT_BIT, imageViews(textures), MAX_TEXTURES}},
         {{2,
           VK_SHADER_STAGE_FRAGMENT_BIT,

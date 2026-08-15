@@ -4,6 +4,8 @@
 #include "field/analytic.h"
 #include "field/field.h"
 
+#include "tolerances.h"
+
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <cstddef>
@@ -15,12 +17,6 @@ using dunya::field::FieldSample;
 using dunya::field::Primitive;
 
 namespace {
-
-// Named by what is being compared, not by magnitude: a sampled representation
-// will need its own, and one shared constant would have to be wrong for
-// somebody.
-constexpr float ANALYTIC_TOLERANCE = 1e-5f;
-constexpr float GRADIENT_TOLERANCE = 1e-3f;
 
 constexpr uint32_t SPHERE = 0;
 constexpr uint32_t BOX = 1;
@@ -69,11 +65,64 @@ float distanceAt(const std::vector<Primitive>& primitives, const glm::vec3& p) {
 }  // namespace
 
 TEST_CASE("Primitive keeps the layout the shader indexes by", "[field]") {
-  REQUIRE(sizeof(Primitive) == 96);
+  REQUIRE(sizeof(Primitive) == 112);
   REQUIRE(alignof(Primitive) == 16);
   REQUIRE(offsetof(Primitive, inverseModel) == 0);
   REQUIRE(offsetof(Primitive, shape) == 64);
   REQUIRE(offsetof(Primitive, shapeConfig) == 80);
+  REQUIRE(offsetof(Primitive, bounds) == 96);
+}
+
+TEST_CASE("bounds culling does not change the field", "[field][bounds]") {
+  // Two spheres, a smooth-union blob and a carve, so every skip condition is
+  // exercised, then the same scene with bounds filled in. Culling is only ever
+  // allowed to save work, so every sample has to agree exactly.
+  std::vector<Primitive> unbounded{
+    makePrimitive(SPHERE, glm::vec3(0.0f), glm::vec4(1.0f, 0, 0, 0), 3, UNION),
+    makePrimitive(
+      SPHERE,
+      glm::vec3(1.4f, 0.0f, 0.0f),
+      glm::vec4(0.8f, 0.0f, 0.0f, 0.5f),
+      5,
+      SMOOTH_UNION
+    ),
+    makePrimitive(
+      SPHERE,
+      glm::vec3(0.0f, 0.9f, 0.0f),
+      glm::vec4(0.4f, 0, 0, 0),
+      7,
+      SUBTRACTION
+    ),
+    makePrimitive(
+      SPHERE,
+      glm::vec3(6.0f, 6.0f, 6.0f),
+      glm::vec4(0.5f, 0, 0, 0),
+      9,
+      UNION
+    )
+  };
+
+  std::vector<Primitive> bounded = unbounded;
+  for (Primitive& primitive : bounded) {
+    dunya::field::updateBounds(primitive);
+  }
+
+  for (float x = -3.0f; x <= 3.0f; x += 0.25f) {
+    for (float y = -3.0f; y <= 3.0f; y += 0.25f) {
+      for (float z = -3.0f; z <= 3.0f; z += 0.5f) {
+        const glm::vec3 point(x, y, z);
+
+        const FieldSample plain = dunya::field::sample(unbounded, point);
+        const FieldSample culled = dunya::field::sample(bounded, point);
+
+        REQUIRE_THAT(
+          culled.distance,
+          WithinAbs(plain.distance, ANALYTIC_TOLERANCE)
+        );
+        REQUIRE(culled.material == plain.material);
+      }
+    }
+  }
 }
 
 TEST_CASE("an empty field is far away and has material zero", "[field]") {

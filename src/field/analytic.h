@@ -8,10 +8,15 @@
 
 namespace dunya::field {
 
-// Matches normalSampleOffset in field-shader.frag, so a CPU query and the
-// drawn image agree. Tests tighten it; physics may want it tighter still,
-// since contact normals are this gradient and a coarse offset reads as jitter.
-constexpr float DEFAULT_GRADIENT_EPSILON = 0.01f;
+// The shaders are compiled with this same value, so a CPU query and the drawn
+// image agree. Tests tighten it; physics may want it tighter still, since
+// contact normals are this gradient and a coarse offset reads as jitter.
+constexpr float DEFAULT_GRADIENT_EPSILON = DUNYA_GRADIENT_EPSILON;
+
+// Fills in the bounding sphere the evaluator culls against. Must be called
+// after inverseModel, shape and shapeConfig are set; leaving it uncalled costs
+// performance, never correctness.
+void updateBounds(Primitive& primitive);
 
 FieldSample sample(
   std::span<const Primitive> primitives,

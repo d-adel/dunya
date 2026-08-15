@@ -31,7 +31,7 @@ DescriptorGroup::DescriptorGroup(
     throw std::runtime_error("A descriptor group needs at least one binding");
   }
 
-  createPool(buffers.size(), sampledImages, samplers);
+  createPool(sampledImages, samplers);
   createSets(sampledImages, samplers);
 }
 
@@ -65,12 +65,42 @@ void DescriptorGroup::write(
       throw std::runtime_error("Write larger than the binding it targets");
     }
 
-    memcpy(slot.mapped.at(slot.perFrame ? frame : 0), data, size);
+    switch (slot.update) {
+      case BufferUpdate::Static:
+        memcpy(slot.mapped.at(0), data, size);
+        break;
+
+      case BufferUpdate::PerFrame:
+        memcpy(slot.mapped.at(frame), data, size);
+        break;
+
+      case BufferUpdate::PerFrameMutable: {
+        // Staged rather than written: the other copies may belong to frames
+        // the GPU has not finished with. flush() hands it to each in turn.
+        const char* bytes = static_cast<const char*>(data);
+
+        slot.pending.assign(bytes, bytes + size);
+        slot.pendingFrames = m_frameCount;
+        break;
+      }
+    }
 
     return;
   }
 
   throw std::runtime_error("Write to a binding this group does not own");
+}
+
+void DescriptorGroup::flush(uint32_t frame) {
+  for (Slot& slot : m_slots) {
+    if (slot.pendingFrames == 0) {
+      continue;
+    }
+
+    memcpy(slot.mapped.at(frame), slot.pending.data(), slot.pending.size());
+
+    --slot.pendingFrames;
+  }
 }
 
 void DescriptorGroup::createSetLayout(
@@ -89,7 +119,7 @@ void DescriptorGroup::createSetLayout(
   for (const BufferBinding& buffer : buffers) {
     VkDescriptorSetLayoutBinding layoutBinding{};
     layoutBinding.binding = buffer.binding;
-    layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    layoutBinding.descriptorType = buffer.type;
     layoutBinding.descriptorCount = 1;
     layoutBinding.stageFlags = buffer.stages;
     layoutBinding.pImmutableSamplers = nullptr;
@@ -167,20 +197,27 @@ void DescriptorGroup::createBuffers(
   m_slots.reserve(buffers.size());
 
   for (const BufferBinding& binding : buffers) {
-    const uint32_t count = binding.perFrame ? m_frameCount : 1;
+    const uint32_t count =
+      binding.update == BufferUpdate::Static ? 1 : m_frameCount;
 
     Slot slot;
     slot.binding = binding.binding;
-    slot.perFrame = binding.perFrame;
+    slot.update = binding.update;
     slot.size = binding.size;
+    slot.type = binding.type;
     slot.buffers.reserve(count);
     slot.mapped.resize(count);
+
+    const VkBufferUsageFlags usage =
+      binding.type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
+        ? VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
+        : VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 
     for (uint32_t i = 0; i < count; ++i) {
       slot.buffers.emplace_back(
         device,
         binding.size,
-        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        usage,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
           | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
       );
@@ -205,17 +242,34 @@ void DescriptorGroup::createBuffers(
 }
 
 void DescriptorGroup::createPool(
-  size_t bufferCount,
   const std::vector<SampledImageBinding>& sampledImages,
   const std::vector<SamplerBinding>& samplers
 ) {
   std::vector<VkDescriptorPoolSize> poolSizes;
 
-  if (bufferCount > 0) {
+  uint32_t uniformCount = 0;
+  uint32_t storageCount = 0;
+
+  for (const Slot& slot : m_slots) {
+    if (slot.type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) {
+      ++storageCount;
+    } else {
+      ++uniformCount;
+    }
+  }
+
+  if (uniformCount > 0) {
     VkDescriptorPoolSize poolSize{};
     poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSize.descriptorCount =
-      static_cast<uint32_t>(bufferCount) * m_frameCount;
+    poolSize.descriptorCount = uniformCount * m_frameCount;
+
+    poolSizes.push_back(poolSize);
+  }
+
+  if (storageCount > 0) {
+    VkDescriptorPoolSize poolSize{};
+    poolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    poolSize.descriptorCount = storageCount * m_frameCount;
 
     poolSizes.push_back(poolSize);
   }
@@ -307,7 +361,9 @@ void DescriptorGroup::createSets(
 
     for (const Slot& slot : m_slots) {
       VkDescriptorBufferInfo bufferInfo{};
-      bufferInfo.buffer = slot.buffers.at(slot.perFrame ? frame : 0).buffer();
+      bufferInfo.buffer =
+        slot.buffers.at(slot.update == BufferUpdate::Static ? 0 : frame)
+          .buffer();
       bufferInfo.offset = 0;
       bufferInfo.range = slot.size;
 
@@ -322,7 +378,7 @@ void DescriptorGroup::createSets(
       write.dstSet = m_sets[frame];
       write.dstBinding = slot.binding;
       write.dstArrayElement = 0;
-      write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+      write.descriptorType = slot.type;
       write.descriptorCount = 1;
       write.pBufferInfo = bufferInfos.data() + i;
 

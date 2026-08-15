@@ -12,17 +12,33 @@ FieldPass::FieldPass(
         {{0,
           MAX_PRIMITIVES * sizeof(Primitive),
           VK_SHADER_STAGE_FRAGMENT_BIT,
-          false},
-         {1, sizeof(FieldFrame), VK_SHADER_STAGE_FRAGMENT_BIT, true}}
+          DescriptorGroup::BufferUpdate::PerFrameMutable,
+          VK_DESCRIPTOR_TYPE_STORAGE_BUFFER},
+         {1,
+          sizeof(FieldFrame),
+          VK_SHADER_STAGE_FRAGMENT_BIT,
+          DescriptorGroup::BufferUpdate::PerFrame}}
       ) {
   if (primitives.size() > MAX_PRIMITIVES) {
     throw std::runtime_error("More primitives than the field buffer holds");
   }
 
-  m_group.write(0, 0, primitives.data(), primitives.size() * sizeof(Primitive));
+  uploadPrimitives(primitives);
+}
+
+void FieldPass::uploadPrimitives(
+  std::span<const dunya::field::Primitive> primitives
+) {
+  if (primitives.size() > MAX_PRIMITIVES) {
+    throw std::runtime_error("More primitives than the field buffer holds");
+  }
+
+  m_group.write(0, 0, primitives.data(), primitives.size_bytes());
 }
 
 void FieldPass::update(uint32_t frame, const FieldFrame& frameData) {
+  m_group.flush(frame);
+
   m_group.write(1, frame, &frameData, sizeof(frameData));
 }
 

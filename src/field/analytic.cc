@@ -37,7 +37,70 @@ float primitiveDistance(const Primitive& primitive, const glm::vec3& point) {
   }
 }
 
+// A primitive can be skipped only when it provably cannot change the
+// accumulator. The conditions differ per operation and getting them wrong is
+// silent, so they are stated once here and mirrored exactly in the shader.
+bool skippable(
+  const Primitive& primitive,
+  const glm::vec3& point,
+  float accumulated
+) {
+  if (primitive.bounds.w <= 0.0f) {
+    return false;
+  }
+
+  const float bound =
+    glm::length(point - glm::vec3(primitive.bounds)) - primitive.bounds.w;
+
+  switch (primitive.shapeConfig.z) {
+    // Union and smooth union lose to a nearer accumulator. The blend radius is
+    // folded into the stored radius, so a smooth union that could still pull
+    // the surface toward itself never satisfies this.
+    case 0u:
+    case 1u:
+      return bound > accumulated;
+
+    // Subtraction is max(acc, -cur), which only bites when the cutter reaches
+    // within the accumulated distance.
+    case 3u:
+      return bound >= -accumulated;
+
+    // Intersection takes a max, so an arbitrarily distant primitive still
+    // dominates and can never be skipped on distance.
+    default:
+      return false;
+  }
+}
+
 }  // namespace
+
+void updateBounds(Primitive& primitive) {
+  const glm::mat4 model = glm::inverse(primitive.inverseModel);
+  const glm::vec3 centre = glm::vec3(model[3]);
+
+  float radius = 0.0f;
+
+  switch (primitive.shapeConfig.x) {
+    case 0u:
+      radius = primitive.shape.x;
+      break;
+
+    case 1u:
+      radius = glm::length(glm::vec3(primitive.shape));
+      break;
+
+    // A plane is unbounded, and an unknown shape has no bound we can trust.
+    default:
+      radius = 0.0f;
+      break;
+  }
+
+  if (radius > 0.0f && primitive.shapeConfig.z == 1u) {
+    radius += primitive.shape.w;
+  }
+
+  primitive.bounds = glm::vec4(centre, radius);
+}
 
 FieldSample sample(
   std::span<const Primitive> primitives,
@@ -46,6 +109,10 @@ FieldSample sample(
   FieldSample accumulated{FAR_DISTANCE, 0};
 
   for (const Primitive& primitive : primitives) {
+    if (skippable(primitive, point, accumulated.distance)) {
+      continue;
+    }
+
     const FieldSample current{
       primitiveDistance(primitive, point),
       primitive.shapeConfig.y

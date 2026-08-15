@@ -21,6 +21,17 @@ struct KeyEvent {
   KeyEventType type;
 };
 
+enum class MouseButtonEventType {
+  Pressed,
+  Released
+};
+
+struct MouseButtonEvent {
+  int button;
+  MouseButtonEventType type;
+  int mods;
+};
+
 struct KeyTiming {
   uint64_t doubleWindowMs = 250;    // Max gap between 2 presses
   uint64_t holdDelayMs = 350;       // Time before Hold event
@@ -78,6 +89,13 @@ private:
     int mods
   );
 
+  static void mouseButtonCallback(
+    GLFWwindow* window,
+    int button,
+    int action,
+    int mods
+  );
+
   void updateCursor();
   void handleKey(int key, int action);
   void dispatch(int key, KeyEventType type);
@@ -97,6 +115,7 @@ private:
   std::array<KeyState, GLFW_KEY_LAST + 1> m_keyStates{};
 
   GLFWkeyfun m_previousKeyCallback = nullptr;
+  GLFWmousebuttonfun m_previousMouseButtonCallback = nullptr;
 
   Cursor m_cursor{};
 

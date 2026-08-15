@@ -7,7 +7,7 @@ FrameGlobals::FrameGlobals(const Device& device)
         {{0,
           sizeof(CameraUniform),
           VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-          true}}
+          DescriptorGroup::BufferUpdate::PerFrame}}
       ) {}
 
 void FrameGlobals::update(uint32_t frame, const CameraUniform& camera) {

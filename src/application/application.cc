@@ -49,9 +49,16 @@ Application::Application()
   m_keySubscription = EventDispatcher::instance().subscribe<KeyEvent>(
     [this](const KeyEvent& event) { handleKeyEvent(event); }
   );
+
+  m_mouseSubscription = EventDispatcher::instance().subscribe<MouseButtonEvent>(
+    [this](const MouseButtonEvent& event) { handleMouseButtonEvent(event); }
+  );
 }
 
 Application::~Application() {
+  EventDispatcher::instance().unsubscribe<MouseButtonEvent>(
+    m_mouseSubscription
+  );
   EventDispatcher::instance().unsubscribe<KeyEvent>(m_keySubscription);
 }
 
@@ -59,8 +66,11 @@ void Application::start() {
   glfwSetInputMode(
     m_context.window().handle(),
     GLFW_CURSOR,
-    acceptsInput() ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL
+    GLFW_CURSOR_NORMAL
   );
+
+  std::cout << "Hold right mouse to look and fly (WASD/QE)\n"
+            << "Left click carves, shift + left click adds\n";
 
   double prevTime = glfwGetTime();
   double pipelineReloadCheck = 0;
@@ -112,7 +122,7 @@ void Application::start() {
       }
     }
 
-    bool curAcceptsInput = acceptsInput();
+    bool curAcceptsInput = acceptsInput() && m_looking;
 
     if (curAcceptsInput != m_prevAcceptsInput) {
       m_input.cursorDeltaInvalid();
@@ -156,17 +166,138 @@ bool Application::acceptsInput() const noexcept {
   return m_input.enabled() && m_context.window().focused();
 }
 
+void Application::handleMouseButtonEvent(const MouseButtonEvent& event) {
+  if (!acceptsInput()) {
+    return;
+  }
+
+  if (event.button == GLFW_MOUSE_BUTTON_RIGHT) {
+    setLookMode(event.type == MouseButtonEventType::Pressed);
+    return;
+  }
+
+  if (
+    event.button != GLFW_MOUSE_BUTTON_LEFT
+    || event.type != MouseButtonEventType::Pressed
+  ) {
+    return;
+  }
+
+  // Clicking is for the visible cursor; while looking, the reported position
+  // is a virtual one that has nothing to do with the screen.
+  if (m_looking) {
+    return;
+  }
+
+  editField(
+    (event.mods & GLFW_MOD_SHIFT) != 0 ? FIELD_OP_UNION : FIELD_OP_SUBTRACTION
+  );
+}
+
+void Application::setLookMode(bool looking) {
+  if (m_looking == looking) {
+    return;
+  }
+
+  m_looking = looking;
+
+  if (!m_looking) {
+    clearCameraInput();
+  }
+
+  // Entering or leaving capture teleports the cursor, and a delta across that
+  // jump would spin the camera (idiom 17).
+  m_input.cursorDeltaInvalid();
+
+  glfwSetInputMode(
+    m_context.window().handle(),
+    GLFW_CURSOR,
+    m_looking ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL
+  );
+}
+
+void Application::editField(uint32_t operation) {
+  const Cursor cursor = m_input.cursor();
+  const VkExtent2D extent = m_swapChain.extent();
+
+  // Vulkan's NDC y runs downward because the projection flips it, and GLFW
+  // reports the cursor from the top left, so both axes map without a flip.
+  const glm::vec2 ndc(
+    2.0f * static_cast<float>(cursor.x) / static_cast<float>(extent.width)
+      - 1.0f,
+    2.0f * static_cast<float>(cursor.y) / static_cast<float>(extent.height)
+      - 1.0f
+  );
+
+  const glm::mat4 viewProj = m_frameContext.proj * m_frameContext.view;
+
+  const dunya::field::Ray ray = dunya::field::screenPointToRay(
+    glm::inverse(viewProj),
+    glm::vec3(m_frameContext.cameraPos),
+    ndc
+  );
+
+  const std::optional<dunya::field::RayHit> hit =
+    dunya::field::raymarch(m_scene.primitives(), ray);
+
+  if (!hit.has_value()) {
+    std::cout << "Nothing under the cursor\n";
+    return;
+  }
+
+  // Centred on the surface a carve only takes a shallow bite, because half the
+  // sphere sits in empty space. Pushing it along the ray by its own radius puts
+  // the whole sphere inside the material, so repeated clicks tunnel through.
+  const glm::vec3 centre = operation == FIELD_OP_SUBTRACTION
+                             ? hit->position + ray.direction * EDIT_RADIUS
+                             : hit->position;
+
+  // What the CPU thinks is there before the edit. At the surface this should
+  // read about zero, which is the agreement between the ray the CPU marched
+  // and the surface the shader drew.
+  const float surfaceDistance =
+    dunya::field::sample(m_scene.primitives(), hit->position).distance;
+  const float centreBefore =
+    dunya::field::sample(m_scene.primitives(), centre).distance;
+
+  if (!m_scene.addPrimitive(centre, EDIT_RADIUS, hit->material, operation)) {
+    std::cout << "Primitive budget full, edit refused\n";
+    return;
+  }
+
+  const auto uploadStart = std::chrono::steady_clock::now();
+  m_fieldPass.uploadPrimitives(m_scene.primitives());
+  const auto uploadEnd = std::chrono::steady_clock::now();
+
+  // A carve leaves empty space at its centre and an add leaves solid, so both
+  // land on +/- the edit radius. Anything else means the CPU and the GPU
+  // disagree about the array they share.
+  const float centreAfter =
+    dunya::field::sample(m_scene.primitives(), centre).distance;
+
+  const auto uploadMicros =
+    std::chrono::duration_cast<std::chrono::microseconds>(
+      uploadEnd - uploadStart
+    )
+      .count();
+
+  std::cout << (operation == FIELD_OP_SUBTRACTION ? "carve" : "add  ")
+            << "  surface " << std::fixed << std::setprecision(4)
+            << surfaceDistance << "  centre " << std::setprecision(3)
+            << centreBefore << " -> " << centreAfter << "  upload "
+            << uploadMicros << " us  primitives " << m_scene.primitives().size()
+            << '\n';
+}
+
 void Application::handleKeyEvent(const KeyEvent& event) {
   if (event.key == GLFW_KEY_ESCAPE && event.type == KeyEventType::Pressed) {
     m_input.toggleEnabled();
 
     clearCameraInput();
 
-    glfwSetInputMode(
-      m_context.window().handle(),
-      GLFW_CURSOR,
-      acceptsInput() ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL
-    );
+    // The cursor now belongs to look mode, so escape leaves it rather than
+    // setting the mode itself.
+    setLookMode(false);
   }
 
   if (event.key == GLFW_KEY_P && event.type == KeyEventType::SinglePressed) {
@@ -221,7 +352,8 @@ void Application::handleKeyEvent(const KeyEvent& event) {
 
   switch (event.type) {
     case KeyEventType::Pressed:
-      *state = acceptsInput();
+      // Movement belongs to look mode, the same way it does in a scene view.
+      *state = acceptsInput() && m_looking;
       break;
 
     case KeyEventType::Released:

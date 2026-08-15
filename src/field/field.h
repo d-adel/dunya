@@ -23,15 +23,22 @@ namespace dunya::field {
  * non-uniform scale in inverseModel breaks that.
  */
 
+/* bounds is a world-space bounding sphere, xyz centre and w radius, used to
+ * skip primitives that cannot affect a sample. **A radius of zero means "no
+ * bound known" and the primitive is never skipped**, so a default-constructed
+ * Primitive is slow rather than wrong. Planes are unbounded and stay at zero.
+ */
+
 struct Primitive {
   glm::mat4 inverseModel;
   glm::vec4 shape;
   glm::uvec4 shapeConfig;
+  glm::vec4 bounds;
 };
 
 static_assert(
-  sizeof(Primitive) == 96,
-  "Primitive must keep the std140 layout the field shader indexes by"
+  sizeof(Primitive) == 112,
+  "Primitive must keep the layout the field shader indexes by"
 );
 
 struct FieldSample {

@@ -21,6 +21,28 @@ Scene::Scene(const Context& context)
   m_drawItems.emplace_back(DrawItem({0, 3, model2}));
 }
 
+bool Scene::addPrimitive(
+  const glm::vec3& centre,
+  float radius,
+  uint32_t material,
+  uint32_t operation
+) {
+  if (m_primitives.size() >= MAX_PRIMITIVES) {
+    return false;
+  }
+
+  Primitive primitive{};
+  primitive.inverseModel =
+    glm::inverse(glm::translate(glm::mat4(1.0f), centre));
+  primitive.shape = glm::vec4(radius, 0.0f, 0.0f, 0.0f);
+  primitive.shapeConfig = glm::uvec4(0, material, operation, 0);
+  dunya::field::updateBounds(primitive);
+
+  m_primitives.push_back(primitive);
+
+  return true;
+}
+
 void Scene::augmentFrameContext(Frame& frameContext) const {
   std::span<const DrawItem> data(m_drawItems);
   std::span<const Mesh> meshes(m_meshes);
@@ -118,6 +140,11 @@ std::vector<Material> Scene::createMaterials() {
 std::vector<Primitive> Scene::createPrimitives() {
   std::vector<Primitive> primitives;
 
+  // Reserved to capacity so an append never reallocates: Frame hands the
+  // renderer a span over this vector, and a reallocation would leave last
+  // frame's span pointing at freed storage (idiom 19).
+  primitives.reserve(MAX_PRIMITIVES);
+
   Primitive sphere{};
   sphere.inverseModel =
     glm::inverse(glm::translate(glm::mat4(1.0f), glm::vec3(1.0f, 0.45f, 0.0f)));
@@ -145,6 +172,10 @@ std::vector<Primitive> Scene::createPrimitives() {
   primitives.push_back(sphere);
   primitives.push_back(box);
   primitives.push_back(plane);
+
+  for (Primitive& primitive : primitives) {
+    dunya::field::updateBounds(primitive);
+  }
 
   return primitives;
 }

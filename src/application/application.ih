@@ -1,5 +1,9 @@
 #include "application.h"
 #include "config/config.h"
+#include "field/analytic.h"
+#include "field/raycast.h"
+
+#include <optional>
 #include <iostream>
 #include <iomanip>
 #include <chrono>

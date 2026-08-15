@@ -10,11 +10,23 @@
 
 class DescriptorGroup {
 public:
+  enum class BufferUpdate {
+    // Written once at construction and never again: one copy is enough.
+    Static,
+    // Written every frame with that frame's own value.
+    PerFrame,
+    // Written occasionally, at a moment of the caller's choosing. Replicated
+    // per frame because the copy a submitted frame is reading must never be
+    // the copy the CPU overwrites.
+    PerFrameMutable
+  };
+
   struct BufferBinding {
     uint32_t binding = 0;
     VkDeviceSize size = 0;
     VkShaderStageFlags stages = 0;
-    bool perFrame = true;
+    BufferUpdate update = BufferUpdate::PerFrame;
+    VkDescriptorType type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
   };
 
   struct SampledImageBinding {
@@ -51,13 +63,21 @@ public:
 
   void write(uint32_t binding, uint32_t frame, const void* data, size_t size);
 
+  // Carries any staged write into this frame's own copies. Must be called once
+  // per frame, after the fence for that frame has been waited on.
+  void flush(uint32_t frame);
+
 private:
   struct Slot {
     uint32_t binding = 0;
-    bool perFrame = true;
+    BufferUpdate update = BufferUpdate::PerFrame;
     VkDeviceSize size = 0;
+    VkDescriptorType type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     std::vector<Buffer> buffers;
     std::vector<void*> mapped;
+
+    std::vector<char> pending;
+    uint32_t pendingFrames = 0;
   };
 
   void createSetLayout(
@@ -70,7 +90,6 @@ private:
     const std::vector<BufferBinding>& buffers
   );
   void createPool(
-    size_t bufferCount,
     const std::vector<SampledImageBinding>& sampledImages,
     const std::vector<SamplerBinding>& samplers
   );
