@@ -62,7 +62,24 @@ Application::~Application() {
   EventDispatcher::instance().unsubscribe<KeyEvent>(m_keySubscription);
 }
 
-void Application::start() {
+StartupOptions::StartupOptions(std::span<char*> arguments) {
+  // Element zero is the executable, and an unrecognised argument is ignored
+  // rather than fatal: this is a harness, and refusing to launch over a typo
+  // would cost more than the measurement it was asked for.
+  for (size_t i = 1; i < arguments.size(); ++i) {
+    const std::string argument = arguments[i];
+
+    if (argument == "--sampled") {
+      sampled = true;
+    } else if (argument == "--verify-bake") {
+      verifyBake = true;
+    } else if (argument == "--carves" && i + 1 < arguments.size()) {
+      carves = static_cast<uint32_t>(std::stoul(arguments[++i]));
+    }
+  }
+}
+
+void Application::start(const StartupOptions& options) {
   glfwSetInputMode(
     m_context.window().handle(),
     GLFW_CURSOR,
@@ -71,6 +88,17 @@ void Application::start() {
 
   std::cout << "Hold right mouse to look and fly (WASD/QE)\n"
             << "Left click carves, shift + left click adds\n";
+
+  if (options.carves > 0) {
+    stressField(options.carves);
+  }
+
+  if (options.sampled) {
+    m_frameContext.fieldRepresentation = FIELD_SAMPLED;
+    std::cout << "Field representation: sampled\n";
+  }
+
+  bool bakeCheckPending = options.verifyBake;
 
   double prevTime = glfwGetTime();
   double pipelineReloadCheck = 0;
@@ -152,6 +180,15 @@ void Application::start() {
       || m_renderer.drawFrame(m_swapChain, m_frameContext)
     ) {
       m_swapChain.recreate();
+    }
+
+    // After a frame, because the compute bake runs as part of one. Before it,
+    // the volumes still hold the CPU bake and the check would be comparing
+    // that against itself.
+    if (bakeCheckPending) {
+      bakeCheckPending = false;
+      m_context.device().waitIdle();
+      m_fieldPass.verifyBake(m_scene.primitives());
     }
   }
 
@@ -289,6 +326,51 @@ void Application::editField(uint32_t operation) {
             << '\n';
 }
 
+/* Carves a batch, so the two representations can be compared at a primitive
+ * count clicking cannot reach patiently or repeatably.
+ *
+ * The placement is a low-discrepancy sequence rather than random: the carves
+ * have to spread through the volume instead of stacking in a line, and they
+ * have to land in the same places on every run, or the two representations are
+ * not being measured on the same scene.
+ */
+void Application::stressField(uint32_t count) {
+  const std::optional<dunya::field::Aabb> extent =
+    dunya::field::boundedExtent(m_scene.primitives());
+
+  if (!extent.has_value()) {
+    std::cout << "Nothing bounded to carve into\n";
+    return;
+  }
+
+  const glm::vec3 span = extent->maximum - extent->minimum;
+  const uint32_t before = static_cast<uint32_t>(m_scene.primitives().size());
+
+  for (uint32_t i = 0; i < count; ++i) {
+    // The R3 sequence: successive multiples of these three fractions fill a
+    // volume evenly without ever repeating a position.
+    const glm::vec3 at = glm::fract(
+      static_cast<float>(before + i)
+      * glm::vec3(0.8191725f, 0.6710436f, 0.5497005f)
+    );
+
+    if (!m_scene.addPrimitive(
+          extent->minimum + span * at,
+          EDIT_RADIUS,
+          0,
+          FIELD_OP_SUBTRACTION
+        )) {
+      std::cout << "Primitive budget full\n";
+      break;
+    }
+  }
+
+  m_fieldPass.uploadPrimitives(m_scene.primitives());
+
+  std::cout << "stress  primitives " << before << " -> "
+            << m_scene.primitives().size() << '\n';
+}
+
 void Application::handleKeyEvent(const KeyEvent& event) {
   if (event.key == GLFW_KEY_ESCAPE && event.type == KeyEventType::Pressed) {
     m_input.toggleEnabled();
@@ -304,6 +386,24 @@ void Application::handleKeyEvent(const KeyEvent& event) {
     m_frameContext.mode = nextPipelineType(m_frameContext.mode);
     std::cout << "Pipeline mode switched to: " << (int)m_frameContext.mode
               << '\n';
+  }
+
+  if (event.key == GLFW_KEY_B && event.type == KeyEventType::SinglePressed) {
+    stressField(10);
+    return;
+  }
+
+  if (event.key == GLFW_KEY_G && event.type == KeyEventType::SinglePressed) {
+    m_frameContext.fieldRepresentation =
+      m_frameContext.fieldRepresentation == FIELD_ANALYTIC ? FIELD_SAMPLED
+                                                           : FIELD_ANALYTIC;
+
+    std::cout << "Field representation: "
+              << (m_frameContext.fieldRepresentation == FIELD_ANALYTIC
+                    ? "analytic"
+                    : "sampled")
+              << '\n';
+    return;
   }
 
   if (event.key == GLFW_KEY_R && event.type == KeyEventType::SinglePressed) {

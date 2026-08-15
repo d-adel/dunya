@@ -5,9 +5,18 @@ DescriptorGroup::DescriptorGroup(
   uint32_t frameCount,
   std::vector<BufferBinding> buffers,
   std::vector<SampledImageBinding> sampledImages,
-  std::vector<SamplerBinding> samplers
+  std::vector<SamplerBinding> samplers,
+  std::vector<StorageImageBinding> storageImages
 )
     : m_device(device.vkDevice()), m_frameCount(frameCount) {
+  for (const auto& storageImage : storageImages) {
+    if (storageImage.elements.size() > storageImage.capacity) {
+      throw std::runtime_error(
+        "Number of storage image bindings larger than the current capacity"
+      );
+    }
+  }
+
   for (const auto& sampledImage : sampledImages) {
     if (sampledImage.elements.size() > sampledImage.capacity) {
       throw std::runtime_error(
@@ -24,15 +33,18 @@ DescriptorGroup::DescriptorGroup(
     }
   }
 
-  createSetLayout(buffers, sampledImages, samplers);
+  createSetLayout(buffers, sampledImages, samplers, storageImages);
   createBuffers(device, buffers);
 
-  if (buffers.empty() && sampledImages.empty() && samplers.empty()) {
+  if (
+    buffers.empty() && sampledImages.empty() && samplers.empty()
+    && storageImages.empty()
+  ) {
     throw std::runtime_error("A descriptor group needs at least one binding");
   }
 
-  createPool(sampledImages, samplers);
-  createSets(sampledImages, samplers);
+  createPool(sampledImages, samplers, storageImages);
+  createSets(sampledImages, samplers, storageImages);
 }
 
 DescriptorGroup::~DescriptorGroup() {
@@ -106,10 +118,11 @@ void DescriptorGroup::flush(uint32_t frame) {
 void DescriptorGroup::createSetLayout(
   const std::vector<BufferBinding>& buffers,
   const std::vector<SampledImageBinding>& sampledImages,
-  const std::vector<SamplerBinding>& samplers
+  const std::vector<SamplerBinding>& samplers,
+  const std::vector<StorageImageBinding>& storageImages
 ) {
-  const size_t bindingCount =
-    buffers.size() + sampledImages.size() + samplers.size();
+  const size_t bindingCount = buffers.size() + sampledImages.size()
+                              + samplers.size() + storageImages.size();
 
   std::vector<VkDescriptorSetLayoutBinding> bindings;
   std::vector<VkDescriptorBindingFlags> bindingFlags;
@@ -156,6 +169,23 @@ void DescriptorGroup::createSetLayout(
       VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT
       | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT
     );
+  }
+
+  for (const StorageImageBinding& storageImage : storageImages) {
+    VkDescriptorSetLayoutBinding layoutBinding{};
+    layoutBinding.binding = storageImage.binding;
+    layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    layoutBinding.descriptorCount = storageImage.capacity;
+    layoutBinding.stageFlags = storageImage.stages;
+    layoutBinding.pImmutableSamplers = nullptr;
+
+    bindings.push_back(layoutBinding);
+
+    // No update-after-bind here, unlike the sampled arrays. These are a fixed
+    // set written once at creation, and asking for the flag would require
+    // descriptorBindingStorageImageUpdateAfterBind for a capability nothing
+    // uses.
+    bindingFlags.push_back(0);
   }
 
   VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsInfo{};
@@ -243,7 +273,8 @@ void DescriptorGroup::createBuffers(
 
 void DescriptorGroup::createPool(
   const std::vector<SampledImageBinding>& sampledImages,
-  const std::vector<SamplerBinding>& samplers
+  const std::vector<SamplerBinding>& samplers,
+  const std::vector<StorageImageBinding>& storageImages
 ) {
   std::vector<VkDescriptorPoolSize> poolSizes;
 
@@ -298,6 +329,18 @@ void DescriptorGroup::createPool(
     poolSizes.push_back(poolSize);
   }
 
+  uint32_t storageImageCapacity = 0;
+  for (const auto& item : storageImages) {
+    storageImageCapacity += item.capacity;
+  }
+
+  if (storageImageCapacity > 0) {
+    VkDescriptorPoolSize poolSize{};
+    poolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    poolSize.descriptorCount = storageImageCapacity * m_frameCount;
+    poolSizes.push_back(poolSize);
+  }
+
   VkDescriptorPoolCreateInfo poolInfo{};
   poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
   poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
@@ -307,7 +350,8 @@ void DescriptorGroup::createPool(
   // Only the array bindings ask for update-after-bind, so a group without one
   // should not carry the flag; a layout created without the matching bit
   // cannot be allocated from a pool that has it.
-  poolInfo.flags = (sampledImageCapacity > 0 || samplerCapacity > 0)
+  poolInfo.flags = (sampledImageCapacity > 0 || samplerCapacity > 0
+                    || storageImageCapacity > 0)
                      ? VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT
                      : 0;
 
@@ -320,7 +364,8 @@ void DescriptorGroup::createPool(
 
 void DescriptorGroup::createSets(
   const std::vector<SampledImageBinding>& sampledImages,
-  const std::vector<SamplerBinding>& samplers
+  const std::vector<SamplerBinding>& samplers,
+  const std::vector<StorageImageBinding>& storageImages
 ) {
   const std::vector<VkDescriptorSetLayout> layouts(m_frameCount, m_setLayout);
 
@@ -348,16 +393,26 @@ void DescriptorGroup::createSets(
     samplerCapacity += item.capacity;
   }
 
+  size_t storageImageCapacity = 0;
+  for (const auto& item : storageImages) {
+    storageImageCapacity += item.capacity;
+  }
+
   for (uint32_t frame = 0; frame < m_frameCount; ++frame) {
     std::vector<VkDescriptorImageInfo> sampledImageInfos;
     std::vector<VkDescriptorImageInfo> samplerInfos;
+    std::vector<VkDescriptorImageInfo> storageImageInfos;
     std::vector<VkWriteDescriptorSet> writes;
     std::vector<VkDescriptorBufferInfo> bufferInfos;
 
     bufferInfos.reserve(m_slots.size());
     sampledImageInfos.reserve(sampledImageCapacity);
     samplerInfos.reserve(samplerCapacity);
-    writes.reserve(m_slots.size() + sampledImages.size() + samplers.size());
+    storageImageInfos.reserve(storageImageCapacity);
+    writes.reserve(
+      m_slots.size() + sampledImages.size() + samplers.size()
+      + storageImages.size()
+    );
 
     for (const Slot& slot : m_slots) {
       VkDescriptorBufferInfo bufferInfo{};
@@ -440,6 +495,37 @@ void DescriptorGroup::createSets(
 
       writes.push_back(write);
       samplerOffset += count;
+    }
+
+    size_t storageImageOffset = 0;
+    for (const StorageImageBinding& storageImage : storageImages) {
+      const size_t count = storageImage.elements.size();
+
+      if (count == 0u) {
+        continue;
+      }
+
+      for (const auto& element : storageImage.elements) {
+        VkDescriptorImageInfo imageInfo{};
+        // A storage image is written, not sampled, so it is accessed in
+        // GENERAL rather than a read-only layout.
+        imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+        imageInfo.imageView = element;
+
+        storageImageInfos.push_back(imageInfo);
+      }
+
+      VkWriteDescriptorSet write{};
+      write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      write.dstSet = m_sets[frame];
+      write.dstBinding = storageImage.binding;
+      write.dstArrayElement = 0;
+      write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+      write.descriptorCount = static_cast<uint32_t>(count);
+      write.pImageInfo = storageImageInfos.data() + storageImageOffset;
+
+      writes.push_back(write);
+      storageImageOffset += count;
     }
 
     vkUpdateDescriptorSets(

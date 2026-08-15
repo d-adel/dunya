@@ -2,12 +2,17 @@
 
 #include <vulkan/vulkan.h>
 
+#include <string>
 #include <utility>
 #include <vector>
 
 class ShaderModule {
 public:
   ShaderModule(const VkDevice& device, const std::vector<char>& code);
+
+  // Reading the SPIR-V is the module's business, not its caller's. Two
+  // pipelines needed it and a second copy of the loader was the alternative.
+  ShaderModule(const VkDevice& device, const std::string& path);
 
   ShaderModule(const ShaderModule&) = delete;
   ShaderModule& operator=(const ShaderModule&) = delete;

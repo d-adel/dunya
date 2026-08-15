@@ -74,6 +74,8 @@ private:
   void create();
   void destroy() noexcept;
 
+  static std::filesystem::file_time_type newestIncludeTime();
+
   VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
   VkPipeline m_pipeline = VK_NULL_HANDLE;
 
@@ -87,4 +89,5 @@ private:
 
   std::filesystem::file_time_type m_vertTime;
   std::filesystem::file_time_type m_fragTime;
+  std::filesystem::file_time_type m_includeTime;
 };

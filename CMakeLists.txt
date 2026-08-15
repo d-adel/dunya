@@ -46,6 +46,17 @@ set(DUNYA_GRADIENT_EPSILON 0.01f)
 set(DUNYA_MARCH_OMEGA 1.2f)
 set(DUNYA_SHADOW_SHARPNESS 12.0f)
 
+# Trilinear interpolation of a distance field overestimates - the sampled tests
+# measure it - so a march through the grid shortens every step rather than
+# trusting a value that is not a true bound.
+set(DUNYA_GRID_STEP_SAFETY 0.8f)
+
+# Sampler slots, shared so the shader does not have to guess the order Scene
+# creates them in.
+set(DUNYA_SAMPLER_LINEAR_REPEAT 0)
+set(DUNYA_SAMPLER_LINEAR_CLAMP 1)
+set(DUNYA_SAMPLER_NEAREST_CLAMP 2)
+
 set(SHADER_DEFINES
     "-DDUNYA_MAX_PRIMITIVES=${DUNYA_MAX_PRIMITIVES}"
     "-DDUNYA_MAX_TEXTURES=${DUNYA_MAX_TEXTURES}"
@@ -58,7 +69,20 @@ set(SHADER_DEFINES
     "-DDUNYA_GRADIENT_EPSILON=${DUNYA_GRADIENT_EPSILON}"
     "-DDUNYA_MARCH_OMEGA=${DUNYA_MARCH_OMEGA}"
     "-DDUNYA_SHADOW_SHARPNESS=${DUNYA_SHADOW_SHARPNESS}"
+    "-DDUNYA_GRID_STEP_SAFETY=${DUNYA_GRID_STEP_SAFETY}"
+    "-DDUNYA_SAMPLER_LINEAR_REPEAT=${DUNYA_SAMPLER_LINEAR_REPEAT}"
+    "-DDUNYA_SAMPLER_LINEAR_CLAMP=${DUNYA_SAMPLER_LINEAR_CLAMP}"
+    "-DDUNYA_SAMPLER_NEAREST_CLAMP=${DUNYA_SAMPLER_NEAREST_CLAMP}"
 )
+
+# Kept out of the flag string above because the runtime hot-reload path has to
+# quote this itself: a path with a space in it would otherwise be read as two
+# arguments and glslc would report "linking multiple files is not supported".
+set(SHADER_INCLUDE_FLAG "-I${SHADER_SOURCE_DIR}")
+
+# Shared GLSL is not compiled on its own, but every shader that includes it has
+# to rebuild when it changes, so it joins their dependencies explicitly.
+file(GLOB SHADER_INCLUDES CONFIGURE_DEPENDS "${SHADER_SOURCE_DIR}/*.glsl")
 
 # The same flags as one string, so the runtime hot-reload path can pass exactly
 # what the build passed. A reloaded shader compiled with different capacities
@@ -113,6 +137,7 @@ add_executable(${PROJECT_NAME}
     src/surface/surface.cc
     src/swapchain/swapchain.cc
     src/pipeline/pipeline.cc
+    src/computepipeline/computepipeline.cc
     src/shadermodule/shadermodule.cc
     src/renderer/renderer.cc
     src/buffer/buffer.cc
@@ -157,10 +182,14 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     SHADER_SOURCE_DIR=\"${SHADER_SOURCE_DIR}\"
     GLSLC_PATH=\"${GLSLC_EXECUTABLE}\"
     GLSLC_DEFINES=\"${SHADER_DEFINES_ARGS}\"
+    GLSLC_INCLUDE_DIR=\"${SHADER_SOURCE_DIR}\"
     DUNYA_MAX_PRIMITIVES=${DUNYA_MAX_PRIMITIVES}
     DUNYA_MAX_TEXTURES=${DUNYA_MAX_TEXTURES}
     DUNYA_MAX_SAMPLERS=${DUNYA_MAX_SAMPLERS}
     DUNYA_MAX_MATERIALS=${DUNYA_MAX_MATERIALS}
+    DUNYA_SAMPLER_LINEAR_REPEAT=${DUNYA_SAMPLER_LINEAR_REPEAT}
+    DUNYA_SAMPLER_LINEAR_CLAMP=${DUNYA_SAMPLER_LINEAR_CLAMP}
+    DUNYA_SAMPLER_NEAREST_CLAMP=${DUNYA_SAMPLER_NEAREST_CLAMP}
 )
 
 file(
@@ -193,10 +222,11 @@ foreach(SHADER_SOURCE IN LISTS SHADER_SOURCES)
         COMMAND
             "${GLSLC_EXECUTABLE}"
             ${SHADER_DEFINES}
+            "${SHADER_INCLUDE_FLAG}"
             "${SHADER_SOURCE}"
             -o "${SHADER_OUTPUT}"
 
-        DEPENDS "${SHADER_SOURCE}"
+        DEPENDS "${SHADER_SOURCE}" ${SHADER_INCLUDES}
 
         COMMENT "Compiling shader ${SHADER_FILENAME}"
         VERBATIM

@@ -1,28 +1,13 @@
 #include "pipeline.ih"
 
-static std::vector<char> readFile(const std::string& filename) {
-  std::ifstream file(filename, std::ios::ate | std::ios::binary);
-
-  if (!file.is_open()) {
-    throw std::runtime_error("Failed to open file");
-  }
-
-  size_t fileSize = (size_t)file.tellg();
-  std::vector<char> buffer(fileSize);
-
-  file.seekg(0);
-  file.read(buffer.data(), fileSize);
-
-  file.close();
-
-  return buffer;
-}
-
 static bool compileShader(
   const std::string& source,
   const std::string& output
 ) {
-  const std::string command = "\"\"" GLSLC_PATH "\" " GLSLC_DEFINES " \""
+  // Every path is quoted here rather than baked into the flag string, so a
+  // directory with a space in it stays one argument.
+  const std::string command = "\"\"" GLSLC_PATH "\" " GLSLC_DEFINES " -I\"" GLSLC_INCLUDE_DIR
+                              "\" \""
                               + source + "\" -o \"" + output + "\"\"";
 
   return std::system(command.c_str()) == 0;
@@ -134,6 +119,34 @@ void Pipeline::create() {
 
   m_vertTime = std::filesystem::last_write_time(m_config.vert);
   m_fragTime = std::filesystem::last_write_time(m_config.frag);
+  m_includeTime = newestIncludeTime();
+}
+
+std::filesystem::file_time_type Pipeline::newestIncludeTime() {
+  // A shader's own file is not the whole of its source any more: the shared
+  // evaluation lives in an include, and editing that has to reload just the
+  // same. Newest wins, so adding a file counts as a change too.
+  std::filesystem::file_time_type newest{};
+  std::error_code ec;
+
+  for (const auto& entry :
+       std::filesystem::directory_iterator(GLSLC_INCLUDE_DIR, ec)) {
+    if (ec) {
+      break;
+    }
+
+    if (entry.path().extension() != ".glsl") {
+      continue;
+    }
+
+    const auto written = std::filesystem::last_write_time(entry, ec);
+
+    if (!ec && written > newest) {
+      newest = written;
+    }
+  }
+
+  return newest;
 }
 
 bool Pipeline::sourcesChanged() const {
@@ -147,7 +160,8 @@ bool Pipeline::sourcesChanged() const {
     return false;
   }
 
-  return vertTime != m_vertTime || fragTime != m_fragTime;
+  return vertTime != m_vertTime || fragTime != m_fragTime
+         || newestIncludeTime() != m_includeTime;
 }
 
 void Pipeline::reload() {
@@ -184,6 +198,7 @@ void Pipeline::reload() {
 
   m_vertTime = std::filesystem::last_write_time(m_config.vert);
   m_fragTime = std::filesystem::last_write_time(m_config.frag);
+  m_includeTime = newestIncludeTime();
 }
 
 VkPipelineLayout Pipeline::buildPipelineLayout() {
@@ -214,11 +229,8 @@ VkPipelineLayout Pipeline::buildPipelineLayout() {
 }
 
 VkPipeline Pipeline::buildPipeline() {
-  auto vertShaderCode = readFile(m_config.vertexShader);
-  auto fragShaderCode = readFile(m_config.fragmentShader);
-
-  ShaderModule vertexShaderModule(m_device, vertShaderCode);
-  ShaderModule fragShaderModule(m_device, fragShaderCode);
+  ShaderModule vertexShaderModule(m_device, m_config.vertexShader);
+  ShaderModule fragShaderModule(m_device, m_config.fragmentShader);
 
   // Vertex module
   VkPipelineShaderStageCreateInfo vertShaderStageInfo{};

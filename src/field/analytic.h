@@ -4,6 +4,7 @@
 
 #include "glm/glm.hpp"
 
+#include <optional>
 #include <span>
 
 namespace dunya::field {
@@ -17,6 +18,16 @@ constexpr float DEFAULT_GRADIENT_EPSILON = DUNYA_GRADIENT_EPSILON;
 // after inverseModel, shape and shapeConfig are set; leaving it uncalled costs
 // performance, never correctness.
 void updateBounds(Primitive& primitive);
+
+struct Aabb {
+  glm::vec3 minimum;
+  glm::vec3 maximum;
+};
+
+// The box enclosing every primitive that has a bound. Unbounded ones - planes -
+// contribute nothing, which is precisely why they stay analytic: no finite grid
+// can hold them.
+std::optional<Aabb> boundedExtent(std::span<const Primitive> primitives);
 
 FieldSample sample(
   std::span<const Primitive> primitives,

@@ -36,6 +36,16 @@ public:
     uint32_t capacity = 0;
   };
 
+  // Same shape as a sampled image, but written by a shader rather than read,
+  // which means the descriptor names VK_IMAGE_LAYOUT_GENERAL and the image has
+  // to actually be in that layout when the shader runs.
+  struct StorageImageBinding {
+    uint32_t binding = 0;
+    VkShaderStageFlags stages = 0;
+    std::vector<VkImageView> elements{};
+    uint32_t capacity = 0;
+  };
+
   struct SamplerBinding {
     uint32_t binding = 0;
     VkShaderStageFlags stages = 0;
@@ -48,7 +58,8 @@ public:
     uint32_t frameCount,
     std::vector<BufferBinding> buffers,
     std::vector<SampledImageBinding> sampledImages = {},
-    std::vector<SamplerBinding> samplers = {}
+    std::vector<SamplerBinding> samplers = {},
+    std::vector<StorageImageBinding> storageImages = {}
   );
 
   DescriptorGroup(const DescriptorGroup&) = delete;
@@ -83,7 +94,8 @@ private:
   void createSetLayout(
     const std::vector<BufferBinding>& buffers,
     const std::vector<SampledImageBinding>& sampledImages,
-    const std::vector<SamplerBinding>& samplers
+    const std::vector<SamplerBinding>& samplers,
+    const std::vector<StorageImageBinding>& storageImages
   );
   void createBuffers(
     const Device& device,
@@ -91,11 +103,13 @@ private:
   );
   void createPool(
     const std::vector<SampledImageBinding>& sampledImages,
-    const std::vector<SamplerBinding>& samplers
+    const std::vector<SamplerBinding>& samplers,
+    const std::vector<StorageImageBinding>& storageImages
   );
   void createSets(
     const std::vector<SampledImageBinding>& sampledImages,
-    const std::vector<SamplerBinding>& samplers
+    const std::vector<SamplerBinding>& samplers,
+    const std::vector<StorageImageBinding>& storageImages
   );
 
   VkDevice m_device = VK_NULL_HANDLE;

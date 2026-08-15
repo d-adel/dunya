@@ -1,9 +1,9 @@
 #include "main.ih"
 
-int main() {
+int main(int argc, char** argv) {
   try {
     Application application;
-    application.start();
+    application.start(StartupOptions(std::span(argv, argc)));
   } catch (const std::exception& e) {
     std::cerr << e.what() << '\n';
     return 1;

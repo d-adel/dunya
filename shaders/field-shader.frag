@@ -1,4 +1,5 @@
 #version 450
+#extension GL_GOOGLE_include_directive : require
 
 const int MAX_MATERIALS = DUNYA_MAX_MATERIALS;
 const float eps = DUNYA_MARCH_EPSILON;
@@ -11,12 +12,7 @@ const float shadowSharpness = DUNYA_SHADOW_SHARPNESS;
 const float bias = 0.01;
 const float ambient = 0.06;
 
-struct Primitive {
-  mat4 inverseModel;
-  vec4 shape;
-  uvec4 shapeConfig;
-  vec4 bounds;
-};
+#include "field-types.glsl"
 
 struct Material {
   vec4 baseColor;
@@ -62,112 +58,141 @@ layout(std430, set = 2, binding = 0) readonly buffer
 FieldScene { Primitive primitives[]; } scene;
 
 layout(std140, set = 2, binding = 1) uniform FieldFrame {
-  uvec4 primitiveCount;
+  uvec4 config;
+  vec4 gridOrigin;
+  vec4 gridVoxelSize;
+  uvec4 gridResolution;
 } frame;
+
+const int MAX_SAMPLERS = DUNYA_MAX_SAMPLERS;
+layout(set = 1, binding = 2) uniform sampler samplers[MAX_SAMPLERS];
+
+layout(set = 2, binding = 2) uniform texture3D distanceVolume;
+layout(set = 2, binding = 3) uniform utexture3D materialVolume;
 
 layout(location = 0) in vec4 ndc;
 layout(location = 0) out vec4 outColor;
 
-float smin(float a, float b, float k)
-{
-    float h = clamp(
-        0.5 + 0.5 * (b - a) / k,
-        0.0,
-        1.0
+#define FIELD_PRIMITIVE_AT(i) scene.primitives[i]
+#define FIELD_PRIMITIVE_COUNT frame.config.x
+
+#include "field-common.glsl"
+
+// How far outside the grid's box a point lies, and zero when it is inside.
+float outsideGrid(vec3 p) {
+  vec3 maxCorner = frame.gridOrigin.xyz
+                   + frame.gridVoxelSize.xyz * vec3(frame.gridResolution.xyz - 1u);
+
+  return length(p - clamp(p, frame.gridOrigin.xyz, maxCorner));
+}
+
+// Values sit at lattice points, so lattice index i is texel i, whose centre in
+// normalised coordinates is (i + 0.5) / N. Only valid inside the box.
+vec2 gridSample(vec3 p) {
+  vec3 lattice = (p - frame.gridOrigin.xyz) / frame.gridVoxelSize.xyz;
+  vec3 uvw = (lattice + 0.5) / vec3(frame.gridResolution.xyz);
+
+  float distance = texture(
+    sampler3D(distanceVolume, samplers[DUNYA_SAMPLER_LINEAR_CLAMP]),
+    uvw
+  ).r;
+
+  uint material = texture(
+    usampler3D(materialVolume, samplers[DUNYA_SAMPLER_NEAREST_CLAMP]),
+    uvw
+  ).r;
+
+  // Trilinear interpolation overestimates - measured in sampled_tests.cc - so
+  // the step is shortened rather than trusted. At the surface the distance is
+  // zero, so scaling moves no surface; it only makes the march creep.
+  return vec2(distance * DUNYA_GRID_STEP_SAFETY, float(material));
+}
+
+/* The sampled representation, which is the grid where there is one and the
+ * analytic field where there is not.
+ *
+ * The split is by region, not by primitive. The bake runs the whole fold, so
+ * inside the box the grid is already the entire scene - carved ground and all -
+ * and mixing the analytic ground back in would put back exactly the material a
+ * subtraction had just removed. Outside the box only unbounded primitives can
+ * reach, because the bounded ones are what the box was sized around.
+ */
+vec2 fieldDistance(vec3 p) {
+  if (frame.config.y == 0u) {
+    return sceneDistance(p);
+  }
+
+  float outside = outsideGrid(p);
+
+  if (outside > 0.0) {
+    // The box is a bound, never a surface. Everything the grid holds was baked
+    // at least a margin inside it, and the straight line from here to any of it
+    // crosses the boundary, so it is at least that much further away still.
+    //
+    // The margin is what makes this safe to hit-test against: the plain box
+    // distance goes to zero on the boundary, which reads as a surface and
+    // paints the grid's own far wall over the scene, and leaves the march
+    // stepping by nothing on the way out.
+    return minMat(
+      vec2(outside + frame.gridOrigin.w, 0.0),
+      foldDistance(p, frame.config.z, true)
     );
+  }
 
-    return mix(b, a, h) - k * h * (1.0 - h);
+  return gridSample(p);
 }
 
-float sdBox(vec3 p, vec3 center, vec3 halfSize)
+// Trilinear interpolation is only C0: the value is continuous across a cell
+// boundary but the slope is not, so a difference taken inside one cell returns
+// that cell's own slope and neighbouring cells disagree. That disagreement is
+// the faceting - it is shading, not geometry, which is why the silhouette stays
+// smooth while the surface looks chiselled. Spanning a whole cell averages the
+// two slopes instead of picking one.
+float gradientOffset()
 {
-    vec3 q = abs(p - center) - halfSize;
-
-    float outsideDistance = length(max(q, vec3(0.0)));
-    float insideDistance = min(max(q.x, max(q.y, q.z)), 0.0);
-
-    return outsideDistance + insideDistance;
-}
-
-vec2 minMat(vec2 a, vec2 b) {
-  return a.x < b.x ? a : b;
-}
-
-float primitiveDistance(vec3 p, Primitive prim) {
-  vec3 local = ((prim.inverseModel) * vec4(p, 1.0)).xyz;
-  switch(prim.shapeConfig.x) {
-    case 0u:
-      return length(local) - prim.shape.x;
-    case 1u:
-      return sdBox(local, vec3(0), prim.shape.xyz);
-    case 2u:
-      return local.y;
-    default:
-      return 1e9;
-  }
-}
-
-// Mirrors skippable() in analytic.cc. A radius of zero means no bound is
-// known, so the primitive is always evaluated.
-bool skippable(vec3 p, Primitive prim, float acc) {
-  if (prim.bounds.w <= 0.0) {
-    return false;
-  }
-
-  float bound = length(p - prim.bounds.xyz) - prim.bounds.w;
-
-  switch (prim.shapeConfig.z) {
-    case 0u:
-    case 1u:
-      return bound > acc;
-    case 3u:
-      return bound >= -acc;
-    default:
-      return false;
-  }
-}
-
-vec2 sceneDistance(vec3 p) {
-  vec2 acc = vec2(1e9, 0);
-  for (uint i = 0u; i < frame.primitiveCount.x; ++i) {
-    if (skippable(p, scene.primitives[i], acc.x)) {
-      continue;
+    if (frame.config.y == 0u)
+    {
+        return normalSampleOffset;
     }
 
-    vec2 cur = vec2(primitiveDistance(p, scene.primitives[i]),
-    float(scene.primitives[i].shapeConfig.y));
-    switch(scene.primitives[i].shapeConfig.z) {
-      case 1u:
-        {
-          float k = scene.primitives[i].shape.w;
-          acc = vec2(smin(acc.x, cur.x, k), acc.x < cur.x ? acc.y : cur.y);
-        }
-        break;
-      case 2u:
-        acc = acc.x > cur.x ? acc : cur;
-        break;
-      case 3u:
-        acc = vec2(max(acc.x, -cur.x), acc.y);
-        break;
-      default:
-        acc = minMat(acc, cur);
-        break;
-    }
-  }
+    vec3 voxel = frame.gridVoxelSize.xyz;
 
-  return acc;
+    return max(normalSampleOffset, max(voxel.x, max(voxel.y, voxel.z)));
+}
+
+/* How far off a surface anything that starts on it has to begin.
+ *
+ * The grid only knows where the surface is to within its own interpolation
+ * error, so a bias thinner than a voxel starts a shadow ray inside the surface
+ * it just left, and the march reports that surface as its own occluder. Since
+ * lightReaching returns a hard zero, neighbouring pixels disagreeing about
+ * whether they started inside come out as black teeth against lit ones rather
+ * than as a soft terminator.
+ */
+float surfaceBias()
+{
+    if (frame.config.y == 0u)
+    {
+        return bias;
+    }
+
+    vec3 voxel = frame.gridVoxelSize.xyz;
+
+    return max(bias, 2.0 * max(voxel.x, max(voxel.y, voxel.z)));
 }
 
 vec3 estimateNormal(vec3 p)
 {
-    vec3 offsetX = vec3(normalSampleOffset, 0.0, 0.0);
-    vec3 offsetY = vec3(0.0, normalSampleOffset, 0.0);
-    vec3 offsetZ = vec3(0.0, 0.0, normalSampleOffset);
+    float h = gradientOffset();
+
+    vec3 offsetX = vec3(h, 0.0, 0.0);
+    vec3 offsetY = vec3(0.0, h, 0.0);
+    vec3 offsetZ = vec3(0.0, 0.0, h);
 
     return normalize(vec3(
-        sceneDistance(p + offsetX).x - sceneDistance(p - offsetX).x,
-        sceneDistance(p + offsetY).x - sceneDistance(p - offsetY).x,
-        sceneDistance(p + offsetZ).x - sceneDistance(p - offsetZ).x
+        fieldDistance(p + offsetX).x - fieldDistance(p - offsetX).x,
+        fieldDistance(p + offsetY).x - fieldDistance(p - offsetY).x,
+        fieldDistance(p + offsetZ).x - fieldDistance(p - offsetZ).x
     ));
 }
 
@@ -189,7 +214,7 @@ bool march(vec3 origin, vec3 direction, out vec3 hitPosition, out float material
             origin +
             direction * distanceTravelled;
 
-        vec2 field = sceneDistance(p);
+        vec2 field = fieldDistance(p);
 
         if (i == 0)
         {
@@ -242,12 +267,12 @@ bool march(vec3 origin, vec3 direction, out vec3 hitPosition, out float material
 float lightReaching(vec3 origin, vec3 direction)
 {
     float result = 1.0;
-    float distanceTravelled = bias;
+    float distanceTravelled = surfaceBias();
 
     for (int i = 0; i < maxIter; ++i)
     {
         float distanceToSurface =
-            sceneDistance(origin + direction * distanceTravelled).x;
+            fieldDistance(origin + direction * distanceTravelled).x;
 
         if (distanceToSurface <= eps)
         {
@@ -311,7 +336,7 @@ void main()
       float diffuse = max(0.0, dot(normal, lightDir));
 
       float light = diffuse > 0.0
-        ? lightReaching(hitPosition + normal * bias, lightDir)
+        ? lightReaching(hitPosition + normal * surfaceBias(), lightDir)
         : 1.0;
 
       vec3 color = vec3(surfaceAlbedo * (ambient + diffuse * light));

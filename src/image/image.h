@@ -10,10 +10,14 @@
 class Image {
 public:
   Image() = default;
+  // depth of 1 makes a 2D image, anything more a 3D one. The distinction
+  // reaches the image type, the view type and the copy extent together, so it
+  // is taken once rather than inferred in three places.
   Image(
     const Device& device,
     uint32_t width,
     uint32_t height,
+    uint32_t depth,
     VkFormat format,
     VkImageTiling tiling,
     VkImageUsageFlags usage,
@@ -34,7 +38,8 @@ public:
     VkDevice device,
     VkImage image,
     VkFormat format,
-    VkImageAspectFlags aspectFlags
+    VkImageAspectFlags aspectFlags,
+    VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D
   );
 
   // Getters
@@ -54,7 +59,8 @@ public:
     const Device& device,
     Buffer& buffer,
     uint32_t width,
-    uint32_t height
+    uint32_t height,
+    uint32_t depth = 1
   );
 
 private:
@@ -63,6 +69,7 @@ private:
     const Device& device,
     uint32_t width,
     uint32_t height,
+    uint32_t depth,
     VkFormat format,
     VkImageTiling tiling,
     VkImageUsageFlags usage,

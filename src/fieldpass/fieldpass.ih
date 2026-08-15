@@ -1,4 +1,18 @@
 #include "fieldpass.h"
+#include "buffer/buffer.h"
+#include "field/analytic.h"
+#include "oneshot/oneshotcommand.h"
+
+#include <algorithm>
+#include <array>
+
+#include <chrono>
+#include <cmath>
+#include <cstdint>
+#include <cstring>
+#include <iostream>
+#include <optional>
+#include <vector>
 
 #include "config/config.h"
 

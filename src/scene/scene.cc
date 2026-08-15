@@ -70,9 +70,28 @@ const std::vector<Sampler>& Scene::samplers() const noexcept {
 
 std::vector<Sampler> Scene::createSamplers(const Device& device) {
   std::vector<Sampler> samplers;
-  samplers.reserve(1);
+  samplers.reserve(3);
 
   samplers.emplace_back(device);
+
+  // A sampled field is clamped rather than repeated, and its material volume
+  // holds ids, which cannot be filtered at all.
+  samplers.emplace_back(
+    device,
+    SamplerSettings{
+      VK_FILTER_LINEAR,
+      VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+      false
+    }
+  );
+  samplers.emplace_back(
+    device,
+    SamplerSettings{
+      VK_FILTER_NEAREST,
+      VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+      false
+    }
+  );
 
   return samplers;
 }

@@ -1,5 +1,28 @@
 #include "shadermodule.ih"
 
+namespace {
+
+std::vector<char> readSpirv(const std::string& path) {
+  std::ifstream file(path, std::ios::ate | std::ios::binary);
+
+  if (!file.is_open()) {
+    throw std::runtime_error("Failed to open file");
+  }
+
+  const size_t size = static_cast<size_t>(file.tellg());
+  std::vector<char> buffer(size);
+
+  file.seekg(0);
+  file.read(buffer.data(), size);
+
+  return buffer;
+}
+
+}  // namespace
+
+ShaderModule::ShaderModule(const VkDevice& device, const std::string& path)
+    : ShaderModule(device, readSpirv(path)) {}
+
 ShaderModule::ShaderModule(
   const VkDevice& device,
   const std::vector<char>& code

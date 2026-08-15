@@ -10,6 +10,7 @@ FetchContent_MakeAvailable(Catch2)
 add_executable(field_tests
     field_tests.cc
     raycast_tests.cc
+    sampled_tests.cc
 )
 
 target_include_directories(field_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")

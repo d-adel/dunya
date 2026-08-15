@@ -12,6 +12,23 @@
 #include "frameglobals/frameglobals.h"
 #include "field/field.h"
 
+#include <span>
+
+/* What the process was asked to do before the first frame.
+ *
+ * A measurement harness, not a feature. Comparing the two representations means
+ * running the same scene at the same primitive count in each of them, and a
+ * hand on the keyboard reproduces neither between runs.
+ */
+struct StartupOptions {
+  StartupOptions() = default;
+  explicit StartupOptions(std::span<char*> arguments);
+
+  uint32_t carves = 0;
+  bool sampled = false;
+  bool verifyBake = false;
+};
+
 class Application {
 public:
   Application();
@@ -23,13 +40,14 @@ public:
   Application& operator=(Application&&) = delete;
 
   void clearCameraInput() noexcept;
-  void start();
+  void start(const StartupOptions& options = {});
 
 private:
   void handleKeyEvent(const KeyEvent& event);
   void handleMouseButtonEvent(const MouseButtonEvent& event);
   void setLookMode(bool looking);
   void editField(uint32_t operation);
+  void stressField(uint32_t count);
   bool acceptsInput() const noexcept;
 
   Context m_context;

@@ -284,11 +284,11 @@ void Renderer::recordCommandBuffer(
   }
 
   if (drawField) {
-    const FieldFrame fieldFrame{
-      glm::uvec4(frameContext.primitives.size(), 0, 0, 0)
-    };
-
-    m_fieldPass.update(m_currentFrame, fieldFrame);
+    m_fieldPass.update(
+      m_currentFrame,
+      static_cast<uint32_t>(frameContext.primitives.size()),
+      frameContext.fieldRepresentation
+    );
 
     vkCmdBindPipeline(
       m_commandBuffers[m_currentFrame],

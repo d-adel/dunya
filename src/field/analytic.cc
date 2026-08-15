@@ -102,6 +102,35 @@ void updateBounds(Primitive& primitive) {
   primitive.bounds = glm::vec4(centre, radius);
 }
 
+std::optional<Aabb> boundedExtent(std::span<const Primitive> primitives) {
+  bool any = false;
+  Aabb extent{glm::vec3(0.0f), glm::vec3(0.0f)};
+
+  for (const Primitive& primitive : primitives) {
+    if (primitive.bounds.w <= 0.0f) {
+      continue;
+    }
+
+    const glm::vec3 centre = glm::vec3(primitive.bounds);
+    const glm::vec3 radius = glm::vec3(primitive.bounds.w);
+
+    if (!any) {
+      extent = {centre - radius, centre + radius};
+      any = true;
+      continue;
+    }
+
+    extent.minimum = glm::min(extent.minimum, centre - radius);
+    extent.maximum = glm::max(extent.maximum, centre + radius);
+  }
+
+  if (!any) {
+    return std::nullopt;
+  }
+
+  return extent;
+}
+
 FieldSample sample(
   std::span<const Primitive> primitives,
   const glm::vec3& point

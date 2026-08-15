@@ -27,7 +27,7 @@ void DepthImage::recreate(const Device& device, VkExtent2D swapChainExtent) {
   VkImageAspectFlags aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
 
   m_depthImage =
-    Image(device, w, h, m_format, tiling, usage, properties, aspect);
+    Image(device, w, h, 1, m_format, tiling, usage, properties, aspect);
 }
 
 VkFormat DepthImage::findSupportedFormat(

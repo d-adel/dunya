@@ -4,12 +4,13 @@ VkImageView Image::createImageView(
   VkDevice device,
   VkImage image,
   VkFormat format,
-  VkImageAspectFlags aspectFlags
+  VkImageAspectFlags aspectFlags,
+  VkImageViewType viewType
 ) {
   VkImageViewCreateInfo viewInfo{};
   viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
   viewInfo.image = image;
-  viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+  viewInfo.viewType = viewType;
   viewInfo.format = format;
   viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
   viewInfo.subresourceRange.baseMipLevel = 0;
@@ -31,6 +32,7 @@ Image::Image(
   const Device& device,
   uint32_t width,
   uint32_t height,
+  uint32_t depth,
   VkFormat format,
   VkImageTiling tiling,
   VkImageUsageFlags usage,
@@ -38,8 +40,15 @@ Image::Image(
   VkImageAspectFlags aspect
 )
     : m_device(device.vkDevice()) {
-  createImage(device, width, height, format, tiling, usage, properties);
-  m_imageView = createImageView(device.vkDevice(), m_image, format, aspect);
+  createImage(device, width, height, depth, format, tiling, usage, properties);
+
+  m_imageView = createImageView(
+    device.vkDevice(),
+    m_image,
+    format,
+    aspect,
+    depth > 1 ? VK_IMAGE_VIEW_TYPE_3D : VK_IMAGE_VIEW_TYPE_2D
+  );
 }
 
 Image::Image(Image&& other) noexcept
@@ -97,6 +106,7 @@ void Image::createImage(
   const Device& device,
   uint32_t width,
   uint32_t height,
+  uint32_t depth,
   VkFormat format,
   VkImageTiling tiling,
   VkImageUsageFlags usage,
@@ -104,10 +114,10 @@ void Image::createImage(
 ) {
   VkImageCreateInfo imageInfo{};
   imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-  imageInfo.imageType = VK_IMAGE_TYPE_2D;
+  imageInfo.imageType = depth > 1 ? VK_IMAGE_TYPE_3D : VK_IMAGE_TYPE_2D;
   imageInfo.extent.width = static_cast<uint32_t>(width);
   imageInfo.extent.height = static_cast<uint32_t>(height);
-  imageInfo.extent.depth = 1;
+  imageInfo.extent.depth = depth;
   imageInfo.mipLevels = 1;
   imageInfo.arrayLayers = 1;
   imageInfo.format = format;
@@ -204,7 +214,8 @@ void Image::copyFrom(
   const Device& device,
   Buffer& buffer,
   uint32_t width,
-  uint32_t height
+  uint32_t height,
+  uint32_t depth
 ) {
   OneShotCommand cmd;
   cmd.start(device);
@@ -220,7 +231,7 @@ void Image::copyFrom(
   region.imageSubresource.layerCount = 1;
 
   region.imageOffset = {0, 0, 0};
-  region.imageExtent = {width, height, 1};
+  region.imageExtent = {width, height, depth};
 
   vkCmdCopyBufferToImage(
     cmd.cmdBuffer(),

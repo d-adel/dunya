@@ -1,13 +1,14 @@
 #include "sampler.ih"
 
-Sampler::Sampler(const Device& device) : m_device(device.vkDevice()) {
+Sampler::Sampler(const Device& device, const SamplerSettings& settings)
+    : m_device(device.vkDevice()) {
   VkSamplerCreateInfo samplerInfo{};
   samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-  samplerInfo.magFilter = VK_FILTER_LINEAR;
-  samplerInfo.minFilter = VK_FILTER_LINEAR;
-  samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-  samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-  samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+  samplerInfo.magFilter = settings.filter;
+  samplerInfo.minFilter = settings.filter;
+  samplerInfo.addressModeU = settings.addressMode;
+  samplerInfo.addressModeV = settings.addressMode;
+  samplerInfo.addressModeW = settings.addressMode;
   samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
   samplerInfo.unnormalizedCoordinates = VK_FALSE;
   samplerInfo.compareEnable = VK_FALSE;
@@ -20,8 +21,9 @@ Sampler::Sampler(const Device& device) : m_device(device.vkDevice()) {
   VkPhysicalDeviceProperties properties{};
   vkGetPhysicalDeviceProperties(device.physicalDevice(), &properties);
 
-  samplerInfo.anisotropyEnable = VK_TRUE;
-  samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
+  samplerInfo.anisotropyEnable = settings.anisotropy ? VK_TRUE : VK_FALSE;
+  samplerInfo.maxAnisotropy =
+    settings.anisotropy ? properties.limits.maxSamplerAnisotropy : 1.0f;
 
   if (
     vkCreateSampler(m_device, &samplerInfo, nullptr, &m_sampler) != VK_SUCCESS
