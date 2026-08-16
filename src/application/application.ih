@@ -1,8 +1,9 @@
 #include "application.h"
-#include "capture/capture.h"
 #include "config/config.h"
 #include "field/analytic.h"
 #include "field/raycast.h"
+
+#include <imgui.h>
 
 #include <optional>
 #include <iostream>

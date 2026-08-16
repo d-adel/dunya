@@ -40,6 +40,7 @@ public:
   bool drawFrame(
     const SwapChain& swapChain,
     const Frame& frameContext,
+    const std::function<void(VkCommandBuffer)>& onOverlay = {},
     const std::function<void(VkImage)>& onFrameReady = {}
   );
 
@@ -53,7 +54,8 @@ private:
   void createSyncObjects(uint32_t imageCount);
   void recordCommandBuffer(
     const SwapChain& swapChain,
-    const Frame& frameContext
+    const Frame& frameContext,
+    const std::function<void(VkCommandBuffer)>& onOverlay
   );
 
   VkCommandPool m_commandPool;

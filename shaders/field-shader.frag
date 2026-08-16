@@ -2,15 +2,24 @@
 #extension GL_GOOGLE_include_directive : require
 
 const int MAX_MATERIALS = DUNYA_MAX_MATERIALS;
-const float eps = DUNYA_MARCH_EPSILON;
-const int maxIter = DUNYA_MARCH_MAX_ITERATIONS;
-const float maxTravel = DUNYA_MARCH_MAX_DISTANCE;
-const float shadowMaxTravel = DUNYA_SHADOW_MAX_DISTANCE;
-const float normalSampleOffset = DUNYA_GRADIENT_EPSILON;
-const float omegaStart = DUNYA_MARCH_OMEGA;
-const float shadowSharpness = DUNYA_SHADOW_SHARPNESS;
 const float bias = 0.01;
 const float ambient = 0.06;
+
+// Tunable at runtime rather than compiled in: turning one of these used to mean
+// rebuilding two toolchains, which is not tuning. All scalars, so std140 packs
+// them consecutively - MarchParams in frameglobals.h holds the matching struct
+// and a static_assert on its size.
+layout(std140, set = 0, binding = 1) uniform MarchParams {
+  float epsilon;
+  float maxDistance;
+  float omega;
+  float gridStepSafety;
+
+  float gradientEpsilon;
+  float shadowMaxDistance;
+  float shadowSharpness;
+  uint maxIterations;
+} params;
 
 #include "field-types.glsl"
 
@@ -105,7 +114,7 @@ vec2 gridSample(vec3 p) {
   // Trilinear interpolation overestimates - measured in sampled_tests.cc - so
   // the step is shortened rather than trusted. At the surface the distance is
   // zero, so scaling moves no surface; it only makes the march creep.
-  return vec2(distance * DUNYA_GRID_STEP_SAFETY, float(material));
+  return vec2(distance * params.gridStepSafety, float(material));
 }
 
 /* The sampled representation, which is the grid where there is one and the
@@ -152,12 +161,12 @@ float gradientOffset()
 {
     if (frame.config.y == 0u)
     {
-        return normalSampleOffset;
+        return params.gradientEpsilon;
     }
 
     vec3 voxel = frame.gridVoxelSize.xyz;
 
-    return max(normalSampleOffset, max(voxel.x, max(voxel.y, voxel.z)));
+    return max(params.gradientEpsilon, max(voxel.x, max(voxel.y, voxel.z)));
 }
 
 /* How far off a surface anything that starts on it has to begin.
@@ -203,12 +212,12 @@ bool march(vec3 origin, vec3 direction, out vec3 hitPosition, out float material
 {
     float distanceTravelled = 0;
 
-    float omega = omegaStart;
+    float omega = params.omega;
     float previousRadius = 0.0;
     float stepLength = 0.0;
     float functionSign = 1.0;
 
-    for (int i = 0; i < maxIter; ++i)
+    for (int i = 0; i < int(params.maxIterations); ++i)
     {
         vec3 p =
             origin +
@@ -241,7 +250,7 @@ bool march(vec3 origin, vec3 direction, out vec3 hitPosition, out float material
 
         previousRadius = radius;
 
-        if (!relaxationFailed && radius <= eps)
+        if (!relaxationFailed && radius <= params.epsilon)
         {
             hitPosition = p;
             materialId = field.y;
@@ -250,7 +259,7 @@ bool march(vec3 origin, vec3 direction, out vec3 hitPosition, out float material
 
         distanceTravelled += stepLength;
 
-        if (distanceTravelled > maxTravel)
+        if (distanceTravelled > params.maxDistance)
         {
             break;
         }
@@ -269,21 +278,21 @@ float lightReaching(vec3 origin, vec3 direction)
     float result = 1.0;
     float distanceTravelled = surfaceBias();
 
-    for (int i = 0; i < maxIter; ++i)
+    for (int i = 0; i < int(params.maxIterations); ++i)
     {
         float distanceToSurface =
             fieldDistance(origin + direction * distanceTravelled).x;
 
-        if (distanceToSurface <= eps)
+        if (distanceToSurface <= params.epsilon)
         {
             return 0.0;
         }
 
-        result = min(result, shadowSharpness * distanceToSurface / distanceTravelled);
+        result = min(result, params.shadowSharpness * distanceToSurface / distanceTravelled);
 
         distanceTravelled += distanceToSurface;
 
-        if (distanceTravelled > shadowMaxTravel || result < 0.01)
+        if (distanceTravelled > params.shadowMaxDistance || result < 0.01)
         {
             break;
         }

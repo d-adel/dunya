@@ -11,41 +11,18 @@
 #include "fieldpass/fieldpass.h"
 #include "frameglobals/frameglobals.h"
 #include "field/field.h"
-#include "imagecompare/imagecompare.h"
+#include "fieldeditor/fieldeditor.h"
+#include "framecheck/framecheck.h"
+#include "overlay/overlay.h"
+#include "startupoptions/startupoptions.h"
 
-#include <span>
-#include <string>
-
-/* What the process was asked to do before the first frame.
+/* Wiring, and the loop.
  *
- * A measurement harness, not a feature. Reproducing a comparison means running
- * the same scene at the same primitive count in each representation, and a hand
- * on the keyboard reproduces neither between runs. Every option here exists to
- * make a measurement repeatable; none of them changes what the renderer is.
+ * Owns the subsystems and hands them each other; turns input into intent and
+ * intent into calls on whichever of them the intent belongs to. What it should
+ * *not* do is any of their work - an edit lives in FieldEditor, a harness run
+ * in FrameCheck, argument parsing in StartupOptions.
  */
-struct StartupOptions {
-  StartupOptions() = default;
-  explicit StartupOptions(std::span<char*> arguments);
-
-  // Carves this many spheres before the first frame, at fixed positions.
-  uint32_t carves = 0;
-
-  // Falls back to the exact field. M17 chose the sampled one, so this asks for
-  // the reference rather than for a feature.
-  bool analytic = false;
-
-  // Compares the compute bake against a CPU bake of the same primitives.
-  bool verifyBake = false;
-
-  // Writes the first presented frame here as a PNG and exits. Empty means run
-  // normally.
-  std::string screenshot;
-
-  // Compares the first presented frame against this reference and exits with a
-  // failing status if it has drifted. Empty means run normally.
-  std::string golden;
-};
-
 class Application {
 public:
   Application();
@@ -66,14 +43,12 @@ private:
   void handleKeyEvent(const KeyEvent& event);
   void handleMouseButtonEvent(const MouseButtonEvent& event);
   void setLookMode(bool looking);
-  void editField(uint32_t operation);
-  void stressField(uint32_t count);
-  dunya::image::Bitmap readFrame(VkImage image);
-  bool compareToGolden(
-    const dunya::image::Bitmap& frame,
-    const std::string& path
-  );
+  void registerPanels();
   bool acceptsInput() const noexcept;
+
+  // The cursor as a world ray, which needs the window and the camera and so
+  // cannot live with the editing it feeds.
+  dunya::field::Ray cursorRay() const;
 
   Context m_context;
   Input m_input;
@@ -87,6 +62,12 @@ private:
   Pipeline m_fieldPipeline;
   Renderer m_renderer;
 
+  // After the renderer, because it is torn down before the device goes and
+  // members are destroyed in reverse declaration order.
+  Overlay m_overlay;
+
+  FieldEditor m_fieldEditor;
+
   CameraInput m_cameraInput;
   bool m_prevAcceptsInput;
   // Unity scene-view model: the cursor is visible and clickable by default, and
@@ -94,6 +75,10 @@ private:
   bool m_looking = false;
   Frame m_frameContext{};
   bool m_reloadRequested;
+
+  // A member rather than a local in start(), because a panel outlives the call
+  // that registered it and a captured reference to a local would dangle.
+  double m_lastFrameMs = 0.0;
 
   EventDispatcher::SubscriptionId m_keySubscription{};
   EventDispatcher::SubscriptionId m_mouseSubscription{};

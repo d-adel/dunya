@@ -41,6 +41,8 @@ Application::Application()
         m_context.surface().handle(),
         m_swapChain.imageCount()
       ),
+      m_overlay(m_context, m_swapChain),
+      m_fieldEditor(m_scene, m_fieldPass),
       m_cameraInput({}),
       m_prevAcceptsInput(false),
       m_reloadRequested(false)
@@ -62,51 +64,6 @@ Application::~Application() {
   EventDispatcher::instance().unsubscribe<KeyEvent>(m_keySubscription);
 }
 
-StartupOptions::StartupOptions(std::span<char*> arguments) {
-  // Element zero is the executable. Anything unrecognised is refused rather
-  // than ignored: a mistyped flag would otherwise run happily and measure the
-  // opposite of what was asked, which is worse than not launching.
-  for (size_t i = 1; i < arguments.size(); ++i) {
-    const std::string argument = arguments[i];
-
-    if (argument == "--analytic") {
-      analytic = true;
-    } else if (argument == "--verify-bake") {
-      verifyBake = true;
-    } else if (argument == "--golden") {
-      if (i + 1 >= arguments.size()) {
-        throw std::runtime_error("--golden needs a reference path");
-      }
-
-      golden = arguments[++i];
-    } else if (argument == "--screenshot") {
-      if (i + 1 >= arguments.size()) {
-        throw std::runtime_error("--screenshot needs a path");
-      }
-
-      screenshot = arguments[++i];
-    } else if (argument == "--carves") {
-      if (i + 1 >= arguments.size()) {
-        throw std::runtime_error("--carves needs a count");
-      }
-
-      const std::string count = arguments[++i];
-
-      if (count.find_first_not_of("0123456789") != std::string::npos) {
-        throw std::runtime_error("--carves needs a count, got: " + count);
-      }
-
-      carves = static_cast<uint32_t>(std::stoul(count));
-    } else {
-      throw std::runtime_error(
-        "Unknown argument: " + argument
-        + "\nUsage: DunyaRenderer [--analytic] [--carves N] [--verify-bake]"
-          " [--screenshot PATH] [--golden PATH]"
-      );
-    }
-  }
-}
-
 int Application::start(const StartupOptions& options) {
   glfwSetInputMode(
     m_context.window().handle(),
@@ -118,7 +75,7 @@ int Application::start(const StartupOptions& options) {
             << "Left click carves, shift + left click adds\n";
 
   if (options.carves > 0) {
-    stressField(options.carves);
+    m_fieldEditor.stress(options.carves);
   }
 
   if (options.analytic) {
@@ -126,38 +83,23 @@ int Application::start(const StartupOptions& options) {
     std::cout << "Field representation: analytic\n";
   }
 
+  registerPanels();
+
   bool bakeCheckPending = options.verifyBake;
 
-  // Set by the hook itself rather than guessed at from outside: it only runs on
-  // a frame that reached the point of being presented, which is exactly the
-  // condition a capture needs and is awkward to test for out here.
-  bool captured = false;
-  bool goldenFailed = false;
+  FrameCheck frameCheck(m_context, m_swapChain, options);
 
   std::function<void(VkImage)> captureHook;
 
-  if (!options.screenshot.empty() || !options.golden.empty()) {
-    captureHook = [this, &options, &captured, &goldenFailed](VkImage image) {
-      const dunya::image::Bitmap frame = readFrame(image);
-
-      if (!options.screenshot.empty()) {
-        dunya::image::save(frame, options.screenshot);
-        std::cout << "captured " << frame.width << "x" << frame.height << " to "
-                  << options.screenshot << '\n';
-      }
-
-      if (!options.golden.empty()) {
-        goldenFailed = !compareToGolden(frame, options.golden);
-      }
-
-      captured = true;
-    };
+  if (frameCheck.wanted()) {
+    captureHook = [&frameCheck](VkImage image) { frameCheck.run(image); };
   }
 
   double prevTime = glfwGetTime();
   double pipelineReloadCheck = 0;
   double statWindowStart = prevTime;
   uint32_t statFrames = 0;
+
   while (!glfwWindowShouldClose(m_context.window().handle())) {
     double now = glfwGetTime();
     float dt = static_cast<float>(now - prevTime);
@@ -167,6 +109,7 @@ int Application::start(const StartupOptions& options) {
     if (now - statWindowStart >= 1.0) {
       const double elapsed = now - statWindowStart;
       const double msPerFrame = (elapsed * 1000.0) / statFrames;
+      m_lastFrameMs = msPerFrame;
 
       std::cout << modeName(m_frameContext.mode) << "  "
                 << m_swapChain.extent().width << "x"
@@ -229,9 +172,28 @@ int Application::start(const StartupOptions& options) {
     m_scene.augmentFrameContext(m_frameContext);
     // -----------------------------------
 
+    // A capture run builds no overlay at all, which is what keeps it out of the
+    // golden images without the renderer needing to know it exists.
+    std::function<void(VkCommandBuffer)> overlayHook;
+
+    if (!captureHook) {
+      m_overlay.begin();
+      m_overlay.build();
+      m_overlay.end();
+
+      overlayHook = [this](VkCommandBuffer commandBuffer) {
+        m_overlay.record(commandBuffer);
+      };
+    }
+
     const bool swapChainStale =
       m_context.window().takeResized()
-      || m_renderer.drawFrame(m_swapChain, m_frameContext, captureHook);
+      || m_renderer.drawFrame(
+        m_swapChain,
+        m_frameContext,
+        overlayHook,
+        captureHook
+      );
 
     if (swapChainStale) {
       m_swapChain.recreate();
@@ -246,14 +208,14 @@ int Application::start(const StartupOptions& options) {
       m_fieldPass.verifyBake(m_scene.primitives());
     }
 
-    if (captured) {
+    if (frameCheck.ran()) {
       glfwSetWindowShouldClose(m_context.window().handle(), GLFW_TRUE);
     }
   }
 
   m_context.device().waitIdle();
 
-  return goldenFailed ? 1 : 0;
+  return frameCheck.failed() ? 1 : 0;
 }
 
 void Application::clearCameraInput() noexcept {
@@ -266,6 +228,18 @@ bool Application::acceptsInput() const noexcept {
 
 void Application::handleMouseButtonEvent(const MouseButtonEvent& event) {
   if (!acceptsInput()) {
+    return;
+  }
+
+  // The overlay gets first refusal on the cursor. Without this a click that
+  // lands on a slider also carves the world behind it - the click reaches both,
+  // because they are two systems reading the same button rather than one
+  // passing it to the other.
+  //
+  // Not applied while looking: the cursor is captured then, its reported
+  // position is virtual, and the overlay has no claim on a button being used to
+  // fly.
+  if (!m_looking && m_overlay.wantsMouse()) {
     return;
   }
 
@@ -289,9 +263,10 @@ void Application::handleMouseButtonEvent(const MouseButtonEvent& event) {
 
   // Both smooth: a stamp meets the one before it at a crease, and that is what
   // shading shows, whichever direction the material moved.
-  editField(
+  m_fieldEditor.edit(
     (event.mods & GLFW_MOD_SHIFT) != 0 ? FIELD_OP_SMOOTH_UNION
-                                       : FIELD_OP_SMOOTH_SUBTRACTION
+                                       : FIELD_OP_SMOOTH_SUBTRACTION,
+    cursorRay()
   );
 }
 
@@ -317,7 +292,67 @@ void Application::setLookMode(bool looking) {
   );
 }
 
-void Application::editField(uint32_t operation) {
+/* Every panel this process shows, declared where the data it reads lives.
+ *
+ * They capture this, and the overlay outlives nothing that they touch: it is a
+ * member of the class that owns everything they read.
+ */
+void Application::registerPanels() {
+  m_overlay.panel("Frame", [this] {
+    ImGui::Text(
+      "%.2f ms  %.0f fps",
+      m_lastFrameMs,
+      m_lastFrameMs > 0.0 ? 1000.0 / m_lastFrameMs : 0.0
+    );
+    ImGui::Text(
+      "%ux%u",
+      m_swapChain.extent().width,
+      m_swapChain.extent().height
+    );
+    ImGui::Text("%zu primitives", m_scene.primitives().size());
+    ImGui::Text(
+      "%s",
+      m_frameContext.fieldRepresentation == FIELD_ANALYTIC ? "analytic"
+                                                           : "sampled"
+    );
+  });
+
+  m_overlay.panel("March", [this] {
+    MarchParams& march = m_frameContext.march;
+
+    // Logarithmic where the useful range spans orders of magnitude: a linear
+    // slider from 0.0001 to 0.01 spends nearly all of its travel in values
+    // that make the march crawl.
+    ImGui::SliderFloat(
+      "epsilon",
+      &march.epsilon,
+      0.0001f,
+      0.01f,
+      "%.5f",
+      ImGuiSliderFlags_Logarithmic
+    );
+    ImGui::SliderFloat("gradient", &march.gradientEpsilon, 0.001f, 0.1f, "%.4f");
+
+    // Below 1 is plain sphere tracing and above 2 is unstable even when the
+    // estimator is conservative.
+    ImGui::SliderFloat("omega", &march.omega, 1.0f, 2.0f);
+
+    // Above 1 would trust a value trilinear interpolation is known to
+    // overestimate, which is how a march steps through a surface.
+    ImGui::SliderFloat("grid safety", &march.gridStepSafety, 0.1f, 1.0f);
+
+    ImGui::SliderFloat("max distance", &march.maxDistance, 10.0f, 500.0f);
+    ImGui::SliderFloat("shadow distance", &march.shadowMaxDistance, 1.0f, 100.0f);
+    ImGui::SliderFloat("shadow sharpness", &march.shadowSharpness, 1.0f, 64.0f);
+
+    int iterations = static_cast<int>(march.maxIterations);
+    if (ImGui::SliderInt("max iterations", &iterations, 32, 2000)) {
+      march.maxIterations = static_cast<uint32_t>(iterations);
+    }
+  });
+}
+
+dunya::field::Ray Application::cursorRay() const {
   const Cursor cursor = m_input.cursor();
   const VkExtent2D extent = m_swapChain.extent();
 
@@ -332,236 +367,23 @@ void Application::editField(uint32_t operation) {
 
   const glm::mat4 viewProj = m_frameContext.proj * m_frameContext.view;
 
-  const dunya::field::Ray ray = dunya::field::screenPointToRay(
+  return dunya::field::screenPointToRay(
     glm::inverse(viewProj),
     glm::vec3(m_frameContext.cameraPos),
     ndc
   );
-
-  const std::optional<dunya::field::RayHit> hit =
-    dunya::field::raymarch(m_scene.primitives(), ray);
-
-  if (!hit.has_value()) {
-    std::cout << "Nothing under the cursor\n";
-    return;
-  }
-
-  /* Place the sphere so that its far wall lands exactly one advance past the
-   * surface, which is what makes a click move the surface by EDIT_ADVANCE.
-   *
-   * For a carve that means pulling it back out of the material toward the eye;
-   * for an add, pushing it in. Same distance, opposite sign, because a carve
-   * moves the surface away from the eye and an add moves it toward.
-   *
-   * The offset is bounded by the radius at both ends, and both ends are
-   * degenerate. Push a carve a full radius in and the clicked point lands
-   * exactly *on* the cutter, so its distance there is zero, so max(acc, -0)
-   * leaves the field untouched: the surface does not move where it was aimed,
-   * the next march finds the same point, and clicking repeatedly appends
-   * identical primitives and does nothing. Pull it a full radius out and the
-   * cutter no longer reaches the surface at all. Everything useful is strictly
-   * between, and which point in between is EDIT_ADVANCE's decision.
-   */
-  const float offset = EDIT_RADIUS - EDIT_ADVANCE;
-  const glm::vec3 centre = fieldOpRemovesMaterial(operation)
-                             ? hit->position - ray.direction * offset
-                             : hit->position + ray.direction * offset;
-
-  // What the CPU thinks is there before the edit. At the surface this should
-  // read about zero, which is the agreement between the ray the CPU marched
-  // and the surface the shader drew.
-  const float surfaceDistance =
-    dunya::field::sample(m_scene.primitives(), hit->position).distance;
-  const float centreBefore =
-    dunya::field::sample(m_scene.primitives(), centre).distance;
-
-  if (
-    !m_scene
-       .addPrimitive(centre, EDIT_RADIUS, EDIT_BLEND, hit->material, operation)
-  ) {
-    std::cout << "Primitive budget full, edit refused\n";
-    return;
-  }
-
-  const auto uploadStart = std::chrono::steady_clock::now();
-  m_fieldPass.uploadPrimitives(m_scene.primitives());
-  const auto uploadEnd = std::chrono::steady_clock::now();
-
-  // A carve leaves empty space at its centre and an add leaves solid, so both
-  // land on +/- the edit radius. Anything else means the CPU and the GPU
-  // disagree about the array they share.
-  const float centreAfter =
-    dunya::field::sample(m_scene.primitives(), centre).distance;
-
-  const auto uploadMicros =
-    std::chrono::duration_cast<std::chrono::microseconds>(
-      uploadEnd - uploadStart
-    )
-      .count();
-
-  std::cout << (fieldOpRemovesMaterial(operation) ? "carve" : "add  ")
-            << "  surface " << std::fixed << std::setprecision(4)
-            << surfaceDistance << "  centre " << std::setprecision(3)
-            << centreBefore << " -> " << centreAfter << "  upload "
-            << uploadMicros << " us  primitives " << m_scene.primitives().size()
-            << '\n';
-}
-
-/* Carves a batch, so the two representations can be compared at a primitive
- * count clicking cannot reach patiently or repeatably.
- *
- * The placement is a low-discrepancy sequence rather than random: the carves
- * have to spread through the volume instead of stacking in a line, and they
- * have to land in the same places on every run, or the two representations are
- * not being measured on the same scene.
- */
-void Application::stressField(uint32_t count) {
-  const std::optional<dunya::field::Aabb> extent =
-    dunya::field::boundedExtent(m_scene.primitives());
-
-  if (!extent.has_value()) {
-    std::cout << "Nothing bounded to carve into\n";
-    return;
-  }
-
-  const glm::vec3 span = extent->maximum - extent->minimum;
-  const uint32_t before = static_cast<uint32_t>(m_scene.primitives().size());
-
-  for (uint32_t i = 0; i < count; ++i) {
-    // The R3 sequence: successive multiples of these three fractions fill a
-    // volume evenly without ever repeating a position.
-    const glm::vec3 at = glm::fract(
-      static_cast<float>(before + i)
-      * glm::vec3(0.8191725f, 0.6710436f, 0.5497005f)
-    );
-
-    // Deliberately the hard op with no blend, unlike a click. M17's comparison
-    // table was measured with this, and a smooth carve costs an extra smin per
-    // primitive per sample, so quietly changing it here would move published
-    // numbers without saying so.
-    if (!m_scene.addPrimitive(
-          extent->minimum + span * at,
-          EDIT_RADIUS,
-          0.0f,
-          0,
-          FIELD_OP_SUBTRACTION
-        )) {
-      std::cout << "Primitive budget full\n";
-      break;
-    }
-  }
-
-  m_fieldPass.uploadPrimitives(m_scene.primitives());
-
-  std::cout << "stress  primitives " << before << " -> "
-            << m_scene.primitives().size() << '\n';
-}
-
-/* Reads the frame just presented and writes it out as a PNG.
- *
- * The swapchain image is the one that shipped, which is the point: a capture
- * rendered down some private path could pass while the path that actually runs
- * is broken.
- */
-dunya::image::Bitmap Application::readFrame(VkImage image) {
-  const VkExtent2D extent = m_swapChain.extent();
-
-  // A minimised window presents nothing. Failing here is deliberate - a
-  // zero-sized or stale capture silently blessed as a reference is the failure
-  // this whole milestone exists to prevent.
-  if (extent.width == 0 || extent.height == 0) {
-    throw std::runtime_error("Cannot capture a frame from a zero-sized window");
-  }
-
-  // The recorded frame left it ready to present, and it goes back that way.
-  return dunya::capture::read(
-    m_context.device(),
-    image,
-    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-    extent,
-    m_swapChain.imageFormat()
-  );
-}
-
-namespace {
-
-/* What counts as noise rather than change.
- *
- * Deliberately strict to begin with, because the run-to-run spread on this
- * machine was measured rather than guessed at, and a tolerance wider than the
- * noise is a regression this gate would wave through. It will need widening the
- * day a driver update moves the numbers - and *that* is the moment to measure
- * again, not to raise it until the red goes away.
- */
-constexpr dunya::image::Tolerance GOLDEN_TOLERANCE{0, 0, 255};
-
-}  // namespace
-
-/* Compares a frame against its committed reference. Returns true when the image
- * is unchanged.
- *
- * A missing reference writes one and still fails. Passing instead would mean a
- * mistyped path silently reports success forever, which is the failure mode
- * that makes a test worse than no test at all.
- */
-bool Application::compareToGolden(
-  const dunya::image::Bitmap& frame,
-  const std::string& path
-) {
-  const std::filesystem::path reference(path);
-
-  if (!std::filesystem::exists(reference)) {
-    dunya::image::save(frame, path);
-
-    std::cout << "golden " << path
-              << ": MISSING, wrote it. Look at it, then commit it.\n";
-
-    return false;
-  }
-
-  const dunya::image::Bitmap expected = dunya::image::load(path);
-
-  const dunya::image::Difference difference =
-    dunya::image::compare(expected, frame, GOLDEN_TOLERANCE);
-
-  if (dunya::image::passes(difference, GOLDEN_TOLERANCE)) {
-    std::cout << "golden " << path << ": ok\n";
-    return true;
-  }
-
-  std::cout << "golden " << path << ": FAILED\n";
-
-  if (!difference.comparable) {
-    std::cout << "  size " << expected.width << "x" << expected.height
-              << " became " << frame.width << "x" << frame.height << '\n';
-    return false;
-  }
-
-  const uint64_t total =
-    static_cast<uint64_t>(expected.width) * expected.height;
-
-  std::cout << "  " << difference.differingPixels << " of " << total
-            << " pixels differ, worst channel delta "
-            << difference.worstChannelDelta << " at (" << difference.worstX
-            << ", " << difference.worstY << ")\n";
-
-  // Beside the reference by name, in the working directory rather than the
-  // source tree: the evidence belongs where the run happened.
-  const std::string stem = reference.stem().string();
-
-  dunya::image::save(frame, stem + "-actual.png");
-  dunya::image::save(
-    dunya::image::differenceImage(expected, frame, GOLDEN_TOLERANCE),
-    stem + "-diff.png"
-  );
-
-  std::cout << "  wrote " << stem << "-actual.png and " << stem
-            << "-diff.png\n";
-
-  return false;
 }
 
 void Application::handleKeyEvent(const KeyEvent& event) {
+  // Typing into a text field must not also fly the camera. Escape is exempt
+  // because it is how the cursor is handed back, and a UI that could swallow it
+  // would be a UI you cannot leave.
+  if (
+    m_overlay.wantsKeyboard() && event.key != GLFW_KEY_ESCAPE
+  ) {
+    return;
+  }
+
   if (event.key == GLFW_KEY_ESCAPE && event.type == KeyEventType::Pressed) {
     m_input.toggleEnabled();
 
@@ -579,7 +401,7 @@ void Application::handleKeyEvent(const KeyEvent& event) {
   }
 
   if (event.key == GLFW_KEY_B && event.type == KeyEventType::SinglePressed) {
-    stressField(10);
+    m_fieldEditor.stress(10);
     return;
   }
 

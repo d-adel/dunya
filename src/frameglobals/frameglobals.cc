@@ -7,11 +7,22 @@ FrameGlobals::FrameGlobals(const Device& device)
         {{0,
           sizeof(CameraUniform),
           VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+          DescriptorGroup::BufferUpdate::PerFrame},
+         // Set 0 because it changes at the same rate as the camera: this set is
+         // the per-frame one, and a slider moves a value exactly as often.
+         {1,
+          sizeof(MarchParams),
+          VK_SHADER_STAGE_FRAGMENT_BIT,
           DescriptorGroup::BufferUpdate::PerFrame}}
       ) {}
 
-void FrameGlobals::update(uint32_t frame, const CameraUniform& camera) {
+void FrameGlobals::update(
+  uint32_t frame,
+  const CameraUniform& camera,
+  const MarchParams& march
+) {
   m_group.write(0, frame, &camera, sizeof(camera));
+  m_group.write(1, frame, &march, sizeof(march));
 }
 
 const VkDescriptorSet& FrameGlobals::descriptorSet(

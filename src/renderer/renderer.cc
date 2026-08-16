@@ -123,7 +123,8 @@ void Renderer::createSyncObjects(uint32_t imageCount) {
 
 void Renderer::recordCommandBuffer(
   const SwapChain& swapChain,
-  const Frame& frameContext
+  const Frame& frameContext,
+  const std::function<void(VkCommandBuffer)>& onOverlay
 ) {
   VkCommandBufferBeginInfo beginInfo{};
   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -310,6 +311,13 @@ void Renderer::recordCommandBuffer(
     vkCmdDraw(m_commandBuffers[m_currentFrame], 3, 1, 0, 0);
   }
 
+  // Last, and inside the pass: the overlay draws over the finished scene, and
+  // it is given a command buffer rather than being known about - the renderer
+  // has no idea what ImGui is.
+  if (onOverlay) {
+    onOverlay(m_commandBuffers[m_currentFrame]);
+  }
+
   vkCmdEndRendering(m_commandBuffers[m_currentFrame]);
 
   VkImageMemoryBarrier2 imageMemoryBarrier2Present{};
@@ -347,6 +355,7 @@ void Renderer::recordCommandBuffer(
 bool Renderer::drawFrame(
   const SwapChain& swapChain,
   const Frame& frameContext,
+  const std::function<void(VkCommandBuffer)>& onOverlay,
   const std::function<void(VkImage)>& onFrameReady
 ) {
   if (
@@ -397,9 +406,9 @@ bool Renderer::drawFrame(
     frameContext.cameraPos
   };
 
-  m_frameGlobals.update(m_currentFrame, camera);
+  m_frameGlobals.update(m_currentFrame, camera, frameContext.march);
 
-  recordCommandBuffer(swapChain, frameContext);
+  recordCommandBuffer(swapChain, frameContext, onOverlay);
 
   VkSubmitInfo2 submitInfo2{};
   submitInfo2.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;

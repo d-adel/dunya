@@ -32,9 +32,12 @@ set(DUNYA_MAX_TEXTURES 16)
 set(DUNYA_MAX_SAMPLERS 8)
 set(DUNYA_MAX_MATERIALS 64)
 
-# Marching parameters, for the same reason: a CPU query and the drawn image have
-# to agree about where a surface is, or a click carves somewhere other than
-# where the crosshair pointed.
+# Marching parameters. These are *defaults*, not shared declarations: the shader
+# reads them from a uniform (MarchParams) so they can be turned at runtime, and
+# what CMake still owns is the value they start at - one number in one place,
+# handed to the CPU only. The CPU still needs them because a CPU query and the
+# drawn image have to agree about where a surface is, or a click carves
+# somewhere other than where the crosshair pointed.
 set(DUNYA_MARCH_EPSILON 0.001f)
 set(DUNYA_MARCH_MAX_ITERATIONS 800)
 set(DUNYA_SHADOW_MAX_DISTANCE 20.0f)
@@ -57,19 +60,15 @@ set(DUNYA_SAMPLER_LINEAR_REPEAT 0)
 set(DUNYA_SAMPLER_LINEAR_CLAMP 1)
 set(DUNYA_SAMPLER_NEAREST_CLAMP 2)
 
+# Only what *declares* something both languages must agree on: array capacities
+# and the slot numbers Scene fills. Anything tunable is deliberately absent - it
+# reaches the shader as a uniform now, and leaving it here as well would put the
+# same number back in two toolchains, which is the thing idiom 27 is about.
 set(SHADER_DEFINES
     "-DDUNYA_MAX_PRIMITIVES=${DUNYA_MAX_PRIMITIVES}"
     "-DDUNYA_MAX_TEXTURES=${DUNYA_MAX_TEXTURES}"
     "-DDUNYA_MAX_SAMPLERS=${DUNYA_MAX_SAMPLERS}"
     "-DDUNYA_MAX_MATERIALS=${DUNYA_MAX_MATERIALS}"
-    "-DDUNYA_MARCH_EPSILON=${DUNYA_MARCH_EPSILON}"
-    "-DDUNYA_MARCH_MAX_ITERATIONS=${DUNYA_MARCH_MAX_ITERATIONS}"
-    "-DDUNYA_MARCH_MAX_DISTANCE=${DUNYA_MARCH_MAX_DISTANCE}"
-    "-DDUNYA_SHADOW_MAX_DISTANCE=${DUNYA_SHADOW_MAX_DISTANCE}"
-    "-DDUNYA_GRADIENT_EPSILON=${DUNYA_GRADIENT_EPSILON}"
-    "-DDUNYA_MARCH_OMEGA=${DUNYA_MARCH_OMEGA}"
-    "-DDUNYA_SHADOW_SHARPNESS=${DUNYA_SHADOW_SHARPNESS}"
-    "-DDUNYA_GRID_STEP_SAFETY=${DUNYA_GRID_STEP_SAFETY}"
     "-DDUNYA_SAMPLER_LINEAR_REPEAT=${DUNYA_SAMPLER_LINEAR_REPEAT}"
     "-DDUNYA_SAMPLER_LINEAR_CLAMP=${DUNYA_SAMPLER_LINEAR_CLAMP}"
     "-DDUNYA_SAMPLER_NEAREST_CLAMP=${DUNYA_SAMPLER_NEAREST_CLAMP}"
@@ -117,10 +116,45 @@ FetchContent_Declare(
     SOURCE_SUBDIR  cmake_disabled
 )
 
-FetchContent_MakeAvailable(glfw glm stb tinyobjloader)
+# Fetch Dear ImGui. Like stb it is a source drop with no build system of its
+# own, so SOURCE_SUBDIR points at nothing and the library target is declared
+# below rather than inherited.
+FetchContent_Declare(
+    imgui
+    GIT_REPOSITORY  https://github.com/ocornut/imgui
+    GIT_TAG         v1.91.9b
+    SOURCE_SUBDIR   cmake_disabled
+)
+
+FetchContent_MakeAvailable(glfw glm stb tinyobjloader imgui)
 
 # Find Vulkan SDK
 find_package(Vulkan REQUIRED)
+
+# The overlay is a development tool built as its own target, and deliberately
+# not held to /W4 /WX: third-party code should not have to meet this project's
+# warning bar, and its own target is the cleanest place to say so - no
+# per-source overrides and no pragmas wrapped around includes.
+#
+# Declared after find_package because it links Vulkan::Vulkan, which does not
+# exist until then.
+add_library(imgui STATIC
+    "${imgui_SOURCE_DIR}/imgui.cpp"
+    "${imgui_SOURCE_DIR}/imgui_draw.cpp"
+    "${imgui_SOURCE_DIR}/imgui_tables.cpp"
+    "${imgui_SOURCE_DIR}/imgui_widgets.cpp"
+    "${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp"
+    "${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp"
+)
+
+target_include_directories(imgui SYSTEM PUBLIC
+    "${imgui_SOURCE_DIR}"
+    "${imgui_SOURCE_DIR}/backends"
+)
+
+target_link_libraries(imgui PUBLIC glfw Vulkan::Vulkan)
+
+target_compile_features(imgui PUBLIC cxx_std_20)
 
 # Field evaluation, free of Vulkan so the tests can link it alone
 add_subdirectory(src/field)
@@ -150,6 +184,10 @@ add_executable(${PROJECT_NAME}
     src/image/image.cc
     src/oneshot/oneshotcommand.cc
     src/capture/capture.cc
+    src/overlay/overlay.cc
+    src/startupoptions/startupoptions.cc
+    src/fieldeditor/fieldeditor.cc
+    src/framecheck/framecheck.cc
     src/texture/texture.cc
     src/sampler/sampler.cc
     src/depthimage/depthimage.cc
@@ -192,6 +230,18 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     DUNYA_SAMPLER_LINEAR_REPEAT=${DUNYA_SAMPLER_LINEAR_REPEAT}
     DUNYA_SAMPLER_LINEAR_CLAMP=${DUNYA_SAMPLER_LINEAR_CLAMP}
     DUNYA_SAMPLER_NEAREST_CLAMP=${DUNYA_SAMPLER_NEAREST_CLAMP}
+
+    # The starting values for MarchParams. Three of these reached only the
+    # shader before, which was fine while the shader was the only reader; now
+    # that the C++ side owns them and uploads them, all of them come here.
+    DUNYA_MARCH_EPSILON=${DUNYA_MARCH_EPSILON}
+    DUNYA_MARCH_MAX_ITERATIONS=${DUNYA_MARCH_MAX_ITERATIONS}
+    DUNYA_MARCH_MAX_DISTANCE=${DUNYA_MARCH_MAX_DISTANCE}
+    DUNYA_MARCH_OMEGA=${DUNYA_MARCH_OMEGA}
+    DUNYA_GRADIENT_EPSILON=${DUNYA_GRADIENT_EPSILON}
+    DUNYA_SHADOW_MAX_DISTANCE=${DUNYA_SHADOW_MAX_DISTANCE}
+    DUNYA_SHADOW_SHARPNESS=${DUNYA_SHADOW_SHARPNESS}
+    DUNYA_GRID_STEP_SAFETY=${DUNYA_GRID_STEP_SAFETY}
 )
 
 file(
@@ -260,6 +310,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     # loading gets them from here rather than from a second copy that would
     # collide at link time.
     dunya::imagecompare
+    imgui
 )
 target_include_directories(${PROJECT_NAME} PRIVATE src ${stb_SOURCE_DIR} ${tinyobjloader_SOURCE_DIR})
 
