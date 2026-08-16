@@ -10,6 +10,7 @@
 
 #include "config/config.h"
 
+#include <functional>
 #include <vector>
 
 class Renderer {
@@ -28,7 +29,19 @@ public:
   Renderer& operator=(Renderer const&) = delete;
   ~Renderer();
 
-  bool drawFrame(const SwapChain& swapChain, const Frame& frameContext);
+  /* Draws one frame, optionally handing the finished image to a reader first.
+   *
+   * onFrameReady runs after the render work has completed and *before* the
+   * image is presented, because that is the only window in which touching it is
+   * legal: once vkQueuePresentKHR has been called the image belongs to the
+   * presentation engine again, and reading it there is a validation error
+   * rather than a race you get away with.
+   */
+  bool drawFrame(
+    const SwapChain& swapChain,
+    const Frame& frameContext,
+    const std::function<void(VkImage)>& onFrameReady = {}
+  );
 
 private:
   void createCommandPool(
@@ -52,7 +65,7 @@ private:
   VkQueue m_presentQueue = VK_NULL_HANDLE;
 
   VkDevice m_device;
-  uint32_t m_imageIndex;
+  uint32_t m_imageIndex = 0;
   uint32_t m_currentFrame = 0;
 
   const Pipeline& m_meshPipeline;

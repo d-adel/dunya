@@ -73,6 +73,18 @@ StartupOptions::StartupOptions(std::span<char*> arguments) {
       analytic = true;
     } else if (argument == "--verify-bake") {
       verifyBake = true;
+    } else if (argument == "--golden") {
+      if (i + 1 >= arguments.size()) {
+        throw std::runtime_error("--golden needs a reference path");
+      }
+
+      golden = arguments[++i];
+    } else if (argument == "--screenshot") {
+      if (i + 1 >= arguments.size()) {
+        throw std::runtime_error("--screenshot needs a path");
+      }
+
+      screenshot = arguments[++i];
     } else if (argument == "--carves") {
       if (i + 1 >= arguments.size()) {
         throw std::runtime_error("--carves needs a count");
@@ -89,12 +101,13 @@ StartupOptions::StartupOptions(std::span<char*> arguments) {
       throw std::runtime_error(
         "Unknown argument: " + argument
         + "\nUsage: DunyaRenderer [--analytic] [--carves N] [--verify-bake]"
+          " [--screenshot PATH] [--golden PATH]"
       );
     }
   }
 }
 
-void Application::start(const StartupOptions& options) {
+int Application::start(const StartupOptions& options) {
   glfwSetInputMode(
     m_context.window().handle(),
     GLFW_CURSOR,
@@ -114,6 +127,32 @@ void Application::start(const StartupOptions& options) {
   }
 
   bool bakeCheckPending = options.verifyBake;
+
+  // Set by the hook itself rather than guessed at from outside: it only runs on
+  // a frame that reached the point of being presented, which is exactly the
+  // condition a capture needs and is awkward to test for out here.
+  bool captured = false;
+  bool goldenFailed = false;
+
+  std::function<void(VkImage)> captureHook;
+
+  if (!options.screenshot.empty() || !options.golden.empty()) {
+    captureHook = [this, &options, &captured, &goldenFailed](VkImage image) {
+      const dunya::image::Bitmap frame = readFrame(image);
+
+      if (!options.screenshot.empty()) {
+        dunya::image::save(frame, options.screenshot);
+        std::cout << "captured " << frame.width << "x" << frame.height << " to "
+                  << options.screenshot << '\n';
+      }
+
+      if (!options.golden.empty()) {
+        goldenFailed = !compareToGolden(frame, options.golden);
+      }
+
+      captured = true;
+    };
+  }
 
   double prevTime = glfwGetTime();
   double pipelineReloadCheck = 0;
@@ -190,10 +229,11 @@ void Application::start(const StartupOptions& options) {
     m_scene.augmentFrameContext(m_frameContext);
     // -----------------------------------
 
-    if (
+    const bool swapChainStale =
       m_context.window().takeResized()
-      || m_renderer.drawFrame(m_swapChain, m_frameContext)
-    ) {
+      || m_renderer.drawFrame(m_swapChain, m_frameContext, captureHook);
+
+    if (swapChainStale) {
       m_swapChain.recreate();
     }
 
@@ -205,9 +245,15 @@ void Application::start(const StartupOptions& options) {
       m_context.device().waitIdle();
       m_fieldPass.verifyBake(m_scene.primitives());
     }
+
+    if (captured) {
+      glfwSetWindowShouldClose(m_context.window().handle(), GLFW_TRUE);
+    }
   }
 
   m_context.device().waitIdle();
+
+  return goldenFailed ? 1 : 0;
 }
 
 void Application::clearCameraInput() noexcept {
@@ -409,6 +455,110 @@ void Application::stressField(uint32_t count) {
 
   std::cout << "stress  primitives " << before << " -> "
             << m_scene.primitives().size() << '\n';
+}
+
+/* Reads the frame just presented and writes it out as a PNG.
+ *
+ * The swapchain image is the one that shipped, which is the point: a capture
+ * rendered down some private path could pass while the path that actually runs
+ * is broken.
+ */
+dunya::image::Bitmap Application::readFrame(VkImage image) {
+  const VkExtent2D extent = m_swapChain.extent();
+
+  // A minimised window presents nothing. Failing here is deliberate - a
+  // zero-sized or stale capture silently blessed as a reference is the failure
+  // this whole milestone exists to prevent.
+  if (extent.width == 0 || extent.height == 0) {
+    throw std::runtime_error("Cannot capture a frame from a zero-sized window");
+  }
+
+  // The recorded frame left it ready to present, and it goes back that way.
+  return dunya::capture::read(
+    m_context.device(),
+    image,
+    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+    extent,
+    m_swapChain.imageFormat()
+  );
+}
+
+namespace {
+
+/* What counts as noise rather than change.
+ *
+ * Deliberately strict to begin with, because the run-to-run spread on this
+ * machine was measured rather than guessed at, and a tolerance wider than the
+ * noise is a regression this gate would wave through. It will need widening the
+ * day a driver update moves the numbers - and *that* is the moment to measure
+ * again, not to raise it until the red goes away.
+ */
+constexpr dunya::image::Tolerance GOLDEN_TOLERANCE{0, 0, 255};
+
+}  // namespace
+
+/* Compares a frame against its committed reference. Returns true when the image
+ * is unchanged.
+ *
+ * A missing reference writes one and still fails. Passing instead would mean a
+ * mistyped path silently reports success forever, which is the failure mode
+ * that makes a test worse than no test at all.
+ */
+bool Application::compareToGolden(
+  const dunya::image::Bitmap& frame,
+  const std::string& path
+) {
+  const std::filesystem::path reference(path);
+
+  if (!std::filesystem::exists(reference)) {
+    dunya::image::save(frame, path);
+
+    std::cout << "golden " << path
+              << ": MISSING, wrote it. Look at it, then commit it.\n";
+
+    return false;
+  }
+
+  const dunya::image::Bitmap expected = dunya::image::load(path);
+
+  const dunya::image::Difference difference =
+    dunya::image::compare(expected, frame, GOLDEN_TOLERANCE);
+
+  if (dunya::image::passes(difference, GOLDEN_TOLERANCE)) {
+    std::cout << "golden " << path << ": ok\n";
+    return true;
+  }
+
+  std::cout << "golden " << path << ": FAILED\n";
+
+  if (!difference.comparable) {
+    std::cout << "  size " << expected.width << "x" << expected.height
+              << " became " << frame.width << "x" << frame.height << '\n';
+    return false;
+  }
+
+  const uint64_t total =
+    static_cast<uint64_t>(expected.width) * expected.height;
+
+  std::cout << "  " << difference.differingPixels << " of " << total
+            << " pixels differ, worst channel delta "
+            << difference.worstChannelDelta << " at (" << difference.worstX
+            << ", " << difference.worstY << ")\n";
+
+  // Beside the reference by name, in the working directory rather than the
+  // source tree: the evidence belongs where the run happened.
+  const std::string stem = reference.stem().string();
+
+  dunya::image::save(frame, stem + "-actual.png");
+  dunya::image::save(
+    dunya::image::differenceImage(expected, frame, GOLDEN_TOLERANCE),
+    stem + "-diff.png"
+  );
+
+  std::cout << "  wrote " << stem << "-actual.png and " << stem
+            << "-diff.png\n";
+
+  return false;
 }
 
 void Application::handleKeyEvent(const KeyEvent& event) {

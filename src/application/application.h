@@ -11,8 +11,10 @@
 #include "fieldpass/fieldpass.h"
 #include "frameglobals/frameglobals.h"
 #include "field/field.h"
+#include "imagecompare/imagecompare.h"
 
 #include <span>
+#include <string>
 
 /* What the process was asked to do before the first frame.
  *
@@ -34,6 +36,14 @@ struct StartupOptions {
 
   // Compares the compute bake against a CPU bake of the same primitives.
   bool verifyBake = false;
+
+  // Writes the first presented frame here as a PNG and exits. Empty means run
+  // normally.
+  std::string screenshot;
+
+  // Compares the first presented frame against this reference and exits with a
+  // failing status if it has drifted. Empty means run normally.
+  std::string golden;
 };
 
 class Application {
@@ -47,7 +57,10 @@ public:
   Application& operator=(Application&&) = delete;
 
   void clearCameraInput() noexcept;
-  void start(const StartupOptions& options = {});
+
+  // Returns the process exit status, because --golden makes this a test as well
+  // as a renderer and a failing comparison has to reach the shell.
+  int start(const StartupOptions& options = {});
 
 private:
   void handleKeyEvent(const KeyEvent& event);
@@ -55,6 +68,11 @@ private:
   void setLookMode(bool looking);
   void editField(uint32_t operation);
   void stressField(uint32_t count);
+  dunya::image::Bitmap readFrame(VkImage image);
+  bool compareToGolden(
+    const dunya::image::Bitmap& frame,
+    const std::string& path
+  );
   bool acceptsInput() const noexcept;
 
   Context m_context;

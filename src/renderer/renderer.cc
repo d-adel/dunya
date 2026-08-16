@@ -346,7 +346,8 @@ void Renderer::recordCommandBuffer(
 
 bool Renderer::drawFrame(
   const SwapChain& swapChain,
-  const Frame& frameContext
+  const Frame& frameContext,
+  const std::function<void(VkImage)>& onFrameReady
 ) {
   if (
     vkWaitForFences(
@@ -434,6 +435,17 @@ bool Renderer::drawFrame(
     != VK_SUCCESS
   ) {
     throw std::runtime_error("failed to submit draw command buffer!");
+  }
+
+  // Still acquired, and the submit above is the work the reader wants to see,
+  // so the wait belongs here rather than in the reader: it is this frame's
+  // completion being waited for, which is the renderer's own business.
+  if (onFrameReady) {
+    if (vkDeviceWaitIdle(m_device) != VK_SUCCESS) {
+      throw std::runtime_error("Failed waiting for the frame to be readable");
+    }
+
+    onFrameReady(swapChain.image(m_imageIndex));
   }
 
   VkSemaphore signalSemaphores[] = {

@@ -7,11 +7,12 @@ int main(int argc, char** argv) {
     const StartupOptions options{std::span(argv, argc)};
 
     Application application;
-    application.start(options);
+
+    // Not always zero: --golden turns this into a test, and a drifted image has
+    // to reach the shell as a failing status or CTest cannot see it.
+    return application.start(options);
   } catch (const std::exception& e) {
     std::cerr << e.what() << '\n';
     return 1;
   }
-
-  return 0;
 }

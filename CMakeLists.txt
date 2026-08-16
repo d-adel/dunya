@@ -125,8 +125,10 @@ find_package(Vulkan REQUIRED)
 # Field evaluation, free of Vulkan so the tests can link it alone
 add_subdirectory(src/field)
 
+# Image comparison, free of Vulkan for the same reason
+add_subdirectory(src/imagecompare)
+
 enable_testing()
-add_subdirectory(tests)
 
 # Define executable and link libraries
 add_executable(${PROJECT_NAME}
@@ -147,7 +149,7 @@ add_executable(${PROJECT_NAME}
     src/descriptorgroup/descriptorgroup.cc
     src/image/image.cc
     src/oneshot/oneshotcommand.cc
-    src/texture/stb_image_impl.cc
+    src/capture/capture.cc
     src/texture/texture.cc
     src/sampler/sampler.cc
     src/depthimage/depthimage.cc
@@ -253,6 +255,11 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Vulkan::Vulkan
     glm::glm
     dunya::field
+
+    # Also where stb's implementations now live, for the whole project: texture
+    # loading gets them from here rather than from a second copy that would
+    # collide at link time.
+    dunya::imagecompare
 )
 target_include_directories(${PROJECT_NAME} PRIVATE src ${stb_SOURCE_DIR} ${tinyobjloader_SOURCE_DIR})
 
@@ -279,3 +286,7 @@ add_custom_command(
     COMMENT "Copying models"
     VERBATIM
 )
+
+# After the executable, not before it: the golden image tests run the renderer
+# itself, so the target has to exist before a test can name it.
+add_subdirectory(tests)
