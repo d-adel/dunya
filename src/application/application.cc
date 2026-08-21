@@ -11,7 +11,13 @@ Application::Application()
         m_scene.samplers(),
         m_scene.materials()
       ),
-      m_fieldPass(m_context.device(), m_scene.primitives()),
+      m_fieldObjectTable(m_context.device()),
+      m_fieldPass(
+        m_context.device(),
+        m_fieldObjectTable,
+        gridBox(m_scene.fieldObjects().front()),
+        m_scene.primitives()
+      ),
       m_meshPipeline(
         PipelineType::Mesh,
         m_context.device().vkDevice(),
@@ -27,13 +33,14 @@ Application::Application()
         std::vector<VkDescriptorSetLayout>{
           m_frameGlobals.setLayout(),
           m_resourceTable.setLayout(),
-          m_fieldPass.setLayout()
+          m_fieldObjectTable.setLayout()
         },
         m_swapChain
       ),
       m_renderer(
         m_context.device(),
         m_fieldPass,
+        m_fieldObjectTable,
         m_frameGlobals,
         m_meshPipeline,
         m_fieldPipeline,
@@ -92,7 +99,9 @@ int Application::start(const StartupOptions& options) {
   std::function<void(VkImage)> captureHook;
 
   if (frameCheck.wanted()) {
-    captureHook = [&frameCheck](VkImage image) { frameCheck.run(image); };
+    captureHook = [&frameCheck](VkImage image) {
+      frameCheck.run(image);
+    };
   }
 
   double prevTime = glfwGetTime();
@@ -169,6 +178,20 @@ int Application::start(const StartupOptions& options) {
     m_frameContext.proj = m_camera.projectionMatrix(aspect);
     m_frameContext.view = m_camera.viewMatrix();
     m_frameContext.cameraPos = m_camera.position();
+
+    for (size_t i = 0; i < m_scene.fieldObjects().size(); i++) {
+      if (m_scene.fieldObjects()[i].volumeIndex == UINT32_MAX) {
+        // Changes when objects own their volumes. Bindings 4/5 lack
+        // UPDATE_AFTER_BIND: registering is only legal before work is submitted.
+        uint32_t volumeIndex = m_fieldObjectTable.registerVolume(
+          m_fieldPass.distanceVolume(),
+          m_fieldPass.materialVolume()
+        );
+
+        m_scene.setVolumeIndex(i, volumeIndex);
+      }
+    }
+
     m_scene.augmentFrameContext(m_frameContext);
     // -----------------------------------
 
@@ -186,14 +209,13 @@ int Application::start(const StartupOptions& options) {
       };
     }
 
-    const bool swapChainStale =
-      m_context.window().takeResized()
-      || m_renderer.drawFrame(
-        m_swapChain,
-        m_frameContext,
-        overlayHook,
-        captureHook
-      );
+    const bool swapChainStale = m_context.window().takeResized()
+                                || m_renderer.drawFrame(
+                                  m_swapChain,
+                                  m_frameContext,
+                                  overlayHook,
+                                  captureHook
+                                );
 
     if (swapChainStale) {
       m_swapChain.recreate();
@@ -331,7 +353,13 @@ void Application::registerPanels() {
       "%.5f",
       ImGuiSliderFlags_Logarithmic
     );
-    ImGui::SliderFloat("gradient", &march.gradientEpsilon, 0.001f, 0.1f, "%.4f");
+    ImGui::SliderFloat(
+      "gradient",
+      &march.gradientEpsilon,
+      0.001f,
+      0.1f,
+      "%.4f"
+    );
 
     // Below 1 is plain sphere tracing and above 2 is unstable even when the
     // estimator is conservative.
@@ -342,7 +370,12 @@ void Application::registerPanels() {
     ImGui::SliderFloat("grid safety", &march.gridStepSafety, 0.1f, 1.0f);
 
     ImGui::SliderFloat("max distance", &march.maxDistance, 10.0f, 500.0f);
-    ImGui::SliderFloat("shadow distance", &march.shadowMaxDistance, 1.0f, 100.0f);
+    ImGui::SliderFloat(
+      "shadow distance",
+      &march.shadowMaxDistance,
+      1.0f,
+      100.0f
+    );
     ImGui::SliderFloat("shadow sharpness", &march.shadowSharpness, 1.0f, 64.0f);
 
     int iterations = static_cast<int>(march.maxIterations);
@@ -378,9 +411,7 @@ void Application::handleKeyEvent(const KeyEvent& event) {
   // Typing into a text field must not also fly the camera. Escape is exempt
   // because it is how the cursor is handed back, and a UI that could swallow it
   // would be a UI you cannot leave.
-  if (
-    m_overlay.wantsKeyboard() && event.key != GLFW_KEY_ESCAPE
-  ) {
+  if (m_overlay.wantsKeyboard() && event.key != GLFW_KEY_ESCAPE) {
     return;
   }
 

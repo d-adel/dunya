@@ -14,11 +14,7 @@ public:
     // Written once at construction and never again: one copy is enough.
     Static,
     // Written every frame with that frame's own value.
-    PerFrame,
-    // Written occasionally, at a moment of the caller's choosing. Replicated
-    // per frame because the copy a submitted frame is reading must never be
-    // the copy the CPU overwrites.
-    PerFrameMutable
+    PerFrame
   };
 
   struct BufferBinding {
@@ -73,10 +69,15 @@ public:
   const VkDescriptorSet& descriptorSet(uint32_t frame) const noexcept;
 
   void write(uint32_t binding, uint32_t frame, const void* data, size_t size);
+  void writeImage(uint32_t binding, uint32_t index, VkImageView imageView);
 
-  // Carries any staged write into this frame's own copies. Must be called once
-  // per frame, after the fence for that frame has been waited on.
-  void flush(uint32_t frame);
+  // Same, for a storage-image binding: GENERAL layout instead of read-only.
+  void writeStorageImage(
+    uint32_t binding,
+    uint32_t index,
+    VkImageView imageView
+  );
+
 
 private:
   struct Slot {
@@ -86,9 +87,12 @@ private:
     VkDescriptorType type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     std::vector<Buffer> buffers;
     std::vector<void*> mapped;
+  };
 
-    std::vector<char> pending;
-    uint32_t pendingFrames = 0;
+  struct ImageSlot {
+    uint32_t binding = 0;
+    VkDescriptorType type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    uint32_t capacity = 0;
   };
 
   void createSetLayout(
@@ -97,6 +101,7 @@ private:
     const std::vector<SamplerBinding>& samplers,
     const std::vector<StorageImageBinding>& storageImages
   );
+
   void createBuffers(
     const Device& device,
     const std::vector<BufferBinding>& buffers
@@ -127,4 +132,5 @@ private:
 
   std::vector<VkDescriptorSet> m_sets;
   std::vector<Slot> m_slots;
+  std::vector<ImageSlot> m_imageSlots;
 };

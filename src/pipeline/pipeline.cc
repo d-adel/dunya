@@ -6,8 +6,8 @@ static bool compileShader(
 ) {
   // Every path is quoted here rather than baked into the flag string, so a
   // directory with a space in it stays one argument.
-  const std::string command = "\"\"" GLSLC_PATH "\" " GLSLC_DEFINES " -I\"" GLSLC_INCLUDE_DIR
-                              "\" \""
+  const std::string command = "\"\"" GLSLC_PATH "\" " GLSLC_DEFINES
+                              " -I\"" GLSLC_INCLUDE_DIR "\" \""
                               + source + "\" -o \"" + output + "\"\"";
 
   return std::system(command.c_str()) == 0;
@@ -73,8 +73,8 @@ void Pipeline::makeConfig() {
       m_config.setLayouts = m_setLayouts;
 
       pushConstant.offset = 0;
-      pushConstant.size = offsetof(MeshPushConstants, materialIndex)
-                          + sizeof(MeshPushConstants::materialIndex);
+      pushConstant.size = offsetof(PushConstants, objectIndex)
+                          + sizeof(PushConstants::objectIndex);
       pushConstant.stageFlags =
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
@@ -92,8 +92,8 @@ void Pipeline::makeConfig() {
       m_config.setLayouts = m_setLayouts;
 
       pushConstant.offset = 0;
-      pushConstant.size = offsetof(MeshPushConstants, materialIndex)
-                          + sizeof(MeshPushConstants::materialIndex);
+      pushConstant.size = offsetof(PushConstants, objectIndex)
+                          + sizeof(PushConstants::objectIndex);
       pushConstant.stageFlags =
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 

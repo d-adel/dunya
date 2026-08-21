@@ -41,16 +41,20 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
   const float centreBefore =
     dunya::field::sample(m_scene.primitives(), centre).distance;
 
-  if (
-    !m_scene
-       .addPrimitive(centre, EDIT_RADIUS, EDIT_BLEND, hit->material, operation)
-  ) {
+  if (!m_scene.addPrimitive(
+        0,
+        centre,
+        EDIT_RADIUS,
+        EDIT_BLEND,
+        hit->material,
+        operation
+      )) {
     std::cout << "Primitive budget full, edit refused\n";
     return;
   }
 
   const auto uploadStart = std::chrono::steady_clock::now();
-  m_fieldPass.uploadPrimitives(m_scene.primitives());
+  m_fieldPass.primitivesChanged(m_scene.primitives());
   const auto uploadEnd = std::chrono::steady_clock::now();
 
   // A carve leaves empty space at its centre and an add leaves solid, so both
@@ -103,6 +107,7 @@ void FieldEditor::stress(uint32_t count) {
     // primitive per sample, so quietly changing it here would move published
     // numbers without saying so.
     if (!m_scene.addPrimitive(
+          0,
           extent->minimum + span * at,
           EDIT_RADIUS,
           0.0f,
@@ -114,7 +119,7 @@ void FieldEditor::stress(uint32_t count) {
     }
   }
 
-  m_fieldPass.uploadPrimitives(m_scene.primitives());
+  m_fieldPass.primitivesChanged(m_scene.primitives());
 
   std::cout << "stress  primitives " << before << " -> "
             << m_scene.primitives().size() << '\n';

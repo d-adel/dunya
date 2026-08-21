@@ -287,6 +287,10 @@ void Device::createLogicalDevice() {
 
   VkPhysicalDeviceFeatures deviceFeatures{};
   deviceFeatures.samplerAnisotropy = VK_TRUE;
+  // The shaders index the volume arrays by runtime values, which is its own
+  // feature even though desktop drivers tolerate it unenabled.
+  deviceFeatures.shaderSampledImageArrayDynamicIndexing = VK_TRUE;
+  deviceFeatures.shaderStorageImageArrayDynamicIndexing = VK_TRUE;
 
   VkPhysicalDeviceVulkan12Features features12{};
   features12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
@@ -388,6 +392,10 @@ bool Device::checkDeviceFeatureSupport(VkPhysicalDevice device) {
   return features13.dynamicRendering == VK_TRUE
          && features13.synchronization2 == VK_TRUE
          && physicalDeviceFeatures.features.samplerAnisotropy == VK_TRUE
+         && physicalDeviceFeatures.features.shaderSampledImageArrayDynamicIndexing
+              == VK_TRUE
+         && physicalDeviceFeatures.features.shaderStorageImageArrayDynamicIndexing
+              == VK_TRUE
          && features12.descriptorBindingPartiallyBound == VK_TRUE
          && features12.descriptorBindingSampledImageUpdateAfterBind == VK_TRUE;
 }

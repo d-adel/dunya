@@ -3,8 +3,7 @@
 using dunya::field::Primitive;
 
 Scene::Scene(const Context& context)
-    : m_primitives(createPrimitives()),
-      m_materials(createMaterials()),
+    : m_materials(createMaterials()),
       m_samplers(createSamplers(context.device())),
       m_textures(createTextures(context.device())) {
   glm::mat4 model = glm::rotate(
@@ -19,16 +18,21 @@ Scene::Scene(const Context& context)
   m_meshes.emplace_back(Mesh(context.device(), "models/viking_room.obj"));
   m_drawItems.emplace_back(DrawItem({0, 2, model}));
   m_drawItems.emplace_back(DrawItem({0, 3, model2}));
+  m_fieldObjects.reserve(MAX_FIELD_OBJECTS);
+
+  addFieldObject();
 }
 
 bool Scene::addPrimitive(
+  size_t objectIndex,
   const glm::vec3& centre,
   float radius,
   float blend,
   uint32_t material,
   uint32_t operation
 ) {
-  if (m_primitives.size() >= MAX_PRIMITIVES) {
+  FieldObject& fieldObject = m_fieldObjects.at(objectIndex);
+  if (fieldObject.editList.size() >= MAX_PRIMITIVES) {
     return false;
   }
 
@@ -39,22 +43,62 @@ bool Scene::addPrimitive(
   primitive.shapeConfig = glm::uvec4(0, material, operation, 0);
   dunya::field::updateBounds(primitive);
 
-  m_primitives.push_back(primitive);
+  fieldObject.editList.push_back(primitive);
+
+  refreshDerived(fieldObject);
 
   return true;
 }
 
-void Scene::augmentFrameContext(Frame& frameContext) const {
+bool Scene::addFieldObject() {
+  if (m_fieldObjects.size() >= MAX_FIELD_OBJECTS) {
+    return false;
+  }
+
+  FieldObject obj;
+
+  obj.editList = createPrimitives();
+
+  // Reserved to capacity so an append never reallocates: Frame hands the
+  // renderer a span over this vector, and a reallocation would leave last
+  // frame's span pointing at freed storage.
+  obj.editList.reserve(MAX_PRIMITIVES);
+
+  // Before the grid is fitted, because refreshDerived divides the box by it.
+  obj.resolution = glm::uvec3(FIELD_GRID_RESOLUTION);
+
+  refreshDerived(obj);
+
+  m_fieldObjects.emplace_back(std::move(obj));
+
+  return true;
+}
+
+void Scene::setVolumeIndex(size_t objectIndex, uint32_t volumeIndex) {
+  m_fieldObjects.at(objectIndex).volumeIndex = volumeIndex;
+}
+
+void Scene::augmentFrameContext(Frame& frameContext) {
   std::span<const DrawItem> data(m_drawItems);
   std::span<const Mesh> meshes(m_meshes);
-  std::span<const Primitive> primitives(m_primitives);
+  std::span<const Primitive> primitives(m_fieldObjects[0].editList);
+
+  makeShared(
+    frameContext.fieldRepresentation,
+    m_fieldObjects,
+    m_sharedFieldObjects
+  );
+
+  std::span<const FieldObjectShared> sharedFieldObjects(m_sharedFieldObjects);
+
   frameContext.drawItems = data;
   frameContext.meshes = meshes;
   frameContext.primitives = primitives;
+  frameContext.sharedFieldObjects = sharedFieldObjects;
 }
 
 const std::vector<Primitive>& Scene::primitives() const noexcept {
-  return m_primitives;
+  return m_fieldObjects[0].editList;
 }
 
 const std::vector<Material>& Scene::materials() const noexcept {
@@ -67,6 +111,10 @@ const std::vector<Texture>& Scene::textures() const noexcept {
 
 const std::vector<Sampler>& Scene::samplers() const noexcept {
   return m_samplers;
+}
+
+const std::vector<FieldObject>& Scene::fieldObjects() const noexcept {
+  return m_fieldObjects;
 }
 
 std::vector<Sampler> Scene::createSamplers(const Device& device) {

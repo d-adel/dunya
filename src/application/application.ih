@@ -2,6 +2,7 @@
 #include "config/config.h"
 #include "field/analytic.h"
 #include "field/raycast.h"
+#include "fieldobject/fieldobject.h"
 
 #include <imgui.h>
 

@@ -13,13 +13,14 @@
 #include <span>
 #include <filesystem>
 
-struct MeshPushConstants {
+struct PushConstants {
   glm::mat4 model;
   uint32_t materialIndex;
+  uint32_t objectIndex;
 };
 
 static_assert(
-  offsetof(MeshPushConstants, materialIndex) == 64,
+  offsetof(PushConstants, objectIndex) == 68,
   "The push constant block must match its declaration in both mesh shaders"
 );
 

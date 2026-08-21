@@ -3,6 +3,7 @@
 Renderer::Renderer(
   const Device& device,
   FieldPass& fieldPass,
+  FieldObjectTable& fieldObjectTable,
   FrameGlobals& frameGlobals,
   const Pipeline& meshPipeline,
   const Pipeline& fieldPipeline,
@@ -17,6 +18,7 @@ Renderer::Renderer(
       m_fieldPipeline(fieldPipeline),
       m_resourceTable(resourceTable),
       m_fieldPass(fieldPass),
+      m_fieldObjectTable(fieldObjectTable),
       m_frameGlobals(frameGlobals) {
   createCommandPool(device.physicalDevice(), surface);
   createCommandBuffer();
@@ -261,15 +263,15 @@ void Renderer::recordCommandBuffer(
         VK_INDEX_TYPE_UINT32
       );
 
-      const MeshPushConstants pushConstants{item.model, item.materialIndex};
+      const PushConstants pushConstants{item.model, item.materialIndex};
 
       vkCmdPushConstants(
         m_commandBuffers[m_currentFrame],
         m_meshPipeline.pipelineLayout(),
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         0,
-        offsetof(MeshPushConstants, materialIndex)
-          + sizeof(MeshPushConstants::materialIndex),
+        offsetof(PushConstants, materialIndex)
+          + sizeof(PushConstants::materialIndex),
         &pushConstants
       );
 
@@ -285,10 +287,16 @@ void Renderer::recordCommandBuffer(
   }
 
   if (drawField) {
-    m_fieldPass.update(
+    m_fieldObjectTable.update(m_currentFrame, frameContext.sharedFieldObjects);
+    m_fieldObjectTable.updatePrimitives(m_currentFrame, frameContext.primitives);
+
+    // After the pool write, because the dispatch reads this frame's copy.
+    m_fieldPass.bakeIfDirty(
       m_currentFrame,
       static_cast<uint32_t>(frameContext.primitives.size()),
-      frameContext.fieldRepresentation
+      frameContext.sharedFieldObjects.empty()
+        ? 0u
+        : frameContext.sharedFieldObjects[0].resolutionVolumeIndex.w
     );
 
     vkCmdBindPipeline(
@@ -303,7 +311,7 @@ void Renderer::recordCommandBuffer(
       m_fieldPipeline.pipelineLayout(),
       2,
       1,
-      &m_fieldPass.descriptorSet(m_currentFrame),
+      &m_fieldObjectTable.descriptorSet(m_currentFrame),
       0,
       nullptr
     );

@@ -15,6 +15,7 @@
 #include "framecheck/framecheck.h"
 #include "overlay/overlay.h"
 #include "startupoptions/startupoptions.h"
+#include "fieldobjecttable/fieldobjecttable.h"
 
 /* Wiring, and the loop.
  *
@@ -57,6 +58,7 @@ private:
   Scene m_scene;
   FrameGlobals m_frameGlobals;
   ResourceTable m_resourceTable;
+  FieldObjectTable m_fieldObjectTable;
   FieldPass m_fieldPass;
   Pipeline m_meshPipeline;
   Pipeline m_fieldPipeline;

@@ -23,9 +23,10 @@ dunya::field::Aabb paddedExtent(std::span<const Primitive> primitives) {
   return {box.minimum - margin, box.maximum + margin};
 }
 
-SampledField bakeGrid(std::span<const Primitive> primitives) {
-  const dunya::field::Aabb box = paddedExtent(primitives);
-
+SampledField bakeGrid(
+  const dunya::field::Aabb& box,
+  std::span<const Primitive> primitives
+) {
   const auto start = std::chrono::steady_clock::now();
 
   SampledField grid = dunya::field::bake(
@@ -90,46 +91,19 @@ Texture makeMaterialVolume(const Device& device, const SampledField& grid) {
 
 FieldPass::FieldPass(
   const Device& device,
+  const FieldObjectTable& table,
+  const dunya::field::Aabb& box,
   std::span<const dunya::field::Primitive> primitives
 )
     : m_device(device),
-      m_grid(bakeGrid(primitives)),
+      m_grid(bakeGrid(box, primitives)),
       m_distanceVolume(makeDistanceVolume(device, m_grid)),
       m_materialVolume(makeMaterialVolume(device, m_grid)),
-      m_group(
-        device,
-        MAX_FRAMES_IN_FLIGHT,
-        {{0,
-          MAX_PRIMITIVES * sizeof(Primitive),
-          VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
-          DescriptorGroup::BufferUpdate::PerFrameMutable,
-          VK_DESCRIPTOR_TYPE_STORAGE_BUFFER},
-         {1,
-          sizeof(FieldFrame),
-          VK_SHADER_STAGE_FRAGMENT_BIT,
-          DescriptorGroup::BufferUpdate::PerFrame}},
-        {{2,
-          VK_SHADER_STAGE_FRAGMENT_BIT,
-          {m_distanceVolume.image().imageView()},
-          1},
-         {3,
-          VK_SHADER_STAGE_FRAGMENT_BIT,
-          {m_materialVolume.image().imageView()},
-          1}},
-        {},
-        {{4,
-          VK_SHADER_STAGE_COMPUTE_BIT,
-          {m_distanceVolume.image().imageView()},
-          1},
-         {5,
-          VK_SHADER_STAGE_COMPUTE_BIT,
-          {m_materialVolume.image().imageView()},
-          1}}
-      ),
+      m_table(table),
       m_bakePipeline(
         device.vkDevice(),
         "shaders/field-bake.comp.spv",
-        std::vector<VkDescriptorSetLayout>{m_group.setLayout()},
+        std::vector<VkDescriptorSetLayout>{table.setLayout()},
         std::vector<VkPushConstantRange>{
           {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(BakeParams)}
         }
@@ -138,7 +112,7 @@ FieldPass::FieldPass(
     throw std::runtime_error("More primitives than the field buffer holds");
   }
 
-  uploadPrimitives(primitives);
+  primitivesChanged(primitives);
 }
 
 namespace {
@@ -153,11 +127,11 @@ VkImageMemoryBarrier2 volumeBarrier(
   barrier.oldLayout = from;
   barrier.newLayout = to;
   barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-  barrier.srcAccessMask = VK_ACCESS_2_MEMORY_READ_BIT
-                          | VK_ACCESS_2_MEMORY_WRITE_BIT;
+  barrier.srcAccessMask =
+    VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
   barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-  barrier.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT
-                          | VK_ACCESS_2_MEMORY_WRITE_BIT;
+  barrier.dstAccessMask =
+    VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
   barrier.image = image;
   barrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
   barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -180,8 +154,7 @@ void transitionVolumes(
 
   VkDependencyInfo dependency{};
   dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-  dependency.imageMemoryBarrierCount =
-    static_cast<uint32_t>(barriers.size());
+  dependency.imageMemoryBarrierCount = static_cast<uint32_t>(barriers.size());
   dependency.pImageMemoryBarriers = barriers.data();
 
   vkCmdPipelineBarrier2(cmd, &dependency);
@@ -189,7 +162,11 @@ void transitionVolumes(
 
 }  // namespace
 
-void FieldPass::bakeIfDirty(uint32_t frame, uint32_t primitiveCount) {
+void FieldPass::bakeIfDirty(
+  uint32_t frame,
+  uint32_t primitiveCount,
+  uint32_t volume
+) {
   if (!m_gridDirty) {
     return;
   }
@@ -223,7 +200,7 @@ void FieldPass::bakeIfDirty(uint32_t frame, uint32_t primitiveCount) {
     m_bakePipeline.pipelineLayout(),
     0,
     1,
-    &m_group.descriptorSet(frame),
+    &m_table.descriptorSet(frame),
     0,
     nullptr
   );
@@ -231,7 +208,8 @@ void FieldPass::bakeIfDirty(uint32_t frame, uint32_t primitiveCount) {
   const BakeParams params{
     glm::vec4(m_grid.origin, 0.0f),
     glm::vec4(m_grid.voxelSize, 0.0f),
-    glm::uvec4(m_grid.resolution, primitiveCount)
+    glm::uvec4(m_grid.resolution, primitiveCount),
+    glm::uvec4(volume, 0u, 0u, 0u)
   };
 
   vkCmdPushConstants(
@@ -347,7 +325,9 @@ std::vector<uint8_t> readVolume(
  * tests that: the renderer only ever displays the GPU result, so a divergence
  * would look like the grid's interpolation error rather than like a bug.
  */
-void FieldPass::verifyBake(std::span<const dunya::field::Primitive> primitives) {
+void FieldPass::verifyBake(
+  std::span<const dunya::field::Primitive> primitives
+) {
   const dunya::field::Aabb box = paddedExtent(primitives);
 
   const SampledField reference = dunya::field::bake(
@@ -385,12 +365,12 @@ void FieldPass::verifyBake(std::span<const dunya::field::Primitive> primitives) 
     }
   }
 
-  std::cout << "bake check  worst distance " << std::scientific
-            << worstDistance << "  material mismatches " << materialMismatches
-            << " of " << reference.distances.size() << '\n';
+  std::cout << "bake check  worst distance " << std::scientific << worstDistance
+            << "  material mismatches " << materialMismatches << " of "
+            << reference.distances.size() << '\n';
 }
 
-void FieldPass::uploadPrimitives(
+void FieldPass::primitivesChanged(
   std::span<const dunya::field::Primitive> primitives
 ) {
   if (primitives.size() > MAX_PRIMITIVES) {
@@ -408,47 +388,12 @@ void FieldPass::uploadPrimitives(
   m_grid.origin = box.minimum;
   m_grid.voxelSize =
     dunya::field::voxelSize(box.minimum, box.maximum, m_grid.resolution);
-
-  // One past the last unbounded primitive rather than a count, so the fold
-  // outside the grid keeps the array's order. Order is the whole meaning of a
-  // CSG fold, so the alternative - sorting the unbounded ones to the front -
-  // would change the geometry to save the reads.
-  m_unboundedScan = 0;
-
-  for (size_t i = 0; i < primitives.size(); ++i) {
-    if (primitives[i].bounds.w <= 0.0f) {
-      m_unboundedScan = static_cast<uint32_t>(i) + 1u;
-    }
-  }
-
-  m_group.write(0, 0, primitives.data(), primitives.size_bytes());
 }
 
-void FieldPass::update(
-  uint32_t frame,
-  uint32_t primitiveCount,
-  uint32_t representation
-) {
-  m_group.flush(frame);
-
-  const FieldFrame frameData{
-    glm::uvec4(primitiveCount, representation, m_unboundedScan, 0),
-    glm::vec4(m_grid.origin, FIELD_GRID_MARGIN),
-    glm::vec4(m_grid.voxelSize, 0.0f),
-    glm::uvec4(m_grid.resolution, 0)
-  };
-
-  m_group.write(1, frame, &frameData, sizeof(frameData));
-
-  // After the flush, so the dispatch reads this frame's copy of the array
-  // rather than one that has not received the edit yet.
-  bakeIfDirty(frame, primitiveCount);
+VkImageView FieldPass::distanceVolume() const noexcept {
+  return m_distanceVolume.image().imageView();
 }
 
-const VkDescriptorSetLayout& FieldPass::setLayout() const noexcept {
-  return m_group.setLayout();
-}
-
-const VkDescriptorSet& FieldPass::descriptorSet(uint32_t frame) const noexcept {
-  return m_group.descriptorSet(frame);
+VkImageView FieldPass::materialVolume() const noexcept {
+  return m_materialVolume.image().imageView();
 }

@@ -7,6 +7,7 @@
 #include "frameglobals/frameglobals.h"
 #include "frame/frame.h"
 #include "fieldpass/fieldpass.h"
+#include "fieldobjecttable/fieldobjecttable.h"
 
 #include "config/config.h"
 
@@ -18,6 +19,7 @@ public:
   Renderer(
     const Device& device,
     FieldPass& fieldPass,
+    FieldObjectTable& fieldObjectTable,
     FrameGlobals& frameGlobals,
     const Pipeline& meshPipeline,
     const Pipeline& fieldPipeline,
@@ -74,5 +76,6 @@ private:
   const Pipeline& m_fieldPipeline;
   const ResourceTable& m_resourceTable;
   FieldPass& m_fieldPass;
+  FieldObjectTable& m_fieldObjectTable;
   FrameGlobals& m_frameGlobals;
 };

@@ -85,16 +85,6 @@ void DescriptorGroup::write(
       case BufferUpdate::PerFrame:
         memcpy(slot.mapped.at(frame), data, size);
         break;
-
-      case BufferUpdate::PerFrameMutable: {
-        // Staged rather than written: the other copies may belong to frames
-        // the GPU has not finished with. flush() hands it to each in turn.
-        const char* bytes = static_cast<const char*>(data);
-
-        slot.pending.assign(bytes, bytes + size);
-        slot.pendingFrames = m_frameCount;
-        break;
-      }
     }
 
     return;
@@ -103,16 +93,118 @@ void DescriptorGroup::write(
   throw std::runtime_error("Write to a binding this group does not own");
 }
 
-void DescriptorGroup::flush(uint32_t frame) {
-  for (Slot& slot : m_slots) {
-    if (slot.pendingFrames == 0) {
-      continue;
-    }
+void DescriptorGroup::writeImage(
+  uint32_t binding,
+  uint32_t index,
+  VkImageView imageView
+) {
+  std::vector<VkWriteDescriptorSet> writes;
+  writes.reserve(m_sets.size());
 
-    memcpy(slot.mapped.at(frame), slot.pending.data(), slot.pending.size());
+  auto it = std::find_if(
+    m_imageSlots.begin(),
+    m_imageSlots.end(),
+    [binding](const ImageSlot& slot) { return slot.binding == binding; }
+  );
 
-    --slot.pendingFrames;
+  if (it == m_imageSlots.end()) {
+    throw std::runtime_error("Failed to write image, non-existing binding");
   }
+
+  if (index >= it->capacity) {
+    throw std::runtime_error("Failed to write to image, index out of bounds");
+  }
+
+  if (it->type != VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE) {
+    throw std::runtime_error(
+      "Failed to write image, binding can only be a sampled image"
+    );
+  }
+
+  VkDescriptorImageInfo imageInfo{};
+  imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+  imageInfo.imageView = imageView;
+
+  VkWriteDescriptorSet write{};
+  write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+
+  write.dstBinding = binding;
+  write.dstArrayElement = index;
+  write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+  write.descriptorCount = 1;
+  write.pImageInfo = &imageInfo;
+
+  for (auto set : m_sets) {
+    write.dstSet = set;
+    writes.push_back(write);
+  }
+
+  vkUpdateDescriptorSets(
+    m_device,
+    static_cast<uint32_t>(writes.size()),
+    writes.data(),
+    0,
+    nullptr
+  );
+}
+
+void DescriptorGroup::writeStorageImage(
+  uint32_t binding,
+  uint32_t index,
+  VkImageView imageView
+) {
+  std::vector<VkWriteDescriptorSet> writes;
+  writes.reserve(m_sets.size());
+
+  auto it = std::find_if(
+    m_imageSlots.begin(),
+    m_imageSlots.end(),
+    [binding](const ImageSlot& slot) { return slot.binding == binding; }
+  );
+
+  if (it == m_imageSlots.end()) {
+    throw std::runtime_error(
+      "Failed to write storage image, non-existing binding"
+    );
+  }
+
+  if (index >= it->capacity) {
+    throw std::runtime_error(
+      "Failed to write to storage image, index out of bounds"
+    );
+  }
+
+  if (it->type != VK_DESCRIPTOR_TYPE_STORAGE_IMAGE) {
+    throw std::runtime_error(
+      "Failed to write storage image, binding is not a storage image"
+    );
+  }
+
+  VkDescriptorImageInfo imageInfo{};
+  imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+  imageInfo.imageView = imageView;
+
+  VkWriteDescriptorSet write{};
+  write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+
+  write.dstBinding = binding;
+  write.dstArrayElement = index;
+  write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+  write.descriptorCount = 1;
+  write.pImageInfo = &imageInfo;
+
+  for (auto set : m_sets) {
+    write.dstSet = set;
+    writes.push_back(write);
+  }
+
+  vkUpdateDescriptorSets(
+    m_device,
+    static_cast<uint32_t>(writes.size()),
+    writes.data(),
+    0,
+    nullptr
+  );
 }
 
 void DescriptorGroup::createSetLayout(
@@ -128,6 +220,9 @@ void DescriptorGroup::createSetLayout(
   std::vector<VkDescriptorBindingFlags> bindingFlags;
   bindings.reserve(bindingCount);
   bindingFlags.reserve(bindingCount);
+  m_imageSlots.reserve(
+    sampledImages.size() + samplers.size() + storageImages.size()
+  );
 
   for (const BufferBinding& buffer : buffers) {
     VkDescriptorSetLayoutBinding layoutBinding{};
@@ -154,6 +249,12 @@ void DescriptorGroup::createSetLayout(
       VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT
       | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT
     );
+
+    ImageSlot slot{};
+    slot.binding = sampledImage.binding;
+    slot.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    slot.capacity = sampledImage.capacity;
+    m_imageSlots.push_back(slot);
   }
 
   for (const SamplerBinding& sampler : samplers) {
@@ -169,6 +270,12 @@ void DescriptorGroup::createSetLayout(
       VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT
       | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT
     );
+
+    ImageSlot slot{};
+    slot.binding = sampler.binding;
+    slot.type = VK_DESCRIPTOR_TYPE_SAMPLER;
+    slot.capacity = sampler.capacity;
+    m_imageSlots.push_back(slot);
   }
 
   for (const StorageImageBinding& storageImage : storageImages) {
@@ -181,11 +288,17 @@ void DescriptorGroup::createSetLayout(
 
     bindings.push_back(layoutBinding);
 
-    // No update-after-bind here, unlike the sampled arrays. These are a fixed
-    // set written once at creation, and asking for the flag would require
-    // descriptorBindingStorageImageUpdateAfterBind for a capability nothing
-    // uses.
-    bindingFlags.push_back(0);
+    // Partially bound, because a volume array has empty slots until objects
+    // fill them. No update-after-bind: that would need
+    // descriptorBindingStorageImageUpdateAfterBind, so these can only be
+    // written while no submitted work references the set.
+    bindingFlags.push_back(VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT);
+
+    ImageSlot slot{};
+    slot.binding = storageImage.binding;
+    slot.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    slot.capacity = storageImage.capacity;
+    m_imageSlots.push_back(slot);
   }
 
   VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsInfo{};
@@ -349,9 +462,8 @@ void DescriptorGroup::createPool(
 
   // The same decision the layout made, not a second reading of it: a layout
   // carrying the bit may only be allocated from a pool carrying it.
-  poolInfo.flags = m_updateAfterBind
-                     ? VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT
-                     : 0;
+  poolInfo.flags =
+    m_updateAfterBind ? VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT : 0;
 
   if (
     vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_pool) != VK_SUCCESS

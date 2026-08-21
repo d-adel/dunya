@@ -2,6 +2,7 @@
 #extension GL_GOOGLE_include_directive : require
 
 const int MAX_MATERIALS = DUNYA_MAX_MATERIALS;
+const int MAX_FIELD_OBJECTS = DUNYA_MAX_FIELD_OBJECTS;
 const float bias = 0.01;
 const float ambient = 0.06;
 
@@ -48,8 +49,9 @@ struct Material {
   uint emissiveSampler;
 };
 
-layout(std140, set = 1, binding = 0) uniform
-MaterialTable { Material materials[MAX_MATERIALS]; } materialTable;
+layout(std140, set = 1, binding = 0) uniform MaterialTable {
+  Material materials[MAX_MATERIALS];
+} materialTable;
 
 layout(std140, set = 0, binding = 0) uniform CameraUniform {
   mat4 view;
@@ -63,53 +65,73 @@ layout(std140, set = 0, binding = 0) uniform CameraUniform {
 // data that grows at runtime, and the guaranteed uniform range is 16 KB.
 // std430 and std140 agree here because every member is 16-byte aligned and
 // Primitive is exactly 96 bytes, which its static_assert pins.
-layout(std430, set = 2, binding = 0) readonly buffer
-FieldScene { Primitive primitives[]; } scene;
+layout(std430, set = 2, binding = 3) readonly buffer FieldScene {
+  Primitive primitives[];
+} scene;
 
-layout(std140, set = 2, binding = 1) uniform FieldFrame {
+// layout(std140, set = 2, binding = 1) uniform FieldFrame {
+//   uvec4 config;
+//   vec4 gridOrigin;
+//   vec4 gridVoxelSize;
+//   uvec4 gridResolution;
+// } frame;
+
+layout(std140, set = 2, binding = 0) readonly buffer FieldObjectShared {
+  mat4 model;
+  mat4 inverseModel;
+  vec4 voxelSize;
+  uvec4 resolutionVolumeIndex;
   uvec4 config;
-  vec4 gridOrigin;
-  vec4 gridVoxelSize;
-  uvec4 gridResolution;
-} frame;
+} fieldObject;
+
+uint volumeIndex = fieldObject.resolutionVolumeIndex.w;
+
+// World space, while the march still runs there: the grid is centred on the
+// object's local origin, and the object sits at model's translation.
+vec3 origin = fieldObject.model[3].xyz
+              - fieldObject.voxelSize.xyz
+                  * (fieldObject.resolutionVolumeIndex.xyz - 1) * 0.5;
 
 const int MAX_SAMPLERS = DUNYA_MAX_SAMPLERS;
 layout(set = 1, binding = 2) uniform sampler samplers[MAX_SAMPLERS];
 
-layout(set = 2, binding = 2) uniform texture3D distanceVolume;
-layout(set = 2, binding = 3) uniform utexture3D materialVolume;
+layout(set = 2, binding = 1)
+  uniform texture3D distanceVolume[MAX_FIELD_OBJECTS];
+layout(set = 2, binding = 2)
+  uniform utexture3D materialVolume[MAX_FIELD_OBJECTS];
 
 layout(location = 0) in vec4 ndc;
 layout(location = 0) out vec4 outColor;
 
 #define FIELD_PRIMITIVE_AT(i) scene.primitives[i]
-#define FIELD_PRIMITIVE_COUNT frame.config.x
+#define FIELD_PRIMITIVE_COUNT fieldObject.config.x
 
 #include "field-common.glsl"
 
 // How far outside the grid's box a point lies, and zero when it is inside.
 float outsideGrid(vec3 p) {
-  vec3 maxCorner = frame.gridOrigin.xyz
-                   + frame.gridVoxelSize.xyz * vec3(frame.gridResolution.xyz - 1u);
+  vec3 maxCorner = origin
+                   + fieldObject.voxelSize.xyz
+                       * vec3(fieldObject.resolutionVolumeIndex.xyz - 1u);
 
-  return length(p - clamp(p, frame.gridOrigin.xyz, maxCorner));
+  return length(p - clamp(p, origin, maxCorner));
 }
 
 // Values sit at lattice points, so lattice index i is texel i, whose centre in
 // normalised coordinates is (i + 0.5) / N. Only valid inside the box.
 vec2 gridSample(vec3 p) {
-  vec3 lattice = (p - frame.gridOrigin.xyz) / frame.gridVoxelSize.xyz;
-  vec3 uvw = (lattice + 0.5) / vec3(frame.gridResolution.xyz);
+  vec3 lattice = (p - origin) / fieldObject.voxelSize.xyz;
+  vec3 uvw = (lattice + 0.5) / vec3(fieldObject.resolutionVolumeIndex.xyz);
 
-  float distance = texture(
-    sampler3D(distanceVolume, samplers[DUNYA_SAMPLER_LINEAR_CLAMP]),
-    uvw
-  ).r;
+  float distance = texture(sampler3D(distanceVolume[volumeIndex],
+                                     samplers[DUNYA_SAMPLER_LINEAR_CLAMP]),
+                           uvw)
+                     .r;
 
-  uint material = texture(
-    usampler3D(materialVolume, samplers[DUNYA_SAMPLER_NEAREST_CLAMP]),
-    uvw
-  ).r;
+  uint material = texture(usampler3D(materialVolume[volumeIndex],
+                                     samplers[DUNYA_SAMPLER_NEAREST_CLAMP]),
+                          uvw)
+                    .r;
 
   // Trilinear interpolation overestimates - measured in sampled_tests.cc - so
   // the step is shortened rather than trusted. At the surface the distance is
@@ -127,7 +149,7 @@ vec2 gridSample(vec3 p) {
  * reach, because the bounded ones are what the box was sized around.
  */
 vec2 fieldDistance(vec3 p) {
-  if (frame.config.y == 0u) {
+  if (fieldObject.config.y == 0u) {
     return sceneDistance(p);
   }
 
@@ -142,10 +164,8 @@ vec2 fieldDistance(vec3 p) {
     // distance goes to zero on the boundary, which reads as a surface and
     // paints the grid's own far wall over the scene, and leaves the march
     // stepping by nothing on the way out.
-    return minMat(
-      vec2(outside + frame.gridOrigin.w, 0.0),
-      foldDistance(p, frame.config.z, true)
-    );
+    return minMat(vec2(outside + fieldObject.voxelSize.w, 0.0),
+                  foldDistance(p, fieldObject.config.z, true));
   }
 
   return gridSample(p);
@@ -157,16 +177,14 @@ vec2 fieldDistance(vec3 p) {
 // the faceting - it is shading, not geometry, which is why the silhouette stays
 // smooth while the surface looks chiselled. Spanning a whole cell averages the
 // two slopes instead of picking one.
-float gradientOffset()
-{
-    if (frame.config.y == 0u)
-    {
-        return params.gradientEpsilon;
-    }
+float gradientOffset() {
+  if (fieldObject.config.y == 0u) {
+    return params.gradientEpsilon;
+  }
 
-    vec3 voxel = frame.gridVoxelSize.xyz;
+  vec3 voxel = fieldObject.voxelSize.xyz;
 
-    return max(params.gradientEpsilon, max(voxel.x, max(voxel.y, voxel.z)));
+  return max(params.gradientEpsilon, max(voxel.x, max(voxel.y, voxel.z)));
 }
 
 /* How far off a surface anything that starts on it has to begin.
@@ -178,94 +196,83 @@ float gradientOffset()
  * whether they started inside come out as black teeth against lit ones rather
  * than as a soft terminator.
  */
-float surfaceBias()
-{
-    if (frame.config.y == 0u)
-    {
-        return bias;
-    }
+float surfaceBias() {
+  if (fieldObject.config.y == 0u) {
+    return bias;
+  }
 
-    vec3 voxel = frame.gridVoxelSize.xyz;
+  vec3 voxel = fieldObject.voxelSize.xyz;
 
-    return max(bias, 2.0 * max(voxel.x, max(voxel.y, voxel.z)));
+  return max(bias, 2.0 * max(voxel.x, max(voxel.y, voxel.z)));
 }
 
-vec3 estimateNormal(vec3 p)
-{
-    float h = gradientOffset();
+vec3 estimateNormal(vec3 p) {
+  float h = gradientOffset();
 
-    vec3 offsetX = vec3(h, 0.0, 0.0);
-    vec3 offsetY = vec3(0.0, h, 0.0);
-    vec3 offsetZ = vec3(0.0, 0.0, h);
+  vec3 offsetX = vec3(h, 0.0, 0.0);
+  vec3 offsetY = vec3(0.0, h, 0.0);
+  vec3 offsetZ = vec3(0.0, 0.0, h);
 
-    return normalize(vec3(
-        fieldDistance(p + offsetX).x - fieldDistance(p - offsetX).x,
-        fieldDistance(p + offsetY).x - fieldDistance(p - offsetY).x,
-        fieldDistance(p + offsetZ).x - fieldDistance(p - offsetZ).x
-    ));
+  return normalize(
+    vec3(fieldDistance(p + offsetX).x - fieldDistance(p - offsetX).x,
+         fieldDistance(p + offsetY).x - fieldDistance(p - offsetY).x,
+         fieldDistance(p + offsetZ).x - fieldDistance(p - offsetZ).x));
 }
 
 // Steps by the unsigned distance so a ray that starts inside solid geometry
 // marches out to the boundary instead of reporting a hit where it began. That
 // is what lets the camera fly inside a shape and see its interior.
-bool march(vec3 origin, vec3 direction, out vec3 hitPosition, out float materialId)
-{
-    float distanceTravelled = 0;
+bool march(vec3 origin,
+           vec3 direction,
+           out vec3 hitPosition,
+           out float materialId) {
+  float distanceTravelled = 0;
 
-    float omega = params.omega;
-    float previousRadius = 0.0;
-    float stepLength = 0.0;
-    float functionSign = 1.0;
+  float omega = params.omega;
+  float previousRadius = 0.0;
+  float stepLength = 0.0;
+  float functionSign = 1.0;
 
-    for (int i = 0; i < int(params.maxIterations); ++i)
-    {
-        vec3 p =
-            origin +
-            direction * distanceTravelled;
+  for (int i = 0; i < int(params.maxIterations); ++i) {
+    vec3 p = origin + direction * distanceTravelled;
 
-        vec2 field = fieldDistance(p);
+    vec2 field = fieldDistance(p);
 
-        if (i == 0)
-        {
-            functionSign = field.x < 0.0 ? -1.0 : 1.0;
-        }
-
-        float signedRadius = functionSign * field.x;
-        float radius = abs(signedRadius);
-
-        // The over-stepped sphere no longer reaches the previous one, so the
-        // step may have skipped a surface. Undo part of it and stop relaxing.
-        bool relaxationFailed =
-            omega > 1.0 && (radius + previousRadius) < stepLength;
-
-        if (relaxationFailed)
-        {
-            stepLength -= omega * stepLength;
-            omega = 1.0;
-        }
-        else
-        {
-            stepLength = signedRadius * omega;
-        }
-
-        previousRadius = radius;
-
-        if (!relaxationFailed && radius <= params.epsilon)
-        {
-            hitPosition = p;
-            materialId = field.y;
-            return true;
-        }
-
-        distanceTravelled += stepLength;
-
-        if (distanceTravelled > params.maxDistance)
-        {
-            break;
-        }
+    if (i == 0) {
+      functionSign = field.x < 0.0 ? -1.0 : 1.0;
     }
 
-    return false;
+    float signedRadius = functionSign * field.x;
+    float radius = abs(signedRadius);
+
+    // The over-stepped sphere no longer reaches the previous one, so the
+    // step may have skipped a surface. Undo part of it and stop relaxing.
+    bool relaxationFailed =
+      omega > 1.0 && (radius + previousRadius) < stepLength;
+
+    if (relaxationFailed) {
+      stepLength -= omega * stepLength;
+      omega = 1.0;
+    } else {
+      stepLength = signedRadius * omega;
+    }
+
+    previousRadius = radius;
+
+    if (!relaxationFailed && radius <= params.epsilon) {
+      hitPosition = p;
+      materialId = field.y;
+      return true;
+    }
+
+    distanceTravelled += stepLength;
+
+    if (distanceTravelled > params.maxDistance) {
+      break;
+    }
+  }
+
+  return false;
 }
 
 // Returns how much light reaches the point, not whether anything blocked it.
@@ -273,86 +280,77 @@ bool march(vec3 origin, vec3 direction, out vec3 hitPosition, out float material
 // an approximate cone intersection and costs nothing beyond the march we were
 // doing anyway - which is where soft shadows come from for free. Owns nothing
 // and answers one question (idiom 23), and stops early once it is fully dark.
-float lightReaching(vec3 origin, vec3 direction)
-{
-    float result = 1.0;
-    float distanceTravelled = surfaceBias();
+float lightReaching(vec3 origin, vec3 direction) {
+  float result = 1.0;
+  float distanceTravelled = surfaceBias();
 
-    for (int i = 0; i < int(params.maxIterations); ++i)
-    {
-        float distanceToSurface =
-            fieldDistance(origin + direction * distanceTravelled).x;
+  for (int i = 0; i < int(params.maxIterations); ++i) {
+    float distanceToSurface =
+      fieldDistance(origin + direction * distanceTravelled).x;
 
-        if (distanceToSurface <= params.epsilon)
-        {
-            return 0.0;
-        }
-
-        result = min(result, params.shadowSharpness * distanceToSurface / distanceTravelled);
-
-        distanceTravelled += distanceToSurface;
-
-        if (distanceTravelled > params.shadowMaxDistance || result < 0.01)
-        {
-            break;
-        }
+    if (distanceToSurface <= params.epsilon) {
+      return 0.0;
     }
 
-    return clamp(result, 0.0, 1.0);
+    result =
+      min(result,
+          params.shadowSharpness * distanceToSurface / distanceTravelled);
+
+    distanceTravelled += distanceToSurface;
+
+    if (distanceTravelled > params.shadowMaxDistance || result < 0.01) {
+      break;
+    }
+  }
+
+  return clamp(result, 0.0, 1.0);
 }
 
 vec3 albedo(float materialId) {
   return materialTable.materials[uint(materialId + 0.5)].baseColor.rgb;
 }
 
-void main()
-{
+void main() {
+  vec4 clipPosition = vec4(ndc.xy, 1.0, 1.0);
 
-    vec4 clipPosition = vec4(ndc.xy, 1.0, 1.0);
+  vec4 worldPosition = camera.inverseViewProj * clipPosition;
 
-    vec4 worldPosition =
-        camera.inverseViewProj * clipPosition;
+  worldPosition /= worldPosition.w;
 
-    worldPosition /= worldPosition.w;
+  vec3 direction = normalize(worldPosition.xyz - camera.position.xyz);
 
-    vec3 direction = normalize(
-        worldPosition.xyz - camera.position.xyz
-    );
+  vec3 hitPosition;
+  float materialId;
+  if (march(camera.position.xyz, direction, hitPosition, materialId)) {
+    vec3 surfaceAlbedo = albedo(materialId);
 
-    vec3 hitPosition;
-    float materialId;
-    if (march(camera.position.xyz, direction, hitPosition, materialId))
-    {
-      vec3 surfaceAlbedo = albedo(materialId);
+    vec4 clip = camera.viewProj * vec4(hitPosition, 1.0);
+    float depth = clip.z / clip.w;
+    if (depth <= 0 || isinf(depth) || isnan(depth)) {
+      discard;
+    }
+    gl_FragDepth = depth;
 
-      vec4 clip = camera.viewProj * vec4(hitPosition, 1.0);
-      float depth = clip.z / clip.w;
-      if (depth <= 0 || isinf(depth) || isnan(depth)) {
-        discard;
-      }
-      gl_FragDepth = depth;
+    vec3 lightDir = normalize(vec3(0.4, 1.0, 0.6));
+    vec3 normal = estimateNormal(hitPosition);
 
-      vec3 lightDir = normalize(vec3(0.4, 1.0, 0.6));
-      vec3 normal = estimateNormal(hitPosition);
+    // The gradient points out of solid geometry, which is away from the eye
+    // when the surface is being viewed from inside. Face it back at the
+    // viewer so an interior wall is shaded rather than left black.
+    if (dot(normal, direction) > 0.0) {
+      normal = -normal;
+    }
 
-      // The gradient points out of solid geometry, which is away from the eye
-      // when the surface is being viewed from inside. Face it back at the
-      // viewer so an interior wall is shaded rather than left black.
-      if (dot(normal, direction) > 0.0) {
-        normal = -normal;
-      }
+    float diffuse = max(0.0, dot(normal, lightDir));
 
-      float diffuse = max(0.0, dot(normal, lightDir));
-
-      float light = diffuse > 0.0
+    float light =
+      diffuse > 0.0
         ? lightReaching(hitPosition + normal * surfaceBias(), lightDir)
         : 1.0;
 
-      vec3 color = vec3(surfaceAlbedo * (ambient + diffuse * light));
-      outColor = vec4(color, 1.0);
-    }
-    else
-    {
-        discard;
-    }
+    vec3 color = vec3(surfaceAlbedo * (ambient + diffuse * light));
+    outColor = vec4(color, 1.0);
+  } else {
+    discard;
+  }
 }

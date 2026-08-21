@@ -5,6 +5,7 @@
 #include "mesh/mesh.h"
 #include "pipeline/pipeline.h"
 #include "field/field.h"
+#include "fieldobject/fieldobject.h"
 
 #include <glm/glm.hpp>
 #include <span>
@@ -22,6 +23,7 @@ struct Frame {
   std::span<const DrawItem> drawItems = {};
   std::span<const Mesh> meshes = {};
   std::span<const dunya::field::Primitive> primitives = {};
+  std::span<const FieldObjectShared> sharedFieldObjects = {};
   PipelineType mode = PipelineType::Both;
 
   uint32_t fieldRepresentation = FIELD_SAMPLED;
