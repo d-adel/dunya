@@ -82,12 +82,10 @@ layout(std140, set = 2, binding = 0) readonly buffer FieldObjectShared {
   vec4 voxelSize;
   uvec4 resolutionVolumeIndex;
   uvec4 config;
+  vec4 localOrigin;
 } fieldObject;
 
 uint volumeIndex = fieldObject.resolutionVolumeIndex.w;
-
-vec3 origin = -fieldObject.voxelSize.xyz
-              * (fieldObject.resolutionVolumeIndex.xyz - 1) * 0.5;
 
 const int MAX_SAMPLERS = DUNYA_MAX_SAMPLERS;
 layout(set = 1, binding = 2) uniform sampler samplers[MAX_SAMPLERS];
@@ -107,17 +105,17 @@ layout(location = 0) out vec4 outColor;
 
 // How far outside the grid's box a point lies, and zero when it is inside.
 float outsideGrid(vec3 p) {
-  vec3 maxCorner = origin
+  vec3 maxCorner = fieldObject.localOrigin.xyz
                    + fieldObject.voxelSize.xyz
                        * vec3(fieldObject.resolutionVolumeIndex.xyz - 1u);
 
-  return length(p - clamp(p, origin, maxCorner));
+  return length(p - clamp(p, fieldObject.localOrigin.xyz, maxCorner));
 }
 
 // Values sit at lattice points, so lattice index i is texel i, whose centre in
 // normalised coordinates is (i + 0.5) / N. Only valid inside the box.
 vec2 gridSample(vec3 p) {
-  vec3 lattice = (p - origin) / fieldObject.voxelSize.xyz;
+  vec3 lattice = (p - fieldObject.localOrigin.xyz) / fieldObject.voxelSize.xyz;
   vec3 uvw = (lattice + 0.5) / vec3(fieldObject.resolutionVolumeIndex.xyz);
 
   float distance = texture(sampler3D(distanceVolume[volumeIndex],

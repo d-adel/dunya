@@ -28,6 +28,8 @@ void makeShared(
     shared.config.y = fieldRepresentation;
     shared.config.z = fieldObject.unboundedScan;
 
+    shared.localOrigin = shared.inverseModel * fieldObject.gridOrigin;
+
     out.push_back(shared);
   }
 }
@@ -59,6 +61,8 @@ void refreshDerived(FieldObject& fieldObject) {
   const dunya::field::Aabb box = gridBox(fieldObject);
 
   fieldObject.position = (box.minimum + box.maximum) * 0.5f;
+  fieldObject.gridOrigin = glm::vec4(box.minimum, 1.0f);
+
   fieldObject.voxelSize =
     dunya::field::voxelSize(box.minimum, box.maximum, fieldObject.resolution);
 }

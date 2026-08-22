@@ -19,6 +19,8 @@ struct FieldObject {
 
   uint32_t volumeIndex = UINT32_MAX;
   uint32_t unboundedScan = 0;
+
+  glm::vec4 gridOrigin{0.0f};
 };
 
 // Spare lanes carry scalars: voxelSize.w is the grid margin, and
@@ -29,7 +31,8 @@ struct FieldObjectShared {
   glm::vec4 voxelSize;               // 16 bytes (offset 128)
   glm::uvec4 resolutionVolumeIndex;  // 16 bytes (offset 144)
   glm::uvec4 config;                 // 16 bytes (offset 160)
-                                     // Total: 176 bytes
+  glm::vec4 localOrigin;             // 16 bytes (offset 176)
+                                     // Total: 192 bytes
 };
 
 // Pinned because the shader reads these bytes by position.
@@ -54,7 +57,11 @@ static_assert(
   "FieldObjectShared must match its block in field-shader.frag"
 );
 static_assert(
-  sizeof(FieldObjectShared) == 176,
+  offsetof(FieldObjectShared, localOrigin) == 176,
+  "FieldObjectShared must match its block in field-shader.frag"
+);
+static_assert(
+  sizeof(FieldObjectShared) == 192,
   "FieldObjectShared must match its block in field-shader.frag"
 );
 
