@@ -93,10 +93,10 @@ FieldPass::FieldPass(
   const Device& device,
   const FieldObjectTable& table,
   const dunya::field::Aabb& box,
-  std::span<const dunya::field::Primitive> primitives
+  const FieldObject& fieldObject
 )
     : m_device(device),
-      m_grid(bakeGrid(box, primitives)),
+      m_grid(bakeGrid(box, fieldObject.editList)),
       m_distanceVolume(makeDistanceVolume(device, m_grid)),
       m_materialVolume(makeMaterialVolume(device, m_grid)),
       m_table(table),
@@ -108,11 +108,11 @@ FieldPass::FieldPass(
           {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(BakeParams)}
         }
       ) {
-  if (primitives.size() > MAX_PRIMITIVES) {
+  if (fieldObject.editList.size() > MAX_PRIMITIVES) {
     throw std::runtime_error("More primitives than the field buffer holds");
   }
 
-  primitivesChanged(primitives);
+  primitivesChanged(fieldObject);
 }
 
 namespace {
@@ -370,24 +370,15 @@ void FieldPass::verifyBake(
             << reference.distances.size() << '\n';
 }
 
-void FieldPass::primitivesChanged(
-  std::span<const dunya::field::Primitive> primitives
-) {
-  if (primitives.size() > MAX_PRIMITIVES) {
+void FieldPass::primitivesChanged(const FieldObject& fieldObject) {
+  if (fieldObject.editList.size() > MAX_PRIMITIVES) {
     throw std::runtime_error("More primitives than the field buffer holds");
   }
 
   m_gridDirty = true;
 
-  // The grid follows what it holds. An edit that grows or moves the bounded
-  // primitives moves the box with them, or the new geometry lands outside the
-  // lattice and the sampled representation simply does not have it. The
-  // resolution never changes, so the volumes keep their storage.
-  const dunya::field::Aabb box = paddedExtent(primitives);
-
-  m_grid.origin = box.minimum;
-  m_grid.voxelSize =
-    dunya::field::voxelSize(box.minimum, box.maximum, m_grid.resolution);
+  m_grid.origin = fieldObject.gridOrigin;
+  m_grid.voxelSize = fieldObject.voxelSize;
 }
 
 VkImageView FieldPass::distanceVolume() const noexcept {

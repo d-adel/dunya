@@ -16,7 +16,7 @@ Application::Application()
         m_context.device(),
         m_fieldObjectTable,
         gridBox(m_scene.fieldObjects().front()),
-        m_scene.primitives()
+        m_scene.fieldObjects().front()
       ),
       m_meshPipeline(
         PipelineType::Mesh,
@@ -182,7 +182,8 @@ int Application::start(const StartupOptions& options) {
     for (size_t i = 0; i < m_scene.fieldObjects().size(); i++) {
       if (m_scene.fieldObjects()[i].volumeIndex == UINT32_MAX) {
         // Changes when objects own their volumes. Bindings 4/5 lack
-        // UPDATE_AFTER_BIND: registering is only legal before work is submitted.
+        // UPDATE_AFTER_BIND: registering is only legal before work is
+        // submitted.
         uint32_t volumeIndex = m_fieldObjectTable.registerVolume(
           m_fieldPass.distanceVolume(),
           m_fieldPass.materialVolume()

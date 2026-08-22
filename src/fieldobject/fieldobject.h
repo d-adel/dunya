@@ -21,6 +21,14 @@ struct FieldObject {
   uint32_t unboundedScan = 0;
 
   glm::vec4 gridOrigin{0.0f};
+
+  const glm::mat4 inverseModel() const {
+    glm::mat4 rotationMatrix = glm::mat4_cast(rotation);
+
+    glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), position);
+
+    return glm::inverse(translationMatrix * rotationMatrix);
+  }
 };
 
 // Spare lanes carry scalars: voxelSize.w is the grid margin, and

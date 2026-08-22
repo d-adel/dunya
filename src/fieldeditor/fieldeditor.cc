@@ -4,8 +4,16 @@ FieldEditor::FieldEditor(Scene& scene, FieldPass& fieldPass)
     : m_scene(scene), m_fieldPass(fieldPass) {}
 
 void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
+  glm::vec3 origin =
+    m_scene.fieldObjects().front().inverseModel() * glm::vec4(ray.origin, 1.0f);
+
+  glm::vec3 direction = m_scene.fieldObjects().front().inverseModel()
+                        * glm::vec4(ray.direction, 0.0f);
+
+  dunya::field::Ray localRay{origin, direction};
+
   const std::optional<dunya::field::RayHit> hit =
-    dunya::field::raymarch(m_scene.primitives(), ray);
+    dunya::field::raymarch(m_scene.fieldObjects().front().editList, localRay);
 
   if (!hit.has_value()) {
     std::cout << "Nothing under the cursor\n";
@@ -30,8 +38,8 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
    */
   const float offset = EDIT_RADIUS - EDIT_ADVANCE;
   const glm::vec3 centre = fieldOpRemovesMaterial(operation)
-                             ? hit->position - ray.direction * offset
-                             : hit->position + ray.direction * offset;
+                             ? hit->position - localRay.direction * offset
+                             : hit->position + localRay.direction * offset;
 
   // What the CPU thinks is there before the edit. At the surface this should
   // read about zero, which is the agreement between the ray the CPU marched
@@ -54,7 +62,7 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
   }
 
   const auto uploadStart = std::chrono::steady_clock::now();
-  m_fieldPass.primitivesChanged(m_scene.primitives());
+  m_fieldPass.primitivesChanged(m_scene.fieldObjects().front());
   const auto uploadEnd = std::chrono::steady_clock::now();
 
   // A carve leaves empty space at its centre and an add leaves solid, so both
@@ -119,7 +127,7 @@ void FieldEditor::stress(uint32_t count) {
     }
   }
 
-  m_fieldPass.primitivesChanged(m_scene.primitives());
+  m_fieldPass.primitivesChanged(m_scene.fieldObjects().front());
 
   std::cout << "stress  primitives " << before << " -> "
             << m_scene.primitives().size() << '\n';

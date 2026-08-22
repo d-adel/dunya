@@ -11,13 +11,8 @@ void makeShared(
   for (const FieldObject& fieldObject : fieldObjects) {
     FieldObjectShared shared{};
 
-    glm::mat4 rotationMatrix = glm::mat4_cast(fieldObject.rotation);
-
-    glm::mat4 translationMatrix =
-      glm::translate(glm::mat4(1.0f), fieldObject.position);
-
-    shared.model = translationMatrix * rotationMatrix;
-    shared.inverseModel = glm::inverse(shared.model);
+    shared.inverseModel = fieldObject.inverseModel();
+    shared.model = glm::inverse(shared.inverseModel);
     // w is the slack baked around the contents: the bound returned outside the
     // grid must never be small enough to read as arrival.
     shared.voxelSize = glm::vec4(fieldObject.voxelSize, FIELD_GRID_MARGIN);
@@ -28,7 +23,7 @@ void makeShared(
     shared.config.y = fieldRepresentation;
     shared.config.z = fieldObject.unboundedScan;
 
-    shared.localOrigin = shared.inverseModel * fieldObject.gridOrigin;
+    shared.localOrigin = fieldObject.gridOrigin;
 
     out.push_back(shared);
   }
@@ -60,7 +55,6 @@ void refreshDerived(FieldObject& fieldObject) {
   // The grid follows what it holds, or new geometry lands off the lattice.
   const dunya::field::Aabb box = gridBox(fieldObject);
 
-  fieldObject.position = (box.minimum + box.maximum) * 0.5f;
   fieldObject.gridOrigin = glm::vec4(box.minimum, 1.0f);
 
   fieldObject.voxelSize =

@@ -7,6 +7,7 @@
 #include "field/sampled.h"
 #include "field/analytic.h"
 #include "texture/texture.h"
+#include "fieldobject/fieldobject.h"
 
 #include <glm/glm.hpp>
 
@@ -33,7 +34,7 @@ public:
     const Device& device,
     const FieldObjectTable& table,
     const dunya::field::Aabb& box,
-    std::span<const dunya::field::Primitive> primitives
+    const FieldObject& fieldObject
   );
 
   FieldPass(const FieldPass&) = delete;
@@ -48,7 +49,7 @@ public:
   void bakeIfDirty(uint32_t frame, uint32_t primitiveCount, uint32_t volume);
 
   // Marks the volumes stale and re-fits the grid to what the primitives span.
-  void primitivesChanged(std::span<const dunya::field::Primitive> primitives);
+  void primitivesChanged(const FieldObject& fieldObject);
 
   // Reads the baked volumes back and compares them against a CPU bake of the
   // same primitives. Slow and deliberate: a check, not part of a frame.
@@ -73,5 +74,4 @@ private:
   // Starts dirty so the first frame re-bakes on the GPU over the CPU result,
   // which is what makes the two measurable against each other.
   bool m_gridDirty = true;
-
 };

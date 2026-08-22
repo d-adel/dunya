@@ -67,6 +67,18 @@ bool Scene::addFieldObject() {
   // Before the grid is fitted, because refreshDerived divides the box by it.
   obj.resolution = glm::uvec3(FIELD_GRID_RESOLUTION);
 
+  const dunya::field::Aabb box = gridBox(obj);
+  obj.position = (box.minimum + box.maximum) * 0.5f;
+
+  glm::mat4 model = glm::inverse(obj.inverseModel());
+
+  // Re-anchored inverseModel
+  for (size_t i = 0; i < obj.editList.size(); ++i) {
+    Primitive& primitive = obj.editList[i];
+    primitive.inverseModel = primitive.inverseModel * model;
+    dunya::field::updateBounds(primitive);
+  }
+
   refreshDerived(obj);
 
   m_fieldObjects.emplace_back(std::move(obj));

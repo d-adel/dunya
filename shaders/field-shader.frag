@@ -145,16 +145,12 @@ vec2 gridSample(vec3 p) {
  */
 vec2 fieldDistance(vec3 p) {
   if (fieldObject.config.y == 0u) {
-    // Delete when edit list goes local
-    p = (fieldObject.model * vec4(p, 1.0)).xyz;
     return sceneDistance(p);
   }
 
   float outside = outsideGrid(p);
 
   if (outside > 0.0) {
-    // Delete when edit list goes local
-    p = (fieldObject.model * vec4(p, 1.0)).xyz;
     return minMat(vec2(outside + fieldObject.voxelSize.w, 0.0),
                   foldDistance(p, fieldObject.config.z, true));
   }
