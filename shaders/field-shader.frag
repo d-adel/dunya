@@ -86,11 +86,8 @@ layout(std140, set = 2, binding = 0) readonly buffer FieldObjectShared {
 
 uint volumeIndex = fieldObject.resolutionVolumeIndex.w;
 
-// World space, while the march still runs there: the grid is centred on the
-// object's local origin, and the object sits at model's translation.
-vec3 origin = fieldObject.model[3].xyz
-              - fieldObject.voxelSize.xyz
-                  * (fieldObject.resolutionVolumeIndex.xyz - 1) * 0.5;
+vec3 origin = -fieldObject.voxelSize.xyz
+              * (fieldObject.resolutionVolumeIndex.xyz - 1) * 0.5;
 
 const int MAX_SAMPLERS = DUNYA_MAX_SAMPLERS;
 layout(set = 1, binding = 2) uniform sampler samplers[MAX_SAMPLERS];
@@ -150,20 +147,16 @@ vec2 gridSample(vec3 p) {
  */
 vec2 fieldDistance(vec3 p) {
   if (fieldObject.config.y == 0u) {
+    // Delete when edit list goes local
+    p = (fieldObject.model * vec4(p, 1.0)).xyz;
     return sceneDistance(p);
   }
 
   float outside = outsideGrid(p);
 
   if (outside > 0.0) {
-    // The box is a bound, never a surface. Everything the grid holds was baked
-    // at least a margin inside it, and the straight line from here to any of it
-    // crosses the boundary, so it is at least that much further away still.
-    //
-    // The margin is what makes this safe to hit-test against: the plain box
-    // distance goes to zero on the boundary, which reads as a surface and
-    // paints the grid's own far wall over the scene, and leaves the march
-    // stepping by nothing on the way out.
+    // Delete when edit list goes local
+    p = (fieldObject.model * vec4(p, 1.0)).xyz;
     return minMat(vec2(outside + fieldObject.voxelSize.w, 0.0),
                   foldDistance(p, fieldObject.config.z, true));
   }
@@ -317,35 +310,46 @@ void main() {
 
   worldPosition /= worldPosition.w;
 
-  vec3 direction = normalize(worldPosition.xyz - camera.position.xyz);
+  vec3 worldDirection = normalize(worldPosition.xyz - camera.position.xyz);
+  vec3 localDirection =
+    (fieldObject.inverseModel * vec4(worldDirection, 0)).xyz;
 
-  vec3 hitPosition;
+  vec3 localCameraPos =
+    (fieldObject.inverseModel * vec4(camera.position.xyz, 1)).xyz;
+
+  vec3 localHitPosition;
   float materialId;
-  if (march(camera.position.xyz, direction, hitPosition, materialId)) {
+  if (march(localCameraPos, localDirection, localHitPosition, materialId)) {
     vec3 surfaceAlbedo = albedo(materialId);
 
-    vec4 clip = camera.viewProj * vec4(hitPosition, 1.0);
+    vec4 worldHitPos = fieldObject.model * vec4(localHitPosition, 1.0);
+    vec4 clip = camera.viewProj * worldHitPos;
+
     float depth = clip.z / clip.w;
     if (depth <= 0 || isinf(depth) || isnan(depth)) {
       discard;
     }
     gl_FragDepth = depth;
 
-    vec3 lightDir = normalize(vec3(0.4, 1.0, 0.6));
-    vec3 normal = estimateNormal(hitPosition);
+    vec3 worldLightDir = normalize(vec3(0.4, 1.0, 0.6));
+    vec3 localLightDir =
+      (fieldObject.inverseModel * vec4(worldLightDir, 0.0)).xyz;
+
+    vec3 localNormal = estimateNormal(localHitPosition);
 
     // The gradient points out of solid geometry, which is away from the eye
     // when the surface is being viewed from inside. Face it back at the
     // viewer so an interior wall is shaded rather than left black.
-    if (dot(normal, direction) > 0.0) {
-      normal = -normal;
+    if (dot(localNormal, localDirection) > 0.0) {
+      localNormal = -localNormal;
     }
 
-    float diffuse = max(0.0, dot(normal, lightDir));
+    float diffuse = max(0.0, dot(localNormal, localLightDir));
 
     float light =
       diffuse > 0.0
-        ? lightReaching(hitPosition + normal * surfaceBias(), lightDir)
+        ? lightReaching(localHitPosition + localNormal * surfaceBias(),
+                        localLightDir)
         : 1.0;
 
     vec3 color = vec3(surfaceAlbedo * (ambient + diffuse * light));
