@@ -68,4 +68,46 @@ std::optional<RayHit> raymarch(
   return std::nullopt;
 }
 
+std::optional<std::pair<float, float>> intersect(
+  const Aabb& box,
+  const Ray& ray
+) {
+  float tEnter = -std::numeric_limits<float>::infinity();
+  float tExit = std::numeric_limits<float>::infinity();
+
+  for (int axis = 0; axis < 3; ++axis) {
+    const float origin = ray.origin[axis];
+    const float direction = ray.direction[axis];
+    const float minimum = box.minimum[axis];
+    const float maximum = box.maximum[axis];
+
+    if (std::abs(direction) < RAY_EPSILON) {
+      if (origin < minimum || origin > maximum) {
+        return std::nullopt;
+      }
+
+      continue;
+    }
+
+    float t0 = (minimum - origin) / direction;
+    float t1 = (maximum - origin) / direction;
+
+    if (t0 > t1) {
+      std::swap(t0, t1);
+    }
+
+    tEnter = std::max(tEnter, t0);
+    tExit = std::min(tExit, t1);
+
+    if (tEnter > tExit) {
+      return std::nullopt;
+    }
+  }
+
+  if (tExit < 0.0f) {
+    return std::nullopt;
+  }
+
+  return std::pair{std::max(tEnter, 0.0f), tExit};
+}
 }  // namespace dunya::field

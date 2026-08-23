@@ -3,18 +3,37 @@
 FieldEditor::FieldEditor(Scene& scene) : m_scene(scene) {}
 
 void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
-  glm::vec3 origin =
-    m_scene.fieldObjects().front().inverseModel() * glm::vec4(ray.origin, 1.0f);
+  int objectIndex = -1;
+  dunya::field::RayHit minHit;
+  dunya::field::Ray localRay;
+  for (size_t i = 0; i < m_scene.fieldObjects().size(); i++) {
+    const auto& fieldObject = m_scene.fieldObjects()[i];
 
-  glm::vec3 direction = m_scene.fieldObjects().front().inverseModel()
-                        * glm::vec4(ray.direction, 0.0f);
+    glm::vec3 origin = fieldObject.inverseModel() * glm::vec4(ray.origin, 1.0f);
 
-  dunya::field::Ray localRay{origin, direction};
+    glm::vec3 direction =
+      fieldObject.inverseModel() * glm::vec4(ray.direction, 0.0f);
 
-  const std::optional<dunya::field::RayHit> hit =
-    dunya::field::raymarch(m_scene.fieldObjects().front().editList, localRay);
+    dunya::field::Ray curRay = {origin, direction};
 
-  if (!hit.has_value()) {
+    std::optional<std::pair<float, float>> tOpt(std::nullopt);
+    if (fieldObject.unboundedScan == 0) {
+      dunya::field::Aabb box = gridBox(fieldObject);
+      tOpt = dunya::field::intersect(box, curRay);
+    }
+
+    if (tOpt.has_value() || fieldObject.unboundedScan > 0) {
+      std::optional<dunya::field::RayHit> hit =
+        dunya::field::raymarch(fieldObject.editList, curRay);
+      if (hit && (objectIndex == -1 || minHit.travelled > hit->travelled)) {
+        minHit = hit.value();
+        objectIndex = static_cast<int>(i);
+        localRay = curRay;
+      }
+    }
+  }
+
+  if (objectIndex == -1) {
     std::cout << "Nothing under the cursor\n";
     return;
   }
@@ -37,15 +56,15 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
    */
   const float offset = EDIT_RADIUS - EDIT_ADVANCE;
   const glm::vec3 centre = fieldOpRemovesMaterial(operation)
-                             ? hit->position - localRay.direction * offset
-                             : hit->position + localRay.direction * offset;
+                             ? minHit.position - localRay.direction * offset
+                             : minHit.position + localRay.direction * offset;
 
   if (!m_scene.addPrimitive(
-        0,
+        objectIndex,
         centre,
         EDIT_RADIUS,
         EDIT_BLEND,
-        hit->material,
+        minHit.material,
         operation
       )) {
     std::cout << "Primitive budget full, edit refused\n";
