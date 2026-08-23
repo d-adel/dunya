@@ -1,80 +1,6 @@
-#include "fieldpass.ih"
+#include "fieldbaker.ih"
 
-using dunya::field::Primitive;
 using dunya::field::SampledField;
-
-namespace {
-
-// The box the grid covers: what the bounded primitives span, plus the slack
-// that keeps their surfaces off the boundary. The margin is load-bearing - the
-// shader's bound for a point outside the grid leans on nothing inside it
-// reaching the edge.
-dunya::field::Aabb paddedExtent(std::span<const Primitive> primitives) {
-  const std::optional<dunya::field::Aabb> extent =
-    dunya::field::boundedExtent(primitives);
-
-  // With nothing bounded there is nothing a grid could hold, so cover the
-  // smallest legal box rather than special-casing every use of it.
-  const dunya::field::Aabb box =
-    extent.value_or(dunya::field::Aabb{glm::vec3(0.0f), glm::vec3(1.0f)});
-
-  const glm::vec3 margin(FIELD_GRID_MARGIN);
-
-  return {box.minimum - margin, box.maximum + margin};
-}
-
-SampledField bakeGrid(
-  const dunya::field::Aabb& box,
-  std::span<const Primitive> primitives
-) {
-  const auto start = std::chrono::steady_clock::now();
-
-  SampledField grid = dunya::field::bake(
-    primitives,
-    box.minimum,
-    box.maximum,
-    glm::uvec3(FIELD_GRID_RESOLUTION)
-  );
-
-  const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-    std::chrono::steady_clock::now() - start
-  );
-
-  const size_t texels = grid.distances.size();
-
-  std::cout << "field grid " << FIELD_GRID_RESOLUTION << "^3  baked in "
-            << elapsed.count() << " ms  distance "
-            << (texels * sizeof(float)) / (1024 * 1024) << " MB  material "
-            << (texels) / (1024 * 1024) << " MB\n";
-
-  return grid;
-}
-
-}  // namespace
-
-FieldPass::FieldPass(
-  const Device& device,
-  const FieldObjectTable& table,
-  const dunya::field::Aabb& box,
-  const FieldObject& fieldObject
-)
-    : m_device(device),
-      m_grid(bakeGrid(box, fieldObject.editList)),
-      m_table(table),
-      m_bakePipeline(
-        device.vkDevice(),
-        "shaders/field-bake.comp.spv",
-        std::vector<VkDescriptorSetLayout>{table.setLayout()},
-        std::vector<VkPushConstantRange>{
-          {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(BakeParams)}
-        }
-      ) {
-  if (fieldObject.editList.size() > MAX_PRIMITIVES) {
-    throw std::runtime_error("More primitives than the field buffer holds");
-  }
-
-  primitivesChanged(fieldObject);
-}
 
 namespace {
 
@@ -123,25 +49,15 @@ void transitionVolumes(
 
 }  // namespace
 
-void FieldPass::bakeIfDirty(
+void FieldBaker::bake(
+  const FieldObjectShared& fieldObject,
   uint32_t frame,
-  uint32_t primitiveCount,
-  uint32_t index,
   VolumeImages images
-) {
-  if (!m_gridDirty) {
-    return;
-  }
-
-  m_gridDirty = false;
-
+) const {
   const auto start = std::chrono::steady_clock::now();
 
   OneShotCommand cmd;
   cmd.start(m_device);
-
-  // A storage image is written in GENERAL; the fragment pass samples it in a
-  // read-only layout, so the dispatch is bracketed by the two transitions.
 
   transitionVolumes(
     cmd.cmdBuffer(),
@@ -168,11 +84,17 @@ void FieldPass::bakeIfDirty(
     nullptr
   );
 
+  glm::uvec3 resolution(
+    fieldObject.resolutionVolumeIndex.x,
+    fieldObject.resolutionVolumeIndex.y,
+    fieldObject.resolutionVolumeIndex.z
+  );
+
   const BakeParams params{
-    glm::vec4(m_grid.origin, 0.0f),
-    glm::vec4(m_grid.voxelSize, 0.0f),
-    glm::uvec4(m_grid.resolution, primitiveCount),
-    glm::uvec4(index, 0u, 0u, 0u)
+    fieldObject.localOrigin,
+    fieldObject.voxelSize,
+    glm::uvec4(resolution, fieldObject.config.x),
+    glm::uvec4(fieldObject.resolutionVolumeIndex.w, 0u, 0u, 0u)
   };
 
   vkCmdPushConstants(
@@ -184,9 +106,9 @@ void FieldPass::bakeIfDirty(
     &params
   );
 
-  // Rounded up, with the shader discarding the tail past the lattice.
-  const uint32_t groups = (FIELD_GRID_RESOLUTION + 3u) / 4u;
-  vkCmdDispatch(cmd.cmdBuffer(), groups, groups, groups);
+  const glm::uvec3 groups = (resolution + glm::uvec3(3u)) / glm::uvec3(4u);
+
+  vkCmdDispatch(cmd.cmdBuffer(), groups.x, groups.y, groups.z);
 
   transitionVolumes(
     cmd.cmdBuffer(),
@@ -203,7 +125,7 @@ void FieldPass::bakeIfDirty(
   );
 
   std::cout << "field grid rebaked on GPU in " << elapsed.count() << " us  ("
-            << primitiveCount << " primitives)\n";
+            << fieldObject.config.x << " primitives)\n";
 }
 
 namespace {
@@ -281,37 +203,42 @@ std::vector<uint8_t> readVolume(
 
 }  // namespace
 
-/* Checks the compute bake against the CPU one it is supposed to reproduce.
- *
- * The two are separate implementations of the same fold, in different
- * languages, and M17's whole comparison rests on them agreeing. Nothing else
- * tests that: the renderer only ever displays the GPU result, so a divergence
- * would look like the grid's interpolation error rather than like a bug.
- */
-void FieldPass::verifyBake(
-  std::span<const dunya::field::Primitive> primitives,
+FieldBaker::FieldBaker(const Device& device, const FieldObjectTable& table)
+    : m_device(device),
+      m_table(table),
+      m_bakePipeline(
+        device.vkDevice(),
+        "shaders/field-bake.comp.spv",
+        std::vector<VkDescriptorSetLayout>{table.setLayout()},
+        std::vector<VkPushConstantRange>{
+          {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(BakeParams)}
+        }
+      ) {}
+
+void FieldBaker::verifyBake(
+  const FieldObject& fieldObject,
   VolumeImages images
-) {
-  const dunya::field::Aabb box = paddedExtent(primitives);
+) const {
+  const dunya::field::Aabb box = gridBox(fieldObject);
 
   const SampledField reference = dunya::field::bake(
-    primitives,
+    fieldObject.editList,
     box.minimum,
     box.maximum,
-    glm::uvec3(FIELD_GRID_RESOLUTION)
+    fieldObject.resolution
   );
 
   const std::vector<uint8_t> distanceBytes = readVolume(
     m_device,
     images.distance,
-    reference.resolution,
+    fieldObject.resolution,
     reference.distances.size() * sizeof(float)
   );
 
   const std::vector<uint8_t> materialBytes = readVolume(
     m_device,
     images.material,
-    reference.resolution,
+    fieldObject.resolution,
     reference.materials.size()
   );
 
@@ -332,15 +259,4 @@ void FieldPass::verifyBake(
   std::cout << "bake check  worst distance " << std::scientific << worstDistance
             << "  material mismatches " << materialMismatches << " of "
             << reference.distances.size() << '\n';
-}
-
-void FieldPass::primitivesChanged(const FieldObject& fieldObject) {
-  if (fieldObject.editList.size() > MAX_PRIMITIVES) {
-    throw std::runtime_error("More primitives than the field buffer holds");
-  }
-
-  m_gridDirty = true;
-
-  m_grid.origin = fieldObject.gridOrigin;
-  m_grid.voxelSize = fieldObject.voxelSize;
 }

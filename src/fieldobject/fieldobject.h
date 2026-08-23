@@ -20,6 +20,8 @@ struct FieldObject {
   uint32_t volumeIndex = UINT32_MAX;
   uint32_t unboundedScan = 0;
 
+  bool dirty = true;
+
   glm::vec4 gridOrigin{0.0f};
 
   const glm::mat4 inverseModel() const {

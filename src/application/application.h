@@ -8,7 +8,6 @@
 #include "input/input.h"
 #include "frame/frame.h"
 #include "resourcetable/resourcetable.h"
-#include "fieldpass/fieldpass.h"
 #include "frameglobals/frameglobals.h"
 #include "field/field.h"
 #include "fieldeditor/fieldeditor.h"
@@ -17,6 +16,7 @@
 #include "startupoptions/startupoptions.h"
 #include "fieldobjecttable/fieldobjecttable.h"
 #include "volumepool/volumepool.h"
+#include "fieldbaker/fieldbaker.h"
 
 /* Wiring, and the loop.
  *
@@ -60,8 +60,8 @@ private:
   FrameGlobals m_frameGlobals;
   ResourceTable m_resourceTable;
   FieldObjectTable m_fieldObjectTable;
+  FieldBaker m_fieldBaker;
   VolumePool m_volumePool;
-  FieldPass m_fieldPass;
   Pipeline m_meshPipeline;
   Pipeline m_fieldPipeline;
   Renderer m_renderer;
@@ -83,6 +83,8 @@ private:
   // A member rather than a local in start(), because a panel outlives the call
   // that registered it and a captured reference to a local would dangle.
   double m_lastFrameMs = 0.0;
+
+  std::vector<size_t> m_dirtyObjectIndices;
 
   EventDispatcher::SubscriptionId m_keySubscription{};
   EventDispatcher::SubscriptionId m_mouseSubscription{};

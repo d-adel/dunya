@@ -40,7 +40,8 @@ public:
   );
 
   bool addFieldObject();
-  void setVolumeIndex(size_t objextIndex, uint32_t volumeIndex);
+  void setVolumeIndex(size_t objectIndex, uint32_t volumeIndex);
+  void setDirty(size_t objectIndex, bool value);
 
   const std::vector<dunya::field::Primitive>& primitives() const noexcept;
   const std::vector<Material>& materials() const noexcept;

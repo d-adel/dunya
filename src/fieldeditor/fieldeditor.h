@@ -1,7 +1,6 @@
 #pragma once
 
 #include "field/raycast.h"
-#include "fieldpass/fieldpass.h"
 #include "scene/scene.h"
 
 #include <cstdint>
@@ -15,7 +14,7 @@
  */
 class FieldEditor {
 public:
-  FieldEditor(Scene& scene, FieldPass& fieldPass);
+  FieldEditor(Scene& scene);
 
   FieldEditor(const FieldEditor&) = delete;
   FieldEditor& operator=(const FieldEditor&) = delete;
@@ -34,5 +33,4 @@ public:
 
 private:
   Scene& m_scene;
-  FieldPass& m_fieldPass;
 };

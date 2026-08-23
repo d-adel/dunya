@@ -203,10 +203,10 @@ add_executable(${PROJECT_NAME}
     src/context/context.cc
     src/scene/scene.cc
     src/frame/frame.cc
-    src/fieldpass/fieldpass.cc
     src/fieldobject/fieldobject.cc
     src/fieldobjecttable/fieldobjecttable.cc
     src/volumepool/volumepool.cc
+    src/fieldbaker/fieldbaker.cc
 )
 
 find_program(

@@ -6,9 +6,9 @@
 #include "resourcetable/resourcetable.h"
 #include "frameglobals/frameglobals.h"
 #include "frame/frame.h"
-#include "fieldpass/fieldpass.h"
 #include "fieldobjecttable/fieldobjecttable.h"
 #include "volumepool/volumepool.h"
+#include "fieldbaker/fieldbaker.h"
 
 #include "config/config.h"
 
@@ -19,8 +19,8 @@ class Renderer {
 public:
   Renderer(
     const Device& device,
-    FieldPass& fieldPass,
     FieldObjectTable& fieldObjectTable,
+    const FieldBaker& fieldBaker,
     const VolumePool& volumePool,
     FrameGlobals& frameGlobals,
     const Pipeline& meshPipeline,
@@ -77,8 +77,8 @@ private:
   const Pipeline& m_meshPipeline;
   const Pipeline& m_fieldPipeline;
   const ResourceTable& m_resourceTable;
-  FieldPass& m_fieldPass;
   FieldObjectTable& m_fieldObjectTable;
+  const FieldBaker& m_fieldBaker;
   const VolumePool& m_volumePool;
   FrameGlobals& m_frameGlobals;
 };

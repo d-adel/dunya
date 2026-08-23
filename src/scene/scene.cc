@@ -47,6 +47,8 @@ bool Scene::addPrimitive(
 
   refreshDerived(fieldObject);
 
+  fieldObject.dirty = true;
+
   return true;
 }
 
@@ -88,6 +90,10 @@ bool Scene::addFieldObject() {
 
 void Scene::setVolumeIndex(size_t objectIndex, uint32_t volumeIndex) {
   m_fieldObjects.at(objectIndex).volumeIndex = volumeIndex;
+}
+
+void Scene::setDirty(size_t objectIndex, bool value) {
+  m_fieldObjects.at(objectIndex).dirty = value;
 }
 
 void Scene::augmentFrameContext(Frame& frameContext) {

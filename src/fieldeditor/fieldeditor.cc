@@ -1,7 +1,6 @@
 #include "fieldeditor.ih"
 
-FieldEditor::FieldEditor(Scene& scene, FieldPass& fieldPass)
-    : m_scene(scene), m_fieldPass(fieldPass) {}
+FieldEditor::FieldEditor(Scene& scene) : m_scene(scene) {}
 
 void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
   glm::vec3 origin =
@@ -41,14 +40,6 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
                              ? hit->position - localRay.direction * offset
                              : hit->position + localRay.direction * offset;
 
-  // What the CPU thinks is there before the edit. At the surface this should
-  // read about zero, which is the agreement between the ray the CPU marched
-  // and the surface the shader drew.
-  const float surfaceDistance =
-    dunya::field::sample(m_scene.primitives(), hit->position).distance;
-  const float centreBefore =
-    dunya::field::sample(m_scene.primitives(), centre).distance;
-
   if (!m_scene.addPrimitive(
         0,
         centre,
@@ -60,29 +51,6 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
     std::cout << "Primitive budget full, edit refused\n";
     return;
   }
-
-  const auto uploadStart = std::chrono::steady_clock::now();
-  m_fieldPass.primitivesChanged(m_scene.fieldObjects().front());
-  const auto uploadEnd = std::chrono::steady_clock::now();
-
-  // A carve leaves empty space at its centre and an add leaves solid, so both
-  // land on +/- the edit radius. Anything else means the CPU and the GPU
-  // disagree about the array they share.
-  const float centreAfter =
-    dunya::field::sample(m_scene.primitives(), centre).distance;
-
-  const auto uploadMicros =
-    std::chrono::duration_cast<std::chrono::microseconds>(
-      uploadEnd - uploadStart
-    )
-      .count();
-
-  std::cout << (fieldOpRemovesMaterial(operation) ? "carve" : "add  ")
-            << "  surface " << std::fixed << std::setprecision(4)
-            << surfaceDistance << "  centre " << std::setprecision(3)
-            << centreBefore << " -> " << centreAfter << "  upload "
-            << uploadMicros << " us  primitives " << m_scene.primitives().size()
-            << '\n';
 }
 
 /* The placement is a low-discrepancy sequence rather than random: the carves
@@ -127,8 +95,7 @@ void FieldEditor::stress(uint32_t count) {
     }
   }
 
-  m_fieldPass.primitivesChanged(m_scene.fieldObjects().front());
-
+  m_scene.setDirty(0, true);
   std::cout << "stress  primitives " << before << " -> "
             << m_scene.primitives().size() << '\n';
 }

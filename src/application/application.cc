@@ -12,13 +12,8 @@ Application::Application()
         m_scene.materials()
       ),
       m_fieldObjectTable(m_context.device()),
+      m_fieldBaker(m_context.device(), m_fieldObjectTable),
       m_volumePool(m_context.device()),
-      m_fieldPass(
-        m_context.device(),
-        m_fieldObjectTable,
-        gridBox(m_scene.fieldObjects().front()),
-        m_scene.fieldObjects().front()
-      ),
       m_meshPipeline(
         PipelineType::Mesh,
         m_context.device().vkDevice(),
@@ -40,8 +35,8 @@ Application::Application()
       ),
       m_renderer(
         m_context.device(),
-        m_fieldPass,
         m_fieldObjectTable,
+        m_fieldBaker,
         m_volumePool,
         m_frameGlobals,
         m_meshPipeline,
@@ -51,7 +46,7 @@ Application::Application()
         m_swapChain.imageCount()
       ),
       m_overlay(m_context, m_swapChain),
-      m_fieldEditor(m_scene, m_fieldPass),
+      m_fieldEditor(m_scene),
       m_cameraInput({}),
       m_prevAcceptsInput(false),
       m_reloadRequested(false)
@@ -64,6 +59,8 @@ Application::Application()
   m_mouseSubscription = EventDispatcher::instance().subscribe<MouseButtonEvent>(
     [this](const MouseButtonEvent& event) { handleMouseButtonEvent(event); }
   );
+
+  m_dirtyObjectIndices.reserve(MAX_FIELD_OBJECTS);
 }
 
 Application::~Application() {
@@ -176,6 +173,7 @@ int Application::start(const StartupOptions& options) {
     float aspect = static_cast<float>(m_swapChain.extent().width)
                    / static_cast<float>(m_swapChain.extent().height);
 
+    m_dirtyObjectIndices.clear();
     // ---------- Frame context ----------
     m_frameContext.proj = m_camera.projectionMatrix(aspect);
     m_frameContext.view = m_camera.viewMatrix();
@@ -206,8 +204,13 @@ int Application::start(const StartupOptions& options) {
 
         m_scene.setVolumeIndex(i, index);
       }
+
+      if (fieldObject.dirty) {
+        m_dirtyObjectIndices.push_back(i);
+      }
     }
 
+    m_frameContext.dirtyObjectIndices = m_dirtyObjectIndices;
     m_scene.augmentFrameContext(m_frameContext);
     // -----------------------------------
 
@@ -235,6 +238,10 @@ int Application::start(const StartupOptions& options) {
 
     if (swapChainStale) {
       m_swapChain.recreate();
+    } else {
+      for (const auto& i : m_dirtyObjectIndices) {
+        m_scene.setDirty(i, false);
+      }
     }
 
     // After a frame, because the compute bake runs as part of one. Before it,
@@ -245,7 +252,7 @@ int Application::start(const StartupOptions& options) {
       m_context.device().waitIdle();
       VolumeImages images =
         m_volumePool.images(m_scene.fieldObjects().front().volumeIndex);
-      m_fieldPass.verifyBake(m_scene.primitives(), images);
+      m_fieldBaker.verifyBake(m_scene.fieldObjects().front(), images);
     }
 
     if (frameCheck.ran()) {
