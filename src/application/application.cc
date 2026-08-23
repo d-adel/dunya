@@ -12,6 +12,7 @@ Application::Application()
         m_scene.materials()
       ),
       m_fieldObjectTable(m_context.device()),
+      m_volumePool(m_context.device()),
       m_fieldPass(
         m_context.device(),
         m_fieldObjectTable,
@@ -41,6 +42,7 @@ Application::Application()
         m_context.device(),
         m_fieldPass,
         m_fieldObjectTable,
+        m_volumePool,
         m_frameGlobals,
         m_meshPipeline,
         m_fieldPipeline,
@@ -180,16 +182,29 @@ int Application::start(const StartupOptions& options) {
     m_frameContext.cameraPos = m_camera.position();
 
     for (size_t i = 0; i < m_scene.fieldObjects().size(); i++) {
-      if (m_scene.fieldObjects()[i].volumeIndex == UINT32_MAX) {
+      const FieldObject& fieldObject = m_scene.fieldObjects()[i];
+      if (fieldObject.volumeIndex == UINT32_MAX) {
         // Changes when objects own their volumes. Bindings 4/5 lack
         // UPDATE_AFTER_BIND: registering is only legal before work is
         // submitted.
-        uint32_t volumeIndex = m_fieldObjectTable.registerVolume(
-          m_fieldPass.distanceVolume(),
-          m_fieldPass.materialVolume()
+        dunya::field::Aabb box = gridBox(fieldObject);
+        const dunya::field::SampledField& grid = dunya::field::bake(
+          fieldObject.editList,
+          box.minimum,
+          box.maximum,
+          fieldObject.resolution
         );
 
-        m_scene.setVolumeIndex(i, volumeIndex);
+        uint32_t index = m_volumePool.allocate(grid);
+        auto images = m_volumePool.images(index);
+
+        m_fieldObjectTable.registerVolume(
+          images.distance.imageView(),
+          images.material.imageView(),
+          index
+        );
+
+        m_scene.setVolumeIndex(i, index);
       }
     }
 
@@ -228,7 +243,9 @@ int Application::start(const StartupOptions& options) {
     if (bakeCheckPending) {
       bakeCheckPending = false;
       m_context.device().waitIdle();
-      m_fieldPass.verifyBake(m_scene.primitives());
+      VolumeImages images =
+        m_volumePool.images(m_scene.fieldObjects().front().volumeIndex);
+      m_fieldPass.verifyBake(m_scene.primitives(), images);
     }
 
     if (frameCheck.ran()) {

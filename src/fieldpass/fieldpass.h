@@ -8,6 +8,7 @@
 #include "field/analytic.h"
 #include "texture/texture.h"
 #include "fieldobject/fieldobject.h"
+#include "volumepool/volumepool.h"
 
 #include <glm/glm.hpp>
 
@@ -46,17 +47,22 @@ public:
 
   // Re-runs the bake on the GPU when the primitives have changed. Reads the
   // pool out of the table, so it runs after that frame's pool write.
-  void bakeIfDirty(uint32_t frame, uint32_t primitiveCount, uint32_t volume);
+  void bakeIfDirty(
+    uint32_t frame,
+    uint32_t primitiveCount,
+    uint32_t index,
+    VolumeImages images
+  );
 
   // Marks the volumes stale and re-fits the grid to what the primitives span.
   void primitivesChanged(const FieldObject& fieldObject);
 
   // Reads the baked volumes back and compares them against a CPU bake of the
   // same primitives. Slow and deliberate: a check, not part of a frame.
-  void verifyBake(std::span<const dunya::field::Primitive> primitives);
-
-  VkImageView distanceVolume() const noexcept;
-  VkImageView materialVolume() const noexcept;
+  void verifyBake(
+    std::span<const dunya::field::Primitive> primitives,
+    VolumeImages images
+  );
 
 private:
   const Device& m_device;
@@ -64,9 +70,6 @@ private:
   // Baked once at construction. Declared before the volumes because they are
   // built from it, and members are constructed in declaration order.
   dunya::field::SampledField m_grid;
-
-  Texture m_distanceVolume;
-  Texture m_materialVolume;
 
   const FieldObjectTable& m_table;
   ComputePipeline m_bakePipeline;

@@ -8,6 +8,7 @@
 #include "frame/frame.h"
 #include "fieldpass/fieldpass.h"
 #include "fieldobjecttable/fieldobjecttable.h"
+#include "volumepool/volumepool.h"
 
 #include "config/config.h"
 
@@ -20,6 +21,7 @@ public:
     const Device& device,
     FieldPass& fieldPass,
     FieldObjectTable& fieldObjectTable,
+    const VolumePool& volumePool,
     FrameGlobals& frameGlobals,
     const Pipeline& meshPipeline,
     const Pipeline& fieldPipeline,
@@ -77,5 +79,6 @@ private:
   const ResourceTable& m_resourceTable;
   FieldPass& m_fieldPass;
   FieldObjectTable& m_fieldObjectTable;
+  const VolumePool& m_volumePool;
   FrameGlobals& m_frameGlobals;
 };

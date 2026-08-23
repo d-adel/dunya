@@ -10,6 +10,7 @@
 
 class Texture {
 public:
+  Texture() = default;
   Texture(const Device& device, const std::string& texturePath);
 
   // Four bytes per texel, which is what every 2D format here uses.

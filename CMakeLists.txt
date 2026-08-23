@@ -206,6 +206,7 @@ add_executable(${PROJECT_NAME}
     src/fieldpass/fieldpass.cc
     src/fieldobject/fieldobject.cc
     src/fieldobjecttable/fieldobjecttable.cc
+    src/volumepool/volumepool.cc
 )
 
 find_program(

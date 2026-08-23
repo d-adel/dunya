@@ -50,43 +50,6 @@ SampledField bakeGrid(
   return grid;
 }
 
-Texture makeDistanceVolume(const Device& device, const SampledField& grid) {
-  // 32-bit for the first measurement, deliberately: half's spacing near a
-  // distance of one is about 0.001, which is the march epsilon, so starting
-  // narrower would fold quantisation error into the interpolation number this
-  // milestone is trying to measure. R16 and R8 are the next data points.
-  return Texture(
-    device,
-    grid.resolution.x,
-    grid.resolution.y,
-    grid.resolution.z,
-    VK_FORMAT_R32_SFLOAT,
-    grid.distances.data(),
-    grid.distances.size() * sizeof(float),
-    VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
-  );
-}
-
-Texture makeMaterialVolume(const Device& device, const SampledField& grid) {
-  std::vector<uint8_t> ids;
-  ids.reserve(grid.materials.size());
-
-  for (uint32_t material : grid.materials) {
-    ids.push_back(static_cast<uint8_t>(material));
-  }
-
-  return Texture(
-    device,
-    grid.resolution.x,
-    grid.resolution.y,
-    grid.resolution.z,
-    VK_FORMAT_R8_UINT,
-    ids.data(),
-    ids.size(),
-    VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
-  );
-}
-
 }  // namespace
 
 FieldPass::FieldPass(
@@ -97,8 +60,6 @@ FieldPass::FieldPass(
 )
     : m_device(device),
       m_grid(bakeGrid(box, fieldObject.editList)),
-      m_distanceVolume(makeDistanceVolume(device, m_grid)),
-      m_materialVolume(makeMaterialVolume(device, m_grid)),
       m_table(table),
       m_bakePipeline(
         device.vkDevice(),
@@ -165,7 +126,8 @@ void transitionVolumes(
 void FieldPass::bakeIfDirty(
   uint32_t frame,
   uint32_t primitiveCount,
-  uint32_t volume
+  uint32_t index,
+  VolumeImages images
 ) {
   if (!m_gridDirty) {
     return;
@@ -180,10 +142,11 @@ void FieldPass::bakeIfDirty(
 
   // A storage image is written in GENERAL; the fragment pass samples it in a
   // read-only layout, so the dispatch is bracketed by the two transitions.
+
   transitionVolumes(
     cmd.cmdBuffer(),
-    m_distanceVolume.image().image(),
-    m_materialVolume.image().image(),
+    images.distance.image(),
+    images.material.image(),
     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
     VK_IMAGE_LAYOUT_GENERAL
   );
@@ -209,7 +172,7 @@ void FieldPass::bakeIfDirty(
     glm::vec4(m_grid.origin, 0.0f),
     glm::vec4(m_grid.voxelSize, 0.0f),
     glm::uvec4(m_grid.resolution, primitiveCount),
-    glm::uvec4(volume, 0u, 0u, 0u)
+    glm::uvec4(index, 0u, 0u, 0u)
   };
 
   vkCmdPushConstants(
@@ -227,8 +190,8 @@ void FieldPass::bakeIfDirty(
 
   transitionVolumes(
     cmd.cmdBuffer(),
-    m_distanceVolume.image().image(),
-    m_materialVolume.image().image(),
+    images.distance.image(),
+    images.material.image(),
     VK_IMAGE_LAYOUT_GENERAL,
     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
   );
@@ -326,7 +289,8 @@ std::vector<uint8_t> readVolume(
  * would look like the grid's interpolation error rather than like a bug.
  */
 void FieldPass::verifyBake(
-  std::span<const dunya::field::Primitive> primitives
+  std::span<const dunya::field::Primitive> primitives,
+  VolumeImages images
 ) {
   const dunya::field::Aabb box = paddedExtent(primitives);
 
@@ -339,14 +303,14 @@ void FieldPass::verifyBake(
 
   const std::vector<uint8_t> distanceBytes = readVolume(
     m_device,
-    m_distanceVolume.image(),
+    images.distance,
     reference.resolution,
     reference.distances.size() * sizeof(float)
   );
 
   const std::vector<uint8_t> materialBytes = readVolume(
     m_device,
-    m_materialVolume.image(),
+    images.material,
     reference.resolution,
     reference.materials.size()
   );
@@ -379,12 +343,4 @@ void FieldPass::primitivesChanged(const FieldObject& fieldObject) {
 
   m_grid.origin = fieldObject.gridOrigin;
   m_grid.voxelSize = fieldObject.voxelSize;
-}
-
-VkImageView FieldPass::distanceVolume() const noexcept {
-  return m_distanceVolume.image().imageView();
-}
-
-VkImageView FieldPass::materialVolume() const noexcept {
-  return m_materialVolume.image().imageView();
 }

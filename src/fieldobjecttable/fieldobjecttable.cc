@@ -33,33 +33,23 @@ FieldObjectTable::FieldObjectTable(const Device& device)
           MAX_FIELD_OBJECTS}}
       ) {}
 
-uint32_t FieldObjectTable::registerVolume(
+void FieldObjectTable::registerVolume(
   VkImageView distanceView,
-  VkImageView materialView
+  VkImageView materialView,
+  uint32_t volumeIndex
 ) {
-  if (m_volumeCount >= MAX_FIELD_OBJECTS) {
-    throw std::runtime_error(
-      "Failed registering volume, FieldObject limit reached"
-    );
-  }
-
-  m_group.writeImage(DISTANCE_VOLUMES, m_volumeCount, distanceView);
-  m_group.writeImage(MATERIAL_VOLUMES, m_volumeCount, materialView);
+  m_group.writeImage(DISTANCE_VOLUMES, volumeIndex, distanceView);
+  m_group.writeImage(MATERIAL_VOLUMES, volumeIndex, materialView);
   m_group.writeStorageImage(
     DISTANCE_VOLUMES_STORAGE,
-    m_volumeCount,
+    volumeIndex,
     distanceView
   );
   m_group.writeStorageImage(
     MATERIAL_VOLUMES_STORAGE,
-    m_volumeCount,
+    volumeIndex,
     materialView
   );
-
-  const uint32_t index = m_volumeCount;
-  ++m_volumeCount;
-
-  return index;
 }
 
 void FieldObjectTable::update(

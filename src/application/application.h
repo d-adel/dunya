@@ -16,6 +16,7 @@
 #include "overlay/overlay.h"
 #include "startupoptions/startupoptions.h"
 #include "fieldobjecttable/fieldobjecttable.h"
+#include "volumepool/volumepool.h"
 
 /* Wiring, and the loop.
  *
@@ -59,6 +60,7 @@ private:
   FrameGlobals m_frameGlobals;
   ResourceTable m_resourceTable;
   FieldObjectTable m_fieldObjectTable;
+  VolumePool m_volumePool;
   FieldPass m_fieldPass;
   Pipeline m_meshPipeline;
   Pipeline m_fieldPipeline;

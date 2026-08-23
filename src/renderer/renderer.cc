@@ -4,6 +4,7 @@ Renderer::Renderer(
   const Device& device,
   FieldPass& fieldPass,
   FieldObjectTable& fieldObjectTable,
+  const VolumePool& volumePool,
   FrameGlobals& frameGlobals,
   const Pipeline& meshPipeline,
   const Pipeline& fieldPipeline,
@@ -19,6 +20,7 @@ Renderer::Renderer(
       m_resourceTable(resourceTable),
       m_fieldPass(fieldPass),
       m_fieldObjectTable(fieldObjectTable),
+      m_volumePool(volumePool),
       m_frameGlobals(frameGlobals) {
   createCommandPool(device.physicalDevice(), surface);
   createCommandBuffer();
@@ -288,15 +290,19 @@ void Renderer::recordCommandBuffer(
 
   if (drawField) {
     m_fieldObjectTable.update(m_currentFrame, frameContext.sharedFieldObjects);
-    m_fieldObjectTable.updatePrimitives(m_currentFrame, frameContext.primitives);
+    m_fieldObjectTable.updatePrimitives(
+      m_currentFrame,
+      frameContext.primitives
+    );
 
     // After the pool write, because the dispatch reads this frame's copy.
+    uint32_t index = frameContext.sharedFieldObjects[0].resolutionVolumeIndex.w;
+    VolumeImages images = m_volumePool.images(index);
     m_fieldPass.bakeIfDirty(
       m_currentFrame,
       static_cast<uint32_t>(frameContext.primitives.size()),
-      frameContext.sharedFieldObjects.empty()
-        ? 0u
-        : frameContext.sharedFieldObjects[0].resolutionVolumeIndex.w
+      frameContext.sharedFieldObjects.empty() ? 0u : index,
+      images
     );
 
     vkCmdBindPipeline(

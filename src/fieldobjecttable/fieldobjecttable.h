@@ -31,7 +31,11 @@ public:
   const VkDescriptorSetLayout& setLayout() const noexcept;
 
   // Both views twice: sampled for the fragment shader, storage for the bake.
-  uint32_t registerVolume(VkImageView distanceView, VkImageView materialView);
+  void registerVolume(
+    VkImageView distanceView,
+    VkImageView materialView,
+    uint32_t volumeIndex
+  );
 
   void update(
     uint32_t frame,
@@ -45,7 +49,5 @@ public:
   );
 
 private:
-  uint32_t m_volumeCount = 0;
-
   DescriptorGroup m_group;
 };
