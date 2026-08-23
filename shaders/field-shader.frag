@@ -69,13 +69,6 @@ layout(std430, set = 2, binding = 3) readonly buffer FieldScene {
   Primitive primitives[];
 } scene;
 
-// layout(std140, set = 2, binding = 1) uniform FieldFrame {
-//   uvec4 config;
-//   vec4 gridOrigin;
-//   vec4 gridVoxelSize;
-//   uvec4 gridResolution;
-// } frame;
-
 layout(std140, set = 2, binding = 0) readonly buffer FieldObjectShared {
   mat4 model;
   mat4 inverseModel;
@@ -95,7 +88,7 @@ layout(set = 2, binding = 1)
 layout(set = 2, binding = 2)
   uniform utexture3D materialVolume[MAX_FIELD_OBJECTS];
 
-layout(location = 0) in vec4 ndc;
+layout(location = 0) in vec4 clipPosition;
 layout(location = 0) out vec4 outColor;
 
 #define FIELD_PRIMITIVE_AT(i) scene.primitives[i]
@@ -298,9 +291,9 @@ vec3 albedo(float materialId) {
 }
 
 void main() {
-  vec4 clipPosition = vec4(ndc.xy, 1.0, 1.0);
+  vec2 ndc = clipPosition.xy / clipPosition.w;
 
-  vec4 worldPosition = camera.inverseViewProj * clipPosition;
+  vec4 worldPosition = camera.inverseViewProj * vec4(ndc, 1.0, 1.0);
 
   worldPosition /= worldPosition.w;
 

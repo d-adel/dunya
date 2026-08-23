@@ -320,7 +320,21 @@ void Renderer::recordCommandBuffer(
       nullptr
     );
 
-    vkCmdDraw(m_commandBuffers[m_currentFrame], 3, 1, 0, 0);
+    for (uint32_t i = 0; i < frameContext.sharedFieldObjects.size(); i++) {
+      const PushConstants pushConstants{0, 0, i};
+
+      vkCmdPushConstants(
+        m_commandBuffers[m_currentFrame],
+        m_fieldPipeline.pipelineLayout(),
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        0,
+        offsetof(PushConstants, objectIndex)
+          + sizeof(PushConstants::objectIndex),
+        &pushConstants
+      );
+
+      vkCmdDraw(m_commandBuffers[m_currentFrame], 36, 1, 0, 0);
+    }
   }
 
   // Last, and inside the pass: the overlay draws over the finished scene, and

@@ -86,7 +86,7 @@ void Pipeline::makeConfig() {
       m_config.frag = SHADER_SOURCE_DIR "/field-shader.frag";
       m_config.vertexShader = "shaders/field-shader.vert.spv";
       m_config.fragmentShader = "shaders/field-shader.frag.spv";
-      m_config.cullMode = VK_CULL_MODE_NONE;
+      m_config.cullMode = VK_CULL_MODE_FRONT_BIT;
       m_config.depthTestEnable = VK_TRUE;
       m_config.depthWriteEnable = VK_TRUE;
       m_config.setLayouts = m_setLayouts;

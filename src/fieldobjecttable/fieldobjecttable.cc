@@ -6,7 +6,8 @@ FieldObjectTable::FieldObjectTable(const Device& device)
         MAX_FRAMES_IN_FLIGHT,
         {{ENTRIES,
           MAX_FIELD_OBJECTS * sizeof(FieldObjectShared),
-          VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
+          VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
+            | VK_SHADER_STAGE_COMPUTE_BIT,
           DescriptorGroup::BufferUpdate::PerFrame,
           VK_DESCRIPTOR_TYPE_STORAGE_BUFFER},
          {PRIMITIVE_POOL,

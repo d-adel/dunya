@@ -33,8 +33,11 @@ struct FieldObject {
   }
 };
 
-// Spare lanes carry scalars: voxelSize.w is the grid margin, and
-// resolutionVolumeIndex.w is the slot the object's volumes occupy.
+// voxelSize.w: grid margin
+// resolutionVolumeIndex.w: volume index
+// config.x = primitive count
+// config.y = field representation: 0 = analytical, 1 = sampled
+// config.z = unbounded scan
 struct FieldObjectShared {
   glm::mat4 model;                   // 64 bytes (offset 0)
   glm::mat4 inverseModel;            // 64 bytes (offset 64)
