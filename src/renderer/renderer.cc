@@ -289,18 +289,21 @@ void Renderer::recordCommandBuffer(
   }
 
   if (drawField) {
-    m_fieldObjectTable.update(m_currentFrame, frameContext.sharedFieldObjects);
+    m_fieldObjectTable.update(m_currentFrame);
     m_fieldObjectTable.updatePrimitives(
       m_currentFrame,
       frameContext.primitives
     );
 
     // After the pool write, because the dispatch reads this frame's copy.
-    for (const auto& i : frameContext.dirtyObjectIndices) {
-      const FieldObjectShared& shared = frameContext.sharedFieldObjects[i];
-      uint32_t index = shared.resolutionVolumeIndex.w;
-      VolumeImages images = m_volumePool.images(index);
-      m_fieldBaker.bake(shared, m_currentFrame, images);
+    for (ObjectId objectId : m_fieldObjectTable.bakeList()) {
+      const FieldObjectGPU& gpu = m_fieldObjectTable.gpuFieldObject(objectId);
+
+      const uint32_t volumeIndex = gpu.resolutionVolumeIndex.w;
+
+      VolumeImages images = m_volumePool.images(volumeIndex);
+
+      m_fieldBaker.bake(gpu, m_currentFrame, images);
     }
 
     vkCmdBindPipeline(
@@ -320,8 +323,8 @@ void Renderer::recordCommandBuffer(
       nullptr
     );
 
-    for (uint32_t i = 0; i < frameContext.sharedFieldObjects.size(); i++) {
-      const PushConstants pushConstants{0, 0, i};
+    for (ObjectId objectId : frameContext.fieldObjectIds) {
+      const PushConstants pushConstants{0, 0, objectId};
 
       vkCmdPushConstants(
         m_commandBuffers[m_currentFrame],

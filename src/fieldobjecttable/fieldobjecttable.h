@@ -1,5 +1,6 @@
 #pragma once
 
+#include "config/config.h"
 #include "descriptorgroup/descriptorgroup.h"
 #include "device/device.h"
 #include "fieldobject/fieldobject.h"
@@ -37,17 +38,32 @@ public:
     uint32_t volumeIndex
   );
 
-  void update(
-    uint32_t frame,
-    std::span<const FieldObjectShared> sharedFieldObjs
+  void makeGPUField(
+    ObjectId objectIndex,
+    uint32_t primitiveOffset,
+    uint32_t primitiveCount,
+    const FieldObject& fieldObject,
+    uint32_t fieldRepresentation
   );
 
-  // The pool every object's edit list lives in; read by both shaders.
+  void update(uint32_t frame);
+
   void updatePrimitives(
     uint32_t frame,
     std::span<const dunya::field::Primitive> primitives
   );
 
+  void newFrame();
+
+  void appendToBakeList(ObjectId id);
+
+  std::span<const FieldObjectGPU> gpuFieldObjects() const noexcept;
+  std::span<const ObjectId> bakeList() const noexcept;
+
+  const FieldObjectGPU& gpuFieldObject(ObjectId objectIndex) const;
+
 private:
+  std::vector<FieldObjectGPU> m_gpuFieldObjects;
+  std::vector<ObjectId> m_bakeList;
   DescriptorGroup m_group;
 };

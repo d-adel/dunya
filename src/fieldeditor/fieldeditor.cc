@@ -6,8 +6,11 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
   int objectIndex = -1;
   dunya::field::RayHit minHit;
   dunya::field::Ray localRay;
-  for (size_t i = 0; i < m_scene.fieldObjects().size(); i++) {
-    const auto& fieldObject = m_scene.fieldObjects()[i];
+
+  const ObjectRegistry& registry = m_scene.registry();
+  for (ObjectId id : registry.fieldObjectIds()) {
+    const auto& fieldObject = registry.getFieldObject(id);
+    const auto primitives = registry.getPrimitives(id);
 
     glm::vec3 origin = fieldObject.inverseModel() * glm::vec4(ray.origin, 1.0f);
 
@@ -18,16 +21,16 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
 
     std::optional<std::pair<float, float>> tOpt(std::nullopt);
     if (fieldObject.unboundedScan == 0) {
-      dunya::field::Aabb box = gridBox(fieldObject);
+      dunya::field::Aabb box = gridBox(primitives);
       tOpt = dunya::field::intersect(box, curRay);
     }
 
     if (tOpt.has_value() || fieldObject.unboundedScan > 0) {
       std::optional<dunya::field::RayHit> hit =
-        dunya::field::raymarch(fieldObject.editList, curRay);
+        dunya::field::raymarch(primitives, curRay);
       if (hit && (objectIndex == -1 || minHit.travelled > hit->travelled)) {
         minHit = hit.value();
-        objectIndex = static_cast<int>(i);
+        objectIndex = static_cast<int>(id);
         localRay = curRay;
       }
     }
@@ -78,8 +81,11 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
  * not being measured on the same scene.
  */
 void FieldEditor::stress(uint32_t count) {
+  const ObjectRegistry& registry = m_scene.registry();
+  const auto primitives = registry.getPrimitives(0);
+
   const std::optional<dunya::field::Aabb> extent =
-    dunya::field::boundedExtent(m_scene.primitives());
+    dunya::field::boundedExtent(primitives);
 
   if (!extent.has_value()) {
     std::cout << "Nothing bounded to carve into\n";
@@ -87,7 +93,7 @@ void FieldEditor::stress(uint32_t count) {
   }
 
   const glm::vec3 span = extent->maximum - extent->minimum;
-  const uint32_t before = static_cast<uint32_t>(m_scene.primitives().size());
+  const uint32_t before = static_cast<uint32_t>(primitives.size());
 
   for (uint32_t i = 0; i < count; ++i) {
     // The R3 sequence: successive multiples of these three fractions fill a
@@ -115,6 +121,6 @@ void FieldEditor::stress(uint32_t count) {
   }
 
   m_scene.setDirty(0, true);
-  std::cout << "stress  primitives " << before << " -> "
-            << m_scene.primitives().size() << '\n';
+  std::cout << "stress  primitives " << before << " -> " << primitives.size()
+            << '\n';
 }

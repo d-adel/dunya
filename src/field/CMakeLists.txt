@@ -5,6 +5,7 @@ add_library(dunya_field STATIC
     analytic.cc
     raycast.cc
     sampled.cc
+    primitive.cc
 )
 
 add_library(dunya::field ALIAS dunya_field)

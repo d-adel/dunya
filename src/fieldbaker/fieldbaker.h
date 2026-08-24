@@ -9,6 +9,7 @@
 #include <glm/glm.hpp>
 
 #include <cstdint>
+#include <span>
 
 struct BakeParams {
   glm::vec4 origin;
@@ -34,12 +35,16 @@ public:
   FieldBaker& operator=(FieldBaker&&) = delete;
 
   void bake(
-    const FieldObjectShared& fieldObject,
+    const FieldObjectGPU& fieldObject,
     uint32_t frame,
     VolumeImages images
   ) const;
 
-  void verifyBake(const FieldObject& fieldObject, VolumeImages images) const;
+  void verifyBake(
+    const FieldObject& fieldObject,
+    std::span<const dunya::field::Primitive> primitives,
+    VolumeImages images
+  ) const;
 
 private:
   const Device& m_device;

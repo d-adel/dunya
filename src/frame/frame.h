@@ -22,9 +22,10 @@ struct Frame {
   glm::vec4 cameraPos = glm::vec4(1.0f);
   std::span<const DrawItem> drawItems = {};
   std::span<const Mesh> meshes = {};
+
+  std::span<const ObjectId> fieldObjectIds = {};
   std::span<const dunya::field::Primitive> primitives = {};
-  std::span<const FieldObjectShared> sharedFieldObjects = {};
-  std::span<const size_t> dirtyObjectIndices = {};
+
   PipelineType mode = PipelineType::Both;
 
   uint32_t fieldRepresentation = FIELD_SAMPLED;

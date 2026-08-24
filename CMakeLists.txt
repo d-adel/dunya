@@ -27,7 +27,7 @@ set(SHADER_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/shaders")
 # here rather than in config.h because this is the only place that can reach
 # both compilers; drift between them does not fail to build, it corrupts an
 # std140 stride or indexes past an array.
-set(DUNYA_MAX_PRIMITIVES 128)
+set(DUNYA_MAX_FIELD_PRIMITIVES 128)
 set(DUNYA_MAX_TEXTURES 16)
 set(DUNYA_MAX_SAMPLERS 8)
 set(DUNYA_MAX_MATERIALS 64)
@@ -66,7 +66,7 @@ set(DUNYA_SAMPLER_NEAREST_CLAMP 2)
 # reaches the shader as a uniform now, and leaving it here as well would put the
 # same number back in two toolchains, which is the thing idiom 27 is about.
 set(SHADER_DEFINES
-    "-DDUNYA_MAX_PRIMITIVES=${DUNYA_MAX_PRIMITIVES}"
+    "-DDUNYA_MAX_FIELD_PRIMITIVES=${DUNYA_MAX_FIELD_PRIMITIVES}"
     "-DDUNYA_MAX_TEXTURES=${DUNYA_MAX_TEXTURES}"
     "-DDUNYA_MAX_SAMPLERS=${DUNYA_MAX_SAMPLERS}"
     "-DDUNYA_MAX_MATERIALS=${DUNYA_MAX_MATERIALS}"
@@ -207,6 +207,7 @@ add_executable(${PROJECT_NAME}
     src/fieldobjecttable/fieldobjecttable.cc
     src/volumepool/volumepool.cc
     src/fieldbaker/fieldbaker.cc
+    src/objectregistry/objectregistry.cc
 )
 
 find_program(
@@ -228,7 +229,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     GLSLC_PATH=\"${GLSLC_EXECUTABLE}\"
     GLSLC_DEFINES=\"${SHADER_DEFINES_ARGS}\"
     GLSLC_INCLUDE_DIR=\"${SHADER_SOURCE_DIR}\"
-    DUNYA_MAX_PRIMITIVES=${DUNYA_MAX_PRIMITIVES}
+    DUNYA_MAX_FIELD_PRIMITIVES=${DUNYA_MAX_FIELD_PRIMITIVES}
     DUNYA_MAX_TEXTURES=${DUNYA_MAX_TEXTURES}
     DUNYA_MAX_SAMPLERS=${DUNYA_MAX_SAMPLERS}
     DUNYA_MAX_MATERIALS=${DUNYA_MAX_MATERIALS}

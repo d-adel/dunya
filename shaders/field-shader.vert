@@ -28,6 +28,7 @@ layout(push_constant) uniform PushConstants {
 } push;
 
 layout(location = 0) out vec4 clipPosition;
+layout(location = 1) flat out uint objectIndex;
 
 // Temporary Step 4 fixture.
 // Removed once all field objects, including the ground, are finite.
@@ -95,6 +96,7 @@ const uint CUBE_INDICES[36] = uint[](
   7);
 
 void main() {
+  objectIndex = push.objectIndex;
   FieldObjectShared object = fieldObjectTable.objects[push.objectIndex];
 
   // The CPU has already derived the grid. localOrigin is its minimum

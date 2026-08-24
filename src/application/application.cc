@@ -59,8 +59,6 @@ Application::Application()
   m_mouseSubscription = EventDispatcher::instance().subscribe<MouseButtonEvent>(
     [this](const MouseButtonEvent& event) { handleMouseButtonEvent(event); }
   );
-
-  m_dirtyObjectIndices.reserve(MAX_FIELD_OBJECTS);
 }
 
 Application::~Application() {
@@ -173,21 +171,24 @@ int Application::start(const StartupOptions& options) {
     float aspect = static_cast<float>(m_swapChain.extent().width)
                    / static_cast<float>(m_swapChain.extent().height);
 
-    m_dirtyObjectIndices.clear();
+    m_fieldObjectTable.newFrame();
     // ---------- Frame context ----------
     m_frameContext.proj = m_camera.projectionMatrix(aspect);
     m_frameContext.view = m_camera.viewMatrix();
     m_frameContext.cameraPos = m_camera.position();
 
-    for (size_t i = 0; i < m_scene.fieldObjects().size(); i++) {
-      const FieldObject& fieldObject = m_scene.fieldObjects()[i];
+    ObjectRegistry& registry = m_scene.registry();
+
+    for (ObjectId id : registry.fieldObjectIds()) {
+      const FieldObject& fieldObject = registry.getFieldObject(id);
+
       if (fieldObject.volumeIndex == UINT32_MAX) {
-        // Changes when objects own their volumes. Bindings 4/5 lack
-        // UPDATE_AFTER_BIND: registering is only legal before work is
-        // submitted.
-        dunya::field::Aabb box = gridBox(fieldObject);
+        std::span<const dunya::field::Primitive> primitives =
+          registry.getPrimitives(id);
+
+        dunya::field::Aabb box = gridBox(primitives);
         const dunya::field::SampledField& grid = dunya::field::bake(
-          fieldObject.editList,
+          primitives,
           box.minimum,
           box.maximum,
           fieldObject.resolution
@@ -202,15 +203,25 @@ int Application::start(const StartupOptions& options) {
           index
         );
 
-        m_scene.setVolumeIndex(i, index);
+        m_scene.setVolumeIndex(id, index);
       }
 
+      uint32_t primitiveCount = registry.primitiveCount(id);
+      uint32_t primitiveOffset = registry.primitiveOffset(id);
+
+      m_fieldObjectTable.makeGPUField(
+        id,
+        primitiveOffset,
+        primitiveCount,
+        fieldObject,
+        m_frameContext.fieldRepresentation
+      );
+
       if (fieldObject.dirty) {
-        m_dirtyObjectIndices.push_back(i);
+        m_fieldObjectTable.appendToBakeList(id);
       }
     }
 
-    m_frameContext.dirtyObjectIndices = m_dirtyObjectIndices;
     m_scene.augmentFrameContext(m_frameContext);
     // -----------------------------------
 
@@ -236,11 +247,9 @@ int Application::start(const StartupOptions& options) {
                                   captureHook
                                 );
 
-    if (swapChainStale) {
-      m_swapChain.recreate();
-    } else {
-      for (const auto& i : m_dirtyObjectIndices) {
-        m_scene.setDirty(i, false);
+    if (!swapChainStale) {
+      for (ObjectId objectId : m_fieldObjectTable.bakeList()) {
+        registry.getFieldObject(objectId).dirty = false;
       }
     }
 
@@ -250,9 +259,13 @@ int Application::start(const StartupOptions& options) {
     if (bakeCheckPending) {
       bakeCheckPending = false;
       m_context.device().waitIdle();
-      VolumeImages images =
-        m_volumePool.images(m_scene.fieldObjects().front().volumeIndex);
-      m_fieldBaker.verifyBake(m_scene.fieldObjects().front(), images);
+      for (ObjectId id : registry.fieldObjectIds()) {
+        const FieldObject& fieldObject = registry.getFieldObject(id);
+        std::span<const dunya::field::Primitive> primitives =
+          registry.getPrimitives(id);
+        VolumeImages images = m_volumePool.images(fieldObject.volumeIndex);
+        m_fieldBaker.verifyBake(fieldObject, primitives, images);
+      }
     }
 
     if (frameCheck.ran()) {
@@ -356,7 +369,11 @@ void Application::registerPanels() {
       m_swapChain.extent().width,
       m_swapChain.extent().height
     );
-    ImGui::Text("%zu primitives", m_scene.primitives().size());
+
+    const ObjectRegistry& registry = m_scene.registry();
+    size_t primitiveCount = registry.primitivePool().size();
+
+    ImGui::Text("%zu primitives", primitiveCount);
     ImGui::Text(
       "%s",
       m_frameContext.fieldRepresentation == FIELD_ANALYTIC ? "analytic"

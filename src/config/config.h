@@ -2,15 +2,20 @@
 
 #include <cstdint>
 
+using ObjectId = uint32_t;
+
 constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
 
 // The shaders declare these too, so the numbers come from CMake, which is the
 // only place that reaches both compilers.
-constexpr uint32_t MAX_PRIMITIVES = DUNYA_MAX_PRIMITIVES;
 constexpr uint32_t MAX_TEXTURES = DUNYA_MAX_TEXTURES;
 constexpr uint32_t MAX_SAMPLERS = DUNYA_MAX_SAMPLERS;
 constexpr uint32_t MAX_MATERIALS = DUNYA_MAX_MATERIALS;
 constexpr uint32_t MAX_FIELD_OBJECTS = DUNYA_MAX_FIELD_OBJECTS;
+constexpr uint32_t MAX_FIELD_PRIMITIVES = DUNYA_MAX_FIELD_PRIMITIVES;
+constexpr size_t MAX_PRIMITIVE_POOL =
+  static_cast<size_t>(MAX_FIELD_OBJECTS)
+  * static_cast<size_t>(MAX_FIELD_PRIMITIVES);
 
 constexpr uint32_t TEXTURE_WHITE = 0;
 constexpr uint32_t TEXTURE_FLAT_NORMAL = 1;
@@ -80,3 +85,5 @@ constexpr float EDIT_BLEND = 0.6f * EDIT_ADVANCE;
 // around the primitives so the grid holds the surface rather than clipping it.
 constexpr uint32_t FIELD_GRID_RESOLUTION = 128;
 constexpr float FIELD_GRID_MARGIN = 0.5f;
+
+constexpr ObjectId INVALID_OBJECT_ID = UINT32_MAX;

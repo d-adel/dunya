@@ -50,7 +50,7 @@ void transitionVolumes(
 }  // namespace
 
 void FieldBaker::bake(
-  const FieldObjectShared& fieldObject,
+  const FieldObjectGPU& gpu,
   uint32_t frame,
   VolumeImages images
 ) const {
@@ -85,16 +85,16 @@ void FieldBaker::bake(
   );
 
   glm::uvec3 resolution(
-    fieldObject.resolutionVolumeIndex.x,
-    fieldObject.resolutionVolumeIndex.y,
-    fieldObject.resolutionVolumeIndex.z
+    gpu.resolutionVolumeIndex.x,
+    gpu.resolutionVolumeIndex.y,
+    gpu.resolutionVolumeIndex.z
   );
 
   const BakeParams params{
-    fieldObject.localOrigin,
-    fieldObject.voxelSize,
-    glm::uvec4(resolution, fieldObject.config.x),
-    glm::uvec4(fieldObject.resolutionVolumeIndex.w, 0u, 0u, 0u)
+    gpu.localOrigin,
+    gpu.voxelSize,
+    glm::uvec4(resolution, gpu.config.x),
+    glm::uvec4(gpu.resolutionVolumeIndex.w, gpu.config.w, 0u, 0u)
   };
 
   vkCmdPushConstants(
@@ -125,7 +125,7 @@ void FieldBaker::bake(
   );
 
   std::cout << "field grid rebaked on GPU in " << elapsed.count() << " us  ("
-            << fieldObject.config.x << " primitives)\n";
+            << gpu.config.x << " primitives)\n";
 }
 
 namespace {
@@ -217,12 +217,13 @@ FieldBaker::FieldBaker(const Device& device, const FieldObjectTable& table)
 
 void FieldBaker::verifyBake(
   const FieldObject& fieldObject,
+  std::span<const dunya::field::Primitive> primitives,
   VolumeImages images
 ) const {
-  const dunya::field::Aabb box = gridBox(fieldObject);
+  const dunya::field::Aabb box = gridBox(primitives);
 
   const SampledField reference = dunya::field::bake(
-    fieldObject.editList,
+    primitives,
     box.minimum,
     box.maximum,
     fieldObject.resolution

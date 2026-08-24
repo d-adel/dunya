@@ -1,37 +1,36 @@
 #include "fieldobject.ih"
 
-void makeShared(
-  uint32_t fieldRepresentation,
-  const std::vector<FieldObject>& fieldObjects,
-  std::vector<FieldObjectShared>& out
+FieldObjectGPU fromFieldObject(
+  const FieldObject& fieldObject,
+  uint32_t primitiveOffset,
+  uint32_t primitiveCount,
+  uint32_t fieldRepresentation
 ) {
-  out.clear();
-  out.reserve(fieldObjects.size());
+  FieldObjectGPU gpu{};
 
-  for (const FieldObject& fieldObject : fieldObjects) {
-    FieldObjectShared shared{};
+  gpu.inverseModel = fieldObject.inverseModel();
+  gpu.model = glm::inverse(gpu.inverseModel);
 
-    shared.inverseModel = fieldObject.inverseModel();
-    shared.model = glm::inverse(shared.inverseModel);
-    // w is the slack baked around the contents: the bound returned outside the
-    // grid must never be small enough to read as arrival.
-    shared.voxelSize = glm::vec4(fieldObject.voxelSize, FIELD_GRID_MARGIN);
-    shared.resolutionVolumeIndex =
-      glm::uvec4(fieldObject.resolution, fieldObject.volumeIndex);
+  gpu.voxelSize = glm::vec4(fieldObject.voxelSize, FIELD_GRID_MARGIN);
 
-    shared.config.x = static_cast<glm::uint>(fieldObject.editList.size());
-    shared.config.y = fieldRepresentation;
-    shared.config.z = fieldObject.unboundedScan;
+  gpu.resolutionVolumeIndex =
+    glm::uvec4(fieldObject.resolution, fieldObject.volumeIndex);
 
-    shared.localOrigin = fieldObject.gridOrigin;
+  gpu.config.x = primitiveCount;
+  gpu.config.y = fieldRepresentation;
+  gpu.config.z = fieldObject.unboundedScan;
+  gpu.config.w = primitiveOffset;
 
-    out.push_back(shared);
-  }
+  gpu.localOrigin = fieldObject.gridOrigin;
+
+  return gpu;
 }
 
-dunya::field::Aabb gridBox(const FieldObject& fieldObject) {
+dunya::field::Aabb gridBox(
+  std::span<const dunya::field::Primitive> primitives
+) {
   const std::optional<dunya::field::Aabb> extent =
-    dunya::field::boundedExtent(fieldObject.editList);
+    dunya::field::boundedExtent(primitives);
 
   dunya::field::Aabb boundedExtentBox =
     extent.value_or(dunya::field::Aabb{glm::vec3(0.0f), glm::vec3(1.0f)});
@@ -41,19 +40,19 @@ dunya::field::Aabb gridBox(const FieldObject& fieldObject) {
   return {boundedExtentBox.minimum - margin, boundedExtentBox.maximum + margin};
 }
 
-void refreshDerived(FieldObject& fieldObject) {
-  // One past the last unbounded primitive, not a count: the fold outside the
-  // grid must keep the array's order or the CSG changes.
+void refreshDerived(
+  FieldObject& fieldObject,
+  std::span<const dunya::field::Primitive> primitives
+) {
   fieldObject.unboundedScan = 0;
 
-  for (size_t i = 0; i < fieldObject.editList.size(); ++i) {
-    if (fieldObject.editList[i].bounds.w <= 0.0f) {
+  for (size_t i = 0; i < primitives.size(); ++i) {
+    if (primitives[i].bounds.w <= 0.0f) {
       fieldObject.unboundedScan = static_cast<uint32_t>(i) + 1u;
     }
   }
 
-  // The grid follows what it holds, or new geometry lands off the lattice.
-  const dunya::field::Aabb box = gridBox(fieldObject);
+  const dunya::field::Aabb box = gridBox(primitives);
 
   fieldObject.gridOrigin = glm::vec4(box.minimum, 1.0f);
 

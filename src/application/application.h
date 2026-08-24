@@ -84,8 +84,6 @@ private:
   // that registered it and a captured reference to a local would dangle.
   double m_lastFrameMs = 0.0;
 
-  std::vector<size_t> m_dirtyObjectIndices;
-
   EventDispatcher::SubscriptionId m_keySubscription{};
   EventDispatcher::SubscriptionId m_mouseSubscription{};
 };

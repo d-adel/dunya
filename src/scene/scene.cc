@@ -18,105 +18,79 @@ Scene::Scene(const Context& context)
   m_meshes.emplace_back(Mesh(context.device(), "models/viking_room.obj"));
   m_drawItems.emplace_back(DrawItem({0, 2, model}));
   m_drawItems.emplace_back(DrawItem({0, 3, model2}));
-  m_fieldObjects.reserve(MAX_FIELD_OBJECTS);
 
   addFieldObject();
 }
 
 bool Scene::addPrimitive(
-  size_t objectIndex,
+  ObjectId objectId,
   const glm::vec3& centre,
   float radius,
   float blend,
   uint32_t material,
   uint32_t operation
 ) {
-  FieldObject& fieldObject = m_fieldObjects.at(objectIndex);
-  if (fieldObject.editList.size() >= MAX_PRIMITIVES) {
+  if (!m_objectRegistry.contains(objectId)) {
     return false;
   }
 
-  Primitive primitive{};
-  primitive.inverseModel =
-    glm::inverse(glm::translate(glm::mat4(1.0f), centre));
-  primitive.shape = glm::vec4(radius, 0.0f, 0.0f, blend);
-  primitive.shapeConfig = glm::uvec4(0, material, operation, 0);
-  dunya::field::updateBounds(primitive);
+  const dunya::field::Primitive primitive =
+    dunya::field::makeSphere(centre, radius, material, operation, blend);
 
-  fieldObject.editList.push_back(primitive);
-
-  refreshDerived(fieldObject);
-
-  fieldObject.dirty = true;
-
-  return true;
+  return m_objectRegistry.addPrimitive(objectId, primitive);
 }
 
-bool Scene::addFieldObject() {
-  if (m_fieldObjects.size() >= MAX_FIELD_OBJECTS) {
-    return false;
+ObjectId Scene::addFieldObject() {
+  FieldObject fieldObject{};
+
+  fieldObject.resolution = glm::uvec3(128);
+
+  const ObjectId objectId = m_objectRegistry.addFieldObject(fieldObject);
+
+  if (objectId == INVALID_OBJECT_ID) {
+    return INVALID_OBJECT_ID;
   }
 
-  FieldObject obj;
+  addInitialPrimitives(objectId);
 
-  obj.editList = createPrimitives();
+  const dunya::field::Aabb box =
+    gridBox(m_objectRegistry.getPrimitives(objectId));
+  m_objectRegistry.getFieldObject(objectId).position =
+    (box.minimum + box.maximum) * 0.5f;
 
-  // Reserved to capacity so an append never reallocates: Frame hands the
-  // renderer a span over this vector, and a reallocation would leave last
-  // frame's span pointing at freed storage.
-  obj.editList.reserve(MAX_PRIMITIVES);
-
-  // Before the grid is fitted, because refreshDerived divides the box by it.
-  obj.resolution = glm::uvec3(FIELD_GRID_RESOLUTION);
-
-  const dunya::field::Aabb box = gridBox(obj);
-  obj.position = (box.minimum + box.maximum) * 0.5f;
-
+  FieldObject& obj = m_objectRegistry.getFieldObject(objectId);
   glm::mat4 model = glm::inverse(obj.inverseModel());
 
   // Re-anchored inverseModel
-  for (size_t i = 0; i < obj.editList.size(); ++i) {
-    Primitive& primitive = obj.editList[i];
+  std::span<dunya::field::Primitive> primitives =
+    m_objectRegistry.getPrimitives(objectId);
+  for (size_t i = 0; i < primitives.size(); ++i) {
+    Primitive& primitive = primitives[i];
     primitive.inverseModel = primitive.inverseModel * model;
     dunya::field::updateBounds(primitive);
   }
 
-  refreshDerived(obj);
+  refreshDerived(obj, primitives);
 
-  m_fieldObjects.emplace_back(std::move(obj));
-
-  return true;
+  return objectId;
 }
 
-void Scene::setVolumeIndex(size_t objectIndex, uint32_t volumeIndex) {
-  m_fieldObjects.at(objectIndex).volumeIndex = volumeIndex;
+void Scene::setVolumeIndex(ObjectId objectIndex, uint32_t volumeIndex) {
+  m_objectRegistry.getFieldObject(objectIndex).volumeIndex = volumeIndex;
 }
 
-void Scene::setDirty(size_t objectIndex, bool value) {
-  m_fieldObjects.at(objectIndex).dirty = value;
+void Scene::setDirty(ObjectId objectIndex, bool value) {
+  m_objectRegistry.getFieldObject(objectIndex).dirty = value;
 }
 
 void Scene::augmentFrameContext(Frame& frameContext) {
   std::span<const DrawItem> data(m_drawItems);
   std::span<const Mesh> meshes(m_meshes);
-  std::span<const Primitive> primitives(m_fieldObjects[0].editList);
-
-  makeShared(
-    frameContext.fieldRepresentation,
-    m_fieldObjects,
-    m_sharedFieldObjects
-  );
-
-  std::span<const FieldObjectShared> sharedFieldObjects(m_sharedFieldObjects);
 
   frameContext.drawItems = data;
   frameContext.meshes = meshes;
-  frameContext.primitives = primitives;
-  frameContext.sharedFieldObjects = sharedFieldObjects;
-}
-
-const std::vector<Primitive>& Scene::primitives() const noexcept {
-  return m_fieldObjects[0].editList;
+  frameContext.fieldObjectIds = m_objectRegistry.fieldObjectIds();
+  frameContext.primitives = m_objectRegistry.primitivePool();
 }
 
 const std::vector<Material>& Scene::materials() const noexcept {
@@ -131,8 +105,12 @@ const std::vector<Sampler>& Scene::samplers() const noexcept {
   return m_samplers;
 }
 
-const std::vector<FieldObject>& Scene::fieldObjects() const noexcept {
-  return m_fieldObjects;
+const ObjectRegistry& Scene::registry() const {
+  return m_objectRegistry;
+}
+
+ObjectRegistry& Scene::registry() {
+  return m_objectRegistry;
 }
 
 std::vector<Sampler> Scene::createSamplers(const Device& device) {
@@ -223,45 +201,27 @@ std::vector<Material> Scene::createMaterials() {
   return {fieldSphere, fieldPlane, vikingRoom, checker};
 }
 
-std::vector<Primitive> Scene::createPrimitives() {
-  std::vector<Primitive> primitives;
+void Scene::addInitialPrimitives(ObjectId objectId) {
+  m_objectRegistry.addPrimitive(
+    objectId,
+    dunya::field::makeSphere(glm::vec3(1.0f, 0.45f, 0.0f), 1.0f)
+  );
 
-  // Reserved to capacity so an append never reallocates: Frame hands the
-  // renderer a span over this vector, and a reallocation would leave last
-  // frame's span pointing at freed storage (idiom 19).
-  primitives.reserve(MAX_PRIMITIVES);
-
-  Primitive sphere{};
-  sphere.inverseModel =
-    glm::inverse(glm::translate(glm::mat4(1.0f), glm::vec3(1.0f, 0.45f, 0.0f)));
-  sphere.shape = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
-  sphere.shapeConfig = glm::uvec4(0, 0, 0, 0);
-
-  Primitive box{};
-  box.inverseModel = glm::inverse(
-    glm::translate(glm::mat4(1.0f), glm::vec3(1.8f, 0.0f, 0.0f))
-    * glm::rotate(
-      glm::mat4(1.0f),
+  m_objectRegistry.addPrimitive(
+    objectId,
+    dunya::field::makeBox(
+      glm::vec3(1.8f, 0.0f, 0.0f),
+      glm::vec3(0.5f),
       glm::radians(30.0f),
-      glm::vec3(0.0f, 1.0f, 0.0f)
+      glm::vec3(0.0f, 1.0f, 0.0f),
+      0,
+      1,
+      0.4f
     )
   );
-  box.shape = glm::vec4(0.5f, 0.5f, 0.5f, 0.4f);
-  box.shapeConfig = glm::uvec4(1, 0, 1, 0);
 
-  Primitive plane{};
-  plane.inverseModel =
-    glm::inverse(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -2.0f, 0.0f)));
-  plane.shape = glm::vec4(0.0f);
-  plane.shapeConfig = glm::uvec4(2, 1, 0, 0);
-
-  primitives.push_back(sphere);
-  primitives.push_back(box);
-  primitives.push_back(plane);
-
-  for (Primitive& primitive : primitives) {
-    dunya::field::updateBounds(primitive);
-  }
-
-  return primitives;
+  m_objectRegistry.addPrimitive(
+    objectId,
+    dunya::field::makePlane(glm::vec3(0.0f, -2.0f, 0.0f), 1)
+  );
 }

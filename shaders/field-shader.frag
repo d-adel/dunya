@@ -69,16 +69,18 @@ layout(std430, set = 2, binding = 3) readonly buffer FieldScene {
   Primitive primitives[];
 } scene;
 
-layout(std140, set = 2, binding = 0) readonly buffer FieldObjectShared {
+struct FieldObjectShared {
   mat4 model;
   mat4 inverseModel;
   vec4 voxelSize;
   uvec4 resolutionVolumeIndex;
   uvec4 config;
   vec4 localOrigin;
-} fieldObject;
+};
 
-uint volumeIndex = fieldObject.resolutionVolumeIndex.w;
+layout(std140, set = 2, binding = 0) readonly buffer FieldObjectTable {
+  FieldObjectShared objects[];
+} fieldObjectTable;
 
 const int MAX_SAMPLERS = DUNYA_MAX_SAMPLERS;
 layout(set = 1, binding = 2) uniform sampler samplers[MAX_SAMPLERS];
@@ -89,9 +91,14 @@ layout(set = 2, binding = 2)
   uniform utexture3D materialVolume[MAX_FIELD_OBJECTS];
 
 layout(location = 0) in vec4 clipPosition;
+layout(location = 1) flat in uint objectIndex;
 layout(location = 0) out vec4 outColor;
 
-#define FIELD_PRIMITIVE_AT(i) scene.primitives[i]
+FieldObjectShared fieldObject;
+uint volumeIndex;
+
+#define FIELD_PRIMITIVE_AT(i) scene.primitives[fieldObject.config.w + (i)]
+
 #define FIELD_PRIMITIVE_COUNT fieldObject.config.x
 
 #include "field-common.glsl"
@@ -291,6 +298,9 @@ vec3 albedo(float materialId) {
 }
 
 void main() {
+  fieldObject = fieldObjectTable.objects[objectIndex];
+  volumeIndex = fieldObject.resolutionVolumeIndex.w;
+
   vec2 ndc = clipPosition.xy / clipPosition.w;
 
   vec4 worldPosition = camera.inverseViewProj * vec4(ndc, 1.0, 1.0);
