@@ -82,7 +82,7 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
  */
 void FieldEditor::stress(uint32_t count) {
   const ObjectRegistry& registry = m_scene.registry();
-  const auto primitives = registry.getPrimitives(0);
+  auto primitives = registry.getPrimitives(0);
 
   const std::optional<dunya::field::Aabb> extent =
     dunya::field::boundedExtent(primitives);
@@ -120,6 +120,7 @@ void FieldEditor::stress(uint32_t count) {
     }
   }
 
+  primitives = registry.getPrimitives(0);
   m_scene.setDirty(0, true);
   std::cout << "stress  primitives " << before << " -> " << primitives.size()
             << '\n';
