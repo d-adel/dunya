@@ -8,9 +8,12 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <optional>
+#include <utility>
 #include <vector>
 
 using Catch::Matchers::WithinAbs;
+using dunya::field::Aabb;
 using dunya::field::Primitive;
 using dunya::field::Ray;
 using dunya::field::RayHit;
@@ -167,4 +170,57 @@ TEST_CASE("a march starting inside geometry walks out to it", "[raycast]") {
   REQUIRE_THAT(hit->travelled, WithinAbs(1.0f, MARCH_TOLERANCE));
   REQUIRE_THAT(hit->position.x, WithinAbs(1.0f, MARCH_TOLERANCE));
   REQUIRE(hit->material == 7);
+}
+
+TEST_CASE("a ray through a box reports entry and exit", "[raycast]") {
+  // Axis-aligned, so the slab arithmetic is exact and the expected distances
+  // can be stated rather than bracketed.
+  const Aabb box{glm::vec3(1.0f, -1.0f, -1.0f), glm::vec3(3.0f, 1.0f, 1.0f)};
+  const Ray ray{glm::vec3(0.0f), glm::vec3(1.0f, 0.0f, 0.0f)};
+
+  const std::optional<std::pair<float, float>> t =
+    dunya::field::intersect(box, ray);
+
+  REQUIRE(t.has_value());
+  REQUIRE_THAT(t->first, WithinAbs(1.0f, ANALYTIC_TOLERANCE));
+  REQUIRE_THAT(t->second, WithinAbs(3.0f, ANALYTIC_TOLERANCE));
+}
+
+TEST_CASE("a ray that misses a box reports nothing", "[raycast]") {
+  const Aabb box{glm::vec3(1.0f, -1.0f, -1.0f), glm::vec3(3.0f, 1.0f, 1.0f)};
+
+  // Beside and parallel: the y slab is degenerate and the origin sits outside
+  // it, which is the divide-by-zero branch.
+  const Ray parallel{glm::vec3(0.0f, 5.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)};
+  REQUIRE_FALSE(dunya::field::intersect(box, parallel).has_value());
+
+  // Beside and slanted: both slabs are real but their intervals never overlap.
+  const Ray slanted{
+    glm::vec3(0.0f, 5.0f, 0.0f),
+    glm::normalize(glm::vec3(1.0f, 1.0f, 0.0f))
+  };
+  REQUIRE_FALSE(dunya::field::intersect(box, slanted).has_value());
+}
+
+TEST_CASE("a box behind the ray is not an intersection", "[raycast]") {
+  const Aabb box{glm::vec3(1.0f, -1.0f, -1.0f), glm::vec3(3.0f, 1.0f, 1.0f)};
+
+  // The ray's line crosses the box, but only at negative distances.
+  const Ray ray{glm::vec3(5.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)};
+
+  REQUIRE_FALSE(dunya::field::intersect(box, ray).has_value());
+}
+
+TEST_CASE("a ray starting inside a box enters at distance zero", "[raycast]") {
+  // The geometric entry is behind the origin; the caller must get zero, not a
+  // negative distance it would march backwards to.
+  const Aabb box{glm::vec3(1.0f, -1.0f, -1.0f), glm::vec3(3.0f, 1.0f, 1.0f)};
+  const Ray ray{glm::vec3(2.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)};
+
+  const std::optional<std::pair<float, float>> t =
+    dunya::field::intersect(box, ray);
+
+  REQUIRE(t.has_value());
+  REQUIRE_THAT(t->first, WithinAbs(0.0f, ANALYTIC_TOLERANCE));
+  REQUIRE_THAT(t->second, WithinAbs(1.0f, ANALYTIC_TOLERANCE));
 }
