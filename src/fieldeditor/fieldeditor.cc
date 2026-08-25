@@ -12,10 +12,11 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
     const auto& fieldObject = registry.getFieldObject(id);
     const auto primitives = registry.getPrimitives(id);
 
-    glm::vec3 origin = fieldObject.inverseModel() * glm::vec4(ray.origin, 1.0f);
+    glm::mat4 inverseModel = glm::inverse(fieldObject.model());
 
-    glm::vec3 direction =
-      fieldObject.inverseModel() * glm::vec4(ray.direction, 0.0f);
+    glm::vec3 origin = inverseModel * glm::vec4(ray.origin, 1.0f);
+
+    glm::vec3 direction = inverseModel * glm::vec4(ray.direction, 0.0f);
 
     dunya::field::Ray curRay = {origin, direction};
 

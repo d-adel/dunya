@@ -251,6 +251,8 @@ int Application::start(const StartupOptions& options) {
       for (ObjectId objectId : m_fieldObjectTable.bakeList()) {
         registry.getFieldObject(objectId).dirty = false;
       }
+    } else {
+      m_swapChain.recreate();
     }
 
     // After a frame, because the compute bake runs as part of one. Before it,

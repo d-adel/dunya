@@ -9,6 +9,7 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(field_tests
     field_tests.cc
+    fieldobject_tests.cc
     raycast_tests.cc
     sampled_tests.cc
 )

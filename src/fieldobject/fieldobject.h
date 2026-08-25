@@ -21,12 +21,20 @@ struct FieldObject {
 
   glm::vec4 gridOrigin{0.0f};
 
-  const glm::mat4 inverseModel() const {
+  void rotate(float radiansPerSecond, const glm::vec3& axis, float dt) {
+    float angle = radiansPerSecond * dt;
+
+    glm::quat deltaRotation = glm::angleAxis(angle, glm::normalize(axis));
+
+    rotation = glm::normalize(deltaRotation * rotation);
+  }
+
+  glm::mat4 model() const {
     glm::mat4 rotationMatrix = glm::mat4_cast(rotation);
 
     glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), position);
 
-    return glm::inverse(translationMatrix * rotationMatrix);
+    return translationMatrix * rotationMatrix;
   }
 };
 

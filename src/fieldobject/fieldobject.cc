@@ -8,8 +8,8 @@ FieldObjectGPU fromFieldObject(
 ) {
   FieldObjectGPU gpu{};
 
-  gpu.inverseModel = fieldObject.inverseModel();
-  gpu.model = glm::inverse(gpu.inverseModel);
+  gpu.model = fieldObject.model();
+  gpu.inverseModel = glm::inverse(gpu.model);
 
   gpu.voxelSize = glm::vec4(fieldObject.voxelSize, FIELD_GRID_MARGIN);
 
