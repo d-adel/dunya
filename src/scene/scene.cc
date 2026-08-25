@@ -19,7 +19,21 @@ Scene::Scene(const Context& context)
   m_drawItems.emplace_back(DrawItem({0, 2, model}));
   m_drawItems.emplace_back(DrawItem({0, 3, model2}));
 
-  addFieldObject();
+  ObjectId objectId = addFieldObject(glm::vec3(1.0f, 0.45f, 0.0f));
+  addInitialPrimitives(objectId);
+  ObjectId planeId = addFieldObject(glm::vec3(0.0f, -2.0f, 0.0f));
+  m_objectRegistry.addPrimitive(
+    planeId,
+    dunya::field::makeBox(
+      glm::vec3(0.0f, -0.5f, 0.0f),
+      glm::vec3(10.0f, 0.5f, 10.0f),
+      glm::radians(0.0f),
+      glm::vec3(0.0f, 1.0f, 0.0f),
+      1,
+      0,
+      0.0f
+    )
+  );
 }
 
 bool Scene::addPrimitive(
@@ -40,37 +54,17 @@ bool Scene::addPrimitive(
   return m_objectRegistry.addPrimitive(objectId, primitive);
 }
 
-ObjectId Scene::addFieldObject() {
+ObjectId Scene::addFieldObject(glm::vec3 position) {
   FieldObject fieldObject{};
 
-  fieldObject.resolution = glm::uvec3(128);
+  fieldObject.position = position;
+  fieldObject.resolution = glm::uvec3(FIELD_GRID_RESOLUTION);
 
   const ObjectId objectId = m_objectRegistry.addFieldObject(fieldObject);
 
   if (objectId == INVALID_OBJECT_ID) {
     return INVALID_OBJECT_ID;
   }
-
-  addInitialPrimitives(objectId);
-
-  const dunya::field::Aabb box =
-    gridBox(m_objectRegistry.getPrimitives(objectId));
-  m_objectRegistry.getFieldObject(objectId).position =
-    (box.minimum + box.maximum) * 0.5f;
-
-  FieldObject& obj = m_objectRegistry.getFieldObject(objectId);
-  glm::mat4 model = glm::inverse(obj.inverseModel());
-
-  // Re-anchored inverseModel
-  std::span<dunya::field::Primitive> primitives =
-    m_objectRegistry.getPrimitives(objectId);
-  for (size_t i = 0; i < primitives.size(); ++i) {
-    Primitive& primitive = primitives[i];
-    primitive.inverseModel = primitive.inverseModel * model;
-    dunya::field::updateBounds(primitive);
-  }
-
-  refreshDerived(obj, primitives);
 
   return objectId;
 }
@@ -204,13 +198,13 @@ std::vector<Material> Scene::createMaterials() {
 void Scene::addInitialPrimitives(ObjectId objectId) {
   m_objectRegistry.addPrimitive(
     objectId,
-    dunya::field::makeSphere(glm::vec3(1.0f, 0.45f, 0.0f), 1.0f)
+    dunya::field::makeSphere(glm::vec3(0.0f, 0.0f, 0.0f), 1.0f)
   );
 
   m_objectRegistry.addPrimitive(
     objectId,
     dunya::field::makeBox(
-      glm::vec3(1.8f, 0.0f, 0.0f),
+      glm::vec3(0.8f, -0.45f, 0.0f),
       glm::vec3(0.5f),
       glm::radians(30.0f),
       glm::vec3(0.0f, 1.0f, 0.0f),
@@ -218,10 +212,5 @@ void Scene::addInitialPrimitives(ObjectId objectId) {
       1,
       0.4f
     )
-  );
-
-  m_objectRegistry.addPrimitive(
-    objectId,
-    dunya::field::makePlane(glm::vec3(0.0f, -2.0f, 0.0f), 1)
   );
 }

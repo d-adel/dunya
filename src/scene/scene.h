@@ -33,7 +33,7 @@ public:
     uint32_t operation
   );
 
-  ObjectId addFieldObject();
+  ObjectId addFieldObject(glm::vec3 position);
   void setVolumeIndex(ObjectId objectIndex, uint32_t volumeIndex);
   void setDirty(ObjectId objectIndex, bool value);
 

@@ -46,6 +46,10 @@ ObjectId ObjectRegistry::addFieldObject(const FieldObject& fieldObject) {
 
   m_activeFieldObjects.push_back(objectId);
 
+  std::span<dunya::field::Primitive> primitives = getPrimitives(objectId);
+  FieldObject& object = getFieldObject(objectId);
+  refreshDerived(object, primitives);
+
   return objectId;
 }
 

@@ -30,10 +30,6 @@ layout(push_constant) uniform PushConstants {
 layout(location = 0) out vec4 clipPosition;
 layout(location = 1) flat out uint objectIndex;
 
-// Temporary Step 4 fixture.
-// Removed once all field objects, including the ground, are finite.
-const float PROXY_INFLATE = 1000.0;
-
 // Eight possible box corners:
 //
 // 0 = min.x, min.y, min.z
@@ -111,7 +107,7 @@ void main() {
   // Step 4 only: keep the current unbounded ground visible while validating
   // the proxy draw path. Inflate around the existing grid's centre.
   vec3 center = 0.5 * (boxMin + boxMax);
-  vec3 halfExtent = 0.5 * (boxMax - boxMin) * PROXY_INFLATE;
+  vec3 halfExtent = 0.5 * (boxMax - boxMin);
 
   boxMin = center - halfExtent;
   boxMax = center + halfExtent;

@@ -18,7 +18,7 @@ FieldObjectGPU fromFieldObject(
 
   gpu.config.x = primitiveCount;
   gpu.config.y = fieldRepresentation;
-  gpu.config.z = fieldObject.unboundedScan;
+  gpu.config.z = 1u;
   gpu.config.w = primitiveOffset;
 
   gpu.localOrigin = fieldObject.gridOrigin;
@@ -44,14 +44,6 @@ void refreshDerived(
   FieldObject& fieldObject,
   std::span<const dunya::field::Primitive> primitives
 ) {
-  fieldObject.unboundedScan = 0;
-
-  for (size_t i = 0; i < primitives.size(); ++i) {
-    if (primitives[i].bounds.w <= 0.0f) {
-      fieldObject.unboundedScan = static_cast<uint32_t>(i) + 1u;
-    }
-  }
-
   const dunya::field::Aabb box = gridBox(primitives);
 
   fieldObject.gridOrigin = glm::vec4(box.minimum, 1.0f);

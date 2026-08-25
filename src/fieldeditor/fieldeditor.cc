@@ -20,12 +20,10 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
     dunya::field::Ray curRay = {origin, direction};
 
     std::optional<std::pair<float, float>> tOpt(std::nullopt);
-    if (fieldObject.unboundedScan == 0) {
-      dunya::field::Aabb box = gridBox(primitives);
-      tOpt = dunya::field::intersect(box, curRay);
-    }
+    dunya::field::Aabb box = gridBox(primitives);
+    tOpt = dunya::field::intersect(box, curRay);
 
-    if (tOpt.has_value() || fieldObject.unboundedScan > 0) {
+    if (tOpt.has_value()) {
       std::optional<dunya::field::RayHit> hit =
         dunya::field::raymarch(primitives, curRay);
       if (hit && (objectIndex == -1 || minHit.travelled > hit->travelled)) {

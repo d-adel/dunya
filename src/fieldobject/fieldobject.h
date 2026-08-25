@@ -16,7 +16,6 @@ struct FieldObject {
   glm::uvec3 resolution{0u};
 
   uint32_t volumeIndex = UINT32_MAX;
-  uint32_t unboundedScan = 0;
 
   bool dirty = true;
 
@@ -35,7 +34,7 @@ struct FieldObject {
 // resolutionVolumeIndex.w: volume index
 // config.x = primitive count
 // config.y = field representation: 0 = analytical, 1 = sampled
-// config.z = unbounded scan
+// config.z = live
 // config.w = primitive offset
 struct FieldObjectGPU {
   glm::mat4 model;                   // 64 bytes (offset 0)
