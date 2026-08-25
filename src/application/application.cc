@@ -494,6 +494,18 @@ void Application::handleKeyEvent(const KeyEvent& event) {
     return;
   }
 
+  if (event.key == GLFW_KEY_Z && event.type == KeyEventType::Pressed) {
+    if (m_input.isDown(GLFW_KEY_LEFT_CONTROL)) {
+      m_scene.undo();
+    }
+  }
+
+  if (event.key == GLFW_KEY_Y && event.type == KeyEventType::Pressed) {
+    if (m_input.isDown(GLFW_KEY_LEFT_CONTROL)) {
+      m_scene.redo();
+    }
+  }
+
   bool* state = nullptr;
 
   switch (event.key) {

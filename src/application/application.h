@@ -17,6 +17,7 @@
 #include "fieldobjecttable/fieldobjecttable.h"
 #include "volumepool/volumepool.h"
 #include "fieldbaker/fieldbaker.h"
+#include "commandhistory/commandhistory.h"
 
 /* Wiring, and the loop.
  *

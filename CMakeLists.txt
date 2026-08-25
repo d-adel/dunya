@@ -208,6 +208,8 @@ add_executable(${PROJECT_NAME}
     src/volumepool/volumepool.cc
     src/fieldbaker/fieldbaker.cc
     src/objectregistry/objectregistry.cc
+    src/commandhistory/commandhistory.cc
+    src/command/command.cc
 )
 
 find_program(

@@ -8,15 +8,36 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 
 add_executable(field_tests
+    commandhistory_tests.cc
     field_tests.cc
     fieldobject_tests.cc
     raycast_tests.cc
     sampled_tests.cc
+
+    # The object model is not a library, so these are compiled in directly.
+    # All four are Vulkan-free, which keeps the boundary above honest.
+    ${PROJECT_SOURCE_DIR}/src/command/command.cc
+    ${PROJECT_SOURCE_DIR}/src/commandhistory/commandhistory.cc
+    ${PROJECT_SOURCE_DIR}/src/fieldobject/fieldobject.cc
+    ${PROJECT_SOURCE_DIR}/src/objectregistry/objectregistry.cc
 )
 
 target_include_directories(field_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 
 target_link_libraries(field_tests PRIVATE dunya::field Catch2::Catch2WithMain)
+
+# config.h reads these. The numbers themselves are still written once, at the
+# top of the parent CMakeLists.
+target_compile_definitions(field_tests PRIVATE
+    DUNYA_MAX_FIELD_PRIMITIVES=${DUNYA_MAX_FIELD_PRIMITIVES}
+    DUNYA_MAX_TEXTURES=${DUNYA_MAX_TEXTURES}
+    DUNYA_MAX_SAMPLERS=${DUNYA_MAX_SAMPLERS}
+    DUNYA_MAX_MATERIALS=${DUNYA_MAX_MATERIALS}
+    DUNYA_MAX_FIELD_OBJECTS=${DUNYA_MAX_FIELD_OBJECTS}
+    DUNYA_SAMPLER_LINEAR_REPEAT=${DUNYA_SAMPLER_LINEAR_REPEAT}
+    DUNYA_SAMPLER_LINEAR_CLAMP=${DUNYA_SAMPLER_LINEAR_CLAMP}
+    DUNYA_SAMPLER_NEAREST_CLAMP=${DUNYA_SAMPLER_NEAREST_CLAMP}
+)
 
 if (MSVC)
     target_compile_options(field_tests PRIVATE /W4 /WX /Zc:__cplusplus)

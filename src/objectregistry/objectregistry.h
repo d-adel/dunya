@@ -23,21 +23,17 @@ public:
 
   ObjectId addFieldObject(const FieldObject& fieldObject);
 
-  bool removeFieldObject(ObjectId objectId);
+  // create
+  bool addFieldObjectAt(ObjectId id, const FieldObject& object);
 
   bool addPrimitive(
     ObjectId objectId,
     const dunya::field::Primitive& primitive
   );
 
-  bool removePrimitive(ObjectId objectId, uint32_t primitiveIndex);
+  // retrieve
 
-  void clearPrimitives(ObjectId objectId);
-
-  FieldObject& getFieldObject(ObjectId objectId);
   const FieldObject& getFieldObject(ObjectId objectId) const;
-
-  std::span<dunya::field::Primitive> getPrimitives(ObjectId objectId);
 
   std::span<const dunya::field::Primitive> getPrimitives(
     ObjectId objectId
@@ -45,13 +41,35 @@ public:
 
   std::span<const ObjectId> fieldObjectIds() const noexcept;
 
-  bool contains(ObjectId objectId) const noexcept;
-
-  uint32_t fieldObjectCount() const noexcept;
-  uint32_t primitiveCount(ObjectId objectId) const;
-
   std::span<const dunya::field::Primitive> primitivePool() const noexcept;
 
+  FieldObject& getFieldObject(ObjectId objectId);
+
+  std::span<dunya::field::Primitive> getPrimitives(ObjectId objectId);
+
+  // update
+  bool setPrimitive(
+    ObjectId objectId,
+    uint32_t index,
+    const dunya::field::Primitive& primitive
+  );
+
+  bool insertPrimitive(
+    ObjectId objectId,
+    uint32_t index,
+    const dunya::field::Primitive& primitive
+  );
+
+  bool removePrimitive(ObjectId objectId, uint32_t primitiveIndex);
+
+  void clearPrimitives(ObjectId objectId);
+  // delete
+  bool removeFieldObject(ObjectId objectId);
+
+  // helpers
+  bool contains(ObjectId objectId) const noexcept;
+  uint32_t fieldObjectCount() const noexcept;
+  uint32_t primitiveCount(ObjectId objectId) const;
   uint32_t primitiveOffset(ObjectId objectId) const;
 
 private:

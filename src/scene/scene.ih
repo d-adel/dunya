@@ -5,6 +5,7 @@
 #include "context/context.h"
 #include "config/config.h"
 #include "fieldobject/fieldobject.h"
+#include "command/command.h"
 
 #include <array>
 #include <cstdint>

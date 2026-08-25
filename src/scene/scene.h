@@ -8,6 +8,7 @@
 #include "frame/frame.h"
 #include "fieldobject/fieldobject.h"
 #include "objectregistry/objectregistry.h"
+#include "commandhistory/commandhistory.h"
 
 #include <glm/glm.hpp>
 #include <vector>
@@ -44,6 +45,9 @@ public:
   const std::vector<Texture>& textures() const noexcept;
   const std::vector<Sampler>& samplers() const noexcept;
 
+  void undo();
+  void redo();
+
 private:
   static std::vector<Material> createMaterials();
   static std::vector<Texture> createTextures(const Device& device);
@@ -56,6 +60,6 @@ private:
   std::vector<Texture> m_textures;
   std::vector<Mesh> m_meshes;
   std::vector<DrawItem> m_drawItems;
-
   ObjectRegistry m_objectRegistry;
+  CommandHistory m_commandHistory;
 };

@@ -87,3 +87,4 @@ constexpr uint32_t FIELD_GRID_RESOLUTION = 128;
 constexpr float FIELD_GRID_MARGIN = 0.5f;
 
 constexpr ObjectId INVALID_OBJECT_ID = UINT32_MAX;
+constexpr uint32_t INVALID_PRIMITIVE_OFFSET = UINT32_MAX;

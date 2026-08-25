@@ -19,9 +19,14 @@ Scene::Scene(const Context& context)
   m_drawItems.emplace_back(DrawItem({0, 2, model}));
   m_drawItems.emplace_back(DrawItem({0, 3, model2}));
 
-  ObjectId objectId = addFieldObject(glm::vec3(1.0f, 0.45f, 0.0f));
+  FieldObject fieldObject{};
+  fieldObject.position = glm::vec3(1.0f, 0.45f, 0.0f);
+  fieldObject.resolution = glm::uvec3(FIELD_GRID_RESOLUTION);
+  ObjectId objectId = m_objectRegistry.addFieldObject(fieldObject);
   addInitialPrimitives(objectId);
-  ObjectId planeId = addFieldObject(glm::vec3(0.0f, -2.0f, 0.0f));
+
+  fieldObject.position = glm::vec3(0.0f, -2.0f, 0.0f);
+  ObjectId planeId = m_objectRegistry.addFieldObject(fieldObject);
   m_objectRegistry.addPrimitive(
     planeId,
     dunya::field::makeBox(
@@ -51,7 +56,13 @@ bool Scene::addPrimitive(
   const dunya::field::Primitive primitive =
     dunya::field::makeSphere(centre, radius, material, operation, blend);
 
-  return m_objectRegistry.addPrimitive(objectId, primitive);
+  AddPrimitiveCommand command(
+    objectId,
+    m_objectRegistry.primitiveCount(objectId),
+    primitive
+  );
+
+  return m_commandHistory.execute(command, m_objectRegistry);
 }
 
 ObjectId Scene::addFieldObject(glm::vec3 position) {
@@ -60,13 +71,18 @@ ObjectId Scene::addFieldObject(glm::vec3 position) {
   fieldObject.position = position;
   fieldObject.resolution = glm::uvec3(FIELD_GRID_RESOLUTION);
 
-  const ObjectId objectId = m_objectRegistry.addFieldObject(fieldObject);
+  AddFieldObjectCommand command{.id = INVALID_OBJECT_ID, .object = fieldObject};
 
-  if (objectId == INVALID_OBJECT_ID) {
-    return INVALID_OBJECT_ID;
-  }
+  m_commandHistory.execute(command, m_objectRegistry);
+  return command.id;
+}
 
-  return objectId;
+void Scene::undo() {
+  m_commandHistory.undo(m_objectRegistry);
+}
+
+void Scene::redo() {
+  m_commandHistory.redo(m_objectRegistry);
 }
 
 void Scene::setVolumeIndex(ObjectId objectIndex, uint32_t volumeIndex) {

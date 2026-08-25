@@ -13,11 +13,13 @@ ObjectRegistry::ObjectRegistry() : m_fieldObjects(MAX_FIELD_OBJECTS) {
 }
 
 ObjectId ObjectRegistry::allocateObjectId() {
-  if (!m_freeObjectIds.empty()) {
+  while (!m_freeObjectIds.empty()) {
     const ObjectId objectId = m_freeObjectIds.top();
     m_freeObjectIds.pop();
 
-    return objectId;
+    if (!m_fieldObjects[objectId].object.has_value()) {
+      return objectId;
+    }
   }
 
   if (m_nextUnusedObjectId >= MAX_FIELD_OBJECTS) {
@@ -34,6 +36,21 @@ ObjectId ObjectRegistry::addFieldObject(const FieldObject& fieldObject) {
     return INVALID_OBJECT_ID;
   }
 
+  addFieldObjectAt(objectId, fieldObject);
+
+  return objectId;
+}
+
+bool ObjectRegistry::addFieldObjectAt(
+  ObjectId objectId,
+  const FieldObject& fieldObject
+) {
+  if (
+    objectId >= MAX_FIELD_OBJECTS || m_fieldObjects[objectId].object.has_value()
+  ) {
+    return false;
+  }
+
   FieldObjectSlot& slot = m_fieldObjects[objectId];
 
   slot.object = fieldObject;
@@ -47,10 +64,114 @@ ObjectId ObjectRegistry::addFieldObject(const FieldObject& fieldObject) {
   m_activeFieldObjects.push_back(objectId);
 
   std::span<dunya::field::Primitive> primitives = getPrimitives(objectId);
+
+  refreshDerived(getFieldObject(objectId), primitives);
+
+  return true;
+}
+
+bool ObjectRegistry::setPrimitive(
+  ObjectId objectId,
+  uint32_t primitiveIndex,
+  const dunya::field::Primitive& primitive
+) {
+  if (!contains(objectId)) {
+    return false;
+  }
+
+  FieldObjectSlot& slot = m_fieldObjects[objectId];
+
+  if (primitiveIndex >= slot.primitiveCount) {
+    return false;
+  }
+
+  m_primitives[slot.primitiveOffset + primitiveIndex] = primitive;
+
+  std::span<dunya::field::Primitive> primitives = getPrimitives(objectId);
+
   FieldObject& object = getFieldObject(objectId);
+
   refreshDerived(object, primitives);
 
-  return objectId;
+  object.dirty = true;
+
+  return true;
+}
+
+bool ObjectRegistry::insertPrimitive(
+  ObjectId objectId,
+  uint32_t primitiveIndex,
+  const dunya::field::Primitive& primitive
+) {
+  if (!contains(objectId)) {
+    return false;
+  }
+
+  FieldObjectSlot& slot = m_fieldObjects[objectId];
+
+  if (primitiveIndex > slot.primitiveCount) {
+    return false;
+  }
+
+  if (slot.primitiveCount >= MAX_FIELD_PRIMITIVES) {
+    return false;
+  }
+
+  if (slot.primitiveCount == slot.primitiveCapacity) {
+    uint32_t newCapacity =
+      slot.primitiveCapacity == 0 ? 1 : slot.primitiveCapacity * 2;
+
+    newCapacity =
+      std::min(newCapacity, static_cast<uint32_t>(MAX_FIELD_PRIMITIVES));
+
+    std::optional<const uint32_t> newOffset =
+      allocatePrimitiveRange(newCapacity);
+
+    if (!newOffset.has_value()) {
+      return false;
+    }
+
+    if (newOffset.value() == INVALID_PRIMITIVE_OFFSET) {
+      return false;
+    }
+
+    if (slot.primitiveCount > 0) {
+      std::move(
+        m_primitives.begin() + slot.primitiveOffset,
+        m_primitives.begin() + slot.primitiveOffset + slot.primitiveCount,
+        m_primitives.begin() + newOffset.value()
+      );
+    }
+
+    if (slot.primitiveCapacity > 0) {
+      releasePrimitiveRange(slot.primitiveOffset, slot.primitiveCapacity);
+    }
+
+    slot.primitiveOffset = newOffset.value();
+    slot.primitiveCapacity = newCapacity;
+  }
+
+  auto begin = m_primitives.begin() + slot.primitiveOffset;
+
+  std::move_backward(
+    begin + primitiveIndex,
+    begin + slot.primitiveCount,
+    begin + slot.primitiveCount + 1
+  );
+
+  begin[primitiveIndex] = primitive;
+
+  ++slot.primitiveCount;
+
+  std::span<dunya::field::Primitive> primitives = getPrimitives(objectId);
+
+  FieldObject& object = getFieldObject(objectId);
+
+  refreshDerived(object, primitives);
+
+  object.dirty = true;
+
+  return true;
 }
 
 bool ObjectRegistry::removeFieldObject(ObjectId objectId) {
@@ -244,29 +365,11 @@ bool ObjectRegistry::addPrimitive(
     return false;
   }
 
-  FieldObjectSlot& slot = m_fieldObjects[objectId];
-
-  if (slot.primitiveCount >= MAX_FIELD_PRIMITIVES) {
-    return false;
-  }
-
-  if (slot.primitiveCount == slot.primitiveCapacity) {
-    if (!growPrimitiveRange(slot, slot.primitiveCount + 1)) {
-      return false;
-    }
-  }
-
-  m_primitives[slot.primitiveOffset + slot.primitiveCount] = primitive;
-
-  ++slot.primitiveCount;
-
-  FieldObject& object = *slot.object;
-
-  object.dirty = true;
-
-  refreshDerived(object, getPrimitives(objectId));
-
-  return true;
+  return insertPrimitive(
+    objectId,
+    m_fieldObjects[objectId].primitiveCount,
+    primitive
+  );
 }
 
 bool ObjectRegistry::removePrimitive(
