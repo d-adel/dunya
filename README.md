@@ -123,3 +123,26 @@ It builds and runs the project against the criteria I set for each milestone
 and it answers questions about C++ and Vulkan while I am still learning them.
 It also writes the unit tests and when needed it moves code around without
 rewriting anything. However, decisionmaking is only done by myself.
+
+## Building
+
+dunya builds from a clean clone with no manual dependency setup. Everything
+except the Vulkan SDK is fetched by CMake.
+
+You need:
+
+- The [LunarG Vulkan SDK](https://vulkan.lunarg.com/). CMake finds it through
+  the `VULKAN_SDK` environment variable that the installer sets, and it also
+  provides `glslc`, which compiles the shaders as part of the build.
+- CMake 3.28 or newer.
+- A C++20 compiler. I build with Visual Studio 2026, and the warning settings
+  are strict, so the build should be silent.
+- Git (obviously)
+
+Then:
+
+```sh
+git clone https://github.com/d-adel/dunya.git
+cd dunya
+cmake -S . -B build
+cmake --build build
