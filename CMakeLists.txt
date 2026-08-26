@@ -130,6 +130,15 @@ FetchContent_Declare(
 
 # Fetch Jolt Physics. Its CMakeLists lives in Build/ rather than at the repo
 # root, and it disables its own samples and tests when it is not top level.
+# OFF because Jolt defaults it ON and would build against /MTd while every
+# other target here uses CMake's default /MDd - objects from the two runtimes
+# cannot be linked.
+set(USE_STATIC_MSVC_RUNTIME_LIBRARY OFF)
+
+# Jolt compiles its preconditions out by default, which turns a misuse into a
+# bare segfault instead of a message. Debug builds want them.
+set(USE_ASSERTS ON)
+
 FetchContent_Declare(
     JoltPhysics
     GIT_REPOSITORY  https://github.com/jrouwe/JoltPhysics
@@ -167,12 +176,13 @@ target_link_libraries(imgui PUBLIC glfw Vulkan::Vulkan)
 
 target_compile_features(imgui PUBLIC cxx_std_20)
 
-# Field evaluation, free of Vulkan so the tests can link it alone
+# Dunya libraries
 add_subdirectory(src/dunya/core)
 add_subdirectory(src/dunya/objectmodel)
 add_subdirectory(src/dunya/editor)
 add_subdirectory(src/dunya/platform)
 add_subdirectory(src/dunya/field)
+add_subdirectory(src/dunya/physics)
 
 # Image comparison, free of Vulkan for the same reason
 add_subdirectory(src/dunya/imagecompare)
@@ -188,6 +198,7 @@ add_executable(${PROJECT_NAME}
     src/framecheck/framecheck.cc
     src/application/application.cc
     src/scene/scene.cc
+    src/physicsdemo/physicsdemo.cc
 )
 
 find_program(
@@ -284,6 +295,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     dunya::gpu
     dunya::renderer
     dunya::field
+    dunya::physics
 
     # Also where stb's implementations now live, for the whole project: texture
     # loading gets them from here rather than from a second copy that would

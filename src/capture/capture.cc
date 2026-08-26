@@ -117,8 +117,10 @@ dunya::image::Bitmap read(
   bitmap.pixels.resize(static_cast<size_t>(bytes));
 
   void* mapped = nullptr;
-  if (vkMapMemory(device.vkDevice(), readback.memory(), 0, bytes, 0, &mapped)
-      != VK_SUCCESS) {
+  if (
+    vkMapMemory(device.vkDevice(), readback.memory(), 0, bytes, 0, &mapped)
+    != VK_SUCCESS
+  ) {
     throw std::runtime_error("Failed to map the capture readback buffer");
   }
 

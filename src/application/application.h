@@ -1,5 +1,8 @@
 #pragma once
 
+#include <dunya/physics/joltlibrary/joltlibrary.h>
+#include <dunya/physics/physicsworld/physicsworld.h>
+#include <physicsdemo/physicsdemo.h>
 #include <dunya/gpu/context/context.h>
 #include <dunya/gpu/swapchain/swapchain.h>
 #include <scene/scene.h>
@@ -54,6 +57,12 @@ private:
   dunya::field::Ray cursorRay() const;
 
   dunya::gpu::Context m_context;
+
+  dunya::physics::JoltLibrary m_joltLibrary;
+  dunya::physics::PhysicsWorld m_physicsWorld;
+  // Important: demo after library and world initialization
+  PhysicsDemo m_physicsDemo;
+
   dunya::platform::Input m_input;
   dunya::objectmodel::Camera m_camera;
   dunya::gpu::SwapChain m_swapChain;

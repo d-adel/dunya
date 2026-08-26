@@ -8,23 +8,22 @@ SwapChainSupportDetails querySwapChainSupport(
 ) {
   SwapChainSupportDetails details;
 
-  if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
-        device,
-        surface,
-        &details.capabilities
-      )
-      != VK_SUCCESS) {
+  if (
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+      device,
+      surface,
+      &details.capabilities
+    )
+    != VK_SUCCESS
+  ) {
     throw std::runtime_error("Failed to query surface capabilities");
   }
 
   uint32_t formatCount;
-  if (vkGetPhysicalDeviceSurfaceFormatsKHR(
-        device,
-        surface,
-        &formatCount,
-        nullptr
-      )
-      != VK_SUCCESS) {
+  if (
+    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr)
+    != VK_SUCCESS
+  ) {
     throw std::runtime_error("Failed to count surface formats");
   }
 
@@ -33,38 +32,44 @@ SwapChainSupportDetails querySwapChainSupport(
 
     // VK_INCOMPLETE is a success code but means the list was truncated, so
     // anything other than VK_SUCCESS is a short read here.
-    if (vkGetPhysicalDeviceSurfaceFormatsKHR(
-          device,
-          surface,
-          &formatCount,
-          details.formats.data()
-        )
-        != VK_SUCCESS) {
+    if (
+      vkGetPhysicalDeviceSurfaceFormatsKHR(
+        device,
+        surface,
+        &formatCount,
+        details.formats.data()
+      )
+      != VK_SUCCESS
+    ) {
       throw std::runtime_error("Failed to enumerate surface formats");
     }
   }
 
   uint32_t presentModeCount;
-  if (vkGetPhysicalDeviceSurfacePresentModesKHR(
-        device,
-        surface,
-        &presentModeCount,
-        nullptr
-      )
-      != VK_SUCCESS) {
+  if (
+    vkGetPhysicalDeviceSurfacePresentModesKHR(
+      device,
+      surface,
+      &presentModeCount,
+      nullptr
+    )
+    != VK_SUCCESS
+  ) {
     throw std::runtime_error("Failed to count surface present modes");
   }
 
   if (presentModeCount != 0) {
     details.presentModes.resize(presentModeCount);
 
-    if (vkGetPhysicalDeviceSurfacePresentModesKHR(
-          device,
-          surface,
-          &presentModeCount,
-          details.presentModes.data()
-        )
-        != VK_SUCCESS) {
+    if (
+      vkGetPhysicalDeviceSurfacePresentModesKHR(
+        device,
+        surface,
+        &presentModeCount,
+        details.presentModes.data()
+      )
+      != VK_SUCCESS
+    ) {
       throw std::runtime_error("Failed to enumerate surface present modes");
     }
   }
@@ -153,9 +158,10 @@ uint32_t Device::findMemoryType(
   vkGetPhysicalDeviceMemoryProperties(m_physicalDevice, &memProperties);
 
   for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-    if ((typeFilter & (1 << i))
-        && (memProperties.memoryTypes[i].propertyFlags & properties)
-             == properties) {
+    if (
+      (typeFilter & (1 << i))
+      && (memProperties.memoryTypes[i].propertyFlags & properties) == properties
+    ) {
       return i;
     }
   }
@@ -211,8 +217,10 @@ void Device::pickPhysicalDevice() {
                           && !swapChainSupport.presentModes.empty();
     }
 
-    if (!indices.isComplete() || !extensionsSupported || !featuresSupported
-        || !swapChainAdequate) {
+    if (
+      !indices.isComplete() || !extensionsSupported || !featuresSupported
+      || !swapChainAdequate
+    ) {
       continue;
     }
 
@@ -311,8 +319,10 @@ void Device::createLogicalDevice() {
     static_cast<uint32_t>(deviceExtensions.size());
   createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
-  if (vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_device)
-      != VK_SUCCESS) {
+  if (
+    vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_device)
+    != VK_SUCCESS
+  ) {
     throw std::runtime_error("Failed to create logical device");
   }
 

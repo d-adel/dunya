@@ -38,8 +38,10 @@ DescriptorGroup::DescriptorGroup(
   createSetLayout(buffers, sampledImages, samplers, storageImages);
   createBuffers(device, buffers);
 
-  if (buffers.empty() && sampledImages.empty() && samplers.empty()
-      && storageImages.empty()) {
+  if (
+    buffers.empty() && sampledImages.empty() && samplers.empty()
+    && storageImages.empty()
+  ) {
     throw std::runtime_error("A descriptor group needs at least one binding");
   }
 
@@ -325,8 +327,10 @@ void DescriptorGroup::createSetLayout(
       : 0;
   layoutInfo.pNext = &bindingFlagsInfo;
 
-  if (vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_setLayout)
-      != VK_SUCCESS) {
+  if (
+    vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_setLayout)
+    != VK_SUCCESS
+  ) {
     throw std::runtime_error("Failed to create descriptor set layout");
   }
 }
@@ -363,15 +367,17 @@ void DescriptorGroup::createBuffers(
           | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
       );
 
-      if (vkMapMemory(
-            m_device,
-            slot.buffers[i].memory(),
-            0,
-            binding.size,
-            0,
-            &slot.mapped[i]
-          )
-          != VK_SUCCESS) {
+      if (
+        vkMapMemory(
+          m_device,
+          slot.buffers[i].memory(),
+          0,
+          binding.size,
+          0,
+          &slot.mapped[i]
+        )
+        != VK_SUCCESS
+      ) {
         throw std::runtime_error("Failed to map uniform buffer memory");
       }
     }
@@ -461,8 +467,9 @@ void DescriptorGroup::createPool(
   poolInfo.flags =
     m_updateAfterBind ? VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT : 0;
 
-  if (vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_pool)
-      != VK_SUCCESS) {
+  if (
+    vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_pool) != VK_SUCCESS
+  ) {
     throw std::runtime_error("Failed to create descriptor pool");
   }
 }
@@ -482,8 +489,9 @@ void DescriptorGroup::createSets(
 
   m_sets.resize(m_frameCount);
 
-  if (vkAllocateDescriptorSets(m_device, &allocInfo, m_sets.data())
-      != VK_SUCCESS) {
+  if (
+    vkAllocateDescriptorSets(m_device, &allocInfo, m_sets.data()) != VK_SUCCESS
+  ) {
     throw std::runtime_error("Failed to allocate descriptor sets");
   }
 

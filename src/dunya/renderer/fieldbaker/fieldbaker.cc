@@ -190,15 +190,10 @@ std::vector<uint8_t> readVolume(
   std::vector<uint8_t> bytes(static_cast<size_t>(sizeBytes));
 
   void* mapped = nullptr;
-  if (vkMapMemory(
-        device.vkDevice(),
-        readback.memory(),
-        0,
-        sizeBytes,
-        0,
-        &mapped
-      )
-      != VK_SUCCESS) {
+  if (
+    vkMapMemory(device.vkDevice(), readback.memory(), 0, sizeBytes, 0, &mapped)
+    != VK_SUCCESS
+  ) {
     throw std::runtime_error("Failed to map the bake readback buffer");
   }
 

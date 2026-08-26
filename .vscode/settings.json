@@ -35,7 +35,8 @@
     "${workspaceFolder}/build-ninja/_deps/glm-src",
     "${workspaceFolder}/build-ninja/_deps/glfw-src/include",
     "${workspaceFolder}/build-ninja/_deps/stb-src",
-    "${workspaceFolder}/build-ninja/_deps/tinyobjloader-src"
+    "${workspaceFolder}/build-ninja/_deps/tinyobjloader-src",
+    "${workspaceFolder}/build-ninja/_deps/joltphysics-src"
   ],
   // Shader language server (antaalt.shader-validator): semantic highlighting,
   // completion, signature help, symbols, and glslang validation inline. It is

@@ -50,8 +50,10 @@ bool ObjectRegistry::addFieldObjectAt(
   dunya::core::ObjectId objectId,
   const FieldObject& fieldObject
 ) {
-  if (objectId >= dunya::core::MAX_FIELD_OBJECTS
-      || m_fieldObjects[objectId].object.has_value()) {
+  if (
+    objectId >= dunya::core::MAX_FIELD_OBJECTS
+    || m_fieldObjects[objectId].object.has_value()
+  ) {
     return false;
   }
 

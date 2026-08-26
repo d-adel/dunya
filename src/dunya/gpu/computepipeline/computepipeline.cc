@@ -18,13 +18,10 @@ ComputePipeline::ComputePipeline(
       static_cast<uint32_t>(pushConstantRanges.size());
     layoutInfo.pPushConstantRanges = pushConstantRanges.data();
 
-    if (vkCreatePipelineLayout(
-          m_device,
-          &layoutInfo,
-          nullptr,
-          &m_pipelineLayout
-        )
-        != VK_SUCCESS) {
+    if (
+      vkCreatePipelineLayout(m_device, &layoutInfo, nullptr, &m_pipelineLayout)
+      != VK_SUCCESS
+    ) {
       throw std::runtime_error("Failed to create compute pipeline layout");
     }
 
@@ -42,15 +39,17 @@ ComputePipeline::ComputePipeline(
     pipelineInfo.stage = stageInfo;
     pipelineInfo.layout = m_pipelineLayout;
 
-    if (vkCreateComputePipelines(
-          m_device,
-          VK_NULL_HANDLE,
-          1,
-          &pipelineInfo,
-          nullptr,
-          &m_pipeline
-        )
-        != VK_SUCCESS) {
+    if (
+      vkCreateComputePipelines(
+        m_device,
+        VK_NULL_HANDLE,
+        1,
+        &pipelineInfo,
+        nullptr,
+        &m_pipeline
+      )
+      != VK_SUCCESS
+    ) {
       throw std::runtime_error("Failed to create compute pipeline");
     }
   } catch (...) {

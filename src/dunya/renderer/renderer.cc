@@ -54,8 +54,10 @@ void Renderer::createCommandPool(
   poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
   poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
 
-  if (vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool)
-      != VK_SUCCESS) {
+  if (
+    vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool)
+    != VK_SUCCESS
+  ) {
     throw std::runtime_error("Failed to create command pool");
   }
 }
@@ -70,8 +72,10 @@ void Renderer::createCommandBuffer() {
 
   allocInfo.commandBufferCount = (uint32_t)m_commandBuffers.size();
 
-  if (vkAllocateCommandBuffers(m_device, &allocInfo, m_commandBuffers.data())
-      != VK_SUCCESS) {
+  if (
+    vkAllocateCommandBuffers(m_device, &allocInfo, m_commandBuffers.data())
+    != VK_SUCCESS
+  ) {
     throw std::runtime_error("failed to allocate command buffers!");
   }
 }
@@ -89,18 +93,22 @@ void Renderer::createSyncObjects(uint32_t imageCount) {
   semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
   for (size_t i = 0; i < dunya::core::MAX_FRAMES_IN_FLIGHT; i++) {
-    if (vkCreateFence(m_device, &fenceInfo, nullptr, &m_inFlightFences[i])
-        != VK_SUCCESS) {
+    if (
+      vkCreateFence(m_device, &fenceInfo, nullptr, &m_inFlightFences[i])
+      != VK_SUCCESS
+    ) {
       throw std::runtime_error("Failed to create fence for a frame");
     }
 
-    if (vkCreateSemaphore(
-          m_device,
-          &semaphoreInfo,
-          nullptr,
-          &m_imageAvailableSemaphores[i]
-        )
-        != VK_SUCCESS) {
+    if (
+      vkCreateSemaphore(
+        m_device,
+        &semaphoreInfo,
+        nullptr,
+        &m_imageAvailableSemaphores[i]
+      )
+      != VK_SUCCESS
+    ) {
       throw std::runtime_error(
         "Failed to create image available semaphore for a frame"
       );
@@ -108,8 +116,10 @@ void Renderer::createSyncObjects(uint32_t imageCount) {
   }
 
   for (auto& semaphore : m_renderFinishedSemaphores) {
-    if (vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &semaphore)
-        != VK_SUCCESS) {
+    if (
+      vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &semaphore)
+      != VK_SUCCESS
+    ) {
       throw std::runtime_error(
         "Failed to create render finished semaphore for a frame"
       );
@@ -125,8 +135,10 @@ void Renderer::recordCommandBuffer(
   VkCommandBufferBeginInfo beginInfo{};
   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-  if (vkBeginCommandBuffer(m_commandBuffers[m_currentFrame], &beginInfo)
-      != VK_SUCCESS) {
+  if (
+    vkBeginCommandBuffer(m_commandBuffers[m_currentFrame], &beginInfo)
+    != VK_SUCCESS
+  ) {
     throw std::runtime_error("failed to begin recording command buffer!");
   }
 
@@ -381,14 +393,16 @@ bool Renderer::drawFrame(
   const std::function<void(VkCommandBuffer)>& onOverlay,
   const std::function<void(VkImage)>& onFrameReady
 ) {
-  if (vkWaitForFences(
-        m_device,
-        1,
-        &m_inFlightFences[m_currentFrame],
-        VK_TRUE,
-        UINT64_MAX
-      )
-      != VK_SUCCESS) {
+  if (
+    vkWaitForFences(
+      m_device,
+      1,
+      &m_inFlightFences[m_currentFrame],
+      VK_TRUE,
+      UINT64_MAX
+    )
+    != VK_SUCCESS
+  ) {
     throw std::runtime_error("Failed waiting for the in flight fence");
   }
 
@@ -407,8 +421,9 @@ bool Renderer::drawFrame(
     throw std::runtime_error("Failed to acquire swap chain image");
   }
 
-  if (vkResetFences(m_device, 1, &m_inFlightFences[m_currentFrame])
-      != VK_SUCCESS) {
+  if (
+    vkResetFences(m_device, 1, &m_inFlightFences[m_currentFrame]) != VK_SUCCESS
+  ) {
     throw std::runtime_error("Failed to reset the in flight fence");
   }
 
@@ -454,13 +469,15 @@ bool Renderer::drawFrame(
   submitInfo2.signalSemaphoreInfoCount = 1;
   submitInfo2.pSignalSemaphoreInfos = &signalSubmitInfo;
 
-  if (vkQueueSubmit2(
-        m_graphicsQueue,
-        1,
-        &submitInfo2,
-        m_inFlightFences[m_currentFrame]
-      )
-      != VK_SUCCESS) {
+  if (
+    vkQueueSubmit2(
+      m_graphicsQueue,
+      1,
+      &submitInfo2,
+      m_inFlightFences[m_currentFrame]
+    )
+    != VK_SUCCESS
+  ) {
     throw std::runtime_error("failed to submit draw command buffer!");
   }
 

@@ -89,8 +89,10 @@ void Buffer::createBuffer(
   allocInfo.memoryTypeIndex =
     device.findMemoryType(memRequirements.memoryTypeBits, properties);
 
-  if (vkAllocateMemory(m_device, &allocInfo, nullptr, &m_bufferMemory)
-      != VK_SUCCESS) {
+  if (
+    vkAllocateMemory(m_device, &allocInfo, nullptr, &m_bufferMemory)
+    != VK_SUCCESS
+  ) {
     throw std::runtime_error("failed to allocate buffer memory!");
   }
 

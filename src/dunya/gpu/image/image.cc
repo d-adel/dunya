@@ -130,8 +130,10 @@ void Image::createImage(
   imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
   imageInfo.flags = 0;  // Optional
 
-  if (vkCreateImage(device.vkDevice(), &imageInfo, nullptr, &m_image)
-      != VK_SUCCESS) {
+  if (
+    vkCreateImage(device.vkDevice(), &imageInfo, nullptr, &m_image)
+    != VK_SUCCESS
+  ) {
     throw std::runtime_error("Failed to create image");
   }
 
@@ -144,13 +146,17 @@ void Image::createImage(
   allocInfo.memoryTypeIndex =
     device.findMemoryType(memRequirements.memoryTypeBits, properties);
 
-  if (vkAllocateMemory(device.vkDevice(), &allocInfo, nullptr, &m_imageMemory)
-      != VK_SUCCESS) {
+  if (
+    vkAllocateMemory(device.vkDevice(), &allocInfo, nullptr, &m_imageMemory)
+    != VK_SUCCESS
+  ) {
     throw std::runtime_error("Failed to allocate image memory");
   }
 
-  if (vkBindImageMemory(device.vkDevice(), m_image, m_imageMemory, 0)
-      != VK_SUCCESS) {
+  if (
+    vkBindImageMemory(device.vkDevice(), m_image, m_imageMemory, 0)
+    != VK_SUCCESS
+  ) {
     throw std::runtime_error("Failed to bind image memory");
   }
 }
@@ -176,14 +182,18 @@ void Image::transition(
   barrier.subresourceRange.baseArrayLayer = 0;
   barrier.subresourceRange.layerCount = 1;
 
-  if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED
-      && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+  if (
+    oldLayout == VK_IMAGE_LAYOUT_UNDEFINED
+    && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+  ) {
     barrier.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
     barrier.srcAccessMask = 0;
     barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
     barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
-  } else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-             && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+  } else if (
+    oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+    && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+  ) {
     barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
     barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
     barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;

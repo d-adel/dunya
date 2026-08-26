@@ -27,8 +27,9 @@ Sampler::Sampler(const Device& device, const SamplerSettings& settings)
   samplerInfo.maxAnisotropy =
     settings.anisotropy ? properties.limits.maxSamplerAnisotropy : 1.0f;
 
-  if (vkCreateSampler(m_device, &samplerInfo, nullptr, &m_sampler)
-      != VK_SUCCESS) {
+  if (
+    vkCreateSampler(m_device, &samplerInfo, nullptr, &m_sampler) != VK_SUCCESS
+  ) {
     throw std::runtime_error("Failed to create texture sampler");
   }
 }

@@ -12,7 +12,8 @@ const auto MESH_ATTRIBUTES =
 }  // namespace
 
 Application::Application()
-    : m_input(m_context.window().handle()),
+    : m_physicsDemo(m_physicsWorld),
+      m_input(m_context.window().handle()),
       m_swapChain(m_context),
       m_scene(m_context),
       m_frameGlobals(m_context.device()),
@@ -124,12 +125,28 @@ int Application::start(const StartupOptions& options) {
   double prevTime = glfwGetTime();
   double pipelineReloadCheck = 0;
   double statWindowStart = prevTime;
+  double physicsAccumulator = 0.0;
+  uint64_t physicsStep = 0;
   uint32_t statFrames = 0;
 
   while (!glfwWindowShouldClose(m_context.window().handle())) {
     double now = glfwGetTime();
     float dt = static_cast<float>(now - prevTime);
+
     prevTime = now;
+
+    physicsAccumulator += dt;
+
+    while (physicsAccumulator >= dunya::physics::PhysicsWorld::TIME_STEP) {
+      m_physicsWorld.step();
+      ++physicsStep;
+
+      if (physicsStep % 30 == 0) {
+        m_physicsDemo.log();
+      }
+
+      physicsAccumulator -= dunya::physics::PhysicsWorld::TIME_STEP;
+    }
 
     ++statFrames;
     if (now - statWindowStart >= 1.0) {
@@ -335,8 +352,10 @@ void Application::handleMouseButtonEvent(
     return;
   }
 
-  if (event.button != GLFW_MOUSE_BUTTON_LEFT
-      || event.type != dunya::platform::MouseButtonEventType::Pressed) {
+  if (
+    event.button != GLFW_MOUSE_BUTTON_LEFT
+    || event.type != dunya::platform::MouseButtonEventType::Pressed
+  ) {
     return;
   }
 
@@ -485,8 +504,10 @@ void Application::handleKeyEvent(const dunya::platform::KeyEvent& event) {
     return;
   }
 
-  if (event.key == GLFW_KEY_ESCAPE
-      && event.type == dunya::platform::KeyEventType::Pressed) {
+  if (
+    event.key == GLFW_KEY_ESCAPE
+    && event.type == dunya::platform::KeyEventType::Pressed
+  ) {
     m_input.toggleEnabled();
 
     clearCameraInput();
@@ -496,27 +517,35 @@ void Application::handleKeyEvent(const dunya::platform::KeyEvent& event) {
     setLookMode(false);
   }
 
-  if (event.key == GLFW_KEY_P
-      && event.type == dunya::platform::KeyEventType::SinglePressed) {
+  if (
+    event.key == GLFW_KEY_P
+    && event.type == dunya::platform::KeyEventType::SinglePressed
+  ) {
     m_frameContext.mode = nextPipelineType(m_frameContext.mode);
     std::cout << "Pipeline mode switched to: " << (int)m_frameContext.mode
               << '\n';
   }
 
-  if (event.key == GLFW_KEY_B
-      && event.type == dunya::platform::KeyEventType::SinglePressed) {
+  if (
+    event.key == GLFW_KEY_B
+    && event.type == dunya::platform::KeyEventType::SinglePressed
+  ) {
     m_fieldEditor.stress(10);
     return;
   }
 
-  if (event.key == GLFW_KEY_R
-      && event.type == dunya::platform::KeyEventType::SinglePressed) {
+  if (
+    event.key == GLFW_KEY_R
+    && event.type == dunya::platform::KeyEventType::SinglePressed
+  ) {
     m_reloadRequested = true;
     return;
   }
 
-  if (event.key == GLFW_KEY_V
-      && event.type == dunya::platform::KeyEventType::SinglePressed) {
+  if (
+    event.key == GLFW_KEY_V
+    && event.type == dunya::platform::KeyEventType::SinglePressed
+  ) {
     m_context.device().waitIdle();
     m_swapChain.setUncapped(!m_swapChain.uncapped());
     std::cout << "Present mode: "
@@ -525,15 +554,19 @@ void Application::handleKeyEvent(const dunya::platform::KeyEvent& event) {
     return;
   }
 
-  if (event.key == GLFW_KEY_Z
-      && event.type == dunya::platform::KeyEventType::Pressed) {
+  if (
+    event.key == GLFW_KEY_Z
+    && event.type == dunya::platform::KeyEventType::Pressed
+  ) {
     if (m_input.isDown(GLFW_KEY_LEFT_CONTROL)) {
       m_fieldEditor.undo();
     }
   }
 
-  if (event.key == GLFW_KEY_Y
-      && event.type == dunya::platform::KeyEventType::Pressed) {
+  if (
+    event.key == GLFW_KEY_Y
+    && event.type == dunya::platform::KeyEventType::Pressed
+  ) {
     if (m_input.isDown(GLFW_KEY_LEFT_CONTROL)) {
       m_fieldEditor.redo();
     }

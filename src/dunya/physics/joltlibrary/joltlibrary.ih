@@ -1,0 +1,7 @@
+#include "joltlibrary.h"
+
+#include <Jolt/RegisterTypes.h>
+#include <Jolt/Core/Factory.h>
+
+#include <cstdarg>
+#include <cstdio>

@@ -98,15 +98,17 @@ void Texture::createTextureImage(
   );
 
   void* mapped;
-  if (vkMapMemory(
-        device.vkDevice(),
-        stagingBuffer.memory(),
-        0,
-        imageSize,
-        0,
-        &mapped
-      )
-      != VK_SUCCESS) {
+  if (
+    vkMapMemory(
+      device.vkDevice(),
+      stagingBuffer.memory(),
+      0,
+      imageSize,
+      0,
+      &mapped
+    )
+    != VK_SUCCESS
+  ) {
     throw std::runtime_error("Failed to map texture staging memory");
   }
 

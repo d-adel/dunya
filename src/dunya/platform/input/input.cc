@@ -75,8 +75,9 @@ void Input::update() {
   for (int key = 0; key <= GLFW_KEY_LAST; ++key) {
     KeyState& state = m_keyStates[key];
 
-    if (state.pendingSingle
-        && now - state.lastPressMs >= m_timing.doubleWindowMs) {
+    if (
+      state.pendingSingle && now - state.lastPressMs >= m_timing.doubleWindowMs
+    ) {
       state.pendingSingle = false;
 
       dispatch(key, KeyEventType::SinglePressed);
