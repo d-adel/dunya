@@ -1,5 +1,15 @@
 #include "application.ih"
 
+namespace {
+
+const std::vector<VkVertexInputBindingDescription> MESH_BINDINGS{
+  Vertex::getBindingDescription()
+};
+
+const auto MESH_ATTRIBUTES = Vertex::getAttributeDescriptions();
+
+}  // namespace
+
 Application::Application()
     : m_input(m_context.window().handle()),
       m_swapChain(m_context),
@@ -21,7 +31,9 @@ Application::Application()
           m_frameGlobals.setLayout(),
           m_resourceTable.setLayout()
         },
-        m_swapChain
+        m_swapChain,
+        MESH_BINDINGS,
+        MESH_ATTRIBUTES
       ),
       m_fieldPipeline(
         PipelineType::Field,

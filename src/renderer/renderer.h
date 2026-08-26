@@ -1,8 +1,8 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
-#include "swapchain/swapchain.h"
-#include "pipeline/pipeline.h"
+#include "gpu/swapchain/swapchain.h"
+#include "gpu/pipeline/pipeline.h"
 #include "resourcetable/resourcetable.h"
 #include "frameglobals/frameglobals.h"
 #include "frame/frame.h"
@@ -10,7 +10,7 @@
 #include "volumepool/volumepool.h"
 #include "fieldbaker/fieldbaker.h"
 
-#include "config/config.h"
+#include "core/config/config.h"
 
 #include <functional>
 #include <vector>

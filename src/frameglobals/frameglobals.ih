@@ -1,2 +1,2 @@
 #include "frameglobals.h"
-#include "config/config.h"
+#include "core/config/config.h"

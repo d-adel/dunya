@@ -1,14 +1,14 @@
 #pragma once
 
 #include "field/field.h"
-#include "material/material.h"
+#include "objectmodel/material/material.h"
 #include "mesh/mesh.h"
-#include "sampler/sampler.h"
-#include "texture/texture.h"
+#include "gpu/sampler/sampler.h"
+#include "gpu/texture/texture.h"
 #include "frame/frame.h"
-#include "fieldobject/fieldobject.h"
-#include "objectregistry/objectregistry.h"
-#include "commandhistory/commandhistory.h"
+#include "objectmodel/fieldobject/fieldobject.h"
+#include "objectmodel/objectregistry/objectregistry.h"
+#include "objectmodel/commandhistory/commandhistory.h"
 
 #include <glm/glm.hpp>
 #include <vector>

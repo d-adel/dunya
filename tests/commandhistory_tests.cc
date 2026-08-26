@@ -1,11 +1,11 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
-#include "command/command.h"
-#include "commandhistory/commandhistory.h"
-#include "config/config.h"
+#include "objectmodel/command/command.h"
+#include "objectmodel/commandhistory/commandhistory.h"
+#include "core/config/config.h"
 #include "field/field.h"
-#include "objectregistry/objectregistry.h"
+#include "objectmodel/objectregistry/objectregistry.h"
 
 #include "tolerances.h"
 

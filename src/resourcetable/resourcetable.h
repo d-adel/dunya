@@ -1,10 +1,10 @@
 #pragma once
 
-#include "descriptorgroup/descriptorgroup.h"
-#include "device/device.h"
-#include "material/material.h"
-#include "sampler/sampler.h"
-#include "texture/texture.h"
+#include "gpu/descriptorgroup/descriptorgroup.h"
+#include "gpu/device/device.h"
+#include "objectmodel/material/material.h"
+#include "gpu/sampler/sampler.h"
+#include "gpu/texture/texture.h"
 
 #include <cstdint>
 #include <span>

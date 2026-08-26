@@ -1,4 +1,0 @@
-#include "image.h"
-#include "buffer/buffer.h"
-#include "oneshot/oneshotcommand.h"
-#include <stdexcept>

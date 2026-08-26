@@ -2,9 +2,9 @@
 # target links it on its own, which is what keeps that boundary honest.
 
 add_library(dunya_field STATIC
-    analytic.cc
-    raycast.cc
-    sampled.cc
+    analytic/analytic.cc
+    raycast/raycast.cc
+    sampled/sampled.cc
     primitive.cc
 )
 

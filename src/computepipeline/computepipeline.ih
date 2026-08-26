@@ -1,4 +1,0 @@
-#include "computepipeline.h"
-#include "shadermodule/shadermodule.h"
-
-#include <stdexcept>

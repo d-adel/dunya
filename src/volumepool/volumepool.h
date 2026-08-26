@@ -1,9 +1,9 @@
 #pragma once
 
-#include "texture/texture.h"
-#include "config/config.h"
-#include "device/device.h"
-#include "field/sampled.h"
+#include "gpu/texture/texture.h"
+#include "core/config/config.h"
+#include "gpu/device/device.h"
+#include "field/sampled/sampled.h"
 
 #include <vulkan/vulkan.h>
 #include <optional>

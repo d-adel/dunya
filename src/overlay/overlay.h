@@ -1,7 +1,7 @@
 #pragma once
 
-#include "context/context.h"
-#include "swapchain/swapchain.h"
+#include "gpu/context/context.h"
+#include "gpu/swapchain/swapchain.h"
 
 #include <vulkan/vulkan.h>
 

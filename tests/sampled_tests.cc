@@ -1,9 +1,9 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
-#include "field/analytic.h"
+#include "field/analytic/analytic.h"
 #include "field/field.h"
-#include "field/sampled.h"
+#include "field/sampled/sampled.h"
 
 #include "tolerances.h"
 

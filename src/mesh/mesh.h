@@ -1,6 +1,6 @@
 #pragma once
 
-#include "buffer/buffer.h"
+#include "gpu/buffer/buffer.h"
 #include "vertex/vertex.h"
 
 #include <vulkan/vulkan.h>

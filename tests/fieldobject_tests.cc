@@ -4,8 +4,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "field/field.h"
-#include "field/raycast.h"
-#include "fieldobject/fieldobject.h"
+#include "field/raycast/raycast.h"
+#include "objectmodel/fieldobject/fieldobject.h"
 
 #include "tolerances.h"
 

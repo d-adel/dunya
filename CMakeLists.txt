@@ -159,6 +159,9 @@ target_link_libraries(imgui PUBLIC glfw Vulkan::Vulkan)
 target_compile_features(imgui PUBLIC cxx_std_20)
 
 # Field evaluation, free of Vulkan so the tests can link it alone
+add_subdirectory(src/core)
+add_subdirectory(src/objectmodel)
+add_subdirectory(src/platform)
 add_subdirectory(src/field)
 
 # Image comparison, free of Vulkan for the same reason
@@ -169,47 +172,23 @@ enable_testing()
 # Define executable and link libraries
 add_executable(${PROJECT_NAME}
     src/main.cc
-    src/instance/instance.cc
-    src/window/window.cc
-    src/device/device.cc
-    src/surface/surface.cc
-    src/swapchain/swapchain.cc
-    src/pipeline/pipeline.cc
-    src/computepipeline/computepipeline.cc
-    src/shadermodule/shadermodule.cc
     src/renderer/renderer.cc
-    src/buffer/buffer.cc
     src/vertex/vertex.cc
     src/frameglobals/frameglobals.cc
     src/resourcetable/resourcetable.cc
-    src/descriptorgroup/descriptorgroup.cc
-    src/image/image.cc
-    src/oneshot/oneshotcommand.cc
     src/capture/capture.cc
     src/overlay/overlay.cc
     src/startupoptions/startupoptions.cc
     src/fieldeditor/fieldeditor.cc
     src/framecheck/framecheck.cc
-    src/texture/texture.cc
-    src/sampler/sampler.cc
-    src/depthimage/depthimage.cc
     src/mesh/tiny_obj_loader_impl.cc
     src/mesh/mesh.cc
-    src/camera/camera.cc
-    src/event/event.cc
-    src/input/input.cc
     src/application/application.cc
-    src/glfwlibrary/glfwlibrary.cc
-    src/context/context.cc
     src/scene/scene.cc
     src/frame/frame.cc
-    src/fieldobject/fieldobject.cc
     src/fieldobjecttable/fieldobjecttable.cc
     src/volumepool/volumepool.cc
     src/fieldbaker/fieldbaker.cc
-    src/objectregistry/objectregistry.cc
-    src/commandhistory/commandhistory.cc
-    src/command/command.cc
 )
 
 find_program(
@@ -221,6 +200,8 @@ find_program(
     REQUIRED
 )
 
+add_subdirectory(src/gpu)
+
 # Configuration
 # The GLM_* defines are not repeated here: they arrive as usage requirements
 # from dunya::field, which is the only way both sides are guaranteed to agree
@@ -231,14 +212,6 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     GLSLC_PATH=\"${GLSLC_EXECUTABLE}\"
     GLSLC_DEFINES=\"${SHADER_DEFINES_ARGS}\"
     GLSLC_INCLUDE_DIR=\"${SHADER_SOURCE_DIR}\"
-    DUNYA_MAX_FIELD_PRIMITIVES=${DUNYA_MAX_FIELD_PRIMITIVES}
-    DUNYA_MAX_TEXTURES=${DUNYA_MAX_TEXTURES}
-    DUNYA_MAX_SAMPLERS=${DUNYA_MAX_SAMPLERS}
-    DUNYA_MAX_MATERIALS=${DUNYA_MAX_MATERIALS}
-    DUNYA_MAX_FIELD_OBJECTS=${DUNYA_MAX_FIELD_OBJECTS}
-    DUNYA_SAMPLER_LINEAR_REPEAT=${DUNYA_SAMPLER_LINEAR_REPEAT}
-    DUNYA_SAMPLER_LINEAR_CLAMP=${DUNYA_SAMPLER_LINEAR_CLAMP}
-    DUNYA_SAMPLER_NEAREST_CLAMP=${DUNYA_SAMPLER_NEAREST_CLAMP}
 
     # The starting values for MarchParams. Three of these reached only the
     # shader before, which was fine while the shader was the only reader; now
@@ -313,6 +286,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     glfw
     Vulkan::Vulkan
     glm::glm
+    dunya::core
+    dunya::objectmodel
+    dunya::platform
+    dunya::gpu
     dunya::field
 
     # Also where stb's implementations now live, for the whole project: texture

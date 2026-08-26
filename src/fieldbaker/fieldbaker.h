@@ -1,10 +1,10 @@
 #pragma once
 
-#include "computepipeline/computepipeline.h"
+#include "gpu/computepipeline/computepipeline.h"
 #include "fieldobjecttable/fieldobjecttable.h"
-#include "fieldobject/fieldobject.h"
+#include "objectmodel/fieldobject/fieldobject.h"
 #include "volumepool/volumepool.h"
-#include "device/device.h"
+#include "gpu/device/device.h"
 
 #include <glm/glm.hpp>
 

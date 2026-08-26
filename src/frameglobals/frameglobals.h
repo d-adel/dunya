@@ -1,7 +1,7 @@
 #pragma once
 
-#include "descriptorgroup/descriptorgroup.h"
-#include "device/device.h"
+#include "gpu/descriptorgroup/descriptorgroup.h"
+#include "gpu/device/device.h"
 
 #include <glm/glm.hpp>
 

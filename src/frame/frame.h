@@ -1,11 +1,11 @@
 #pragma once
 
-#include "config/config.h"
+#include "core/config/config.h"
 #include "frameglobals/frameglobals.h"
 #include "mesh/mesh.h"
-#include "pipeline/pipeline.h"
+#include "gpu/pipeline/pipeline.h"
 #include "field/field.h"
-#include "fieldobject/fieldobject.h"
+#include "objectmodel/fieldobject/fieldobject.h"
 
 #include <glm/glm.hpp>
 #include <span>

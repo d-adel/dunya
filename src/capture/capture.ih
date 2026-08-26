@@ -1,7 +1,7 @@
 #include "capture.h"
 
-#include "buffer/buffer.h"
-#include "oneshot/oneshotcommand.h"
+#include "gpu/buffer/buffer.h"
+#include "gpu/oneshot/oneshotcommand.h"
 
 #include <algorithm>
 #include <cstring>

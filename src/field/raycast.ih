@@ -1,6 +1,0 @@
-#include "raycast.h"
-#include "analytic.h"
-
-#include <cmath>
-#include <algorithm>
-#include <limits>

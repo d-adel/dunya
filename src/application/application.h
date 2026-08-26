@@ -1,11 +1,11 @@
 #pragma once
 
-#include "context/context.h"
-#include "swapchain/swapchain.h"
+#include "gpu/context/context.h"
+#include "gpu/swapchain/swapchain.h"
 #include "scene/scene.h"
 #include "renderer/renderer.h"
-#include "camera/camera.h"
-#include "input/input.h"
+#include "objectmodel/camera/camera.h"
+#include "platform/input/input.h"
 #include "frame/frame.h"
 #include "resourcetable/resourcetable.h"
 #include "frameglobals/frameglobals.h"
@@ -17,7 +17,7 @@
 #include "fieldobjecttable/fieldobjecttable.h"
 #include "volumepool/volumepool.h"
 #include "fieldbaker/fieldbaker.h"
-#include "commandhistory/commandhistory.h"
+#include "objectmodel/commandhistory/commandhistory.h"
 
 /* Wiring, and the loop.
  *

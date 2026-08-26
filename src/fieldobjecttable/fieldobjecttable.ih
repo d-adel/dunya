@@ -1,5 +1,5 @@
 #include "fieldobjecttable.h"
-#include "config/config.h"
+#include "core/config/config.h"
 
 #include <array>
 #include <stdexcept>

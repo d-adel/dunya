@@ -1,11 +1,11 @@
 #include "scene.h"
-#include "field/analytic.h"
-#include "field/sampled.h"
+#include "field/analytic/analytic.h"
+#include "field/sampled/sampled.h"
 #include "frame/frame.h"
-#include "context/context.h"
-#include "config/config.h"
-#include "fieldobject/fieldobject.h"
-#include "command/command.h"
+#include "gpu/context/context.h"
+#include "core/config/config.h"
+#include "objectmodel/fieldobject/fieldobject.h"
+#include "objectmodel/command/command.h"
 
 #include <array>
 #include <cstdint>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "device/device.h"
+#include "gpu/device/device.h"
 #include "imagecompare/imagecompare.h"
 
 #include <vulkan/vulkan.h>

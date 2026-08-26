@@ -1,5 +1,0 @@
-#include "sampled.h"
-#include "analytic.h"
-
-#include <cmath>
-#include <stdexcept>

@@ -1,8 +1,8 @@
 #include "fieldeditor.h"
 
-#include "config/config.h"
-#include "field/analytic.h"
-#include "objectregistry/objectregistry.h"
+#include "core/config/config.h"
+#include "field/analytic/analytic.h"
+#include "objectmodel/objectregistry/objectregistry.h"
 
 #include <chrono>
 #include <iomanip>

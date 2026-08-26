@@ -1,7 +1,0 @@
-#include "texture.h"
-#include "oneshot/oneshotcommand.h"
-
-#include <stb_image.h>
-
-#include <string>
-#include <stdexcept>

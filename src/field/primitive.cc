@@ -1,5 +1,5 @@
 #include "field/field.h"
-#include "field/analytic.h"
+#include "field/analytic/analytic.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 

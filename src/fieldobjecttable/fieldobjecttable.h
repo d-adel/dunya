@@ -1,9 +1,9 @@
 #pragma once
 
-#include "config/config.h"
-#include "descriptorgroup/descriptorgroup.h"
-#include "device/device.h"
-#include "fieldobject/fieldobject.h"
+#include "core/config/config.h"
+#include "gpu/descriptorgroup/descriptorgroup.h"
+#include "gpu/device/device.h"
+#include "objectmodel/fieldobject/fieldobject.h"
 
 #include <cstdint>
 #include <span>

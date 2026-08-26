@@ -2,7 +2,7 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include "field/field.h"
-#include "field/raycast.h"
+#include "field/raycast/raycast.h"
 
 #include "tolerances.h"
 
