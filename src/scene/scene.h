@@ -1,14 +1,14 @@
 #pragma once
 
-#include "field/field.h"
-#include "objectmodel/material/material.h"
-#include "renderer/mesh/mesh.h"
-#include "gpu/sampler/sampler.h"
-#include "gpu/texture/texture.h"
-#include "renderer/frame/frame.h"
-#include "objectmodel/fieldobject/fieldobject.h"
-#include "objectmodel/objectregistry/objectregistry.h"
-#include "objectmodel/world/world.h"
+#include <dunya/field/field.h>
+#include <dunya/objectmodel/material/material.h>
+#include <dunya/renderer/mesh/mesh.h>
+#include <dunya/gpu/sampler/sampler.h>
+#include <dunya/gpu/texture/texture.h>
+#include <dunya/renderer/frame/frame.h>
+#include <dunya/objectmodel/fieldobject/fieldobject.h>
+#include <dunya/objectmodel/objectregistry/objectregistry.h>
+#include <dunya/objectmodel/world/world.h>
 
 #include <glm/glm.hpp>
 #include <vector>

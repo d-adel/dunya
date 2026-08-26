@@ -1,9 +1,9 @@
 #pragma once
 
-#include "gpu/context/context.h"
-#include "imagecompare/imagecompare.h"
-#include "startupoptions/startupoptions.h"
-#include "gpu/swapchain/swapchain.h"
+#include <dunya/gpu/context/context.h>
+#include <dunya/imagecompare/imagecompare.h>
+#include <startupoptions/startupoptions.h>
+#include <dunya/gpu/swapchain/swapchain.h>
 
 #include <vulkan/vulkan.h>
 

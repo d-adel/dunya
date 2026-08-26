@@ -1,0 +1,11 @@
+#include "fieldeditor.h"
+
+#include <dunya/core/config/config.h>
+#include <dunya/field/analytic/analytic.h>
+#include <dunya/objectmodel/objectregistry/objectregistry.h>
+
+#include <chrono>
+#include <iomanip>
+#include <iostream>
+#include <optional>
+#include <algorithm>

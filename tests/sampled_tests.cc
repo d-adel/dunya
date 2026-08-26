@@ -1,9 +1,9 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
-#include "field/analytic/analytic.h"
-#include "field/field.h"
-#include "field/sampled/sampled.h"
+#include <dunya/field/analytic/analytic.h>
+#include <dunya/field/field.h>
+#include <dunya/field/sampled/sampled.h>
 
 #include "tolerances.h"
 

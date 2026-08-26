@@ -1,11 +1,11 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
-#include "editor/command/command.h"
-#include "editor/commandhistory/commandhistory.h"
-#include "core/config/config.h"
-#include "field/field.h"
-#include "objectmodel/objectregistry/objectregistry.h"
+#include <dunya/editor/command/command.h>
+#include <dunya/editor/commandhistory/commandhistory.h>
+#include <dunya/core/config/config.h>
+#include <dunya/field/field.h>
+#include <dunya/objectmodel/objectregistry/objectregistry.h>
 
 #include "tolerances.h"
 

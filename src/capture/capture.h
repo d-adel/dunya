@@ -1,7 +1,7 @@
 #pragma once
 
-#include "gpu/device/device.h"
-#include "imagecompare/imagecompare.h"
+#include <dunya/gpu/device/device.h>
+#include <dunya/imagecompare/imagecompare.h>
 
 #include <vulkan/vulkan.h>
 

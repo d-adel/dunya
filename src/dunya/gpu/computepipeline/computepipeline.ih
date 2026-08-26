@@ -1,0 +1,4 @@
+#include "computepipeline.h"
+#include <dunya/gpu/shadermodule/shadermodule.h>
+
+#include <stdexcept>

@@ -1,23 +1,23 @@
 #pragma once
 
-#include "gpu/context/context.h"
-#include "gpu/swapchain/swapchain.h"
-#include "scene/scene.h"
-#include "renderer/renderer.h"
-#include "objectmodel/camera/camera.h"
-#include "platform/input/input.h"
-#include "renderer/frame/frame.h"
-#include "renderer/resourcetable/resourcetable.h"
-#include "renderer/frameglobals/frameglobals.h"
-#include "field/field.h"
-#include "editor/fieldeditor/fieldeditor.h"
-#include "framecheck/framecheck.h"
-#include "overlay/overlay.h"
-#include "startupoptions/startupoptions.h"
-#include "renderer/fieldobjecttable/fieldobjecttable.h"
-#include "renderer/volumepool/volumepool.h"
-#include "renderer/fieldbaker/fieldbaker.h"
-#include "editor/commandhistory/commandhistory.h"
+#include <dunya/gpu/context/context.h>
+#include <dunya/gpu/swapchain/swapchain.h>
+#include <scene/scene.h>
+#include <dunya/renderer/renderer.h>
+#include <dunya/objectmodel/camera/camera.h>
+#include <dunya/platform/input/input.h>
+#include <dunya/renderer/frame/frame.h>
+#include <dunya/renderer/resourcetable/resourcetable.h>
+#include <dunya/renderer/frameglobals/frameglobals.h>
+#include <dunya/field/field.h>
+#include <dunya/editor/fieldeditor/fieldeditor.h>
+#include <framecheck/framecheck.h>
+#include <overlay/overlay.h>
+#include <startupoptions/startupoptions.h>
+#include <dunya/renderer/fieldobjecttable/fieldobjecttable.h>
+#include <dunya/renderer/volumepool/volumepool.h>
+#include <dunya/renderer/fieldbaker/fieldbaker.h>
+#include <dunya/editor/commandhistory/commandhistory.h>
 
 /* Wiring, and the loop.
  *

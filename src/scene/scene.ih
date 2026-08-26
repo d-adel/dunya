@@ -1,11 +1,11 @@
 #include "scene.h"
-#include "field/analytic/analytic.h"
-#include "field/sampled/sampled.h"
-#include "renderer/frame/frame.h"
-#include "gpu/context/context.h"
-#include "core/config/config.h"
-#include "objectmodel/fieldobject/fieldobject.h"
-#include "editor/command/command.h"
+#include <dunya/field/analytic/analytic.h>
+#include <dunya/field/sampled/sampled.h>
+#include <dunya/renderer/frame/frame.h>
+#include <dunya/gpu/context/context.h>
+#include <dunya/core/config/config.h>
+#include <dunya/objectmodel/fieldobject/fieldobject.h>
+#include <dunya/editor/command/command.h>
 
 #include <array>
 #include <cstdint>

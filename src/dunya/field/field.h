@@ -1,0 +1,66 @@
+#pragma once
+
+#include <glm/glm.hpp>
+
+#include <cstdint>
+
+namespace dunya::field {
+
+/* Shape parameter conventions
+ * Sphere: (radius, -)
+ * Box: (halfExtents.xyz -)
+ * .w = blend radius
+ */
+
+/* Config parameter shape conventions
+ * .x = Shape type (0 = sphere, 1 = box, 2 = plane..)
+ * .y = material id
+ * .z = operation
+ *      0 = union
+ *      1 = smooth union
+ *      2 = intersection
+ *      3 = subtraction
+ */
+
+struct Primitive {
+  glm::mat4 inverseModel;
+  glm::vec4 shape;
+  glm::uvec4 shapeConfig;
+  glm::vec4 bounds;
+};
+
+static_assert(
+  sizeof(Primitive) == 112,
+  "Primitive must keep the layout the field shader indexes by"
+);
+
+Primitive makeSphere(
+  glm::vec3 position,
+  float radius,
+  uint32_t material = 0,
+  uint32_t operation = 0,
+  float blendRadius = 0.0f
+);
+
+Primitive makeBox(
+  glm::vec3 position,
+  glm::vec3 halfExtents,
+  float rotationRadians = 0.0f,
+  glm::vec3 rotationAxis = glm::vec3(0.0f, 1.0f, 0.0f),
+  uint32_t material = 0,
+  uint32_t operation = 0,
+  float blendRadius = 0.0f
+);
+
+Primitive makePlane(
+  glm::vec3 position,
+  uint32_t material = 0,
+  uint32_t operation = 0
+);
+
+struct FieldSample {
+  float distance = 0.0f;
+  uint32_t material = 0;
+};
+
+}  // namespace dunya::field

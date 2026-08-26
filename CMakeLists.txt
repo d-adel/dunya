@@ -168,14 +168,14 @@ target_link_libraries(imgui PUBLIC glfw Vulkan::Vulkan)
 target_compile_features(imgui PUBLIC cxx_std_20)
 
 # Field evaluation, free of Vulkan so the tests can link it alone
-add_subdirectory(src/core)
-add_subdirectory(src/objectmodel)
-add_subdirectory(src/editor)
-add_subdirectory(src/platform)
-add_subdirectory(src/field)
+add_subdirectory(src/dunya/core)
+add_subdirectory(src/dunya/objectmodel)
+add_subdirectory(src/dunya/editor)
+add_subdirectory(src/dunya/platform)
+add_subdirectory(src/dunya/field)
 
 # Image comparison, free of Vulkan for the same reason
-add_subdirectory(src/imagecompare)
+add_subdirectory(src/dunya/imagecompare)
 
 enable_testing()
 
@@ -199,8 +199,8 @@ find_program(
     REQUIRED
 )
 
-add_subdirectory(src/gpu)
-add_subdirectory(src/renderer)
+add_subdirectory(src/dunya/gpu)
+add_subdirectory(src/dunya/renderer)
 
 # Configuration
 # The GLM_* defines are not repeated here: they arrive as usage requirements

@@ -1,7 +1,0 @@
-#include "fieldobjecttable.h"
-#include "core/config/config.h"
-
-#include <array>
-#include <stdexcept>
-#include <vector>
-#include <span>

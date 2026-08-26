@@ -1,6 +1,6 @@
 #include "framecheck.h"
 
-#include "capture/capture.h"
+#include <capture/capture.h>
 
 #include <filesystem>
 #include <iostream>

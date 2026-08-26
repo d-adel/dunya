@@ -3,9 +3,9 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "field/field.h"
-#include "field/raycast/raycast.h"
-#include "objectmodel/fieldobject/fieldobject.h"
+#include <dunya/field/field.h>
+#include <dunya/field/raycast/raycast.h>
+#include <dunya/objectmodel/fieldobject/fieldobject.h>
 
 #include "tolerances.h"
 

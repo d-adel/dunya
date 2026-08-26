@@ -1,7 +1,7 @@
 #include "capture.h"
 
-#include "gpu/buffer/buffer.h"
-#include "gpu/oneshot/oneshotcommand.h"
+#include <dunya/gpu/buffer/buffer.h>
+#include <dunya/gpu/oneshot/oneshotcommand.h>
 
 #include <algorithm>
 #include <cstring>

@@ -1,4 +1,0 @@
-#include "computepipeline.h"
-#include "gpu/shadermodule/shadermodule.h"
-
-#include <stdexcept>

@@ -1,6 +1,0 @@
-#include "resourcetable.h"
-#include "core/config/config.h"
-
-#include <array>
-#include <stdexcept>
-#include <vector>
