@@ -11,6 +11,7 @@ add_executable(field_tests
     commandhistory_tests.cc
     field_tests.cc
     fieldobject_tests.cc
+    objectregistry_tests.cc
     physics_tests.cc
     raycast_tests.cc
     sampled_tests.cc
