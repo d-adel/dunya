@@ -4,6 +4,8 @@
 
 #include <cstdint>
 
+namespace dunya::objectmodel {
+
 constexpr uint32_t MATERIAL_FLAG_DOUBLE_SIDED = 1u << 0;
 constexpr uint32_t MATERIAL_FLAG_ALPHA_MASK = 1u << 1;
 constexpr uint32_t MATERIAL_FLAG_ALPHA_BLEND = 1u << 2;
@@ -37,3 +39,5 @@ static_assert(
   sizeof(Material) == 96,
   "Material must keep the std140 layout the shaders index by"
 );
+
+}  // namespace dunya::objectmodel

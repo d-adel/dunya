@@ -1,5 +1,7 @@
 #include "fieldbaker.ih"
 
+namespace dunya::renderer {
+
 using dunya::field::SampledField;
 
 namespace {
@@ -50,13 +52,13 @@ void transitionVolumes(
 }  // namespace
 
 void FieldBaker::bake(
-  const FieldObjectGPU& gpu,
+  const dunya::objectmodel::FieldObjectGPU& gpu,
   uint32_t frame,
   VolumeImages images
 ) const {
   const auto start = std::chrono::steady_clock::now();
 
-  OneShotCommand cmd;
+  dunya::gpu::OneShotCommand cmd;
   cmd.start(m_device);
 
   transitionVolumes(
@@ -133,19 +135,19 @@ namespace {
 // Pulls a whole volume back into host memory. Only ever called by the bake
 // check, so it takes the simple route and waits for the copy.
 std::vector<uint8_t> readVolume(
-  const Device& device,
-  const Image& image,
+  const dunya::gpu::Device& device,
+  const dunya::gpu::Image& image,
   const glm::uvec3& resolution,
   VkDeviceSize sizeBytes
 ) {
-  Buffer readback(
+  dunya::gpu::Buffer readback(
     device,
     sizeBytes,
     VK_BUFFER_USAGE_TRANSFER_DST_BIT,
     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
   );
 
-  OneShotCommand cmd;
+  dunya::gpu::OneShotCommand cmd;
   cmd.start(device);
 
   const std::array<VkImageMemoryBarrier2, 1> toSource{volumeBarrier(
@@ -188,10 +190,15 @@ std::vector<uint8_t> readVolume(
   std::vector<uint8_t> bytes(static_cast<size_t>(sizeBytes));
 
   void* mapped = nullptr;
-  if (
-    vkMapMemory(device.vkDevice(), readback.memory(), 0, sizeBytes, 0, &mapped)
-    != VK_SUCCESS
-  ) {
+  if (vkMapMemory(
+        device.vkDevice(),
+        readback.memory(),
+        0,
+        sizeBytes,
+        0,
+        &mapped
+      )
+      != VK_SUCCESS) {
     throw std::runtime_error("Failed to map the bake readback buffer");
   }
 
@@ -203,7 +210,10 @@ std::vector<uint8_t> readVolume(
 
 }  // namespace
 
-FieldBaker::FieldBaker(const Device& device, const FieldObjectTable& table)
+FieldBaker::FieldBaker(
+  const dunya::gpu::Device& device,
+  const FieldObjectTable& table
+)
     : m_device(device),
       m_table(table),
       m_bakePipeline(
@@ -216,11 +226,11 @@ FieldBaker::FieldBaker(const Device& device, const FieldObjectTable& table)
       ) {}
 
 void FieldBaker::verifyBake(
-  const FieldObject& fieldObject,
+  const dunya::objectmodel::FieldObject& fieldObject,
   std::span<const dunya::field::Primitive> primitives,
   VolumeImages images
 ) const {
-  const dunya::field::Aabb box = gridBox(primitives);
+  const dunya::field::Aabb box = dunya::objectmodel::gridBox(primitives);
 
   const SampledField reference = dunya::field::bake(
     primitives,
@@ -261,3 +271,5 @@ void FieldBaker::verifyBake(
             << "  material mismatches " << materialMismatches << " of "
             << reference.distances.size() << '\n';
 }
+
+}  // namespace dunya::renderer

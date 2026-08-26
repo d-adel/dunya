@@ -1,5 +1,7 @@
 #include "camera.ih"
 
+namespace dunya::objectmodel {
+
 Camera::Camera() : m_position(glm::vec3(0, 0, 2)), m_velocity(glm::vec3(0.f)) {}
 
 void Camera::update(float dt, CameraInput input) {
@@ -43,3 +45,5 @@ glm::mat4 Camera::projectionMatrix(float aspect) const {
 glm::vec4 Camera::position() const {
   return glm::vec4(m_position, nearPlane);
 }
+
+}  // namespace dunya::objectmodel

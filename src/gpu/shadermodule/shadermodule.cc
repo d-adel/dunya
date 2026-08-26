@@ -1,5 +1,7 @@
 #include "shadermodule.ih"
 
+namespace dunya::gpu {
+
 namespace {
 
 std::vector<char> readSpirv(const std::string& path) {
@@ -33,10 +35,8 @@ ShaderModule::ShaderModule(
   createInfo.codeSize = code.size();
   createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
-  if (
-    vkCreateShaderModule(m_device, &createInfo, nullptr, &m_module)
-    != VK_SUCCESS
-  ) {
+  if (vkCreateShaderModule(m_device, &createInfo, nullptr, &m_module)
+      != VK_SUCCESS) {
     throw std::runtime_error("Failed to create shader module");
   }
 }
@@ -76,3 +76,5 @@ void ShaderModule::destroy() noexcept {
 
   m_module = VK_NULL_HANDLE;
 }
+
+}  // namespace dunya::gpu

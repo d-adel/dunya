@@ -4,10 +4,12 @@
 
 #include <vector>
 
+namespace dunya::editor {
+
 class CommandHistory {
 public:
   template<typename T>
-  bool execute(T command, ObjectRegistry& registry) {
+  bool execute(T command, dunya::objectmodel::ObjectRegistry& registry) {
     Command wrapped{std::move(command)};
 
     if (!apply(wrapped, registry)) {
@@ -20,7 +22,10 @@ public:
     return true;
   }
 
-  bool execute(AddFieldObjectCommand& command, ObjectRegistry& registry) {
+  bool execute(
+    AddFieldObjectCommand& command,
+    dunya::objectmodel::ObjectRegistry& registry
+  ) {
     Command wrapped{command};
 
     if (!apply(wrapped, registry)) {
@@ -35,8 +40,8 @@ public:
     return true;
   }
 
-  void undo(ObjectRegistry& registry);
-  void redo(ObjectRegistry& registry);
+  void undo(dunya::objectmodel::ObjectRegistry& registry);
+  void redo(dunya::objectmodel::ObjectRegistry& registry);
   void clear();
 
   bool canUndo() const {
@@ -48,10 +53,18 @@ public:
   }
 
 private:
-  static bool apply(Command& command, ObjectRegistry& registry);
+  static bool apply(
+    Command& command,
+    dunya::objectmodel::ObjectRegistry& registry
+  );
 
-  static bool revert(const Command& command, ObjectRegistry& registry);
+  static bool revert(
+    const Command& command,
+    dunya::objectmodel::ObjectRegistry& registry
+  );
 
   std::vector<Command> m_undo;
   std::vector<Command> m_redo;
 };
+
+}  // namespace dunya::editor

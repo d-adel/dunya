@@ -1,14 +1,16 @@
 #include "fieldeditor.ih"
 
-FieldEditor::FieldEditor(World& world) : m_world(world) {}
+namespace dunya::editor {
+
+FieldEditor::FieldEditor(dunya::objectmodel::World& world) : m_world(world) {}
 
 void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
   int objectIndex = -1;
   dunya::field::RayHit minHit;
   dunya::field::Ray localRay;
 
-  const ObjectRegistry& registry = m_world.registry();
-  for (ObjectId id : registry.fieldObjectIds()) {
+  const dunya::objectmodel::ObjectRegistry& registry = m_world.registry();
+  for (dunya::core::ObjectId id : registry.fieldObjectIds()) {
     const auto& fieldObject = registry.getFieldObject(id);
     const auto primitives = registry.getPrimitives(id);
 
@@ -21,7 +23,7 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
     dunya::field::Ray curRay = {origin, direction};
 
     std::optional<std::pair<float, float>> tOpt(std::nullopt);
-    dunya::field::Aabb box = gridBox(primitives);
+    dunya::field::Aabb box = dunya::objectmodel::gridBox(primitives);
     tOpt = dunya::field::intersect(box, curRay);
 
     if (tOpt.has_value()) {
@@ -56,16 +58,16 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
    * cutter no longer reaches the surface at all. Everything useful is strictly
    * between, and which point in between is EDIT_ADVANCE's decision.
    */
-  const float offset = EDIT_RADIUS - EDIT_ADVANCE;
-  const glm::vec3 centre = fieldOpRemovesMaterial(operation)
+  const float offset = dunya::core::EDIT_RADIUS - dunya::core::EDIT_ADVANCE;
+  const glm::vec3 centre = dunya::core::fieldOpRemovesMaterial(operation)
                              ? minHit.position - localRay.direction * offset
                              : minHit.position + localRay.direction * offset;
 
   if (!addPrimitive(
         objectIndex,
         centre,
-        EDIT_RADIUS,
-        EDIT_BLEND,
+        dunya::core::EDIT_RADIUS,
+        dunya::core::EDIT_BLEND,
         minHit.material,
         operation
       )) {
@@ -80,7 +82,7 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
  * not being measured on the same scene.
  */
 void FieldEditor::stress(uint32_t count) {
-  const ObjectRegistry& registry = m_world.registry();
+  const dunya::objectmodel::ObjectRegistry& registry = m_world.registry();
   auto primitives = registry.getPrimitives(0);
 
   const std::optional<dunya::field::Aabb> extent =
@@ -109,10 +111,10 @@ void FieldEditor::stress(uint32_t count) {
     if (!addPrimitive(
           0,
           extent->minimum + span * at,
-          EDIT_RADIUS,
+          dunya::core::EDIT_RADIUS,
           0.0f,
           0,
-          FIELD_OP_SUBTRACTION
+          dunya::core::FIELD_OP_SUBTRACTION
         )) {
       std::cout << "Primitive budget full\n";
       break;
@@ -126,14 +128,14 @@ void FieldEditor::stress(uint32_t count) {
 }
 
 bool FieldEditor::addPrimitive(
-  ObjectId objectId,
+  dunya::core::ObjectId objectId,
   const glm::vec3& centre,
   float radius,
   float blend,
   uint32_t material,
   uint32_t operation
 ) {
-  ObjectRegistry& registry = m_world.registry();
+  dunya::objectmodel::ObjectRegistry& registry = m_world.registry();
 
   if (!registry.contains(objectId)) {
     return false;
@@ -158,3 +160,5 @@ void FieldEditor::undo() {
 void FieldEditor::redo() {
   m_commandHistory.redo(m_world.registry());
 }
+
+}  // namespace dunya::editor

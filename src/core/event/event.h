@@ -8,6 +8,8 @@
 #include <utility>
 #include <vector>
 
+namespace dunya::core {
+
 class EventDispatcher {
 public:
   using SubscriptionId = std::size_t;
@@ -100,3 +102,5 @@ private:
 
   SubscriptionId m_nextSubscriptionId = 0;
 };
+
+}  // namespace dunya::core

@@ -7,6 +7,8 @@
 #include <cstdint>
 #include <unordered_map>
 
+namespace dunya::platform {
+
 enum class KeyEventType {
   Pressed,
   Released,
@@ -121,3 +123,5 @@ private:
 
   inline static std::unordered_map<GLFWwindow*, Input*> s_inputs;
 };
+
+}  // namespace dunya::platform

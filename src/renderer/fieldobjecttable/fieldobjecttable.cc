@@ -1,39 +1,42 @@
 #include "fieldobjecttable.ih"
 
-FieldObjectTable::FieldObjectTable(const Device& device)
+namespace dunya::renderer {
+
+FieldObjectTable::FieldObjectTable(const dunya::gpu::Device& device)
     : m_group(
         device,
-        MAX_FRAMES_IN_FLIGHT,
+        dunya::core::MAX_FRAMES_IN_FLIGHT,
         {{ENTRIES,
-          MAX_FIELD_OBJECTS * sizeof(FieldObjectGPU),
+          dunya::core::MAX_FIELD_OBJECTS
+            * sizeof(dunya::objectmodel::FieldObjectGPU),
           VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
             | VK_SHADER_STAGE_COMPUTE_BIT,
-          DescriptorGroup::BufferUpdate::PerFrame,
+          dunya::gpu::DescriptorGroup::BufferUpdate::PerFrame,
           VK_DESCRIPTOR_TYPE_STORAGE_BUFFER},
          {PRIMITIVE_POOL,
-          MAX_PRIMITIVE_POOL * sizeof(dunya::field::Primitive),
+          dunya::core::MAX_PRIMITIVE_POOL * sizeof(dunya::field::Primitive),
           VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
-          DescriptorGroup::BufferUpdate::PerFrame,
+          dunya::gpu::DescriptorGroup::BufferUpdate::PerFrame,
           VK_DESCRIPTOR_TYPE_STORAGE_BUFFER}},
         {{DISTANCE_VOLUMES,
           VK_SHADER_STAGE_FRAGMENT_BIT,
           {},
-          MAX_FIELD_OBJECTS},
+          dunya::core::MAX_FIELD_OBJECTS},
          {MATERIAL_VOLUMES,
           VK_SHADER_STAGE_FRAGMENT_BIT,
           {},
-          MAX_FIELD_OBJECTS}},
+          dunya::core::MAX_FIELD_OBJECTS}},
         {},
         {{DISTANCE_VOLUMES_STORAGE,
           VK_SHADER_STAGE_COMPUTE_BIT,
           {},
-          MAX_FIELD_OBJECTS},
+          dunya::core::MAX_FIELD_OBJECTS},
          {MATERIAL_VOLUMES_STORAGE,
           VK_SHADER_STAGE_COMPUTE_BIT,
           {},
-          MAX_FIELD_OBJECTS}}
+          dunya::core::MAX_FIELD_OBJECTS}}
       ) {
-  m_gpuFieldObjects.resize(MAX_FIELD_OBJECTS);
+  m_gpuFieldObjects.resize(dunya::core::MAX_FIELD_OBJECTS);
 }
 
 void FieldObjectTable::registerVolume(
@@ -59,18 +62,18 @@ void FieldObjectTable::newFrame() {
   m_bakeList.clear();
 }
 
-void FieldObjectTable::appendToBakeList(ObjectId id) {
+void FieldObjectTable::appendToBakeList(dunya::core::ObjectId id) {
   m_bakeList.push_back(id);
 }
 
 void FieldObjectTable::makeGPUField(
-  ObjectId objectIndex,
+  dunya::core::ObjectId objectIndex,
   uint32_t primitiveOffset,
   uint32_t primitiveCount,
-  const FieldObject& fieldObject,
+  const dunya::objectmodel::FieldObject& fieldObject,
   uint32_t fieldRepresentation
 ) {
-  m_gpuFieldObjects[objectIndex] = fromFieldObject(
+  m_gpuFieldObjects[objectIndex] = dunya::objectmodel::fromFieldObject(
     fieldObject,
     primitiveOffset,
     primitiveCount,
@@ -79,7 +82,9 @@ void FieldObjectTable::makeGPUField(
 }
 
 void FieldObjectTable::update(uint32_t frame) {
-  std::span<const FieldObjectGPU> objects(m_gpuFieldObjects);
+  std::span<const dunya::objectmodel::FieldObjectGPU> objects(
+    m_gpuFieldObjects
+  );
 
   m_group.write(ENTRIES, frame, objects.data(), objects.size_bytes());
 }
@@ -106,17 +111,20 @@ const VkDescriptorSetLayout& FieldObjectTable::setLayout() const noexcept {
   return m_group.setLayout();
 }
 
-std::span<const FieldObjectGPU> FieldObjectTable::
+std::span<const dunya::objectmodel::FieldObjectGPU> FieldObjectTable::
   gpuFieldObjects() const noexcept {
   return m_gpuFieldObjects;
 }
 
-std::span<const ObjectId> FieldObjectTable::bakeList() const noexcept {
+std::span<const dunya::core::ObjectId> FieldObjectTable::
+  bakeList() const noexcept {
   return m_bakeList;
 }
 
-const FieldObjectGPU& FieldObjectTable::gpuFieldObject(
-  ObjectId objectIndex
+const dunya::objectmodel::FieldObjectGPU& FieldObjectTable::gpuFieldObject(
+  dunya::core::ObjectId objectIndex
 ) const {
   return m_gpuFieldObjects.at(objectIndex);
 }
+
+}  // namespace dunya::renderer

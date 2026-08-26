@@ -1,10 +1,14 @@
 #include "resourcetable.ih"
 
-static std::vector<VkImageView> imageViews(std::span<const Texture> textures) {
+namespace dunya::renderer {
+
+static std::vector<VkImageView> imageViews(
+  std::span<const dunya::gpu::Texture> textures
+) {
   std::vector<VkImageView> views;
   views.reserve(textures.size());
 
-  for (const Texture& texture : textures) {
+  for (const dunya::gpu::Texture& texture : textures) {
     views.push_back(texture.image().imageView());
   }
 
@@ -12,12 +16,12 @@ static std::vector<VkImageView> imageViews(std::span<const Texture> textures) {
 }
 
 static std::vector<VkSampler> samplerHandles(
-  std::span<const Sampler> samplers
+  std::span<const dunya::gpu::Sampler> samplers
 ) {
   std::vector<VkSampler> handles;
   handles.reserve(samplers.size());
 
-  for (const Sampler& sampler : samplers) {
+  for (const dunya::gpu::Sampler& sampler : samplers) {
     handles.push_back(sampler.handle());
   }
 
@@ -25,31 +29,34 @@ static std::vector<VkSampler> samplerHandles(
 }
 
 ResourceTable::ResourceTable(
-  const Device& device,
-  std::span<const Texture> textures,
-  std::span<const Sampler> samplers,
-  std::span<const Material> materials
+  const dunya::gpu::Device& device,
+  std::span<const dunya::gpu::Texture> textures,
+  std::span<const dunya::gpu::Sampler> samplers,
+  std::span<const dunya::objectmodel::Material> materials
 )
     : m_group(
         device,
-        MAX_FRAMES_IN_FLIGHT,
+        dunya::core::MAX_FRAMES_IN_FLIGHT,
         {{0,
-          MAX_MATERIALS * sizeof(Material),
+          dunya::core::MAX_MATERIALS * sizeof(dunya::objectmodel::Material),
           VK_SHADER_STAGE_FRAGMENT_BIT,
-          DescriptorGroup::BufferUpdate::Static}},
-        {{1, VK_SHADER_STAGE_FRAGMENT_BIT, imageViews(textures), MAX_TEXTURES}},
+          dunya::gpu::DescriptorGroup::BufferUpdate::Static}},
+        {{1,
+          VK_SHADER_STAGE_FRAGMENT_BIT,
+          imageViews(textures),
+          dunya::core::MAX_TEXTURES}},
         {{2,
           VK_SHADER_STAGE_FRAGMENT_BIT,
           samplerHandles(samplers),
-          MAX_SAMPLERS}}
+          dunya::core::MAX_SAMPLERS}}
       ) {
-  if (materials.size() > MAX_MATERIALS) {
+  if (materials.size() > dunya::core::MAX_MATERIALS) {
     throw std::runtime_error("More materials than the material table holds");
   }
 
   // PARTIALLY_BOUND makes an unwritten array slot undefined rather than an
   // error, so an out-of-range index here would sample garbage silently.
-  for (const Material& material : materials) {
+  for (const dunya::objectmodel::Material& material : materials) {
     const std::array<uint32_t, 5> images{
       material.baseColorTexture,
       material.metallicRoughnessTexture,
@@ -91,3 +98,5 @@ const VkDescriptorSet& ResourceTable::descriptorSet(
 const VkDescriptorSetLayout& ResourceTable::setLayout() const noexcept {
   return m_group.setLayout();
 }
+
+}  // namespace dunya::renderer

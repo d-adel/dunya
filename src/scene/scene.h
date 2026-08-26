@@ -15,7 +15,7 @@
 
 class Scene {
 public:
-  Scene(const Context& context);
+  Scene(const dunya::gpu::Context& context);
   ~Scene() = default;
 
   Scene(const Scene&) = delete;
@@ -23,26 +23,30 @@ public:
   Scene(Scene&&) = delete;
   Scene& operator=(Scene&&) = delete;
 
-  void augmentFrameContext(Frame& frameContext);
+  void augmentFrameContext(dunya::renderer::Frame& frameContext);
 
-  const World& world() const noexcept;
-  World& world() noexcept;
+  const dunya::objectmodel::World& world() const noexcept;
+  dunya::objectmodel::World& world() noexcept;
 
-  const std::vector<Material>& materials() const noexcept;
-  const std::vector<Texture>& textures() const noexcept;
-  const std::vector<Sampler>& samplers() const noexcept;
+  const std::vector<dunya::objectmodel::Material>& materials() const noexcept;
+  const std::vector<dunya::gpu::Texture>& textures() const noexcept;
+  const std::vector<dunya::gpu::Sampler>& samplers() const noexcept;
 
 private:
-  static std::vector<Material> createMaterials();
-  static std::vector<Texture> createTextures(const Device& device);
-  static std::vector<Sampler> createSamplers(const Device& device);
+  static std::vector<dunya::objectmodel::Material> createMaterials();
+  static std::vector<dunya::gpu::Texture> createTextures(
+    const dunya::gpu::Device& device
+  );
+  static std::vector<dunya::gpu::Sampler> createSamplers(
+    const dunya::gpu::Device& device
+  );
 
-  void addInitialPrimitives(ObjectId objectId);
+  void addInitialPrimitives(dunya::core::ObjectId objectId);
 
-  std::vector<Material> m_materials;
-  std::vector<Sampler> m_samplers;
-  std::vector<Texture> m_textures;
-  std::vector<Mesh> m_meshes;
+  std::vector<dunya::objectmodel::Material> m_materials;
+  std::vector<dunya::gpu::Sampler> m_samplers;
+  std::vector<dunya::gpu::Texture> m_textures;
+  std::vector<dunya::renderer::Mesh> m_meshes;
 
-  World m_world;
+  dunya::objectmodel::World m_world;
 };

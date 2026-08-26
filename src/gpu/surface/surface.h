@@ -2,6 +2,8 @@
 
 #include <GLFW/glfw3.h>
 
+namespace dunya::gpu {
+
 class Surface {
 public:
   Surface(const VkInstance& instance, GLFWwindow* window);
@@ -18,3 +20,5 @@ private:
   GLFWwindow* m_window;
   VkSurfaceKHR m_surface = VK_NULL_HANDLE;
 };
+
+}  // namespace dunya::gpu

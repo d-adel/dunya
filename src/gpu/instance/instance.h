@@ -3,6 +3,8 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 
+namespace dunya::gpu {
+
 #ifdef NDEBUG
 constexpr bool enableValidationLayers = false;
 #else
@@ -35,3 +37,5 @@ private:
     void* userData
   );
 };
+
+}  // namespace dunya::gpu

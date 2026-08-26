@@ -1,5 +1,7 @@
 #include "input.ih"
 
+namespace dunya::platform {
+
 Input::Input(GLFWwindow* window, KeyTiming timing)
     : m_enabled(true),
       m_window(window),
@@ -73,9 +75,8 @@ void Input::update() {
   for (int key = 0; key <= GLFW_KEY_LAST; ++key) {
     KeyState& state = m_keyStates[key];
 
-    if (
-      state.pendingSingle && now - state.lastPressMs >= m_timing.doubleWindowMs
-    ) {
+    if (state.pendingSingle
+        && now - state.lastPressMs >= m_timing.doubleWindowMs) {
       state.pendingSingle = false;
 
       dispatch(key, KeyEventType::SinglePressed);
@@ -156,7 +157,7 @@ void Input::mouseButtonCallback(
   // Only press and release exist for buttons; there is no repeat, so this
   // needs none of the timing the key path carries.
   if (action == GLFW_PRESS || action == GLFW_RELEASE) {
-    EventDispatcher::instance().dispatch(
+    dunya::core::EventDispatcher::instance().dispatch(
       MouseButtonEvent{
         .button = button,
         .type = action == GLFW_PRESS ? MouseButtonEventType::Pressed
@@ -238,7 +239,9 @@ void Input::handleKey(int key, int action) {
 }
 
 void Input::dispatch(int key, KeyEventType type) {
-  EventDispatcher::instance().dispatch(KeyEvent{.key = key, .type = type});
+  dunya::core::EventDispatcher::instance().dispatch(
+    KeyEvent{.key = key, .type = type}
+  );
 }
 
 std::uint64_t Input::currentTimeMs() {
@@ -254,3 +257,5 @@ std::uint64_t Input::currentTimeMs() {
 bool Input::isValidKey(int key) noexcept {
   return key >= 0 && key <= GLFW_KEY_LAST;
 }
+
+}  // namespace dunya::platform

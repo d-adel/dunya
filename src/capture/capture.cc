@@ -63,7 +63,7 @@ void submitBarrier(VkCommandBuffer cmd, const VkImageMemoryBarrier2& barrier) {
 }  // namespace
 
 dunya::image::Bitmap read(
-  const Device& device,
+  const dunya::gpu::Device& device,
   VkImage image,
   VkImageLayout layout,
   VkExtent2D extent,
@@ -74,14 +74,14 @@ dunya::image::Bitmap read(
   const VkDeviceSize bytes =
     static_cast<VkDeviceSize>(extent.width) * extent.height * CHANNELS;
 
-  Buffer readback(
+  dunya::gpu::Buffer readback(
     device,
     bytes,
     VK_BUFFER_USAGE_TRANSFER_DST_BIT,
     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
   );
 
-  OneShotCommand cmd;
+  dunya::gpu::OneShotCommand cmd;
   cmd.start(device);
 
   submitBarrier(
@@ -117,10 +117,8 @@ dunya::image::Bitmap read(
   bitmap.pixels.resize(static_cast<size_t>(bytes));
 
   void* mapped = nullptr;
-  if (
-    vkMapMemory(device.vkDevice(), readback.memory(), 0, bytes, 0, &mapped)
-    != VK_SUCCESS
-  ) {
+  if (vkMapMemory(device.vkDevice(), readback.memory(), 0, bytes, 0, &mapped)
+      != VK_SUCCESS) {
     throw std::runtime_error("Failed to map the capture readback buffer");
   }
 

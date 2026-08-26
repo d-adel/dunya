@@ -1,6 +1,8 @@
 #include "mesh.ih"
 
-Mesh::Mesh(const Device& device, std::string modelPath) {
+namespace dunya::renderer {
+
+Mesh::Mesh(const dunya::gpu::Device& device, std::string modelPath) {
   loadModel(device, modelPath);
 }
 
@@ -8,15 +10,15 @@ size_t Mesh::indexCount() const noexcept {
   return m_indexCount;
 }
 
-const Buffer& Mesh::vertexBuffer() const noexcept {
+const dunya::gpu::Buffer& Mesh::vertexBuffer() const noexcept {
   return m_vertexBuffer;
 }
 
-const Buffer& Mesh::indexBuffer() const noexcept {
+const dunya::gpu::Buffer& Mesh::indexBuffer() const noexcept {
   return m_indexBuffer;
 }
 
-void Mesh::loadModel(const Device& device, std::string modelPath) {
+void Mesh::loadModel(const dunya::gpu::Device& device, std::string modelPath) {
   std::vector<Vertex> vertices;
   std::unordered_map<Vertex, uint32_t> uniqueVertices{};
   std::vector<uint32_t> indices;
@@ -66,9 +68,17 @@ void Mesh::loadModel(const Device& device, std::string modelPath) {
     }
   }
 
-  m_vertexBuffer =
-    Buffer::deviceLocal(device, vertices, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-  m_indexBuffer =
-    Buffer::deviceLocal(device, indices, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+  m_vertexBuffer = dunya::gpu::Buffer::deviceLocal(
+    device,
+    vertices,
+    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
+  );
+  m_indexBuffer = dunya::gpu::Buffer::deviceLocal(
+    device,
+    indices,
+    VK_BUFFER_USAGE_INDEX_BUFFER_BIT
+  );
   m_indexCount = static_cast<uint32_t>(indices.size());
 }
+
+}  // namespace dunya::renderer

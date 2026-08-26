@@ -8,6 +8,8 @@
 #include <cstdint>
 #include <span>
 
+namespace dunya::renderer {
+
 class FieldObjectTable {
 public:
   // Set 2's layout, shared with field-shader.frag and field-bake.comp. The
@@ -19,7 +21,7 @@ public:
   static constexpr uint32_t DISTANCE_VOLUMES_STORAGE = 4;
   static constexpr uint32_t MATERIAL_VOLUMES_STORAGE = 5;
 
-  explicit FieldObjectTable(const Device& device);
+  explicit FieldObjectTable(const dunya::gpu::Device& device);
 
   FieldObjectTable(const FieldObjectTable&) = delete;
   FieldObjectTable& operator=(const FieldObjectTable&) = delete;
@@ -39,10 +41,10 @@ public:
   );
 
   void makeGPUField(
-    ObjectId objectIndex,
+    dunya::core::ObjectId objectIndex,
     uint32_t primitiveOffset,
     uint32_t primitiveCount,
-    const FieldObject& fieldObject,
+    const dunya::objectmodel::FieldObject& fieldObject,
     uint32_t fieldRepresentation
   );
 
@@ -55,15 +57,20 @@ public:
 
   void newFrame();
 
-  void appendToBakeList(ObjectId id);
+  void appendToBakeList(dunya::core::ObjectId id);
 
-  std::span<const FieldObjectGPU> gpuFieldObjects() const noexcept;
-  std::span<const ObjectId> bakeList() const noexcept;
+  std::span<const dunya::objectmodel::FieldObjectGPU>
+  gpuFieldObjects() const noexcept;
+  std::span<const dunya::core::ObjectId> bakeList() const noexcept;
 
-  const FieldObjectGPU& gpuFieldObject(ObjectId objectIndex) const;
+  const dunya::objectmodel::FieldObjectGPU& gpuFieldObject(
+    dunya::core::ObjectId objectIndex
+  ) const;
 
 private:
-  std::vector<FieldObjectGPU> m_gpuFieldObjects;
-  std::vector<ObjectId> m_bakeList;
-  DescriptorGroup m_group;
+  std::vector<dunya::objectmodel::FieldObjectGPU> m_gpuFieldObjects;
+  std::vector<dunya::core::ObjectId> m_bakeList;
+  dunya::gpu::DescriptorGroup m_group;
 };
+
+}  // namespace dunya::renderer

@@ -1,19 +1,21 @@
 #include "frameglobals.ih"
 
-FrameGlobals::FrameGlobals(const Device& device)
+namespace dunya::renderer {
+
+FrameGlobals::FrameGlobals(const dunya::gpu::Device& device)
     : m_group(
         device,
-        MAX_FRAMES_IN_FLIGHT,
+        dunya::core::MAX_FRAMES_IN_FLIGHT,
         {{0,
           sizeof(CameraUniform),
           VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-          DescriptorGroup::BufferUpdate::PerFrame},
+          dunya::gpu::DescriptorGroup::BufferUpdate::PerFrame},
          // Set 0 because it changes at the same rate as the camera: this set is
          // the per-frame one, and a slider moves a value exactly as often.
          {1,
           sizeof(MarchParams),
           VK_SHADER_STAGE_FRAGMENT_BIT,
-          DescriptorGroup::BufferUpdate::PerFrame}}
+          dunya::gpu::DescriptorGroup::BufferUpdate::PerFrame}}
       ) {}
 
 void FrameGlobals::update(
@@ -34,3 +36,5 @@ const VkDescriptorSet& FrameGlobals::descriptorSet(
 const VkDescriptorSetLayout& FrameGlobals::setLayout() const noexcept {
   return m_group.setLayout();
 }
+
+}  // namespace dunya::renderer

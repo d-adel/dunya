@@ -1,13 +1,15 @@
 #include "renderer.ih"
 
+namespace dunya::renderer {
+
 Renderer::Renderer(
-  const Device& device,
+  const dunya::gpu::Device& device,
   FieldObjectTable& fieldObjectTable,
   const FieldBaker& fieldBaker,
   const VolumePool& volumePool,
   FrameGlobals& frameGlobals,
-  const Pipeline& meshPipeline,
-  const Pipeline& fieldPipeline,
+  const dunya::gpu::Pipeline& meshPipeline,
+  const dunya::gpu::Pipeline& fieldPipeline,
   const ResourceTable& resourceTable,
   const VkSurfaceKHR& surface,
   uint32_t imageCount
@@ -29,7 +31,7 @@ Renderer::Renderer(
 
 Renderer::~Renderer() {
   vkDestroyCommandPool(m_device, m_commandPool, nullptr);
-  for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+  for (size_t i = 0; i < dunya::core::MAX_FRAMES_IN_FLIGHT; i++) {
     vkDestroySemaphore(m_device, m_imageAvailableSemaphores[i], nullptr);
 
     vkDestroyFence(m_device, m_inFlightFences[i], nullptr);
@@ -44,24 +46,22 @@ void Renderer::createCommandPool(
   const VkPhysicalDevice& physicalDevice,
   const VkSurfaceKHR& surface
 ) {
-  QueueFamilyIndices queueFamilyIndices =
-    findQueueFamilies(physicalDevice, surface);
+  dunya::gpu::QueueFamilyIndices queueFamilyIndices =
+    dunya::gpu::findQueueFamilies(physicalDevice, surface);
 
   VkCommandPoolCreateInfo poolInfo{};
   poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
   poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
   poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
 
-  if (
-    vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool)
-    != VK_SUCCESS
-  ) {
+  if (vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool)
+      != VK_SUCCESS) {
     throw std::runtime_error("Failed to create command pool");
   }
 }
 
 void Renderer::createCommandBuffer() {
-  m_commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+  m_commandBuffers.resize(dunya::core::MAX_FRAMES_IN_FLIGHT);
   VkCommandBufferAllocateInfo allocInfo{};
   allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   allocInfo.commandPool = m_commandPool;
@@ -70,18 +70,16 @@ void Renderer::createCommandBuffer() {
 
   allocInfo.commandBufferCount = (uint32_t)m_commandBuffers.size();
 
-  if (
-    vkAllocateCommandBuffers(m_device, &allocInfo, m_commandBuffers.data())
-    != VK_SUCCESS
-  ) {
+  if (vkAllocateCommandBuffers(m_device, &allocInfo, m_commandBuffers.data())
+      != VK_SUCCESS) {
     throw std::runtime_error("failed to allocate command buffers!");
   }
 }
 
 void Renderer::createSyncObjects(uint32_t imageCount) {
-  m_imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+  m_imageAvailableSemaphores.resize(dunya::core::MAX_FRAMES_IN_FLIGHT);
   m_renderFinishedSemaphores.resize(imageCount);
-  m_inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+  m_inFlightFences.resize(dunya::core::MAX_FRAMES_IN_FLIGHT);
 
   VkFenceCreateInfo fenceInfo{};
   fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -90,23 +88,19 @@ void Renderer::createSyncObjects(uint32_t imageCount) {
   VkSemaphoreCreateInfo semaphoreInfo{};
   semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-  for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-    if (
-      vkCreateFence(m_device, &fenceInfo, nullptr, &m_inFlightFences[i])
-      != VK_SUCCESS
-    ) {
+  for (size_t i = 0; i < dunya::core::MAX_FRAMES_IN_FLIGHT; i++) {
+    if (vkCreateFence(m_device, &fenceInfo, nullptr, &m_inFlightFences[i])
+        != VK_SUCCESS) {
       throw std::runtime_error("Failed to create fence for a frame");
     }
 
-    if (
-      vkCreateSemaphore(
-        m_device,
-        &semaphoreInfo,
-        nullptr,
-        &m_imageAvailableSemaphores[i]
-      )
-      != VK_SUCCESS
-    ) {
+    if (vkCreateSemaphore(
+          m_device,
+          &semaphoreInfo,
+          nullptr,
+          &m_imageAvailableSemaphores[i]
+        )
+        != VK_SUCCESS) {
       throw std::runtime_error(
         "Failed to create image available semaphore for a frame"
       );
@@ -114,10 +108,8 @@ void Renderer::createSyncObjects(uint32_t imageCount) {
   }
 
   for (auto& semaphore : m_renderFinishedSemaphores) {
-    if (
-      vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &semaphore)
-      != VK_SUCCESS
-    ) {
+    if (vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &semaphore)
+        != VK_SUCCESS) {
       throw std::runtime_error(
         "Failed to create render finished semaphore for a frame"
       );
@@ -126,17 +118,15 @@ void Renderer::createSyncObjects(uint32_t imageCount) {
 }
 
 void Renderer::recordCommandBuffer(
-  const SwapChain& swapChain,
+  const dunya::gpu::SwapChain& swapChain,
   const Frame& frameContext,
   const std::function<void(VkCommandBuffer)>& onOverlay
 ) {
   VkCommandBufferBeginInfo beginInfo{};
   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-  if (
-    vkBeginCommandBuffer(m_commandBuffers[m_currentFrame], &beginInfo)
-    != VK_SUCCESS
-  ) {
+  if (vkBeginCommandBuffer(m_commandBuffers[m_currentFrame], &beginInfo)
+      != VK_SUCCESS) {
     throw std::runtime_error("failed to begin recording command buffer!");
   }
 
@@ -216,10 +206,10 @@ void Renderer::recordCommandBuffer(
   scissor.extent = swapChain.extent();
   vkCmdSetScissor(m_commandBuffers[m_currentFrame], 0, 1, &scissor);
 
-  bool drawMeshes = frameContext.mode == PipelineType::Mesh
-                    || frameContext.mode == PipelineType::Both;
-  bool drawField = frameContext.mode == PipelineType::Field
-                   || frameContext.mode == PipelineType::Both;
+  bool drawMeshes = frameContext.mode == dunya::gpu::PipelineType::Mesh
+                    || frameContext.mode == dunya::gpu::PipelineType::Both;
+  bool drawField = frameContext.mode == dunya::gpu::PipelineType::Field
+                   || frameContext.mode == dunya::gpu::PipelineType::Both;
 
   const std::array<VkDescriptorSet, 2> sharedSets = {
     m_frameGlobals.descriptorSet(m_currentFrame),
@@ -265,15 +255,18 @@ void Renderer::recordCommandBuffer(
         VK_INDEX_TYPE_UINT32
       );
 
-      const PushConstants pushConstants{item.model, item.materialIndex};
+      const dunya::gpu::PushConstants pushConstants{
+        item.model,
+        item.materialIndex
+      };
 
       vkCmdPushConstants(
         m_commandBuffers[m_currentFrame],
         m_meshPipeline.pipelineLayout(),
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         0,
-        offsetof(PushConstants, materialIndex)
-          + sizeof(PushConstants::materialIndex),
+        offsetof(dunya::gpu::PushConstants, materialIndex)
+          + sizeof(dunya::gpu::PushConstants::materialIndex),
         &pushConstants
       );
 
@@ -296,8 +289,9 @@ void Renderer::recordCommandBuffer(
     );
 
     // After the pool write, because the dispatch reads this frame's copy.
-    for (ObjectId objectId : m_fieldObjectTable.bakeList()) {
-      const FieldObjectGPU& gpu = m_fieldObjectTable.gpuFieldObject(objectId);
+    for (dunya::core::ObjectId objectId : m_fieldObjectTable.bakeList()) {
+      const dunya::objectmodel::FieldObjectGPU& gpu =
+        m_fieldObjectTable.gpuFieldObject(objectId);
 
       const uint32_t volumeIndex = gpu.resolutionVolumeIndex.w;
 
@@ -323,16 +317,16 @@ void Renderer::recordCommandBuffer(
       nullptr
     );
 
-    for (ObjectId objectId : frameContext.fieldObjectIds) {
-      const PushConstants pushConstants{0, 0, objectId};
+    for (dunya::core::ObjectId objectId : frameContext.fieldObjectIds) {
+      const dunya::gpu::PushConstants pushConstants{0, 0, objectId};
 
       vkCmdPushConstants(
         m_commandBuffers[m_currentFrame],
         m_fieldPipeline.pipelineLayout(),
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         0,
-        offsetof(PushConstants, objectIndex)
-          + sizeof(PushConstants::objectIndex),
+        offsetof(dunya::gpu::PushConstants, objectIndex)
+          + sizeof(dunya::gpu::PushConstants::objectIndex),
         &pushConstants
       );
 
@@ -382,21 +376,19 @@ void Renderer::recordCommandBuffer(
 }
 
 bool Renderer::drawFrame(
-  const SwapChain& swapChain,
+  const dunya::gpu::SwapChain& swapChain,
   const Frame& frameContext,
   const std::function<void(VkCommandBuffer)>& onOverlay,
   const std::function<void(VkImage)>& onFrameReady
 ) {
-  if (
-    vkWaitForFences(
-      m_device,
-      1,
-      &m_inFlightFences[m_currentFrame],
-      VK_TRUE,
-      UINT64_MAX
-    )
-    != VK_SUCCESS
-  ) {
+  if (vkWaitForFences(
+        m_device,
+        1,
+        &m_inFlightFences[m_currentFrame],
+        VK_TRUE,
+        UINT64_MAX
+      )
+      != VK_SUCCESS) {
     throw std::runtime_error("Failed waiting for the in flight fence");
   }
 
@@ -415,9 +407,8 @@ bool Renderer::drawFrame(
     throw std::runtime_error("Failed to acquire swap chain image");
   }
 
-  if (
-    vkResetFences(m_device, 1, &m_inFlightFences[m_currentFrame]) != VK_SUCCESS
-  ) {
+  if (vkResetFences(m_device, 1, &m_inFlightFences[m_currentFrame])
+      != VK_SUCCESS) {
     throw std::runtime_error("Failed to reset the in flight fence");
   }
 
@@ -463,15 +454,13 @@ bool Renderer::drawFrame(
   submitInfo2.signalSemaphoreInfoCount = 1;
   submitInfo2.pSignalSemaphoreInfos = &signalSubmitInfo;
 
-  if (
-    vkQueueSubmit2(
-      m_graphicsQueue,
-      1,
-      &submitInfo2,
-      m_inFlightFences[m_currentFrame]
-    )
-    != VK_SUCCESS
-  ) {
+  if (vkQueueSubmit2(
+        m_graphicsQueue,
+        1,
+        &submitInfo2,
+        m_inFlightFences[m_currentFrame]
+      )
+      != VK_SUCCESS) {
     throw std::runtime_error("failed to submit draw command buffer!");
   }
 
@@ -508,7 +497,9 @@ bool Renderer::drawFrame(
     throw std::runtime_error("Failed to present swap chain image");
   }
 
-  m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+  m_currentFrame = (m_currentFrame + 1) % dunya::core::MAX_FRAMES_IN_FLIGHT;
 
   return false;
 }
+
+}  // namespace dunya::renderer

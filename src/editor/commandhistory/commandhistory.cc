@@ -3,7 +3,9 @@
 #include <type_traits>
 #include <utility>
 
-void CommandHistory::undo(ObjectRegistry& registry) {
+namespace dunya::editor {
+
+void CommandHistory::undo(dunya::objectmodel::ObjectRegistry& registry) {
   if (m_undo.empty()) {
     return;
   }
@@ -19,7 +21,7 @@ void CommandHistory::undo(ObjectRegistry& registry) {
   m_redo.push_back(std::move(command));
 }
 
-void CommandHistory::redo(ObjectRegistry& registry) {
+void CommandHistory::redo(dunya::objectmodel::ObjectRegistry& registry) {
   if (m_redo.empty()) {
     return;
   }
@@ -40,15 +42,18 @@ void CommandHistory::clear() {
   m_redo.clear();
 }
 
-bool CommandHistory::apply(Command& command, ObjectRegistry& registry) {
+bool CommandHistory::apply(
+  Command& command,
+  dunya::objectmodel::ObjectRegistry& registry
+) {
   return std::visit(
     [&](auto& cmd) -> bool {
       using T = std::decay_t<decltype(cmd)>;
 
       if constexpr (std::is_same_v<T, AddFieldObjectCommand>) {
-        if (cmd.id == INVALID_OBJECT_ID) {
+        if (cmd.id == dunya::core::INVALID_OBJECT_ID) {
           cmd.id = registry.addFieldObject(cmd.object);
-          return cmd.id != INVALID_OBJECT_ID;
+          return cmd.id != dunya::core::INVALID_OBJECT_ID;
         }
 
         return registry.addFieldObjectAt(cmd.id, cmd.object);
@@ -75,7 +80,8 @@ bool CommandHistory::apply(Command& command, ObjectRegistry& registry) {
           return false;
         }
 
-        FieldObject& object = registry.getFieldObject(cmd.id);
+        dunya::objectmodel::FieldObject& object =
+          registry.getFieldObject(cmd.id);
 
         object.position = cmd.newPosition;
         object.rotation = cmd.newRotation;
@@ -109,7 +115,10 @@ bool CommandHistory::apply(Command& command, ObjectRegistry& registry) {
   );
 }
 
-bool CommandHistory::revert(const Command& command, ObjectRegistry& registry) {
+bool CommandHistory::revert(
+  const Command& command,
+  dunya::objectmodel::ObjectRegistry& registry
+) {
   return std::visit(
     [&](const auto& cmd) -> bool {
       using T = std::decay_t<decltype(cmd)>;
@@ -141,7 +150,8 @@ bool CommandHistory::revert(const Command& command, ObjectRegistry& registry) {
           return false;
         }
 
-        FieldObject& object = registry.getFieldObject(cmd.id);
+        dunya::objectmodel::FieldObject& object =
+          registry.getFieldObject(cmd.id);
 
         object.position = cmd.oldPosition;
         object.rotation = cmd.oldRotation;
@@ -174,3 +184,5 @@ bool CommandHistory::revert(const Command& command, ObjectRegistry& registry) {
     command
   );
 }
+
+}  // namespace dunya::editor

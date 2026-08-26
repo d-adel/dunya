@@ -1,5 +1,7 @@
 #include "pipeline.ih"
 
+namespace dunya::gpu {
+
 static bool compileShader(
   const std::string& source,
   const std::string& output
@@ -173,10 +175,8 @@ bool Pipeline::sourcesChanged() const {
 }
 
 void Pipeline::reload() {
-  if (
-    compileShader(m_config.vert, m_config.vertexShader) == false
-    || compileShader(m_config.frag, m_config.fragmentShader) == false
-  ) {
+  if (compileShader(m_config.vert, m_config.vertexShader) == false
+      || compileShader(m_config.frag, m_config.fragmentShader) == false) {
     std::cout << "Shader compilation failed\n";
     return;
   }
@@ -221,15 +221,13 @@ VkPipelineLayout Pipeline::buildPipelineLayout() {
     static_cast<uint32_t>(m_config.pushConstantRanges.size());
   pipelineLayoutInfo.pPushConstantRanges = m_config.pushConstantRanges.data();
 
-  if (
-    vkCreatePipelineLayout(
-      m_device,
-      &pipelineLayoutInfo,
-      nullptr,
-      &pipelineLayout
-    )
-    != VK_SUCCESS
-  ) {
+  if (vkCreatePipelineLayout(
+        m_device,
+        &pipelineLayoutInfo,
+        nullptr,
+        &pipelineLayout
+      )
+      != VK_SUCCESS) {
     return VK_NULL_HANDLE;
   }
 
@@ -379,19 +377,19 @@ VkPipeline Pipeline::buildPipeline() {
   pipelineInfo.pDepthStencilState = &depthStencil;
 
   VkPipeline pipeline;
-  if (
-    vkCreateGraphicsPipelines(
-      m_device,
-      VK_NULL_HANDLE,
-      1,
-      &pipelineInfo,
-      nullptr,
-      &pipeline
-    )
-    != VK_SUCCESS
-  ) {
+  if (vkCreateGraphicsPipelines(
+        m_device,
+        VK_NULL_HANDLE,
+        1,
+        &pipelineInfo,
+        nullptr,
+        &pipeline
+      )
+      != VK_SUCCESS) {
     return VK_NULL_HANDLE;
   }
 
   return pipeline;
 }
+
+}  // namespace dunya::gpu

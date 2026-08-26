@@ -1,5 +1,7 @@
 #include "swapchain.ih"
 
+namespace dunya::gpu {
+
 SwapChain::SwapChain(const Context& context)
     : m_context(context),
       m_swapChainSupport(querySwapChainSupport(
@@ -77,10 +79,8 @@ void SwapChain::createSwapChain() {
   VkExtent2D extent = chooseSwapExtent(m_swapChainSupport.capabilities);
 
   uint32_t imageCount = m_swapChainSupport.capabilities.minImageCount + 1;
-  if (
-    m_swapChainSupport.capabilities.maxImageCount > 0
-    && imageCount > m_swapChainSupport.capabilities.maxImageCount
-  ) {
+  if (m_swapChainSupport.capabilities.maxImageCount > 0
+      && imageCount > m_swapChainSupport.capabilities.maxImageCount) {
     imageCount = m_swapChainSupport.capabilities.maxImageCount;
   }
 
@@ -95,11 +95,9 @@ void SwapChain::createSwapChain() {
   // TRANSFER_SRC is what lets a rendered frame be read back for the golden
   // image tests. It is asked for rather than assumed: the surface has to offer
   // it, and a query is not a request (idiom 11).
-  if (
-    (m_swapChainSupport.capabilities.supportedUsageFlags
-     & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
-    == 0
-  ) {
+  if ((m_swapChainSupport.capabilities.supportedUsageFlags
+       & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
+      == 0) {
     throw std::runtime_error(
       "This surface cannot be read back: no TRANSFER_SRC usage"
     );
@@ -137,40 +135,34 @@ void SwapChain::createSwapChain() {
   // For resizing
   createInfo.oldSwapchain = m_swapChain;
 
-  if (
-    vkCreateSwapchainKHR(
-      m_context.device().vkDevice(),
-      &createInfo,
-      nullptr,
-      &m_swapChain
-    )
-    != VK_SUCCESS
-  ) {
+  if (vkCreateSwapchainKHR(
+        m_context.device().vkDevice(),
+        &createInfo,
+        nullptr,
+        &m_swapChain
+      )
+      != VK_SUCCESS) {
     throw std::runtime_error("Failed to create swap chain");
   }
 
-  if (
-    vkGetSwapchainImagesKHR(
-      m_context.device().vkDevice(),
-      m_swapChain,
-      &imageCount,
-      nullptr
-    )
-    != VK_SUCCESS
-  ) {
+  if (vkGetSwapchainImagesKHR(
+        m_context.device().vkDevice(),
+        m_swapChain,
+        &imageCount,
+        nullptr
+      )
+      != VK_SUCCESS) {
     throw std::runtime_error("Failed retrieving image count");
   }
 
   m_images.resize(imageCount);
-  if (
-    vkGetSwapchainImagesKHR(
-      m_context.device().vkDevice(),
-      m_swapChain,
-      &imageCount,
-      m_images.data()
-    )
-    != VK_SUCCESS
-  ) {
+  if (vkGetSwapchainImagesKHR(
+        m_context.device().vkDevice(),
+        m_swapChain,
+        &imageCount,
+        m_images.data()
+      )
+      != VK_SUCCESS) {
     throw std::runtime_error("Failed setting the swap chain images");
   }
 
@@ -214,10 +206,8 @@ VkSurfaceFormatKHR SwapChain::chooseSwapSurfaceFormat(
   const std::vector<VkSurfaceFormatKHR>& availableFormats
 ) {
   for (const auto& availableFormat : availableFormats) {
-    if (
-      availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB
-      && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
-    ) {
+    if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB
+        && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
       return availableFormat;
     }
   }
@@ -248,9 +238,8 @@ VkPresentModeKHR SwapChain::chooseSwapPresentMode(
 VkExtent2D SwapChain::chooseSwapExtent(
   const VkSurfaceCapabilitiesKHR& capabilities
 ) {
-  if (
-    capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()
-  ) {
+  if (capabilities.currentExtent.width
+      != std::numeric_limits<uint32_t>::max()) {
     return capabilities.currentExtent;
   } else {
     int width, height;
@@ -275,3 +264,5 @@ VkExtent2D SwapChain::chooseSwapExtent(
     return actualExtent;
   }
 }
+
+}  // namespace dunya::gpu

@@ -1,5 +1,7 @@
 #include "window.ih"
 
+namespace dunya::platform {
+
 Window::Window()
     : m_width(WIDTH),
       m_height(HEIGHT),
@@ -76,3 +78,5 @@ void Window::windowFocusCallback(GLFWwindow* window, int focused) {
     windowObj->focus(focused);
   }
 }
+
+}  // namespace dunya::platform

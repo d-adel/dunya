@@ -20,7 +20,7 @@ namespace dunya::capture {
 // Copies the image into host memory as 8-bit RGBA, converting from the image's
 // own channel order. The image is left in the layout it arrived in.
 dunya::image::Bitmap read(
-  const Device& device,
+  const dunya::gpu::Device& device,
   VkImage image,
   VkImageLayout layout,
   VkExtent2D extent,

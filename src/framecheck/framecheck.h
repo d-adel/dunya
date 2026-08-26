@@ -19,8 +19,8 @@
 class FrameCheck {
 public:
   FrameCheck(
-    const Context& context,
-    const SwapChain& swapChain,
+    const dunya::gpu::Context& context,
+    const dunya::gpu::SwapChain& swapChain,
     const StartupOptions& options
   );
 
@@ -46,8 +46,8 @@ private:
   dunya::image::Bitmap read(VkImage image) const;
   bool compareToReference(const dunya::image::Bitmap& frame) const;
 
-  const Context& m_context;
-  const SwapChain& m_swapChain;
+  const dunya::gpu::Context& m_context;
+  const dunya::gpu::SwapChain& m_swapChain;
 
   std::string m_screenshot;
   std::string m_reference;

@@ -1,5 +1,7 @@
 #include "texture.ih"
 
+namespace dunya::gpu {
+
 Texture::Texture(const Device& device, const std::string& texturePath) {
   int texWidth, texHeight, texChannels;
   stbi_uc* pixels = stbi_load(
@@ -96,17 +98,15 @@ void Texture::createTextureImage(
   );
 
   void* mapped;
-  if (
-    vkMapMemory(
-      device.vkDevice(),
-      stagingBuffer.memory(),
-      0,
-      imageSize,
-      0,
-      &mapped
-    )
-    != VK_SUCCESS
-  ) {
+  if (vkMapMemory(
+        device.vkDevice(),
+        stagingBuffer.memory(),
+        0,
+        imageSize,
+        0,
+        &mapped
+      )
+      != VK_SUCCESS) {
     throw std::runtime_error("Failed to map texture staging memory");
   }
 
@@ -115,8 +115,8 @@ void Texture::createTextureImage(
 
   VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
   VkMemoryPropertyFlags properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-  VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT
-                            | VK_IMAGE_USAGE_SAMPLED_BIT | extraUsage;
+  VkImageUsageFlags usage =
+    VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | extraUsage;
   VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
 
   m_textureImage = Image(
@@ -144,3 +144,5 @@ void Texture::createTextureImage(
     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
   );
 }
+
+}  // namespace dunya::gpu

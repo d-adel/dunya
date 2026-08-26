@@ -4,6 +4,8 @@
 #include <optional>
 #include <vector>
 
+namespace dunya::gpu {
+
 const std::vector<const char*> deviceExtensions = {
   VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
@@ -68,3 +70,5 @@ private:
 
   QueueFamilyIndices m_indices;
 };
+
+}  // namespace dunya::gpu

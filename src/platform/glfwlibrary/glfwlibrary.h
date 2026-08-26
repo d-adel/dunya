@@ -2,6 +2,8 @@
 
 #include <GLFW/glfw3.h>
 
+namespace dunya::platform {
+
 class GLFWLibrary {
 public:
   GLFWLibrary();
@@ -15,3 +17,5 @@ public:
 private:
   static void errorCallback(int errorCode, const char* description);
 };
+
+}  // namespace dunya::platform

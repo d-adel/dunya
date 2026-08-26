@@ -11,19 +11,21 @@
 #include <glm/glm.hpp>
 #include <span>
 
+namespace dunya::renderer {
+
 struct Frame {
   glm::mat4 view = glm::mat4(1.0f);
   glm::mat4 proj = glm::mat4(1.0f);
   glm::vec4 cameraPos = glm::vec4(1.0f);
-  std::span<const DrawItem> drawItems = {};
+  std::span<const dunya::objectmodel::DrawItem> drawItems = {};
   std::span<const Mesh> meshes = {};
 
-  std::span<const ObjectId> fieldObjectIds = {};
+  std::span<const dunya::core::ObjectId> fieldObjectIds = {};
   std::span<const dunya::field::Primitive> primitives = {};
 
-  PipelineType mode = PipelineType::Both;
+  dunya::gpu::PipelineType mode = dunya::gpu::PipelineType::Both;
 
-  uint32_t fieldRepresentation = FIELD_SAMPLED;
+  uint32_t fieldRepresentation = dunya::core::FIELD_SAMPLED;
 
   // Authoritative here rather than in the shader, so a slider and the CPU's own
   // marching read the same numbers. Defaults come from CMake.
@@ -38,3 +40,5 @@ struct Frame {
     DUNYA_MARCH_MAX_ITERATIONS
   };
 };
+
+}  // namespace dunya::renderer

@@ -1,5 +1,7 @@
 #include "buffer.ih"
 
+namespace dunya::gpu {
+
 Buffer::Buffer(
   const Device& device,
   VkDeviceSize size,
@@ -87,10 +89,8 @@ void Buffer::createBuffer(
   allocInfo.memoryTypeIndex =
     device.findMemoryType(memRequirements.memoryTypeBits, properties);
 
-  if (
-    vkAllocateMemory(m_device, &allocInfo, nullptr, &m_bufferMemory)
-    != VK_SUCCESS
-  ) {
+  if (vkAllocateMemory(m_device, &allocInfo, nullptr, &m_bufferMemory)
+      != VK_SUCCESS) {
     throw std::runtime_error("failed to allocate buffer memory!");
   }
 
@@ -113,3 +113,5 @@ void Buffer::copyTo(
 
   cmd.submit(device);
 }
+
+}  // namespace dunya::gpu

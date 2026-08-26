@@ -4,6 +4,8 @@
 #include "gpu/context/context.h"
 #include <vector>
 
+namespace dunya::gpu {
+
 class SwapChain {
 public:
   SwapChain(const Context& context);
@@ -45,3 +47,5 @@ private:
   std::vector<VkImageView> m_imageViews;
   bool m_uncapped = false;
 };
+
+}  // namespace dunya::gpu

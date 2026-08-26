@@ -1,12 +1,14 @@
 #include "renderer/volumepool/volumepool.ih"
 
+namespace dunya::renderer {
+
 using dunya::field::SampledField;
 
-VolumePool::VolumePool(const Device& device) : m_device(device) {
-  m_freeIndices.reserve(MAX_FIELD_OBJECTS);
+VolumePool::VolumePool(const dunya::gpu::Device& device) : m_device(device) {
+  m_freeIndices.reserve(dunya::core::MAX_FIELD_OBJECTS);
 
-  for (uint32_t i = 0; i < MAX_FIELD_OBJECTS; ++i) {
-    m_freeIndices.push_back(MAX_FIELD_OBJECTS - 1 - i);
+  for (uint32_t i = 0; i < dunya::core::MAX_FIELD_OBJECTS; ++i) {
+    m_freeIndices.push_back(dunya::core::MAX_FIELD_OBJECTS - 1 - i);
   }
 }
 
@@ -39,13 +41,13 @@ VolumeImages VolumePool::images(uint32_t index) const {
   return {volume.distance.image(), volume.material.image()};
 }
 
-Texture VolumePool::makeDistanceVolume(
-  const Device& device,
+dunya::gpu::Texture VolumePool::makeDistanceVolume(
+  const dunya::gpu::Device& device,
   const SampledField& grid
 ) {
   // 32-bit for the first measurement, deliberately: half's spacing near a
   // distance of one is about 0.001, which is the march epsilon
-  return Texture(
+  return dunya::gpu::Texture(
     device,
     grid.resolution.x,
     grid.resolution.y,
@@ -57,8 +59,8 @@ Texture VolumePool::makeDistanceVolume(
   );
 }
 
-Texture VolumePool::makeMaterialVolume(
-  const Device& device,
+dunya::gpu::Texture VolumePool::makeMaterialVolume(
+  const dunya::gpu::Device& device,
   const SampledField& grid
 ) {
   std::vector<uint8_t> ids;
@@ -68,7 +70,7 @@ Texture VolumePool::makeMaterialVolume(
     ids.push_back(static_cast<uint8_t>(material));
   }
 
-  return Texture(
+  return dunya::gpu::Texture(
     device,
     grid.resolution.x,
     grid.resolution.y,
@@ -79,3 +81,5 @@ Texture VolumePool::makeMaterialVolume(
     VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
   );
 }
+
+}  // namespace dunya::renderer

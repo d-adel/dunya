@@ -15,16 +15,18 @@
 #include <functional>
 #include <vector>
 
+namespace dunya::renderer {
+
 class Renderer {
 public:
   Renderer(
-    const Device& device,
+    const dunya::gpu::Device& device,
     FieldObjectTable& fieldObjectTable,
     const FieldBaker& fieldBaker,
     const VolumePool& volumePool,
     FrameGlobals& frameGlobals,
-    const Pipeline& meshPipeline,
-    const Pipeline& fieldPipeline,
+    const dunya::gpu::Pipeline& meshPipeline,
+    const dunya::gpu::Pipeline& fieldPipeline,
     const ResourceTable& resourceTable,
     const VkSurfaceKHR& surface,
     uint32_t imageCount
@@ -42,7 +44,7 @@ public:
    * rather than a race you get away with.
    */
   bool drawFrame(
-    const SwapChain& swapChain,
+    const dunya::gpu::SwapChain& swapChain,
     const Frame& frameContext,
     const std::function<void(VkCommandBuffer)>& onOverlay = {},
     const std::function<void(VkImage)>& onFrameReady = {}
@@ -57,7 +59,7 @@ private:
 
   void createSyncObjects(uint32_t imageCount);
   void recordCommandBuffer(
-    const SwapChain& swapChain,
+    const dunya::gpu::SwapChain& swapChain,
     const Frame& frameContext,
     const std::function<void(VkCommandBuffer)>& onOverlay
   );
@@ -74,11 +76,13 @@ private:
   uint32_t m_imageIndex = 0;
   uint32_t m_currentFrame = 0;
 
-  const Pipeline& m_meshPipeline;
-  const Pipeline& m_fieldPipeline;
+  const dunya::gpu::Pipeline& m_meshPipeline;
+  const dunya::gpu::Pipeline& m_fieldPipeline;
   const ResourceTable& m_resourceTable;
   FieldObjectTable& m_fieldObjectTable;
   const FieldBaker& m_fieldBaker;
   const VolumePool& m_volumePool;
   FrameGlobals& m_frameGlobals;
 };
+
+}  // namespace dunya::renderer

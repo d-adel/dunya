@@ -23,7 +23,10 @@
  */
 class Overlay {
 public:
-  Overlay(const Context& context, const SwapChain& swapChain);
+  Overlay(
+    const dunya::gpu::Context& context,
+    const dunya::gpu::SwapChain& swapChain
+  );
 
   Overlay(const Overlay&) = delete;
   Overlay& operator=(const Overlay&) = delete;
@@ -63,7 +66,7 @@ private:
     bool visible = true;
   };
 
-  const Context& m_context;
+  const dunya::gpu::Context& m_context;
 
   std::vector<Panel> m_panels;
 

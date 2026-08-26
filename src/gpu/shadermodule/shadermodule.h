@@ -6,6 +6,8 @@
 #include <utility>
 #include <vector>
 
+namespace dunya::gpu {
+
 class ShaderModule {
 public:
   ShaderModule(const VkDevice& device, const std::vector<char>& code);
@@ -30,3 +32,5 @@ private:
   VkShaderModule m_module = VK_NULL_HANDLE;
   VkDevice m_device = VK_NULL_HANDLE;
 };
+
+}  // namespace dunya::gpu

@@ -6,6 +6,8 @@
 #include <vulkan/vulkan.h>
 #include <utility>
 
+namespace dunya::gpu {
+
 class DepthImage {
 public:
   DepthImage() = default;
@@ -41,3 +43,5 @@ private:
   VkFormat m_format = VK_FORMAT_UNDEFINED;
   Image m_depthImage;
 };
+
+}  // namespace dunya::gpu

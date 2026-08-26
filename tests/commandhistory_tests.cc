@@ -17,11 +17,14 @@ namespace {
 
 // Materials number the primitives 1, 2, 3..., which is how a test tells one
 // slot from another after an edit has moved them around.
-ObjectId makeObject(ObjectRegistry& registry, uint32_t primitives) {
-  FieldObject object{};
-  object.resolution = glm::uvec3(FIELD_GRID_RESOLUTION);
+dunya::core::ObjectId makeObject(
+  dunya::objectmodel::ObjectRegistry& registry,
+  uint32_t primitives
+) {
+  dunya::objectmodel::FieldObject object{};
+  object.resolution = glm::uvec3(dunya::core::FIELD_GRID_RESOLUTION);
 
-  const ObjectId id = registry.addFieldObject(object);
+  const dunya::core::ObjectId id = registry.addFieldObject(object);
 
   for (uint32_t i = 0; i != primitives; ++i) {
     registry.addPrimitive(
@@ -34,8 +37,8 @@ ObjectId makeObject(ObjectRegistry& registry, uint32_t primitives) {
 }
 
 uint32_t materialAt(
-  const ObjectRegistry& registry,
-  ObjectId id,
+  const dunya::objectmodel::ObjectRegistry& registry,
+  dunya::core::ObjectId id,
   uint32_t index
 ) {
   return registry.getPrimitives(id)[index].shapeConfig.y;
@@ -47,17 +50,22 @@ dunya::field::Primitive marker(uint32_t material) {
 
 }  // namespace
 
-TEST_CASE("undoing an added primitive restores the count and marks it dirty",
-          "[commandhistory]") {
+TEST_CASE(
+  "undoing an added primitive restores the count and marks it dirty",
+  "[commandhistory]"
+) {
   // The bake only runs for objects the registry flagged, so an undo that
   // forgets the flag changes the edit list and leaves the image behind.
-  ObjectRegistry registry;
-  CommandHistory history;
+  dunya::objectmodel::ObjectRegistry registry;
+  dunya::editor::CommandHistory history;
 
-  const ObjectId id = makeObject(registry, 2);
+  const dunya::core::ObjectId id = makeObject(registry, 2);
   registry.getFieldObject(id).dirty = false;
 
-  REQUIRE(history.execute(AddPrimitiveCommand{id, 2, marker(9)}, registry));
+  REQUIRE(history.execute(
+    dunya::editor::AddPrimitiveCommand{id, 2, marker(9)},
+    registry
+  ));
 
   REQUIRE(registry.primitiveCount(id) == 3);
   REQUIRE(registry.getFieldObject(id).dirty);
@@ -70,28 +78,34 @@ TEST_CASE("undoing an added primitive restores the count and marks it dirty",
   REQUIRE(registry.getFieldObject(id).dirty);
 }
 
-TEST_CASE("a rejected edit returns false and records nothing",
-          "[commandhistory]") {
+TEST_CASE(
+  "a rejected edit returns false and records nothing",
+  "[commandhistory]"
+) {
   // An edit that never landed must stay out of the history: undoing it later
   // would remove a primitive this command never added.
-  ObjectRegistry registry;
-  CommandHistory history;
+  dunya::objectmodel::ObjectRegistry registry;
+  dunya::editor::CommandHistory history;
 
-  REQUIRE_FALSE(
-    history.execute(AddPrimitiveCommand{0, 0, marker(1)}, registry)
-  );
+  REQUIRE_FALSE(history.execute(
+    dunya::editor::AddPrimitiveCommand{0, 0, marker(1)},
+    registry
+  ));
 
   REQUIRE_FALSE(history.canUndo());
   REQUIRE_FALSE(history.canRedo());
 }
 
 TEST_CASE("redo replays an undone edit", "[commandhistory]") {
-  ObjectRegistry registry;
-  CommandHistory history;
+  dunya::objectmodel::ObjectRegistry registry;
+  dunya::editor::CommandHistory history;
 
-  const ObjectId id = makeObject(registry, 2);
+  const dunya::core::ObjectId id = makeObject(registry, 2);
 
-  REQUIRE(history.execute(AddPrimitiveCommand{id, 2, marker(9)}, registry));
+  REQUIRE(history.execute(
+    dunya::editor::AddPrimitiveCommand{id, 2, marker(9)},
+    registry
+  ));
 
   history.undo(registry);
 
@@ -108,18 +122,24 @@ TEST_CASE("redo replays an undone edit", "[commandhistory]") {
 TEST_CASE("a fresh edit clears the redo stack", "[commandhistory]") {
   // Editing after an undo abandons the branch that was undone; keeping it
   // would let a later redo splice an edit onto a list it never saw.
-  ObjectRegistry registry;
-  CommandHistory history;
+  dunya::objectmodel::ObjectRegistry registry;
+  dunya::editor::CommandHistory history;
 
-  const ObjectId id = makeObject(registry, 1);
+  const dunya::core::ObjectId id = makeObject(registry, 1);
 
-  REQUIRE(history.execute(AddPrimitiveCommand{id, 1, marker(9)}, registry));
+  REQUIRE(history.execute(
+    dunya::editor::AddPrimitiveCommand{id, 1, marker(9)},
+    registry
+  ));
 
   history.undo(registry);
 
   REQUIRE(history.canRedo());
 
-  REQUIRE(history.execute(AddPrimitiveCommand{id, 1, marker(8)}, registry));
+  REQUIRE(history.execute(
+    dunya::editor::AddPrimitiveCommand{id, 1, marker(8)},
+    registry
+  ));
 
   REQUIRE_FALSE(history.canRedo());
   REQUIRE(materialAt(registry, id, 1) == 8);
@@ -128,15 +148,24 @@ TEST_CASE("a fresh edit clears the redo stack", "[commandhistory]") {
 TEST_CASE("undo runs last-in-first-out across objects", "[commandhistory]") {
   // Edit lists are per object but undo is global, so the history is the only
   // thing that knows which object was carved most recently.
-  ObjectRegistry registry;
-  CommandHistory history;
+  dunya::objectmodel::ObjectRegistry registry;
+  dunya::editor::CommandHistory history;
 
-  const ObjectId a = makeObject(registry, 1);
-  const ObjectId b = makeObject(registry, 1);
+  const dunya::core::ObjectId a = makeObject(registry, 1);
+  const dunya::core::ObjectId b = makeObject(registry, 1);
 
-  REQUIRE(history.execute(AddPrimitiveCommand{a, 1, marker(10)}, registry));
-  REQUIRE(history.execute(AddPrimitiveCommand{b, 1, marker(20)}, registry));
-  REQUIRE(history.execute(AddPrimitiveCommand{a, 2, marker(30)}, registry));
+  REQUIRE(history.execute(
+    dunya::editor::AddPrimitiveCommand{a, 1, marker(10)},
+    registry
+  ));
+  REQUIRE(history.execute(
+    dunya::editor::AddPrimitiveCommand{b, 1, marker(20)},
+    registry
+  ));
+  REQUIRE(history.execute(
+    dunya::editor::AddPrimitiveCommand{a, 2, marker(30)},
+    registry
+  ));
 
   REQUIRE(registry.primitiveCount(a) == 3);
   REQUIRE(registry.primitiveCount(b) == 2);
@@ -157,17 +186,19 @@ TEST_CASE("undo runs last-in-first-out across objects", "[commandhistory]") {
   REQUIRE_FALSE(history.canUndo());
 }
 
-TEST_CASE("undoing a removal puts the primitive back in its own slot",
-          "[commandhistory]") {
+TEST_CASE(
+  "undoing a removal puts the primitive back in its own slot",
+  "[commandhistory]"
+) {
   // Primitive order is the CSG fold order, so restoring at the end instead of
   // in place would rebuild a different shape from the same list.
-  ObjectRegistry registry;
-  CommandHistory history;
+  dunya::objectmodel::ObjectRegistry registry;
+  dunya::editor::CommandHistory history;
 
-  const ObjectId id = makeObject(registry, 3);
+  const dunya::core::ObjectId id = makeObject(registry, 3);
 
   REQUIRE(history.execute(
-    RemovePrimitiveCommand{id, 1, registry.getPrimitives(id)[1]},
+    dunya::editor::RemovePrimitiveCommand{id, 1, registry.getPrimitives(id)[1]},
     registry
   ));
 
@@ -183,16 +214,21 @@ TEST_CASE("undoing a removal puts the primitive back in its own slot",
   REQUIRE(materialAt(registry, id, 2) == 3);
 }
 
-TEST_CASE("a redo that cannot apply stays on the redo stack",
-          "[commandhistory]") {
+TEST_CASE(
+  "a redo that cannot apply stays on the redo stack",
+  "[commandhistory]"
+) {
   // A redo that fails must not consume the command: dropping it would lose
   // the edit from both stacks with nothing said.
-  ObjectRegistry registry;
-  CommandHistory history;
+  dunya::objectmodel::ObjectRegistry registry;
+  dunya::editor::CommandHistory history;
 
-  const ObjectId id = makeObject(registry, 1);
+  const dunya::core::ObjectId id = makeObject(registry, 1);
 
-  REQUIRE(history.execute(AddPrimitiveCommand{id, 1, marker(9)}, registry));
+  REQUIRE(history.execute(
+    dunya::editor::AddPrimitiveCommand{id, 1, marker(9)},
+    registry
+  ));
 
   history.undo(registry);
 
@@ -204,16 +240,21 @@ TEST_CASE("a redo that cannot apply stays on the redo stack",
   REQUIRE_FALSE(history.canUndo());
 }
 
-TEST_CASE("an undo that cannot revert stays on the undo stack",
-          "[commandhistory]") {
+TEST_CASE(
+  "an undo that cannot revert stays on the undo stack",
+  "[commandhistory]"
+) {
   // The mirror of the failed redo. A revert that cannot run leaves the
   // history where it was rather than dropping the edit on the floor.
-  ObjectRegistry registry;
-  CommandHistory history;
+  dunya::objectmodel::ObjectRegistry registry;
+  dunya::editor::CommandHistory history;
 
-  const ObjectId id = makeObject(registry, 1);
+  const dunya::core::ObjectId id = makeObject(registry, 1);
 
-  REQUIRE(history.execute(AddPrimitiveCommand{id, 1, marker(9)}, registry));
+  REQUIRE(history.execute(
+    dunya::editor::AddPrimitiveCommand{id, 1, marker(9)},
+    registry
+  ));
 
   registry.removeFieldObject(id);
 
@@ -226,10 +267,10 @@ TEST_CASE("an undo that cannot revert stays on the undo stack",
 TEST_CASE("undoing a transform restores the old pose", "[commandhistory]") {
   // A pose change never touches the edit list, so this one must move the
   // object back without asking for a rebake.
-  ObjectRegistry registry;
-  CommandHistory history;
+  dunya::objectmodel::ObjectRegistry registry;
+  dunya::editor::CommandHistory history;
 
-  const ObjectId id = makeObject(registry, 1);
+  const dunya::core::ObjectId id = makeObject(registry, 1);
 
   const glm::vec3 oldPosition(1.0f, 2.0f, 3.0f);
   const glm::quat oldRotation =
@@ -239,12 +280,12 @@ TEST_CASE("undoing a transform restores the old pose", "[commandhistory]") {
   const glm::quat newRotation =
     glm::angleAxis(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
-  FieldObject& object = registry.getFieldObject(id);
+  dunya::objectmodel::FieldObject& object = registry.getFieldObject(id);
   object.position = oldPosition;
   object.rotation = oldRotation;
 
   REQUIRE(history.execute(
-    TransformFieldObjectCommand{
+    dunya::editor::TransformFieldObjectCommand{
       id,
       oldPosition,
       oldRotation,

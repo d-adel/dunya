@@ -8,6 +8,8 @@
 #include <cstdint>
 #include <vector>
 
+namespace dunya::gpu {
+
 class DescriptorGroup {
 public:
   enum class BufferUpdate {
@@ -78,7 +80,6 @@ public:
     VkImageView imageView
   );
 
-
 private:
   struct Slot {
     uint32_t binding = 0;
@@ -134,3 +135,5 @@ private:
   std::vector<Slot> m_slots;
   std::vector<ImageSlot> m_imageSlots;
 };
+
+}  // namespace dunya::gpu

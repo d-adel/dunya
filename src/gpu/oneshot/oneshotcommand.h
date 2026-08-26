@@ -4,6 +4,8 @@
 
 #include <vulkan/vulkan.h>
 
+namespace dunya::gpu {
+
 class OneShotCommand {
 public:
   OneShotCommand() = default;
@@ -18,3 +20,5 @@ private:
   VkCommandPool m_commandPool;
   VkCommandBuffer m_commandBuffer;
 };
+
+}  // namespace dunya::gpu

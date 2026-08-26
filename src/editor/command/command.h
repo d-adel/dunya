@@ -7,32 +7,34 @@
 
 #include <variant>
 
+namespace dunya::editor {
+
 struct AddFieldObjectCommand {
-  ObjectId id = INVALID_OBJECT_ID;
-  FieldObject object;
+  dunya::core::ObjectId id = dunya::core::INVALID_OBJECT_ID;
+  dunya::objectmodel::FieldObject object;
 };
 
 struct RemoveFieldObjectCommand {
-  ObjectId id;
+  dunya::core::ObjectId id;
 
-  std::optional<FieldObject> object;
+  std::optional<dunya::objectmodel::FieldObject> object;
   std::vector<dunya::field::Primitive> primitives;
 };
 
 struct AddPrimitiveCommand {
-  ObjectId objectId;
+  dunya::core::ObjectId objectId;
   uint32_t primitiveIndex;
   dunya::field::Primitive primitive;
 };
 
 struct RemovePrimitiveCommand {
-  ObjectId objectId;
+  dunya::core::ObjectId objectId;
   uint32_t primitiveIndex;
   dunya::field::Primitive primitive;
 };
 
 struct UpdatePrimitiveCommand {
-  ObjectId objectId;
+  dunya::core::ObjectId objectId;
   uint32_t primitiveIndex;
 
   dunya::field::Primitive oldPrimitive;
@@ -40,7 +42,7 @@ struct UpdatePrimitiveCommand {
 };
 
 struct TransformFieldObjectCommand {
-  ObjectId id;
+  dunya::core::ObjectId id;
 
   glm::vec3 oldPosition;
   glm::quat oldRotation;
@@ -56,3 +58,5 @@ using Command = std::variant<
   AddPrimitiveCommand,
   RemovePrimitiveCommand,
   UpdatePrimitiveCommand>;
+
+}  // namespace dunya::editor

@@ -8,6 +8,8 @@
 #include <cstdint>
 #include <string>
 
+namespace dunya::gpu {
+
 class Texture {
 public:
   Texture() = default;
@@ -53,3 +55,5 @@ private:
 
   Image m_textureImage;
 };
+
+}  // namespace dunya::gpu

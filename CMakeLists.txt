@@ -128,7 +128,16 @@ FetchContent_Declare(
     SOURCE_SUBDIR   cmake_disabled
 )
 
-FetchContent_MakeAvailable(glfw glm stb tinyobjloader imgui)
+# Fetch Jolt Physics. Its CMakeLists lives in Build/ rather than at the repo
+# root, and it disables its own samples and tests when it is not top level.
+FetchContent_Declare(
+    JoltPhysics
+    GIT_REPOSITORY  https://github.com/jrouwe/JoltPhysics
+    GIT_TAG         v5.6.0
+    SOURCE_SUBDIR   Build
+)
+
+FetchContent_MakeAvailable(glfw glm stb tinyobjloader imgui JoltPhysics)
 
 # Find Vulkan SDK
 find_package(Vulkan REQUIRED)

@@ -1,5 +1,7 @@
 #include "objectregistry.ih"
 
+namespace dunya::objectmodel {
+
 using dunya::field::Primitive;
 
 namespace {
@@ -8,13 +10,14 @@ constexpr uint32_t INITIAL_PRIMITIVE_CAPACITY = 4;
 
 }
 
-ObjectRegistry::ObjectRegistry() : m_fieldObjects(MAX_FIELD_OBJECTS) {
-  m_activeFieldObjects.reserve(MAX_FIELD_OBJECTS);
+ObjectRegistry::ObjectRegistry()
+    : m_fieldObjects(dunya::core::MAX_FIELD_OBJECTS) {
+  m_activeFieldObjects.reserve(dunya::core::MAX_FIELD_OBJECTS);
 }
 
-ObjectId ObjectRegistry::allocateObjectId() {
+dunya::core::ObjectId ObjectRegistry::allocateObjectId() {
   while (!m_freeObjectIds.empty()) {
-    const ObjectId objectId = m_freeObjectIds.top();
+    const dunya::core::ObjectId objectId = m_freeObjectIds.top();
     m_freeObjectIds.pop();
 
     if (!m_fieldObjects[objectId].object.has_value()) {
@@ -22,18 +25,20 @@ ObjectId ObjectRegistry::allocateObjectId() {
     }
   }
 
-  if (m_nextUnusedObjectId >= MAX_FIELD_OBJECTS) {
-    return INVALID_OBJECT_ID;
+  if (m_nextUnusedObjectId >= dunya::core::MAX_FIELD_OBJECTS) {
+    return dunya::core::INVALID_OBJECT_ID;
   }
 
   return m_nextUnusedObjectId++;
 }
 
-ObjectId ObjectRegistry::addFieldObject(const FieldObject& fieldObject) {
-  const ObjectId objectId = allocateObjectId();
+dunya::core::ObjectId ObjectRegistry::addFieldObject(
+  const FieldObject& fieldObject
+) {
+  const dunya::core::ObjectId objectId = allocateObjectId();
 
-  if (objectId == INVALID_OBJECT_ID) {
-    return INVALID_OBJECT_ID;
+  if (objectId == dunya::core::INVALID_OBJECT_ID) {
+    return dunya::core::INVALID_OBJECT_ID;
   }
 
   addFieldObjectAt(objectId, fieldObject);
@@ -42,12 +47,11 @@ ObjectId ObjectRegistry::addFieldObject(const FieldObject& fieldObject) {
 }
 
 bool ObjectRegistry::addFieldObjectAt(
-  ObjectId objectId,
+  dunya::core::ObjectId objectId,
   const FieldObject& fieldObject
 ) {
-  if (
-    objectId >= MAX_FIELD_OBJECTS || m_fieldObjects[objectId].object.has_value()
-  ) {
+  if (objectId >= dunya::core::MAX_FIELD_OBJECTS
+      || m_fieldObjects[objectId].object.has_value()) {
     return false;
   }
 
@@ -71,7 +75,7 @@ bool ObjectRegistry::addFieldObjectAt(
 }
 
 bool ObjectRegistry::setPrimitive(
-  ObjectId objectId,
+  dunya::core::ObjectId objectId,
   uint32_t primitiveIndex,
   const dunya::field::Primitive& primitive
 ) {
@@ -99,7 +103,7 @@ bool ObjectRegistry::setPrimitive(
 }
 
 bool ObjectRegistry::insertPrimitive(
-  ObjectId objectId,
+  dunya::core::ObjectId objectId,
   uint32_t primitiveIndex,
   const dunya::field::Primitive& primitive
 ) {
@@ -113,7 +117,7 @@ bool ObjectRegistry::insertPrimitive(
     return false;
   }
 
-  if (slot.primitiveCount >= MAX_FIELD_PRIMITIVES) {
+  if (slot.primitiveCount >= dunya::core::MAX_FIELD_PRIMITIVES) {
     return false;
   }
 
@@ -121,8 +125,10 @@ bool ObjectRegistry::insertPrimitive(
     uint32_t newCapacity =
       slot.primitiveCapacity == 0 ? 1 : slot.primitiveCapacity * 2;
 
-    newCapacity =
-      std::min(newCapacity, static_cast<uint32_t>(MAX_FIELD_PRIMITIVES));
+    newCapacity = std::min(
+      newCapacity,
+      static_cast<uint32_t>(dunya::core::MAX_FIELD_PRIMITIVES)
+    );
 
     std::optional<const uint32_t> newOffset =
       allocatePrimitiveRange(newCapacity);
@@ -131,7 +137,7 @@ bool ObjectRegistry::insertPrimitive(
       return false;
     }
 
-    if (newOffset.value() == INVALID_PRIMITIVE_OFFSET) {
+    if (newOffset.value() == dunya::core::INVALID_PRIMITIVE_OFFSET) {
       return false;
     }
 
@@ -174,7 +180,7 @@ bool ObjectRegistry::insertPrimitive(
   return true;
 }
 
-bool ObjectRegistry::removeFieldObject(ObjectId objectId) {
+bool ObjectRegistry::removeFieldObject(dunya::core::ObjectId objectId) {
   if (!contains(objectId)) {
     return false;
   }
@@ -186,7 +192,7 @@ bool ObjectRegistry::removeFieldObject(ObjectId objectId) {
   }
 
   const uint32_t removedIndex = slot.activeIndex;
-  const ObjectId lastObjectId = m_activeFieldObjects.back();
+  const dunya::core::ObjectId lastObjectId = m_activeFieldObjects.back();
 
   if (removedIndex != m_activeFieldObjects.size() - 1) {
     m_activeFieldObjects[removedIndex] = lastObjectId;
@@ -246,7 +252,7 @@ std::optional<uint32_t> ObjectRegistry::allocatePrimitiveRange(
     );
   }
 
-  if (m_primitives.size() + capacity > MAX_PRIMITIVE_POOL) {
+  if (m_primitives.size() + capacity > dunya::core::MAX_PRIMITIVE_POOL) {
     return std::nullopt;
   }
 
@@ -304,21 +310,21 @@ std::optional<uint32_t> ObjectRegistry::nextPrimitiveCapacity(
   uint32_t currentCapacity,
   uint32_t requiredCapacity
 ) {
-  if (requiredCapacity > MAX_FIELD_PRIMITIVES) {
+  if (requiredCapacity > dunya::core::MAX_FIELD_PRIMITIVES) {
     return std::nullopt;
   }
 
   uint32_t capacity =
     currentCapacity == 0
-      ? std::min(INITIAL_PRIMITIVE_CAPACITY, MAX_FIELD_PRIMITIVES)
+      ? std::min(INITIAL_PRIMITIVE_CAPACITY, dunya::core::MAX_FIELD_PRIMITIVES)
       : currentCapacity;
 
   while (capacity < requiredCapacity) {
-    if (capacity >= MAX_FIELD_PRIMITIVES) {
+    if (capacity >= dunya::core::MAX_FIELD_PRIMITIVES) {
       return std::nullopt;
     }
 
-    capacity = std::min(capacity * 2, MAX_FIELD_PRIMITIVES);
+    capacity = std::min(capacity * 2, dunya::core::MAX_FIELD_PRIMITIVES);
   }
 
   return capacity;
@@ -358,7 +364,7 @@ bool ObjectRegistry::growPrimitiveRange(
 }
 
 bool ObjectRegistry::addPrimitive(
-  ObjectId objectId,
+  dunya::core::ObjectId objectId,
   const dunya::field::Primitive& primitive
 ) {
   if (!contains(objectId)) {
@@ -373,7 +379,7 @@ bool ObjectRegistry::addPrimitive(
 }
 
 bool ObjectRegistry::removePrimitive(
-  ObjectId objectId,
+  dunya::core::ObjectId objectId,
   uint32_t primitiveIndex
 ) {
   if (!contains(objectId)) {
@@ -411,7 +417,7 @@ bool ObjectRegistry::removePrimitive(
   return true;
 }
 
-void ObjectRegistry::clearPrimitives(ObjectId objectId) {
+void ObjectRegistry::clearPrimitives(dunya::core::ObjectId objectId) {
   if (!contains(objectId)) {
     return;
   }
@@ -427,7 +433,7 @@ void ObjectRegistry::clearPrimitives(ObjectId objectId) {
   refreshDerived(object, getPrimitives(objectId));
 }
 
-FieldObject& ObjectRegistry::getFieldObject(ObjectId objectId) {
+FieldObject& ObjectRegistry::getFieldObject(dunya::core::ObjectId objectId) {
   if (!contains(objectId)) {
     throw std::out_of_range("Invalid ObjectId");
   }
@@ -435,7 +441,9 @@ FieldObject& ObjectRegistry::getFieldObject(ObjectId objectId) {
   return *m_fieldObjects[objectId].object;
 }
 
-const FieldObject& ObjectRegistry::getFieldObject(ObjectId objectId) const {
+const FieldObject& ObjectRegistry::getFieldObject(
+  dunya::core::ObjectId objectId
+) const {
   if (!contains(objectId)) {
     throw std::out_of_range("Invalid ObjectId");
   }
@@ -444,7 +452,7 @@ const FieldObject& ObjectRegistry::getFieldObject(ObjectId objectId) const {
 }
 
 std::span<dunya::field::Primitive> ObjectRegistry::getPrimitives(
-  ObjectId objectId
+  dunya::core::ObjectId objectId
 ) {
   if (!contains(objectId)) {
     throw std::out_of_range("Invalid ObjectId");
@@ -456,7 +464,7 @@ std::span<dunya::field::Primitive> ObjectRegistry::getPrimitives(
 }
 
 std::span<const dunya::field::Primitive> ObjectRegistry::getPrimitives(
-  ObjectId objectId
+  dunya::core::ObjectId objectId
 ) const {
   if (!contains(objectId)) {
     throw std::out_of_range("Invalid ObjectId");
@@ -467,11 +475,12 @@ std::span<const dunya::field::Primitive> ObjectRegistry::getPrimitives(
   return {m_primitives.data() + slot.primitiveOffset, slot.primitiveCount};
 }
 
-std::span<const ObjectId> ObjectRegistry::fieldObjectIds() const noexcept {
+std::span<const dunya::core::ObjectId> ObjectRegistry::
+  fieldObjectIds() const noexcept {
   return m_activeFieldObjects;
 }
 
-bool ObjectRegistry::contains(ObjectId objectId) const noexcept {
+bool ObjectRegistry::contains(dunya::core::ObjectId objectId) const noexcept {
   return objectId < m_fieldObjects.size()
          && m_fieldObjects[objectId].object.has_value();
 }
@@ -480,7 +489,7 @@ uint32_t ObjectRegistry::fieldObjectCount() const noexcept {
   return static_cast<uint32_t>(m_activeFieldObjects.size());
 }
 
-uint32_t ObjectRegistry::primitiveCount(ObjectId objectId) const {
+uint32_t ObjectRegistry::primitiveCount(dunya::core::ObjectId objectId) const {
   if (!contains(objectId)) {
     throw std::out_of_range("Invalid ObjectId");
   }
@@ -493,10 +502,12 @@ std::span<const dunya::field::Primitive> ObjectRegistry::
   return m_primitives;
 }
 
-uint32_t ObjectRegistry::primitiveOffset(ObjectId objectId) const {
+uint32_t ObjectRegistry::primitiveOffset(dunya::core::ObjectId objectId) const {
   if (!contains(objectId)) {
     throw std::out_of_range("Invalid ObjectId");
   }
 
   return m_fieldObjects[objectId].primitiveOffset;
 }
+
+}  // namespace dunya::objectmodel

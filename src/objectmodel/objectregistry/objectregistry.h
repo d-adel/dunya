@@ -12,6 +12,8 @@
 #include <span>
 #include <vector>
 
+namespace dunya::objectmodel {
+
 class ObjectRegistry {
 public:
   ObjectRegistry();
@@ -21,56 +23,58 @@ public:
   ObjectRegistry(ObjectRegistry&&) = delete;
   ObjectRegistry& operator=(ObjectRegistry&&) = delete;
 
-  ObjectId addFieldObject(const FieldObject& fieldObject);
+  dunya::core::ObjectId addFieldObject(const FieldObject& fieldObject);
 
   // create
-  bool addFieldObjectAt(ObjectId id, const FieldObject& object);
+  bool addFieldObjectAt(dunya::core::ObjectId id, const FieldObject& object);
 
   bool addPrimitive(
-    ObjectId objectId,
+    dunya::core::ObjectId objectId,
     const dunya::field::Primitive& primitive
   );
 
   // retrieve
 
-  const FieldObject& getFieldObject(ObjectId objectId) const;
+  const FieldObject& getFieldObject(dunya::core::ObjectId objectId) const;
 
   std::span<const dunya::field::Primitive> getPrimitives(
-    ObjectId objectId
+    dunya::core::ObjectId objectId
   ) const;
 
-  std::span<const ObjectId> fieldObjectIds() const noexcept;
+  std::span<const dunya::core::ObjectId> fieldObjectIds() const noexcept;
 
   std::span<const dunya::field::Primitive> primitivePool() const noexcept;
 
-  FieldObject& getFieldObject(ObjectId objectId);
+  FieldObject& getFieldObject(dunya::core::ObjectId objectId);
 
-  std::span<dunya::field::Primitive> getPrimitives(ObjectId objectId);
+  std::span<dunya::field::Primitive> getPrimitives(
+    dunya::core::ObjectId objectId
+  );
 
   // update
   bool setPrimitive(
-    ObjectId objectId,
+    dunya::core::ObjectId objectId,
     uint32_t index,
     const dunya::field::Primitive& primitive
   );
 
   bool insertPrimitive(
-    ObjectId objectId,
+    dunya::core::ObjectId objectId,
     uint32_t index,
     const dunya::field::Primitive& primitive
   );
 
-  bool removePrimitive(ObjectId objectId, uint32_t primitiveIndex);
+  bool removePrimitive(dunya::core::ObjectId objectId, uint32_t primitiveIndex);
 
-  void clearPrimitives(ObjectId objectId);
+  void clearPrimitives(dunya::core::ObjectId objectId);
   // delete
-  bool removeFieldObject(ObjectId objectId);
+  bool removeFieldObject(dunya::core::ObjectId objectId);
 
   // helpers
-  bool contains(ObjectId objectId) const noexcept;
+  bool contains(dunya::core::ObjectId objectId) const noexcept;
   uint32_t fieldObjectCount() const noexcept;
-  uint32_t primitiveCount(ObjectId objectId) const;
-  uint32_t primitiveOffset(ObjectId objectId) const;
+  uint32_t primitiveCount(dunya::core::ObjectId objectId) const;
+  uint32_t primitiveOffset(dunya::core::ObjectId objectId) const;
 
 private:
   struct FieldObjectSlot {
@@ -90,7 +94,7 @@ private:
     uint32_t capacity;
   };
 
-  ObjectId allocateObjectId();
+  dunya::core::ObjectId allocateObjectId();
 
   std::optional<uint32_t> allocatePrimitiveRange(uint32_t capacity);
 
@@ -106,14 +110,17 @@ private:
   std::vector<FieldObjectSlot> m_fieldObjects;
 
   // Dense list of live IDs. This is what FrameContext can span.
-  std::vector<ObjectId> m_activeFieldObjects;
+  std::vector<dunya::core::ObjectId> m_activeFieldObjects;
 
   // Lowest recycled ObjectId comes out first.
-  std::priority_queue<ObjectId, std::vector<ObjectId>, std::greater<ObjectId>>
+  std::priority_queue<
+    dunya::core::ObjectId,
+    std::vector<dunya::core::ObjectId>,
+    std::greater<dunya::core::ObjectId>>
     m_freeObjectIds;
 
   // First ObjectId that has never been used.
-  ObjectId m_nextUnusedObjectId = 0;
+  dunya::core::ObjectId m_nextUnusedObjectId = 0;
 
   // Primitive arena.
   std::vector<dunya::field::Primitive> m_primitives;
@@ -123,3 +130,5 @@ private:
   // Ordered by offset so adjacent free ranges are easy to coalesce.
   std::map<uint32_t, uint32_t> m_freePrimitiveRanges;
 };
+
+}  // namespace dunya::objectmodel

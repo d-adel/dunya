@@ -6,6 +6,8 @@
 #include "gpu/surface/surface.h"
 #include "gpu/device/device.h"
 
+namespace dunya::gpu {
+
 const std::vector<char const*> validationLayers = {
   "VK_LAYER_KHRONOS_validation"
 };
@@ -20,8 +22,8 @@ public:
   Context(Context&&) = delete;
   Context& operator=(Context&&) = delete;
 
-  const Window& window() const noexcept;
-  Window& window();
+  const dunya::platform::Window& window() const noexcept;
+  dunya::platform::Window& window();
 
   const Instance& instance() const noexcept;
   const Surface& surface() const noexcept;
@@ -29,9 +31,11 @@ public:
   Device& device();
 
 private:
-  GLFWLibrary m_glfwLib;
-  Window m_window;
+  dunya::platform::GLFWLibrary m_glfwLib;
+  dunya::platform::Window m_window;
   Instance m_instance;
   Surface m_surface;
   Device m_device;
 };
+
+}  // namespace dunya::gpu

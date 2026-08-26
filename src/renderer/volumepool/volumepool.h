@@ -10,14 +10,16 @@
 #include <array>
 #include <vector>
 
+namespace dunya::renderer {
+
 struct VolumeImages {
-  const Image& distance;
-  const Image& material;
+  const dunya::gpu::Image& distance;
+  const dunya::gpu::Image& material;
 };
 
 class VolumePool {
 public:
-  VolumePool(const Device& device);
+  VolumePool(const dunya::gpu::Device& device);
 
   VolumePool(const VolumePool&) = delete;
   VolumePool& operator=(const VolumePool&) = delete;
@@ -32,21 +34,23 @@ public:
 
 private:
   struct Volume {
-    Texture distance;
-    Texture material;
+    dunya::gpu::Texture distance;
+    dunya::gpu::Texture material;
   };
 
-  Texture makeDistanceVolume(
-    const Device& device,
+  dunya::gpu::Texture makeDistanceVolume(
+    const dunya::gpu::Device& device,
     const dunya::field::SampledField& grid
   );
-  Texture makeMaterialVolume(
-    const Device& device,
+  dunya::gpu::Texture makeMaterialVolume(
+    const dunya::gpu::Device& device,
     const dunya::field::SampledField& grid
   );
 
-  const Device& m_device;
+  const dunya::gpu::Device& m_device;
 
-  std::array<std::optional<Volume>, MAX_FIELD_OBJECTS> m_volumes;
+  std::array<std::optional<Volume>, dunya::core::MAX_FIELD_OBJECTS> m_volumes;
   std::vector<uint32_t> m_freeIndices;
 };
+
+}  // namespace dunya::renderer

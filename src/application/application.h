@@ -43,8 +43,8 @@ public:
   int start(const StartupOptions& options = {});
 
 private:
-  void handleKeyEvent(const KeyEvent& event);
-  void handleMouseButtonEvent(const MouseButtonEvent& event);
+  void handleKeyEvent(const dunya::platform::KeyEvent& event);
+  void handleMouseButtonEvent(const dunya::platform::MouseButtonEvent& event);
   void setLookMode(bool looking);
   void registerPanels();
   bool acceptsInput() const noexcept;
@@ -53,60 +53,62 @@ private:
   // cannot live with the editing it feeds.
   dunya::field::Ray cursorRay() const;
 
-  Context m_context;
-  Input m_input;
-  Camera m_camera;
-  SwapChain m_swapChain;
+  dunya::gpu::Context m_context;
+  dunya::platform::Input m_input;
+  dunya::objectmodel::Camera m_camera;
+  dunya::gpu::SwapChain m_swapChain;
   Scene m_scene;
-  FrameGlobals m_frameGlobals;
-  ResourceTable m_resourceTable;
-  FieldObjectTable m_fieldObjectTable;
-  FieldBaker m_fieldBaker;
-  VolumePool m_volumePool;
-  Pipeline m_meshPipeline;
-  Pipeline m_fieldPipeline;
-  Renderer m_renderer;
+  dunya::renderer::FrameGlobals m_frameGlobals;
+  dunya::renderer::ResourceTable m_resourceTable;
+  dunya::renderer::FieldObjectTable m_fieldObjectTable;
+  dunya::renderer::FieldBaker m_fieldBaker;
+  dunya::renderer::VolumePool m_volumePool;
+  dunya::gpu::Pipeline m_meshPipeline;
+  dunya::gpu::Pipeline m_fieldPipeline;
+  dunya::renderer::Renderer m_renderer;
 
   // After the renderer, because it is torn down before the device goes and
   // members are destroyed in reverse declaration order.
   Overlay m_overlay;
 
-  FieldEditor m_fieldEditor;
+  dunya::editor::FieldEditor m_fieldEditor;
 
-  CameraInput m_cameraInput;
+  dunya::objectmodel::CameraInput m_cameraInput;
   bool m_prevAcceptsInput;
   // Unity scene-view model: the cursor is visible and clickable by default, and
   // only becomes a look control while the right button is held.
   bool m_looking = false;
-  Frame m_frameContext{};
+  dunya::renderer::Frame m_frameContext{};
   bool m_reloadRequested;
 
   // A member rather than a local in start(), because a panel outlives the call
   // that registered it and a captured reference to a local would dangle.
   double m_lastFrameMs = 0.0;
 
-  EventDispatcher::SubscriptionId m_keySubscription{};
-  EventDispatcher::SubscriptionId m_mouseSubscription{};
+  dunya::core::EventDispatcher::SubscriptionId m_keySubscription{};
+  dunya::core::EventDispatcher::SubscriptionId m_mouseSubscription{};
 };
 
-constexpr const char* modeName(PipelineType type) noexcept {
+constexpr const char* modeName(dunya::gpu::PipelineType type) noexcept {
   switch (type) {
-    case PipelineType::Mesh:
+    case dunya::gpu::PipelineType::Mesh:
       return "mesh ";
-    case PipelineType::Field:
+    case dunya::gpu::PipelineType::Field:
       return "field";
-    case PipelineType::Both:
+    case dunya::gpu::PipelineType::Both:
       return "both ";
     default:
       return "?    ";
   }
 }
 
-constexpr PipelineType nextPipelineType(PipelineType current) noexcept {
-  using Value = std::underlying_type_t<PipelineType>;
+constexpr dunya::gpu::PipelineType nextPipelineType(
+  dunya::gpu::PipelineType current
+) noexcept {
+  using Value = std::underlying_type_t<dunya::gpu::PipelineType>;
 
-  const auto next =
-    (static_cast<Value>(current) + 1) % static_cast<Value>(PipelineType::Count);
+  const auto next = (static_cast<Value>(current) + 1)
+                    % static_cast<Value>(dunya::gpu::PipelineType::Count);
 
-  return static_cast<PipelineType>(next);
+  return static_cast<dunya::gpu::PipelineType>(next);
 }

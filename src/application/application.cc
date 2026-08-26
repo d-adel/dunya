@@ -3,10 +3,11 @@
 namespace {
 
 const std::vector<VkVertexInputBindingDescription> MESH_BINDINGS{
-  Vertex::getBindingDescription()
+  dunya::renderer::Vertex::getBindingDescription()
 };
 
-const auto MESH_ATTRIBUTES = Vertex::getAttributeDescriptions();
+const auto MESH_ATTRIBUTES =
+  dunya::renderer::Vertex::getAttributeDescriptions();
 
 }  // namespace
 
@@ -25,7 +26,7 @@ Application::Application()
       m_fieldBaker(m_context.device(), m_fieldObjectTable),
       m_volumePool(m_context.device()),
       m_meshPipeline(
-        PipelineType::Mesh,
+        dunya::gpu::PipelineType::Mesh,
         m_context.device().vkDevice(),
         std::vector<VkDescriptorSetLayout>{
           m_frameGlobals.setLayout(),
@@ -36,7 +37,7 @@ Application::Application()
         MESH_ATTRIBUTES
       ),
       m_fieldPipeline(
-        PipelineType::Field,
+        dunya::gpu::PipelineType::Field,
         m_context.device().vkDevice(),
         std::vector<VkDescriptorSetLayout>{
           m_frameGlobals.setLayout(),
@@ -64,20 +65,27 @@ Application::Application()
       m_reloadRequested(false)
 
 {
-  m_keySubscription = EventDispatcher::instance().subscribe<KeyEvent>(
-    [this](const KeyEvent& event) { handleKeyEvent(event); }
-  );
+  m_keySubscription = dunya::core::EventDispatcher::instance()
+                        .subscribe<dunya::platform::KeyEvent>(
+                          [this](const dunya::platform::KeyEvent& event) {
+                            handleKeyEvent(event);
+                          }
+                        );
 
-  m_mouseSubscription = EventDispatcher::instance().subscribe<MouseButtonEvent>(
-    [this](const MouseButtonEvent& event) { handleMouseButtonEvent(event); }
-  );
+  m_mouseSubscription =
+    dunya::core::EventDispatcher::instance()
+      .subscribe<dunya::platform::MouseButtonEvent>(
+        [this](const dunya::platform::MouseButtonEvent& event) {
+          handleMouseButtonEvent(event);
+        }
+      );
 }
 
 Application::~Application() {
-  EventDispatcher::instance().unsubscribe<MouseButtonEvent>(
-    m_mouseSubscription
-  );
-  EventDispatcher::instance().unsubscribe<KeyEvent>(m_keySubscription);
+  dunya::core::EventDispatcher::instance()
+    .unsubscribe<dunya::platform::MouseButtonEvent>(m_mouseSubscription);
+  dunya::core::EventDispatcher::instance()
+    .unsubscribe<dunya::platform::KeyEvent>(m_keySubscription);
 }
 
 int Application::start(const StartupOptions& options) {
@@ -95,7 +103,7 @@ int Application::start(const StartupOptions& options) {
   }
 
   if (options.analytic) {
-    m_frameContext.fieldRepresentation = FIELD_ANALYTIC;
+    m_frameContext.fieldRepresentation = dunya::core::FIELD_ANALYTIC;
     std::cout << "Field representation: analytic\n";
   }
 
@@ -189,16 +197,17 @@ int Application::start(const StartupOptions& options) {
     m_frameContext.view = m_camera.viewMatrix();
     m_frameContext.cameraPos = m_camera.position();
 
-    ObjectRegistry& registry = m_scene.world().registry();
+    dunya::objectmodel::ObjectRegistry& registry = m_scene.world().registry();
 
-    for (ObjectId id : registry.fieldObjectIds()) {
-      const FieldObject& fieldObject = registry.getFieldObject(id);
+    for (dunya::core::ObjectId id : registry.fieldObjectIds()) {
+      const dunya::objectmodel::FieldObject& fieldObject =
+        registry.getFieldObject(id);
 
       if (fieldObject.volumeIndex == UINT32_MAX) {
         std::span<const dunya::field::Primitive> primitives =
           registry.getPrimitives(id);
 
-        dunya::field::Aabb box = gridBox(primitives);
+        dunya::field::Aabb box = dunya::objectmodel::gridBox(primitives);
         const dunya::field::SampledField& grid = dunya::field::bake(
           primitives,
           box.minimum,
@@ -260,7 +269,7 @@ int Application::start(const StartupOptions& options) {
                                 );
 
     if (!swapChainStale) {
-      for (ObjectId objectId : m_fieldObjectTable.bakeList()) {
+      for (dunya::core::ObjectId objectId : m_fieldObjectTable.bakeList()) {
         registry.getFieldObject(objectId).dirty = false;
       }
     } else {
@@ -273,11 +282,13 @@ int Application::start(const StartupOptions& options) {
     if (bakeCheckPending) {
       bakeCheckPending = false;
       m_context.device().waitIdle();
-      for (ObjectId id : registry.fieldObjectIds()) {
-        const FieldObject& fieldObject = registry.getFieldObject(id);
+      for (dunya::core::ObjectId id : registry.fieldObjectIds()) {
+        const dunya::objectmodel::FieldObject& fieldObject =
+          registry.getFieldObject(id);
         std::span<const dunya::field::Primitive> primitives =
           registry.getPrimitives(id);
-        VolumeImages images = m_volumePool.images(fieldObject.volumeIndex);
+        dunya::renderer::VolumeImages images =
+          m_volumePool.images(fieldObject.volumeIndex);
         m_fieldBaker.verifyBake(fieldObject, primitives, images);
       }
     }
@@ -300,7 +311,9 @@ bool Application::acceptsInput() const noexcept {
   return m_input.enabled() && m_context.window().focused();
 }
 
-void Application::handleMouseButtonEvent(const MouseButtonEvent& event) {
+void Application::handleMouseButtonEvent(
+  const dunya::platform::MouseButtonEvent& event
+) {
   if (!acceptsInput()) {
     return;
   }
@@ -318,14 +331,12 @@ void Application::handleMouseButtonEvent(const MouseButtonEvent& event) {
   }
 
   if (event.button == GLFW_MOUSE_BUTTON_RIGHT) {
-    setLookMode(event.type == MouseButtonEventType::Pressed);
+    setLookMode(event.type == dunya::platform::MouseButtonEventType::Pressed);
     return;
   }
 
-  if (
-    event.button != GLFW_MOUSE_BUTTON_LEFT
-    || event.type != MouseButtonEventType::Pressed
-  ) {
+  if (event.button != GLFW_MOUSE_BUTTON_LEFT
+      || event.type != dunya::platform::MouseButtonEventType::Pressed) {
     return;
   }
 
@@ -338,8 +349,9 @@ void Application::handleMouseButtonEvent(const MouseButtonEvent& event) {
   // Both smooth: a stamp meets the one before it at a crease, and that is what
   // shading shows, whichever direction the material moved.
   m_fieldEditor.edit(
-    (event.mods & GLFW_MOD_SHIFT) != 0 ? FIELD_OP_SMOOTH_UNION
-                                       : FIELD_OP_SMOOTH_SUBTRACTION,
+    (event.mods & GLFW_MOD_SHIFT) != 0
+      ? dunya::core::FIELD_OP_SMOOTH_UNION
+      : dunya::core::FIELD_OP_SMOOTH_SUBTRACTION,
     cursorRay()
   );
 }
@@ -384,19 +396,21 @@ void Application::registerPanels() {
       m_swapChain.extent().height
     );
 
-    const ObjectRegistry& registry = m_scene.world().registry();
+    const dunya::objectmodel::ObjectRegistry& registry =
+      m_scene.world().registry();
     size_t primitiveCount = registry.primitivePool().size();
 
     ImGui::Text("%zu primitives", primitiveCount);
     ImGui::Text(
       "%s",
-      m_frameContext.fieldRepresentation == FIELD_ANALYTIC ? "analytic"
-                                                           : "sampled"
+      m_frameContext.fieldRepresentation == dunya::core::FIELD_ANALYTIC
+        ? "analytic"
+        : "sampled"
     );
   });
 
   m_overlay.panel("March", [this] {
-    MarchParams& march = m_frameContext.march;
+    dunya::renderer::MarchParams& march = m_frameContext.march;
 
     // Logarithmic where the useful range spans orders of magnitude: a linear
     // slider from 0.0001 to 0.01 spends nearly all of its travel in values
@@ -442,7 +456,7 @@ void Application::registerPanels() {
 }
 
 dunya::field::Ray Application::cursorRay() const {
-  const Cursor cursor = m_input.cursor();
+  const dunya::platform::Cursor cursor = m_input.cursor();
   const VkExtent2D extent = m_swapChain.extent();
 
   // Vulkan's NDC y runs downward because the projection flips it, and GLFW
@@ -463,7 +477,7 @@ dunya::field::Ray Application::cursorRay() const {
   );
 }
 
-void Application::handleKeyEvent(const KeyEvent& event) {
+void Application::handleKeyEvent(const dunya::platform::KeyEvent& event) {
   // Typing into a text field must not also fly the camera. Escape is exempt
   // because it is how the cursor is handed back, and a UI that could swallow it
   // would be a UI you cannot leave.
@@ -471,7 +485,8 @@ void Application::handleKeyEvent(const KeyEvent& event) {
     return;
   }
 
-  if (event.key == GLFW_KEY_ESCAPE && event.type == KeyEventType::Pressed) {
+  if (event.key == GLFW_KEY_ESCAPE
+      && event.type == dunya::platform::KeyEventType::Pressed) {
     m_input.toggleEnabled();
 
     clearCameraInput();
@@ -481,23 +496,27 @@ void Application::handleKeyEvent(const KeyEvent& event) {
     setLookMode(false);
   }
 
-  if (event.key == GLFW_KEY_P && event.type == KeyEventType::SinglePressed) {
+  if (event.key == GLFW_KEY_P
+      && event.type == dunya::platform::KeyEventType::SinglePressed) {
     m_frameContext.mode = nextPipelineType(m_frameContext.mode);
     std::cout << "Pipeline mode switched to: " << (int)m_frameContext.mode
               << '\n';
   }
 
-  if (event.key == GLFW_KEY_B && event.type == KeyEventType::SinglePressed) {
+  if (event.key == GLFW_KEY_B
+      && event.type == dunya::platform::KeyEventType::SinglePressed) {
     m_fieldEditor.stress(10);
     return;
   }
 
-  if (event.key == GLFW_KEY_R && event.type == KeyEventType::SinglePressed) {
+  if (event.key == GLFW_KEY_R
+      && event.type == dunya::platform::KeyEventType::SinglePressed) {
     m_reloadRequested = true;
     return;
   }
 
-  if (event.key == GLFW_KEY_V && event.type == KeyEventType::SinglePressed) {
+  if (event.key == GLFW_KEY_V
+      && event.type == dunya::platform::KeyEventType::SinglePressed) {
     m_context.device().waitIdle();
     m_swapChain.setUncapped(!m_swapChain.uncapped());
     std::cout << "Present mode: "
@@ -506,13 +525,15 @@ void Application::handleKeyEvent(const KeyEvent& event) {
     return;
   }
 
-  if (event.key == GLFW_KEY_Z && event.type == KeyEventType::Pressed) {
+  if (event.key == GLFW_KEY_Z
+      && event.type == dunya::platform::KeyEventType::Pressed) {
     if (m_input.isDown(GLFW_KEY_LEFT_CONTROL)) {
       m_fieldEditor.undo();
     }
   }
 
-  if (event.key == GLFW_KEY_Y && event.type == KeyEventType::Pressed) {
+  if (event.key == GLFW_KEY_Y
+      && event.type == dunya::platform::KeyEventType::Pressed) {
     if (m_input.isDown(GLFW_KEY_LEFT_CONTROL)) {
       m_fieldEditor.redo();
     }
@@ -549,12 +570,12 @@ void Application::handleKeyEvent(const KeyEvent& event) {
   }
 
   switch (event.type) {
-    case KeyEventType::Pressed:
+    case dunya::platform::KeyEventType::Pressed:
       // Movement belongs to look mode, the same way it does in a scene view.
       *state = acceptsInput() && m_looking;
       break;
 
-    case KeyEventType::Released:
+    case dunya::platform::KeyEventType::Released:
       *state = false;
       break;
 

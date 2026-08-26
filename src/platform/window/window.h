@@ -2,6 +2,8 @@
 
 #include <GLFW/glfw3.h>
 
+namespace dunya::platform {
+
 constexpr uint32_t WIDTH = 1280;
 constexpr uint32_t HEIGHT = 720;
 
@@ -36,3 +38,5 @@ private:
   bool m_resized;
   bool m_windowFocused;
 };
+
+}  // namespace dunya::platform

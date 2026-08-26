@@ -1,5 +1,7 @@
 #include "glfwlibrary.ih"
 
+namespace dunya::platform {
+
 GLFWLibrary::GLFWLibrary() {
   glfwSetErrorCallback(errorCallback);
   if (glfwInit() == GLFW_FALSE) {
@@ -14,3 +16,5 @@ GLFWLibrary::~GLFWLibrary() {
 void GLFWLibrary::errorCallback(int errorCode, const char* description) {
   std::cerr << "GLFW Error [" << errorCode << "]: " << description << '\n';
 }
+
+}  // namespace dunya::platform

@@ -7,6 +7,8 @@
 
 #include <cstdint>
 
+namespace dunya::renderer {
+
 struct CameraUniform {
   glm::mat4 view;
   glm::mat4 proj;
@@ -48,7 +50,7 @@ static_assert(
 
 class FrameGlobals {
 public:
-  FrameGlobals(const Device& device);
+  FrameGlobals(const dunya::gpu::Device& device);
 
   FrameGlobals(FrameGlobals const&) = delete;
   FrameGlobals& operator=(FrameGlobals const&) = delete;
@@ -67,5 +69,7 @@ public:
   const VkDescriptorSetLayout& setLayout() const noexcept;
 
 private:
-  DescriptorGroup m_group;
+  dunya::gpu::DescriptorGroup m_group;
 };
+
+}  // namespace dunya::renderer

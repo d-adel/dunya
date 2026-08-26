@@ -13,9 +13,12 @@
  * business. What it owns is what an edit *is* - where the cutter goes relative
  * to the surface, and getting the result to the GPU afterwards.
  */
+
+namespace dunya::editor {
+
 class FieldEditor {
 public:
-  FieldEditor(World& world);
+  FieldEditor(dunya::objectmodel::World& world);
 
   FieldEditor(const FieldEditor&) = delete;
   FieldEditor& operator=(const FieldEditor&) = delete;
@@ -39,7 +42,7 @@ public:
 
 private:
   bool addPrimitive(
-    ObjectId objectId,
+    dunya::core::ObjectId objectId,
     const glm::vec3& centre,
     float radius,
     float blend,
@@ -47,6 +50,8 @@ private:
     uint32_t operation
   );
 
-  World& m_world;
+  dunya::objectmodel::World& m_world;
   CommandHistory m_commandHistory;
 };
+
+}  // namespace dunya::editor

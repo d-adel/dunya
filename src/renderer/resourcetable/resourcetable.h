@@ -9,13 +9,15 @@
 #include <cstdint>
 #include <span>
 
+namespace dunya::renderer {
+
 class ResourceTable {
 public:
   ResourceTable(
-    const Device& device,
-    std::span<const Texture> textures,
-    std::span<const Sampler> samplers,
-    std::span<const Material> materials
+    const dunya::gpu::Device& device,
+    std::span<const dunya::gpu::Texture> textures,
+    std::span<const dunya::gpu::Sampler> samplers,
+    std::span<const dunya::objectmodel::Material> materials
   );
 
   ResourceTable(const ResourceTable&) = delete;
@@ -29,5 +31,7 @@ public:
   const VkDescriptorSetLayout& setLayout() const noexcept;
 
 private:
-  DescriptorGroup m_group;
+  dunya::gpu::DescriptorGroup m_group;
 };
+
+}  // namespace dunya::renderer

@@ -13,6 +13,8 @@
  * type whose fields are half inapplicable teaches the reader the wrong shape.
  */
 
+namespace dunya::gpu {
+
 class ComputePipeline {
 public:
   ComputePipeline(
@@ -39,3 +41,5 @@ private:
   VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
   VkPipeline m_pipeline = VK_NULL_HANDLE;
 };
+
+}  // namespace dunya::gpu

@@ -30,7 +30,7 @@ Primitive makeSphere(const glm::vec3& centre, float radius, uint32_t material) {
 }
 
 // The crossing the click path and the shader both do before they march.
-Ray toLocal(const FieldObject& object, const Ray& world) {
+Ray toLocal(const dunya::objectmodel::FieldObject& object, const Ray& world) {
   const glm::mat4 inverseModel = glm::inverse(object.model());
 
   return Ray{
@@ -41,11 +41,13 @@ Ray toLocal(const FieldObject& object, const Ray& world) {
 
 }  // namespace
 
-TEST_CASE("a pose puts an off-centre primitive where the turn says",
-          "[fieldobject]") {
+TEST_CASE(
+  "a pose puts an off-centre primitive where the turn says",
+  "[fieldobject]"
+) {
   // A quarter turn about Y swings local +X onto -Z, so the sphere authored at
   // local (2, 0, 0) has to be found at world (3, 0, -2) and nowhere else.
-  FieldObject object{};
+  dunya::objectmodel::FieldObject object{};
   object.position = glm::vec3(3.0f, 0.0f, 0.0f);
   object.rotation =
     glm::angleAxis(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
@@ -82,7 +84,7 @@ TEST_CASE("a point crossed into a pose and back comes home", "[fieldobject]") {
   // The march runs in local space and the shading runs in world space, so the
   // two crossings have to invert each other on an off-axis turn, not only at
   // identity.
-  FieldObject object{};
+  dunya::objectmodel::FieldObject object{};
   object.position = glm::vec3(-2.0f, 0.7f, 4.0f);
   object.rotation = glm::angleAxis(
     glm::radians(37.0f),
@@ -92,11 +94,10 @@ TEST_CASE("a point crossed into a pose and back comes home", "[fieldobject]") {
   const glm::mat4 model = object.model();
   const glm::mat4 inverseModel = glm::inverse(model);
 
-  for (const glm::vec3 point : {
-         glm::vec3(0.0f),
-         glm::vec3(1.0f, -2.0f, 3.0f),
-         glm::vec3(-5.0f, 0.25f, 0.0f)
-       }) {
+  for (const glm::vec3 point :
+       {glm::vec3(0.0f),
+        glm::vec3(1.0f, -2.0f, 3.0f),
+        glm::vec3(-5.0f, 0.25f, 0.0f)}) {
     const glm::vec3 local = glm::vec3(inverseModel * glm::vec4(point, 1.0f));
     const glm::vec3 home = glm::vec3(model * glm::vec4(local, 1.0f));
 
@@ -110,7 +111,7 @@ TEST_CASE("an accumulated rotation stays rigid", "[fieldobject]") {
   // A spinning object multiplies quaternions once a frame forever. The march
   // never renormalises its local direction, so a scale creeping in here would
   // break the distance bounds silently.
-  FieldObject object{};
+  dunya::objectmodel::FieldObject object{};
 
   for (int step = 0; step != 100000; ++step) {
     object.rotate(
@@ -126,8 +127,7 @@ TEST_CASE("an accumulated rotation stays rigid", "[fieldobject]") {
   );
 
   const glm::vec3 probe(1.0f, -2.0f, 0.5f);
-  const glm::vec3 turned =
-    glm::vec3(object.model() * glm::vec4(probe, 0.0f));
+  const glm::vec3 turned = glm::vec3(object.model() * glm::vec4(probe, 0.0f));
 
   REQUIRE_THAT(
     glm::length(turned),

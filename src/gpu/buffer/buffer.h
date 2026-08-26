@@ -7,6 +7,8 @@
 #include <stdexcept>
 #include <utility>
 
+namespace dunya::gpu {
+
 class Buffer {
 public:
   Buffer() = default;
@@ -60,10 +62,8 @@ void Buffer::fill(const std::vector<T>& data) {
   VkDeviceSize bufferSize = sizeof(data[0]) * data.size();
 
   void* objData;
-  if (
-    vkMapMemory(m_device, m_bufferMemory, 0, bufferSize, 0, &objData)
-    != VK_SUCCESS
-  ) {
+  if (vkMapMemory(m_device, m_bufferMemory, 0, bufferSize, 0, &objData)
+      != VK_SUCCESS) {
     throw std::runtime_error("Failed to map buffer memory");
   }
 
@@ -98,3 +98,5 @@ Buffer Buffer::deviceLocal(
 
   return result;
 }
+
+}  // namespace dunya::gpu

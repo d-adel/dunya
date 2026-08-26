@@ -1,5 +1,7 @@
 #include "instance.ih"
 
+namespace dunya::gpu {
+
 Instance::Instance(const std::vector<char const*>& validationLayers) {
   setup(validationLayers);
 }
@@ -155,10 +157,10 @@ void Instance::setupDebugMessenger() {
     throw std::runtime_error("Required Debug Messenger Extension not present");
   }
 
-  if (
-    function(m_instance, &debugCreateInfo, nullptr, &m_debugMessenger)
-    != VK_SUCCESS
-  ) {
+  if (function(m_instance, &debugCreateInfo, nullptr, &m_debugMessenger)
+      != VK_SUCCESS) {
     throw std::runtime_error("Failed to create debug messenger");
   }
 }
+
+}  // namespace dunya::gpu

@@ -1,5 +1,7 @@
 #include "oneshotcommand.ih"
 
+namespace dunya::gpu {
+
 OneShotCommand::~OneShotCommand() {}
 
 VkCommandBuffer OneShotCommand::cmdBuffer() const noexcept {
@@ -12,10 +14,8 @@ void OneShotCommand::start(const Device& device) {
   poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
   poolInfo.queueFamilyIndex = device.graphicsFamilyIndex();
 
-  if (
-    vkCreateCommandPool(device.vkDevice(), &poolInfo, nullptr, &m_commandPool)
-    != VK_SUCCESS
-  ) {
+  if (vkCreateCommandPool(device.vkDevice(), &poolInfo, nullptr, &m_commandPool)
+      != VK_SUCCESS) {
     throw std::runtime_error(
       "Failed to create command pool while copying buffer"
     );
@@ -27,10 +27,8 @@ void OneShotCommand::start(const Device& device) {
   allocInfo.commandPool = m_commandPool;
   allocInfo.commandBufferCount = 1;
 
-  if (
-    vkAllocateCommandBuffers(device.vkDevice(), &allocInfo, &m_commandBuffer)
-    != VK_SUCCESS
-  ) {
+  if (vkAllocateCommandBuffers(device.vkDevice(), &allocInfo, &m_commandBuffer)
+      != VK_SUCCESS) {
     throw std::runtime_error("Failed to allocate one shot command buffer");
   }
 
@@ -53,10 +51,8 @@ void OneShotCommand::submit(const Device& device) const {
   submitInfo.commandBufferCount = 1;
   submitInfo.pCommandBuffers = &m_commandBuffer;
 
-  if (
-    vkQueueSubmit(device.graphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE)
-    != VK_SUCCESS
-  ) {
+  if (vkQueueSubmit(device.graphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE)
+      != VK_SUCCESS) {
     throw std::runtime_error("Failed to submit one shot command buffer");
   }
 
@@ -67,3 +63,5 @@ void OneShotCommand::submit(const Device& device) const {
   vkFreeCommandBuffers(device.vkDevice(), m_commandPool, 1, &m_commandBuffer);
   vkDestroyCommandPool(device.vkDevice(), m_commandPool, nullptr);
 }
+
+}  // namespace dunya::gpu

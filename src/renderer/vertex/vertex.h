@@ -5,6 +5,8 @@
 #include <glm/gtx/hash.hpp>
 #include <array>
 
+namespace dunya::renderer {
+
 struct Vertex {
   glm::vec3 pos;
   glm::vec3 color;
@@ -58,15 +60,17 @@ void hashHelper(std::size_t& seed, const T& value) {
   seed = std::hash<T>{}(value) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 }
 
+}  // namespace dunya::renderer
+
 namespace std {
 template<>
-struct hash<Vertex> {
-  size_t operator()(Vertex const& vertex) const {
+struct hash<dunya::renderer::Vertex> {
+  size_t operator()(dunya::renderer::Vertex const& vertex) const {
     std::size_t seed = 0;
-    hashHelper(seed, vertex.pos);
-    hashHelper(seed, vertex.color);
-    hashHelper(seed, vertex.texCoord);
-    hashHelper(seed, vertex.normal);
+    dunya::renderer::hashHelper(seed, vertex.pos);
+    dunya::renderer::hashHelper(seed, vertex.color);
+    dunya::renderer::hashHelper(seed, vertex.texCoord);
+    dunya::renderer::hashHelper(seed, vertex.normal);
 
     return seed;
   }

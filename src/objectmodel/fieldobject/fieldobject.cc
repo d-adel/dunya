@@ -1,5 +1,7 @@
 #include "fieldobject.ih"
 
+namespace dunya::objectmodel {
+
 FieldObjectGPU fromFieldObject(
   const FieldObject& fieldObject,
   uint32_t primitiveOffset,
@@ -11,7 +13,8 @@ FieldObjectGPU fromFieldObject(
   gpu.model = fieldObject.model();
   gpu.inverseModel = glm::inverse(gpu.model);
 
-  gpu.voxelSize = glm::vec4(fieldObject.voxelSize, FIELD_GRID_MARGIN);
+  gpu.voxelSize =
+    glm::vec4(fieldObject.voxelSize, dunya::core::FIELD_GRID_MARGIN);
 
   gpu.resolutionVolumeIndex =
     glm::uvec4(fieldObject.resolution, fieldObject.volumeIndex);
@@ -35,7 +38,7 @@ dunya::field::Aabb gridBox(
   dunya::field::Aabb boundedExtentBox =
     extent.value_or(dunya::field::Aabb{glm::vec3(0.0f), glm::vec3(1.0f)});
 
-  const glm::vec3 margin(FIELD_GRID_MARGIN);
+  const glm::vec3 margin(dunya::core::FIELD_GRID_MARGIN);
 
   return {boundedExtentBox.minimum - margin, boundedExtentBox.maximum + margin};
 }
@@ -51,3 +54,5 @@ void refreshDerived(
   fieldObject.voxelSize =
     dunya::field::voxelSize(box.minimum, box.maximum, fieldObject.resolution);
 }
+
+}  // namespace dunya::objectmodel

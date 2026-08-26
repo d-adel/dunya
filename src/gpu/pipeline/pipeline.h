@@ -12,6 +12,8 @@
 #include <span>
 #include <filesystem>
 
+namespace dunya::gpu {
+
 struct PushConstants {
   glm::mat4 model;
   uint32_t materialIndex;
@@ -56,7 +58,8 @@ public:
     const std::vector<VkDescriptorSetLayout>& setLayouts,
     const SwapChain& swapChain,
     std::span<const VkVertexInputBindingDescription> bindingDescriptions = {},
-    std::span<const VkVertexInputAttributeDescription> attributeDescriptions = {}
+    std::span<const VkVertexInputAttributeDescription> attributeDescriptions =
+      {}
   );
   Pipeline(Pipeline const&) = delete;
   Pipeline& operator=(Pipeline const&) = delete;
@@ -97,3 +100,5 @@ private:
   std::filesystem::file_time_type m_fragTime;
   std::filesystem::file_time_type m_includeTime;
 };
+
+}  // namespace dunya::gpu

@@ -29,7 +29,10 @@ VkDescriptorPool createPool(VkDevice device) {
 
 }  // namespace
 
-Overlay::Overlay(const Context& context, const SwapChain& swapChain)
+Overlay::Overlay(
+  const dunya::gpu::Context& context,
+  const dunya::gpu::SwapChain& swapChain
+)
     : m_context(context), m_pool(createPool(context.device().vkDevice())) {
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();

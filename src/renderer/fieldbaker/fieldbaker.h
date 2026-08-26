@@ -11,6 +11,8 @@
 #include <cstdint>
 #include <span>
 
+namespace dunya::renderer {
+
 struct BakeParams {
   glm::vec4 origin;
   glm::vec4 voxelSize;
@@ -27,7 +29,7 @@ static_assert(
 
 class FieldBaker {
 public:
-  FieldBaker(const Device& device, const FieldObjectTable& table);
+  FieldBaker(const dunya::gpu::Device& device, const FieldObjectTable& table);
 
   FieldBaker(const FieldBaker&) = delete;
   FieldBaker& operator=(const FieldBaker&) = delete;
@@ -35,20 +37,22 @@ public:
   FieldBaker& operator=(FieldBaker&&) = delete;
 
   void bake(
-    const FieldObjectGPU& fieldObject,
+    const dunya::objectmodel::FieldObjectGPU& fieldObject,
     uint32_t frame,
     VolumeImages images
   ) const;
 
   void verifyBake(
-    const FieldObject& fieldObject,
+    const dunya::objectmodel::FieldObject& fieldObject,
     std::span<const dunya::field::Primitive> primitives,
     VolumeImages images
   ) const;
 
 private:
-  const Device& m_device;
+  const dunya::gpu::Device& m_device;
   const FieldObjectTable& m_table;
 
-  ComputePipeline m_bakePipeline;
+  dunya::gpu::ComputePipeline m_bakePipeline;
 };
+
+}  // namespace dunya::renderer

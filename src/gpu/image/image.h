@@ -7,6 +7,8 @@
 
 #include <utility>
 
+namespace dunya::gpu {
+
 class Image {
 public:
   Image() = default;
@@ -82,3 +84,5 @@ private:
 
   VkDevice m_device = VK_NULL_HANDLE;
 };
+
+}  // namespace dunya::gpu

@@ -16,8 +16,8 @@ constexpr dunya::image::Tolerance TOLERANCE{0, 0, 255};
 }  // namespace
 
 FrameCheck::FrameCheck(
-  const Context& context,
-  const SwapChain& swapChain,
+  const dunya::gpu::Context& context,
+  const dunya::gpu::SwapChain& swapChain,
   const StartupOptions& options
 )
     : m_context(context),

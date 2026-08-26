@@ -7,9 +7,11 @@
 #include <vector>
 #include <string>
 
+namespace dunya::renderer {
+
 class Mesh {
 public:
-  Mesh(const Device& device, std::string modelPath);
+  Mesh(const dunya::gpu::Device& device, std::string modelPath);
 
   Mesh(const Mesh&) = delete;
   Mesh& operator=(const Mesh&) = delete;
@@ -18,15 +20,17 @@ public:
   Mesh& operator=(Mesh&&) noexcept = default;
 
   size_t indexCount() const noexcept;
-  const Buffer& vertexBuffer() const noexcept;
-  const Buffer& indexBuffer() const noexcept;
+  const dunya::gpu::Buffer& vertexBuffer() const noexcept;
+  const dunya::gpu::Buffer& indexBuffer() const noexcept;
 
   ~Mesh() = default;
 
 private:
-  void loadModel(const Device& device, std::string modelPath);
+  void loadModel(const dunya::gpu::Device& device, std::string modelPath);
 
-  Buffer m_vertexBuffer;
-  Buffer m_indexBuffer;
+  dunya::gpu::Buffer m_vertexBuffer;
+  dunya::gpu::Buffer m_indexBuffer;
   uint32_t m_indexCount = 0;
 };
+
+}  // namespace dunya::renderer

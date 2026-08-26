@@ -6,6 +6,8 @@
 
 #include <utility>
 
+namespace dunya::gpu {
+
 // A volume wants clamping and, for an integer format, nearest filtering - a
 // repeating address mode would wrap the grid onto itself at its own edges.
 struct SamplerSettings {
@@ -34,3 +36,5 @@ private:
   VkSampler m_sampler = VK_NULL_HANDLE;
   VkDevice m_device = VK_NULL_HANDLE;
 };
+
+}  // namespace dunya::gpu

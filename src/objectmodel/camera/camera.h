@@ -4,6 +4,8 @@
 #include <glm/gtx/transform.hpp>
 #include <glm/gtx/quaternion.hpp>
 
+namespace dunya::objectmodel {
+
 struct CameraInput {
   bool forward = false;
   bool back = false;
@@ -51,3 +53,5 @@ private:
   float m_yaw = 0.f;
   float m_lookSensitivity = 1 / 200.f;
 };
+
+}  // namespace dunya::objectmodel

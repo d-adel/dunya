@@ -1,5 +1,7 @@
 #include "depthimage.ih"
 
+namespace dunya::gpu {
+
 DepthImage::DepthImage(const Device& device, const VkExtent2D& swapChainExtent)
     : m_device(device.vkDevice()) {
   recreate(device, swapChainExtent);
@@ -40,15 +42,11 @@ VkFormat DepthImage::findSupportedFormat(
     VkFormatProperties props;
     vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &props);
 
-    if (
-      tiling == VK_IMAGE_TILING_LINEAR
-      && (props.linearTilingFeatures & features) == features
-    ) {
+    if (tiling == VK_IMAGE_TILING_LINEAR
+        && (props.linearTilingFeatures & features) == features) {
       return format;
-    } else if (
-      tiling == VK_IMAGE_TILING_OPTIMAL
-      && (props.optimalTilingFeatures & features) == features
-    ) {
+    } else if (tiling == VK_IMAGE_TILING_OPTIMAL
+               && (props.optimalTilingFeatures & features) == features) {
       return format;
     }
   }
@@ -71,3 +69,5 @@ bool DepthImage::hasStencilComponent(VkFormat format) {
   return format == VK_FORMAT_D32_SFLOAT_S8_UINT
          || format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
+
+}  // namespace dunya::gpu
