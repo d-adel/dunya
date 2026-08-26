@@ -3,12 +3,12 @@
 #include <vulkan/vulkan.h>
 #include "gpu/swapchain/swapchain.h"
 #include "gpu/pipeline/pipeline.h"
-#include "resourcetable/resourcetable.h"
-#include "frameglobals/frameglobals.h"
-#include "frame/frame.h"
-#include "fieldobjecttable/fieldobjecttable.h"
-#include "volumepool/volumepool.h"
-#include "fieldbaker/fieldbaker.h"
+#include "renderer/resourcetable/resourcetable.h"
+#include "renderer/frameglobals/frameglobals.h"
+#include "renderer/frame/frame.h"
+#include "renderer/fieldobjecttable/fieldobjecttable.h"
+#include "renderer/volumepool/volumepool.h"
+#include "renderer/fieldbaker/fieldbaker.h"
 
 #include "core/config/config.h"
 

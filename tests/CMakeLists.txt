@@ -17,7 +17,7 @@ add_executable(field_tests
 
 target_include_directories(field_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 
-target_link_libraries(field_tests PRIVATE dunya::core dunya::field dunya::objectmodel Catch2::Catch2WithMain)
+target_link_libraries(field_tests PRIVATE dunya::core dunya::editor dunya::field dunya::objectmodel Catch2::Catch2WithMain)
 
 if (MSVC)
     target_compile_options(field_tests PRIVATE /W4 /WX /Zc:__cplusplus)

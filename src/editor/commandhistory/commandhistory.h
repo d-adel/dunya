@@ -1,6 +1,6 @@
 #pragma once
 
-#include "objectmodel/command/command.h"
+#include "editor/command/command.h"
 
 #include <vector>
 

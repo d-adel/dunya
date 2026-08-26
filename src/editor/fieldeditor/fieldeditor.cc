@@ -1,13 +1,13 @@
 #include "fieldeditor.ih"
 
-FieldEditor::FieldEditor(Scene& scene) : m_scene(scene) {}
+FieldEditor::FieldEditor(World& world) : m_world(world) {}
 
 void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
   int objectIndex = -1;
   dunya::field::RayHit minHit;
   dunya::field::Ray localRay;
 
-  const ObjectRegistry& registry = m_scene.registry();
+  const ObjectRegistry& registry = m_world.registry();
   for (ObjectId id : registry.fieldObjectIds()) {
     const auto& fieldObject = registry.getFieldObject(id);
     const auto primitives = registry.getPrimitives(id);
@@ -61,7 +61,7 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
                              ? minHit.position - localRay.direction * offset
                              : minHit.position + localRay.direction * offset;
 
-  if (!m_scene.addPrimitive(
+  if (!addPrimitive(
         objectIndex,
         centre,
         EDIT_RADIUS,
@@ -80,7 +80,7 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
  * not being measured on the same scene.
  */
 void FieldEditor::stress(uint32_t count) {
-  const ObjectRegistry& registry = m_scene.registry();
+  const ObjectRegistry& registry = m_world.registry();
   auto primitives = registry.getPrimitives(0);
 
   const std::optional<dunya::field::Aabb> extent =
@@ -106,7 +106,7 @@ void FieldEditor::stress(uint32_t count) {
     // table was measured with this, and a smooth carve costs an extra smin per
     // primitive per sample, so quietly changing it here would move published
     // numbers without saying so.
-    if (!m_scene.addPrimitive(
+    if (!addPrimitive(
           0,
           extent->minimum + span * at,
           EDIT_RADIUS,
@@ -120,7 +120,41 @@ void FieldEditor::stress(uint32_t count) {
   }
 
   primitives = registry.getPrimitives(0);
-  m_scene.setDirty(0, true);
+  m_world.setDirty(0, true);
   std::cout << "stress  primitives " << before << " -> " << primitives.size()
             << '\n';
+}
+
+bool FieldEditor::addPrimitive(
+  ObjectId objectId,
+  const glm::vec3& centre,
+  float radius,
+  float blend,
+  uint32_t material,
+  uint32_t operation
+) {
+  ObjectRegistry& registry = m_world.registry();
+
+  if (!registry.contains(objectId)) {
+    return false;
+  }
+
+  const dunya::field::Primitive primitive =
+    dunya::field::makeSphere(centre, radius, material, operation, blend);
+
+  AddPrimitiveCommand command(
+    objectId,
+    registry.primitiveCount(objectId),
+    primitive
+  );
+
+  return m_commandHistory.execute(command, registry);
+}
+
+void FieldEditor::undo() {
+  m_commandHistory.undo(m_world.registry());
+}
+
+void FieldEditor::redo() {
+  m_commandHistory.redo(m_world.registry());
 }

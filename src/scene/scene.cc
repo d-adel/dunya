@@ -16,18 +16,18 @@ Scene::Scene(const Context& context)
     glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -2.0f)) * model;
   m_meshes.emplace_back(Mesh(context.device(), "models/viking_room.obj"));
   m_meshes.emplace_back(Mesh(context.device(), "models/viking_room.obj"));
-  m_drawItems.emplace_back(DrawItem({0, 2, model}));
-  m_drawItems.emplace_back(DrawItem({0, 3, model2}));
+  m_world.addDrawItem(DrawItem({0, 2, model}));
+  m_world.addDrawItem(DrawItem({0, 3, model2}));
 
   FieldObject fieldObject{};
   fieldObject.position = glm::vec3(1.0f, 0.45f, 0.0f);
   fieldObject.resolution = glm::uvec3(FIELD_GRID_RESOLUTION);
-  ObjectId objectId = m_objectRegistry.addFieldObject(fieldObject);
+  ObjectId objectId = m_world.registry().addFieldObject(fieldObject);
   addInitialPrimitives(objectId);
 
   fieldObject.position = glm::vec3(0.0f, -2.0f, 0.0f);
-  ObjectId planeId = m_objectRegistry.addFieldObject(fieldObject);
-  m_objectRegistry.addPrimitive(
+  ObjectId planeId = m_world.registry().addFieldObject(fieldObject);
+  m_world.registry().addPrimitive(
     planeId,
     dunya::field::makeBox(
       glm::vec3(0.0f, -0.5f, 0.0f),
@@ -41,66 +41,13 @@ Scene::Scene(const Context& context)
   );
 }
 
-bool Scene::addPrimitive(
-  ObjectId objectId,
-  const glm::vec3& centre,
-  float radius,
-  float blend,
-  uint32_t material,
-  uint32_t operation
-) {
-  if (!m_objectRegistry.contains(objectId)) {
-    return false;
-  }
-
-  const dunya::field::Primitive primitive =
-    dunya::field::makeSphere(centre, radius, material, operation, blend);
-
-  AddPrimitiveCommand command(
-    objectId,
-    m_objectRegistry.primitiveCount(objectId),
-    primitive
-  );
-
-  return m_commandHistory.execute(command, m_objectRegistry);
-}
-
-ObjectId Scene::addFieldObject(glm::vec3 position) {
-  FieldObject fieldObject{};
-
-  fieldObject.position = position;
-  fieldObject.resolution = glm::uvec3(FIELD_GRID_RESOLUTION);
-
-  AddFieldObjectCommand command{.id = INVALID_OBJECT_ID, .object = fieldObject};
-
-  m_commandHistory.execute(command, m_objectRegistry);
-  return command.id;
-}
-
-void Scene::undo() {
-  m_commandHistory.undo(m_objectRegistry);
-}
-
-void Scene::redo() {
-  m_commandHistory.redo(m_objectRegistry);
-}
-
-void Scene::setVolumeIndex(ObjectId objectIndex, uint32_t volumeIndex) {
-  m_objectRegistry.getFieldObject(objectIndex).volumeIndex = volumeIndex;
-}
-
-void Scene::setDirty(ObjectId objectIndex, bool value) {
-  m_objectRegistry.getFieldObject(objectIndex).dirty = value;
-}
-
 void Scene::augmentFrameContext(Frame& frameContext) {
-  std::span<const DrawItem> data(m_drawItems);
   std::span<const Mesh> meshes(m_meshes);
 
-  frameContext.drawItems = data;
+  frameContext.drawItems = m_world.drawItems();
   frameContext.meshes = meshes;
-  frameContext.fieldObjectIds = m_objectRegistry.fieldObjectIds();
-  frameContext.primitives = m_objectRegistry.primitivePool();
+  frameContext.fieldObjectIds = m_world.registry().fieldObjectIds();
+  frameContext.primitives = m_world.registry().primitivePool();
 }
 
 const std::vector<Material>& Scene::materials() const noexcept {
@@ -115,12 +62,12 @@ const std::vector<Sampler>& Scene::samplers() const noexcept {
   return m_samplers;
 }
 
-const ObjectRegistry& Scene::registry() const {
-  return m_objectRegistry;
+const World& Scene::world() const noexcept {
+  return m_world;
 }
 
-ObjectRegistry& Scene::registry() {
-  return m_objectRegistry;
+World& Scene::world() noexcept {
+  return m_world;
 }
 
 std::vector<Sampler> Scene::createSamplers(const Device& device) {
@@ -212,12 +159,12 @@ std::vector<Material> Scene::createMaterials() {
 }
 
 void Scene::addInitialPrimitives(ObjectId objectId) {
-  m_objectRegistry.addPrimitive(
+  m_world.registry().addPrimitive(
     objectId,
     dunya::field::makeSphere(glm::vec3(0.0f, 0.0f, 0.0f), 1.0f)
   );
 
-  m_objectRegistry.addPrimitive(
+  m_world.registry().addPrimitive(
     objectId,
     dunya::field::makeBox(
       glm::vec3(0.8f, -0.45f, 0.0f),

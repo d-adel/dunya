@@ -1,20 +1,15 @@
 #pragma once
 
 #include "core/config/config.h"
-#include "frameglobals/frameglobals.h"
-#include "mesh/mesh.h"
+#include "renderer/frameglobals/frameglobals.h"
+#include "renderer/mesh/mesh.h"
 #include "gpu/pipeline/pipeline.h"
 #include "field/field.h"
+#include "objectmodel/drawitem/drawitem.h"
 #include "objectmodel/fieldobject/fieldobject.h"
 
 #include <glm/glm.hpp>
 #include <span>
-
-struct DrawItem {
-  uint32_t meshIndex;
-  uint32_t materialIndex;
-  glm::mat4 model;
-};
 
 struct Frame {
   glm::mat4 view = glm::mat4(1.0f);

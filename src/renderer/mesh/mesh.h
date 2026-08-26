@@ -1,7 +1,7 @@
 #pragma once
 
 #include "gpu/buffer/buffer.h"
-#include "vertex/vertex.h"
+#include "renderer/vertex/vertex.h"
 
 #include <vulkan/vulkan.h>
 #include <vector>

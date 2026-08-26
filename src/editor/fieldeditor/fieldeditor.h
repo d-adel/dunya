@@ -1,7 +1,8 @@
 #pragma once
 
+#include "editor/commandhistory/commandhistory.h"
 #include "field/raycast/raycast.h"
-#include "scene/scene.h"
+#include "objectmodel/world/world.h"
 
 #include <cstdint>
 
@@ -14,7 +15,7 @@
  */
 class FieldEditor {
 public:
-  FieldEditor(Scene& scene);
+  FieldEditor(World& world);
 
   FieldEditor(const FieldEditor&) = delete;
   FieldEditor& operator=(const FieldEditor&) = delete;
@@ -31,6 +32,21 @@ public:
   // count that clicking cannot reach patiently or repeatably.
   void stress(uint32_t count);
 
+  // Undo and redo live here rather than on the world: a history is what an
+  // editor remembers doing to a world, not something the world knows.
+  void undo();
+  void redo();
+
 private:
-  Scene& m_scene;
+  bool addPrimitive(
+    ObjectId objectId,
+    const glm::vec3& centre,
+    float radius,
+    float blend,
+    uint32_t material,
+    uint32_t operation
+  );
+
+  World& m_world;
+  CommandHistory m_commandHistory;
 };

@@ -1,9 +1,9 @@
 #pragma once
 
 #include "gpu/computepipeline/computepipeline.h"
-#include "fieldobjecttable/fieldobjecttable.h"
+#include "renderer/fieldobjecttable/fieldobjecttable.h"
 #include "objectmodel/fieldobject/fieldobject.h"
-#include "volumepool/volumepool.h"
+#include "renderer/volumepool/volumepool.h"
 #include "gpu/device/device.h"
 
 #include <glm/glm.hpp>

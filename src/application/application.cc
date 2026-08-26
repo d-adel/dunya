@@ -58,7 +58,7 @@ Application::Application()
         m_swapChain.imageCount()
       ),
       m_overlay(m_context, m_swapChain),
-      m_fieldEditor(m_scene),
+      m_fieldEditor(m_scene.world()),
       m_cameraInput({}),
       m_prevAcceptsInput(false),
       m_reloadRequested(false)
@@ -189,7 +189,7 @@ int Application::start(const StartupOptions& options) {
     m_frameContext.view = m_camera.viewMatrix();
     m_frameContext.cameraPos = m_camera.position();
 
-    ObjectRegistry& registry = m_scene.registry();
+    ObjectRegistry& registry = m_scene.world().registry();
 
     for (ObjectId id : registry.fieldObjectIds()) {
       const FieldObject& fieldObject = registry.getFieldObject(id);
@@ -215,7 +215,7 @@ int Application::start(const StartupOptions& options) {
           index
         );
 
-        m_scene.setVolumeIndex(id, index);
+        m_scene.world().setVolumeIndex(id, index);
       }
 
       uint32_t primitiveCount = registry.primitiveCount(id);
@@ -384,7 +384,7 @@ void Application::registerPanels() {
       m_swapChain.extent().height
     );
 
-    const ObjectRegistry& registry = m_scene.registry();
+    const ObjectRegistry& registry = m_scene.world().registry();
     size_t primitiveCount = registry.primitivePool().size();
 
     ImGui::Text("%zu primitives", primitiveCount);
@@ -508,13 +508,13 @@ void Application::handleKeyEvent(const KeyEvent& event) {
 
   if (event.key == GLFW_KEY_Z && event.type == KeyEventType::Pressed) {
     if (m_input.isDown(GLFW_KEY_LEFT_CONTROL)) {
-      m_scene.undo();
+      m_fieldEditor.undo();
     }
   }
 
   if (event.key == GLFW_KEY_Y && event.type == KeyEventType::Pressed) {
     if (m_input.isDown(GLFW_KEY_LEFT_CONTROL)) {
-      m_scene.redo();
+      m_fieldEditor.redo();
     }
   }
 

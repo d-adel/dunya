@@ -161,6 +161,7 @@ target_compile_features(imgui PUBLIC cxx_std_20)
 # Field evaluation, free of Vulkan so the tests can link it alone
 add_subdirectory(src/core)
 add_subdirectory(src/objectmodel)
+add_subdirectory(src/editor)
 add_subdirectory(src/platform)
 add_subdirectory(src/field)
 
@@ -172,23 +173,12 @@ enable_testing()
 # Define executable and link libraries
 add_executable(${PROJECT_NAME}
     src/main.cc
-    src/renderer/renderer.cc
-    src/vertex/vertex.cc
-    src/frameglobals/frameglobals.cc
-    src/resourcetable/resourcetable.cc
     src/capture/capture.cc
     src/overlay/overlay.cc
     src/startupoptions/startupoptions.cc
-    src/fieldeditor/fieldeditor.cc
     src/framecheck/framecheck.cc
-    src/mesh/tiny_obj_loader_impl.cc
-    src/mesh/mesh.cc
     src/application/application.cc
     src/scene/scene.cc
-    src/frame/frame.cc
-    src/fieldobjecttable/fieldobjecttable.cc
-    src/volumepool/volumepool.cc
-    src/fieldbaker/fieldbaker.cc
 )
 
 find_program(
@@ -201,6 +191,7 @@ find_program(
 )
 
 add_subdirectory(src/gpu)
+add_subdirectory(src/renderer)
 
 # Configuration
 # The GLM_* defines are not repeated here: they arrive as usage requirements
@@ -216,14 +207,6 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     # The starting values for MarchParams. Three of these reached only the
     # shader before, which was fine while the shader was the only reader; now
     # that the C++ side owns them and uploads them, all of them come here.
-    DUNYA_MARCH_EPSILON=${DUNYA_MARCH_EPSILON}
-    DUNYA_MARCH_MAX_ITERATIONS=${DUNYA_MARCH_MAX_ITERATIONS}
-    DUNYA_MARCH_MAX_DISTANCE=${DUNYA_MARCH_MAX_DISTANCE}
-    DUNYA_MARCH_OMEGA=${DUNYA_MARCH_OMEGA}
-    DUNYA_GRADIENT_EPSILON=${DUNYA_GRADIENT_EPSILON}
-    DUNYA_SHADOW_MAX_DISTANCE=${DUNYA_SHADOW_MAX_DISTANCE}
-    DUNYA_SHADOW_SHARPNESS=${DUNYA_SHADOW_SHARPNESS}
-    DUNYA_GRID_STEP_SAFETY=${DUNYA_GRID_STEP_SAFETY}
 )
 
 file(
@@ -288,8 +271,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     glm::glm
     dunya::core
     dunya::objectmodel
+    dunya::editor
     dunya::platform
     dunya::gpu
+    dunya::renderer
     dunya::field
 
     # Also where stb's implementations now live, for the whole project: texture

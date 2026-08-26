@@ -4,10 +4,9 @@
 
 add_library(dunya_objectmodel STATIC
     camera/camera.cc
-    command/command.cc
-    commandhistory/commandhistory.cc
     fieldobject/fieldobject.cc
     objectregistry/objectregistry.cc
+    world/world.cc
 )
 
 add_library(dunya::objectmodel ALIAS dunya_objectmodel)
