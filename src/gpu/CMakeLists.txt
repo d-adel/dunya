@@ -25,6 +25,10 @@ add_library(dunya::gpu ALIAS dunya_gpu)
 
 target_include_directories(dunya_gpu PUBLIC "${PROJECT_SOURCE_DIR}/src")
 
+# PRIVATE, and the same reasoning imagecompare gives: stb appears only in
+# texture.ih, never in a header a consumer includes.
+target_include_directories(dunya_gpu PRIVATE "${stb_SOURCE_DIR}")
+
 target_compile_features(dunya_gpu PUBLIC cxx_std_20)
 
 # PUBLIC: Vulkan handles, the window and glm types all appear in headers
@@ -37,6 +41,12 @@ target_link_libraries(dunya_gpu PUBLIC
     glm::glm
     dunya::imagecompare
 )
+
+# PUBLIC: it changes what <GLFW/glfw3.h> declares, and surface.h is a header
+# consumers include - without it Surface has no VkSurfaceKHR to return. It
+# lives here rather than on platform because pulling in vulkan.h needs the
+# Vulkan include path, and this is the layer that links it.
+target_compile_definitions(dunya_gpu PUBLIC GLFW_INCLUDE_VULKAN)
 
 target_compile_definitions(dunya_gpu PRIVATE
     SHADER_SOURCE_DIR="${SHADER_SOURCE_DIR}"

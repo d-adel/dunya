@@ -198,7 +198,6 @@ add_subdirectory(src/renderer)
 # from dunya::field, which is the only way both sides are guaranteed to agree
 # on glm's type layout.
 target_compile_definitions(${PROJECT_NAME} PRIVATE
-    GLFW_INCLUDE_VULKAN
     SHADER_SOURCE_DIR=\"${SHADER_SOURCE_DIR}\"
     GLSLC_PATH=\"${GLSLC_EXECUTABLE}\"
     GLSLC_DEFINES=\"${SHADER_DEFINES_ARGS}\"
