@@ -301,8 +301,8 @@ std::vector<uint8_t> readVolume(
   return bytes;
 }
 
-// Pulls one object's slot of the bound table back. Same shape as readVolume,
-// and used by the same check.
+// Pulls one object's range of the bound table back, global first and bricks
+// after it. Same shape as readVolume, and used by the same check.
 std::vector<float> readBounds(
   const dunya::gpu::Device& device,
   const dunya::gpu::Buffer& bounds,
@@ -323,12 +323,8 @@ std::vector<float> readBounds(
   cmd.start(device);
 
   VkBufferCopy region{};
-  // Past the global at the front of the range, so what comes back lines up with
-  // the CPU's brick table entry for entry.
-  region.srcOffset = (static_cast<VkDeviceSize>(volumeIndex)
-                        * dunya::core::BRICK_TABLE_STRIDE
-                      + 1u)
-                     * sizeof(float);
+  region.srcOffset = static_cast<VkDeviceSize>(volumeIndex)
+                     * dunya::core::BRICK_TABLE_STRIDE * sizeof(float);
   region.dstOffset = 0;
   region.size = sizeBytes;
 
@@ -433,18 +429,31 @@ void FieldBaker::verifyBake(
     m_device,
     m_table.brickBounds(),
     fieldObject.volumeIndex,
-    static_cast<uint32_t>(reference.brickLipschitz.size())
+    1u + static_cast<uint32_t>(reference.brickLipschitz.size())
   );
 
   float worstBound = 0.0f;
+  float gpuLargestBrick = 0.0f;
 
   for (size_t i = 0; i < reference.brickLipschitz.size(); ++i) {
+    const float gpuBrick = bounds[i + 1u];
+
     worstBound =
-      std::max(worstBound, std::abs(bounds[i] - reference.brickLipschitz[i]));
+      std::max(worstBound, std::abs(gpuBrick - reference.brickLipschitz[i]));
+    gpuLargestBrick = std::max(gpuLargestBrick, gpuBrick);
   }
 
+  // The shadow march reads this one float and nothing else, so it gets two
+  // comparisons: against the bricks the GPU itself produced, which catches a
+  // second reduction that read the wrong slot or ran before the barrier, and
+  // against the CPU's own reduction.
+  const float gpuGlobal = bounds[0];
+
   std::cout << "bound check  worst brick " << std::scientific << worstBound
-            << " over " << reference.brickLipschitz.size() << " bricks\n";
+            << " over " << reference.brickLipschitz.size()
+            << " bricks  global vs its own bricks "
+            << std::abs(gpuGlobal - gpuLargestBrick) << "  vs cpu "
+            << std::abs(gpuGlobal - reference.globalLipschitz) << '\n';
 }
 
 }  // namespace dunya::renderer
