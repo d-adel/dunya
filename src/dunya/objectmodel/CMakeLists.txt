@@ -5,7 +5,6 @@
 add_library(dunya_objectmodel STATIC
     camera/camera.cc
     fieldobject/fieldobject.cc
-    objectregistry/objectregistry.cc
     sdfprimitivestore/sdfprimitivestore.cc
     world/world.cc
 )
@@ -17,7 +16,7 @@ target_include_directories(dunya_objectmodel PUBLIC "${PROJECT_SOURCE_DIR}/src")
 target_compile_features(dunya_objectmodel PUBLIC cxx_std_20)
 
 # PUBLIC: FieldObject and Command carry glm and Primitive types in headers
-# consumers include, and ObjectId is an EnTT type. EnTT stops here on purpose:
+# consumers include, and Entity is an EnTT type. EnTT stops here on purpose:
 # field, gpu and platform have no entities and do not link this.
 target_link_libraries(dunya_objectmodel PUBLIC
     dunya::core

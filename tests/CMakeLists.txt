@@ -12,7 +12,6 @@ add_executable(field_tests
     entt_tests.cc
     field_tests.cc
     fieldobject_tests.cc
-    objectregistry_tests.cc
     physics_tests.cc
     rangestore_tests.cc
     raycast_tests.cc

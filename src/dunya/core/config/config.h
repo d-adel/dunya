@@ -4,8 +4,6 @@
 
 namespace dunya::core {
 
-using ObjectId = uint32_t;
-
 constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
 
 // The shaders declare these too, so the numbers come from CMake, which is the
@@ -109,7 +107,6 @@ static_assert(
 );
 constexpr float FIELD_GRID_MARGIN = 0.5f;
 
-constexpr ObjectId INVALID_OBJECT_ID = UINT32_MAX;
 constexpr uint32_t INVALID_PRIMITIVE_OFFSET = UINT32_MAX;
 
 }  // namespace dunya::core

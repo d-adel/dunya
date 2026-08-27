@@ -1,7 +1,8 @@
 /* The specification for the editor/runtime split, written before the code it
  * describes. Not on the field_tests target yet: instantiateWorld does not
  * exist, so this file cannot compile. Add it to tests/CMakeLists.txt the
- * moment it does.
+ * moment it does. The reads and writes below are on the World surface
+ * settled at M31 increment C, so only the function is missing.
  *
  * Assumed shape, and adjust these tests rather than the design if it differs:
  *
@@ -20,7 +21,7 @@
 
 namespace {
 
-using dunya::core::ObjectId;
+using dunya::objectmodel::Entity;
 using dunya::objectmodel::DrawItem;
 using dunya::objectmodel::FieldObject;
 using dunya::objectmodel::World;
@@ -41,12 +42,12 @@ dunya::field::Primitive marker(uint32_t material) {
   return dunya::field::makeSphere(glm::vec3(0.0f), 1.0f, material);
 }
 
-float markerAt(const World& world, ObjectId id) {
-  return world.registry().getFieldObject(id).position.x;
+float markerAt(const World& world, Entity entity) {
+  return world.registry().get<FieldObject>(entity).position.x;
 }
 
-uint32_t materialAt(const World& world, ObjectId id, uint32_t index) {
-  return world.registry().getPrimitives(id)[index].shapeConfig.y;
+uint32_t materialAt(const World& world, Entity entity, uint32_t index) {
+  return world.primitives(entity)[index].shapeConfig.y;
 }
 
 }  // namespace
@@ -56,15 +57,15 @@ TEST_CASE("every object arrives at the id it had", "[instantiate]") {
   // one number, so a translation table is exactly what this must avoid.
   World authored;
 
-  const ObjectId first = authored.addFieldObject(marked(10.0f));
-  const ObjectId second = authored.addFieldObject(marked(11.0f));
+  const Entity first = authored.addFieldObject(marked(10.0f));
+  const Entity second = authored.addFieldObject(marked(11.0f));
 
   World runtime;
   dunya::objectmodel::instantiateWorld(authored, runtime);
 
-  REQUIRE(runtime.registry().fieldObjectCount() == 2);
-  REQUIRE(runtime.registry().contains(first));
-  REQUIRE(runtime.registry().contains(second));
+  REQUIRE(runtime.fieldObjects().size() == 2);
+  REQUIRE(runtime.registry().all_of<FieldObject>(first));
+  REQUIRE(runtime.registry().all_of<FieldObject>(second));
   REQUIRE(markerAt(runtime, first) == 10.0f);
   REQUIRE(markerAt(runtime, second) == 11.0f);
 }
@@ -74,16 +75,19 @@ TEST_CASE("ids with holes in them are preserved", "[instantiate]") {
   // and renumbering on the way across would break the keying above.
   World authored;
 
-  REQUIRE(authored.registry().addFieldObjectAt(0, marked(10.0f)));
-  REQUIRE(authored.registry().addFieldObjectAt(5, marked(15.0f)));
+  const Entity zero{0};
+  const Entity five{5};
+
+  REQUIRE(authored.addFieldObjectAt(zero, marked(10.0f)));
+  REQUIRE(authored.addFieldObjectAt(five, marked(15.0f)));
 
   World runtime;
   dunya::objectmodel::instantiateWorld(authored, runtime);
 
-  REQUIRE(runtime.registry().contains(0));
-  REQUIRE(runtime.registry().contains(5));
-  REQUIRE_FALSE(runtime.registry().contains(1));
-  REQUIRE(markerAt(runtime, 5) == 15.0f);
+  REQUIRE(runtime.registry().all_of<FieldObject>(zero));
+  REQUIRE(runtime.registry().all_of<FieldObject>(five));
+  REQUIRE_FALSE(runtime.registry().all_of<FieldObject>(Entity{1}));
+  REQUIRE(markerAt(runtime, five) == 15.0f);
 }
 
 TEST_CASE("primitives arrive in csg order", "[instantiate]") {
@@ -91,16 +95,16 @@ TEST_CASE("primitives arrive in csg order", "[instantiate]") {
   // preserves the set but not the sequence produces a different shape.
   World authored;
 
-  const ObjectId id = authored.addFieldObject(marked(10.0f));
+  const Entity id = authored.addFieldObject(marked(10.0f));
 
-  authored.registry().addPrimitive(id, marker(1));
-  authored.registry().addPrimitive(id, marker(2));
-  authored.registry().addPrimitive(id, marker(3));
+  authored.addPrimitive(id, marker(1));
+  authored.addPrimitive(id, marker(2));
+  authored.addPrimitive(id, marker(3));
 
   World runtime;
   dunya::objectmodel::instantiateWorld(authored, runtime);
 
-  REQUIRE(runtime.registry().primitiveCount(id) == 3);
+  REQUIRE(runtime.primitiveCount(id) == 3);
   REQUIRE(materialAt(runtime, id, 0) == 1);
   REQUIRE(materialAt(runtime, id, 1) == 2);
   REQUIRE(materialAt(runtime, id, 2) == 3);
@@ -112,14 +116,14 @@ TEST_CASE("volumeIndex does not cross the boundary", "[instantiate]") {
   // volume and dents it. Copying FieldObject wholesale gets this wrong.
   World authored;
 
-  const ObjectId id = authored.addFieldObject(marked(10.0f));
+  const Entity id = authored.addFieldObject(marked(10.0f));
   authored.setVolumeIndex(id, 3);
 
   World runtime;
   dunya::objectmodel::instantiateWorld(authored, runtime);
 
-  REQUIRE(runtime.registry().getFieldObject(id).volumeIndex == UINT32_MAX);
-  REQUIRE(authored.registry().getFieldObject(id).volumeIndex == 3);
+  REQUIRE(runtime.registry().get<FieldObject>(id).volumeIndex == UINT32_MAX);
+  REQUIRE(authored.registry().get<FieldObject>(id).volumeIndex == 3);
 }
 
 TEST_CASE("draw items arrive in order", "[instantiate]") {
@@ -142,15 +146,15 @@ TEST_CASE("draw items arrive in order", "[instantiate]") {
 TEST_CASE("instantiating leaves the authored world alone", "[instantiate]") {
   World authored;
 
-  const ObjectId id = authored.addFieldObject(marked(10.0f));
-  authored.registry().addPrimitive(id, marker(1));
+  const Entity id = authored.addFieldObject(marked(10.0f));
+  authored.addPrimitive(id, marker(1));
   authored.addDrawItem(DrawItem{0, 0, glm::mat4(1.0f)});
 
   World runtime;
   dunya::objectmodel::instantiateWorld(authored, runtime);
 
-  REQUIRE(authored.registry().fieldObjectCount() == 1);
-  REQUIRE(authored.registry().primitiveCount(id) == 1);
+  REQUIRE(authored.fieldObjects().size() == 1);
+  REQUIRE(authored.primitiveCount(id) == 1);
   REQUIRE(authored.drawItems().size() == 1);
   REQUIRE(markerAt(authored, id) == 10.0f);
 }
@@ -163,20 +167,24 @@ TEST_CASE(
   // Everything a runtime does to its world has to die with that world.
   World authored;
 
-  const ObjectId id = authored.addFieldObject(marked(10.0f));
-  authored.registry().addPrimitive(id, marker(1));
+  const Entity id = authored.addFieldObject(marked(10.0f));
+  authored.addPrimitive(id, marker(1));
 
   World runtime;
   dunya::objectmodel::instantiateWorld(authored, runtime);
 
   // Simulate: the body moves and something carves a dent into it.
-  runtime.registry().getFieldObject(id).position.x = 99.0f;
-  runtime.registry().addPrimitive(id, marker(2));
+  runtime.setPose(
+    id,
+    glm::vec3(99.0f, 0.0f, 0.0f),
+    glm::quat(1.0f, 0.0f, 0.0f, 0.0f)
+  );
+  runtime.addPrimitive(id, marker(2));
   runtime.addDrawItem(DrawItem{7, 7, glm::mat4(1.0f)});
 
   // Stop.
   REQUIRE(markerAt(authored, id) == 10.0f);
-  REQUIRE(authored.registry().primitiveCount(id) == 1);
+  REQUIRE(authored.primitiveCount(id) == 1);
   REQUIRE(materialAt(authored, id, 0) == 1);
   REQUIRE(authored.drawItems().size() == 0);
 }

@@ -7,7 +7,6 @@
 #include <dunya/gpu/texture/texture.h>
 #include <dunya/renderer/frame/frame.h>
 #include <dunya/objectmodel/fieldobject/fieldobject.h>
-#include <dunya/objectmodel/objectregistry/objectregistry.h>
 #include <dunya/objectmodel/world/world.h>
 
 #include <glm/glm.hpp>
