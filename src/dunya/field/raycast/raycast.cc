@@ -31,7 +31,7 @@ std::optional<RayHit> raymarch(
 
   for (int i = 0; i < settings.maxIterations; ++i) {
     const glm::vec3 point = ray.origin + ray.direction * travelled;
-    const FieldSample current = sample(primitives, point);
+    const AnalyticSample current = sample(primitives, point);
 
     // Marching from inside solid geometry means walking the distance back up
     // to zero, so the sign is taken once from where the ray starts.

@@ -33,6 +33,10 @@ set(DUNYA_MAX_SAMPLERS 8)
 set(DUNYA_MAX_MATERIALS 64)
 set(DUNYA_MAX_FIELD_OBJECTS 64)
 
+# Cells to a brick on each axis. Both toolchains index the bound table with
+# it, so it is a declaration rather than a tunable.
+set(DUNYA_BRICK_CELLS 8)
+
 # Marching parameters. These are *defaults*, not shared declarations: the shader
 # reads them from a uniform (MarchParams) so they can be turned at runtime, and
 # what CMake still owns is the value they start at - one number in one place,
@@ -50,11 +54,6 @@ set(DUNYA_GRADIENT_EPSILON 0.01f)
 set(DUNYA_MARCH_OMEGA 1.2f)
 set(DUNYA_SHADOW_SHARPNESS 12.0f)
 
-# Trilinear interpolation of a distance field overestimates - the sampled tests
-# measure it - so a march through the grid shortens every step rather than
-# trusting a value that is not a true bound.
-set(DUNYA_GRID_STEP_SAFETY 0.8f)
-
 # Sampler slots, shared so the shader does not have to guess the order Scene
 # creates them in.
 set(DUNYA_SAMPLER_LINEAR_REPEAT 0)
@@ -71,6 +70,7 @@ set(SHADER_DEFINES
     "-DDUNYA_MAX_SAMPLERS=${DUNYA_MAX_SAMPLERS}"
     "-DDUNYA_MAX_MATERIALS=${DUNYA_MAX_MATERIALS}"
     "-DDUNYA_MAX_FIELD_OBJECTS=${DUNYA_MAX_FIELD_OBJECTS}"
+    "-DDUNYA_BRICK_CELLS=${DUNYA_BRICK_CELLS}"
     "-DDUNYA_SAMPLER_LINEAR_REPEAT=${DUNYA_SAMPLER_LINEAR_REPEAT}"
     "-DDUNYA_SAMPLER_LINEAR_CLAMP=${DUNYA_SAMPLER_LINEAR_CLAMP}"
     "-DDUNYA_SAMPLER_NEAREST_CLAMP=${DUNYA_SAMPLER_NEAREST_CLAMP}"

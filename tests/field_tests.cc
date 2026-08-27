@@ -13,7 +13,7 @@
 #include <vector>
 
 using Catch::Matchers::WithinAbs;
-using dunya::field::FieldSample;
+using dunya::field::AnalyticSample;
 using dunya::field::Primitive;
 
 namespace {
@@ -123,8 +123,8 @@ TEST_CASE("bounds culling does not change the field", "[field][bounds]") {
       for (float z = -3.0f; z <= 3.0f; z += 0.5f) {
         const glm::vec3 point(x, y, z);
 
-        const FieldSample plain = dunya::field::sample(unbounded, point);
-        const FieldSample culled = dunya::field::sample(bounded, point);
+        const AnalyticSample plain = dunya::field::sample(unbounded, point);
+        const AnalyticSample culled = dunya::field::sample(bounded, point);
 
         REQUIRE_THAT(
           culled.distance,
@@ -139,7 +139,7 @@ TEST_CASE("bounds culling does not change the field", "[field][bounds]") {
 TEST_CASE("an empty field is far away and has material zero", "[field]") {
   const std::vector<Primitive> primitives;
 
-  const FieldSample result = dunya::field::sample(primitives, glm::vec3(0.0f));
+  const AnalyticSample result = dunya::field::sample(primitives, glm::vec3(0.0f));
 
   REQUIRE(result.distance > 1e8f);
   REQUIRE(result.material == 0);
@@ -271,7 +271,7 @@ TEST_CASE("union takes the nearer surface and its material", "[field][csg]") {
     )
   };
 
-  const FieldSample near =
+  const AnalyticSample near =
     dunya::field::sample(primitives, glm::vec3(4.0f, 0.0f, 0.0f));
 
   REQUIRE_THAT(near.distance, WithinAbs(-1.0f, ANALYTIC_TOLERANCE));
@@ -291,7 +291,7 @@ TEST_CASE("intersection takes the farther surface", "[field][csg]") {
   };
 
   // Inside the first, further from the second: the second's distance wins.
-  const FieldSample result =
+  const AnalyticSample result =
     dunya::field::sample(primitives, glm::vec3(-0.5f, 0.0f, 0.0f));
 
   REQUIRE_THAT(result.distance, WithinAbs(0.5f, ANALYTIC_TOLERANCE));
@@ -310,7 +310,7 @@ TEST_CASE("subtraction keeps the accumulated material", "[field][csg]") {
     )
   };
 
-  const FieldSample result = dunya::field::sample(primitives, glm::vec3(0.0f));
+  const AnalyticSample result = dunya::field::sample(primitives, glm::vec3(0.0f));
 
   REQUIRE_THAT(result.distance, WithinAbs(0.5f, ANALYTIC_TOLERANCE));
   REQUIRE(result.material == 3);

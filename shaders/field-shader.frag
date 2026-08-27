@@ -3,6 +3,7 @@
 
 const int MAX_MATERIALS = DUNYA_MAX_MATERIALS;
 const int MAX_FIELD_OBJECTS = DUNYA_MAX_FIELD_OBJECTS;
+const uint BRICK_CELLS = DUNYA_BRICK_CELLS;
 const float bias = 0.01;
 const float ambient = 0.06;
 
@@ -10,7 +11,6 @@ layout(std140, set = 0, binding = 1) uniform MarchParams {
   float epsilon;
   float maxDistance;
   float omega;
-  float gridStepSafety;
 
   float gradientEpsilon;
   float shadowMaxDistance;
@@ -84,6 +84,12 @@ layout(set = 2, binding = 1)
 layout(set = 2, binding = 2)
   uniform utexture3D materialVolume[MAX_FIELD_OBJECTS];
 
+// Written by field-lipschitz.comp after each bake. One fixed slot per volume,
+// so localOrigin.w is where an object's own bounds begin.
+layout(std430, set = 2, binding = 6) readonly buffer BrickBounds {
+  float values[];
+} brickBounds;
+
 layout(location = 0) in vec4 clipPosition;
 layout(location = 1) flat in uint objectIndex;
 
@@ -127,7 +133,63 @@ vec2 gridSample(FieldObjectShared fieldObject, vec3 p) {
                           uvw)
                     .r;
 
-  return vec2(distance * params.gridStepSafety, float(material));
+  return vec2(distance, float(material));
+}
+
+// The bound the reduction pass measured for the brick this point sits in. It
+// bounds the interpolant's own gradient, so |g| / bound is a distance the ray
+// can travel without reaching the zero surface.
+float brickBound(FieldObjectShared fieldObject, vec3 p) {
+  uvec3 cells = fieldObject.resolutionVolumeIndex.xyz - 1u;
+  uvec3 brickResolution = (cells + BRICK_CELLS - 1u) / BRICK_CELLS;
+
+  vec3 lattice = (p - fieldObject.localOrigin.xyz) / fieldObject.voxelSize.xyz;
+
+  uvec3 cell = min(uvec3(max(floor(lattice), vec3(0.0))), cells - 1u);
+  uvec3 brick = min(cell / BRICK_CELLS, brickResolution - 1u);
+
+  uint index =
+    brick.x + brickResolution.x * (brick.y + brickResolution.y * brick.z);
+
+  return brickBounds.values[uint(fieldObject.localOrigin.w) + index];
+}
+
+// How far the ray may go before leaving the brick whose bound it just read.
+// Beyond that wall the next brick may be steeper, and the same step would be
+// too long there.
+float brickExit(FieldObjectShared fieldObject, vec3 p, vec3 direction) {
+  uvec3 cells = fieldObject.resolutionVolumeIndex.xyz - 1u;
+
+  vec3 lattice = (p - fieldObject.localOrigin.xyz) / fieldObject.voxelSize.xyz;
+
+  uvec3 cell = min(uvec3(max(floor(lattice), vec3(0.0))), cells - 1u);
+  uvec3 base = (cell / BRICK_CELLS) * BRICK_CELLS;
+
+  vec3 minimum =
+    fieldObject.localOrigin.xyz + fieldObject.voxelSize.xyz * vec3(base);
+  vec3 maximum = fieldObject.localOrigin.xyz
+                 + fieldObject.voxelSize.xyz
+                     * vec3(min(base + BRICK_CELLS, cells));
+
+  float exit = params.maxDistance;
+
+  for (int axis = 0; axis < 3; ++axis) {
+    if (abs(direction[axis]) < 1e-8) {
+      continue;
+    }
+
+    float wall = direction[axis] > 0.0 ? maximum[axis] : minimum[axis];
+
+    exit = min(exit, (wall - p[axis]) / direction[axis]);
+  }
+
+  // A ray starting next to a wall has almost no room before it, and stepping
+  // that gap over and over is a crawl that never leaves the brick. Half a voxel
+  // is the floor: enough to cross, and short enough that the bound it was
+  // measured under still describes the ground it covers.
+  vec3 voxel = fieldObject.voxelSize.xyz;
+
+  return max(exit, 0.5 * min(voxel.x, min(voxel.y, voxel.z)));
 }
 
 vec2 fieldDistance(FieldObjectShared fieldObject, vec3 p) {
@@ -144,6 +206,37 @@ vec2 fieldDistance(FieldObjectShared fieldObject, vec3 p) {
   }
 
   return gridSample(fieldObject, p);
+}
+
+// What the field says, and how far the ray may act on it, are two things. They
+// differ only for the sampled representation, whose value is an interpolation
+// rather than a bound on the distance to its own surface.
+float fieldStep(FieldObjectShared fieldObject,
+                vec3 p,
+                vec3 direction,
+                float value,
+                bool clampToBrick) {
+  if (fieldObject.config.y == 0u) {
+    return abs(value);
+  }
+
+  // Outside the grid the value already is a bound: the distance to the box.
+  if (outsideGrid(fieldObject, p) > 0.0) {
+    return abs(value);
+  }
+
+  float bound = brickBound(fieldObject, p);
+  float exit = brickExit(fieldObject, p, direction);
+
+  if (bound <= 0.0) {
+    return exit;
+  }
+
+  if (!clampToBrick) {
+    return abs(value) / bound;
+  }
+
+  return min(abs(value) / bound, exit);
 }
 
 float gradientOffset(FieldObjectShared fieldObject) {
@@ -206,7 +299,10 @@ bool march(FieldObjectShared fieldObject,
 
     float signedRadius = functionSign * field.x;
 
-    float radius = abs(signedRadius);
+    // The bound the ray may travel on, which for the analytic field is the
+    // distance itself. Stepping and the relaxation test both need a bound; the
+    // hit test below wants the field's real value.
+    float radius = fieldStep(fieldObject, p, direction, field.x, true);
 
     bool relaxationFailed =
       omega > 1.0 && (radius + previousRadius) < stepLength;
@@ -215,12 +311,12 @@ bool march(FieldObjectShared fieldObject,
       stepLength -= omega * stepLength;
       omega = 1.0;
     } else {
-      stepLength = signedRadius * omega;
+      stepLength = (signedRadius < 0.0 ? -radius : radius) * omega;
     }
 
     previousRadius = radius;
 
-    if (!relaxationFailed && radius <= params.epsilon) {
+    if (!relaxationFailed && abs(signedRadius) <= params.epsilon) {
       hitPosition = p;
       materialId = field.y;
       return true;
@@ -247,10 +343,12 @@ float lightReachingLocal(FieldObjectShared fieldObject,
 
     bool trueDistance = true;
     float distanceToSurface;
+    float step;
 
     if (fieldObject.config.y == 0u) {
       // Analytic field: fieldDistance is meaningful everywhere.
       distanceToSurface = fieldDistance(fieldObject, p).x;
+      step = distanceToSurface;
     } else {
       float outside = outsideGrid(fieldObject, p);
 
@@ -258,11 +356,14 @@ float lightReachingLocal(FieldObjectShared fieldObject,
         // Outside a sampled object's grid this is only a conservative
         // marching bound to the grid, not distance to actual geometry.
         distanceToSurface = outside + fieldObject.voxelSize.w;
+        step = distanceToSurface;
 
         trueDistance = false;
       } else {
-        // Inside the grid we have an actual sampled field distance.
+        // Inside the grid we have an actual sampled field distance, and a
+        // separate bound saying how far the ray may act on it.
         distanceToSurface = fieldDistance(fieldObject, p).x;
+        step = fieldStep(fieldObject, p, direction, distanceToSurface, false);
       }
     }
 
@@ -281,7 +382,7 @@ float lightReachingLocal(FieldObjectShared fieldObject,
       }
     }
 
-    distanceTravelled += distanceToSurface;
+    distanceTravelled += step;
 
     if (distanceTravelled > params.shadowMaxDistance || result < 0.01) {
       break;

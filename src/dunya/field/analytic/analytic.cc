@@ -142,18 +142,18 @@ std::optional<Aabb> boundedExtent(std::span<const Primitive> primitives) {
   return extent;
 }
 
-FieldSample sample(
+AnalyticSample sample(
   std::span<const Primitive> primitives,
   const glm::vec3& point
 ) {
-  FieldSample accumulated{FAR_DISTANCE, 0};
+  AnalyticSample accumulated{FAR_DISTANCE, 0};
 
   for (const Primitive& primitive : primitives) {
     if (skippable(primitive, point, accumulated.distance)) {
       continue;
     }
 
-    const FieldSample current{
+    const AnalyticSample current{
       primitiveDistance(primitive, point),
       primitive.shapeConfig.y
     };
@@ -239,6 +239,32 @@ glm::vec3 normal(
   float epsilon
 ) {
   return glm::normalize(gradient(primitives, point, epsilon));
+}
+
+float distance(AnalyticFieldView field, const glm::vec3& point) {
+  return sample(field.primitives, point).distance;
+}
+
+uint32_t material(AnalyticFieldView field, const glm::vec3& point) {
+  return sample(field.primitives, point).material;
+}
+
+glm::vec3 gradient(
+  AnalyticFieldView field,
+  const glm::vec3& point,
+  float epsilon
+) {
+  return gradient(field.primitives, point, epsilon);
+}
+
+// The direction is unused: the bound is the same in every direction, which is
+// what sphere tracing is.
+float stepBound(
+  AnalyticFieldView field,
+  const glm::vec3& point,
+  const glm::vec3&
+) {
+  return std::abs(distance(field, point));
 }
 
 }  // namespace dunya::field

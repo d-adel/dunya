@@ -1,9 +1,14 @@
 #pragma once
 
+#include <dunya/field/capability/distancefield.h>
+#include <dunya/field/capability/gradientquery.h>
+#include <dunya/field/capability/materialquery.h>
+#include <dunya/field/capability/stepbound.h>
 #include <dunya/field/field.h>
 
 #include <glm/glm.hpp>
 
+#include <cstdint>
 #include <optional>
 #include <span>
 
@@ -29,7 +34,14 @@ struct Aabb {
 // can hold them.
 std::optional<Aabb> boundedExtent(std::span<const Primitive> primitives);
 
-FieldSample sample(
+// The fold produces both in one walk, so the bake gets a material per lattice
+// point without a second pass over the primitives.
+struct AnalyticSample {
+  float distance = 0.0f;
+  uint32_t material = 0;
+};
+
+AnalyticSample sample(
   std::span<const Primitive> primitives,
   const glm::vec3& point
 );
@@ -47,5 +59,34 @@ glm::vec3 normal(
   const glm::vec3& point,
   float epsilon = DEFAULT_GRADIENT_EPSILON
 );
+
+// Borrowed, never owning. It exists so the analytic representation has a name
+// the capabilities can attach to; a bare span cannot carry that meaning.
+struct AnalyticFieldView {
+  std::span<const Primitive> primitives;
+};
+
+float distance(AnalyticFieldView field, const glm::vec3& point);
+
+uint32_t material(AnalyticFieldView field, const glm::vec3& point);
+
+glm::vec3 gradient(
+  AnalyticFieldView field,
+  const glm::vec3& point,
+  float epsilon = DEFAULT_GRADIENT_EPSILON
+);
+
+// The value itself, because every operation here keeps the field 1-Lipschitz,
+// so no zero of the field is nearer than the value at this point.
+float stepBound(
+  AnalyticFieldView field,
+  const glm::vec3& point,
+  const glm::vec3& direction
+);
+
+static_assert(DistanceField<AnalyticFieldView>);
+static_assert(GradientQueryable<AnalyticFieldView>);
+static_assert(MaterialQueryable<AnalyticFieldView>);
+static_assert(StepBounded<AnalyticFieldView>);
 
 }  // namespace dunya::field

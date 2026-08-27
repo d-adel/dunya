@@ -96,7 +96,12 @@ void FieldBaker::bake(
     gpu.localOrigin,
     gpu.voxelSize,
     glm::uvec4(resolution, gpu.config.x),
-    glm::uvec4(gpu.resolutionVolumeIndex.w, gpu.config.w, 0u, 0u)
+    glm::uvec4(
+      gpu.resolutionVolumeIndex.w,
+      gpu.config.w,
+      gpu.resolutionVolumeIndex.w * dunya::core::MAX_BRICKS_PER_OBJECT,
+      0u
+    )
   };
 
   vkCmdPushConstants(
@@ -111,6 +116,54 @@ void FieldBaker::bake(
   const glm::uvec3 groups = (resolution + glm::uvec3(3u)) / glm::uvec3(4u);
 
   vkCmdDispatch(cmd.cmdBuffer(), groups.x, groups.y, groups.z);
+
+  // The reduction reads what the dispatch above just wrote.
+  transitionVolumes(
+    cmd.cmdBuffer(),
+    images.distance.image(),
+    images.material.image(),
+    VK_IMAGE_LAYOUT_GENERAL,
+    VK_IMAGE_LAYOUT_GENERAL
+  );
+
+  vkCmdBindPipeline(
+    cmd.cmdBuffer(),
+    VK_PIPELINE_BIND_POINT_COMPUTE,
+    m_lipschitzPipeline.pipeline()
+  );
+
+  vkCmdBindDescriptorSets(
+    cmd.cmdBuffer(),
+    VK_PIPELINE_BIND_POINT_COMPUTE,
+    m_lipschitzPipeline.pipelineLayout(),
+    0,
+    1,
+    &m_table.descriptorSet(frame),
+    0,
+    nullptr
+  );
+
+  vkCmdPushConstants(
+    cmd.cmdBuffer(),
+    m_lipschitzPipeline.pipelineLayout(),
+    VK_SHADER_STAGE_COMPUTE_BIT,
+    0,
+    sizeof(params),
+    &params
+  );
+
+  const glm::uvec3 bricks =
+    (resolution - glm::uvec3(1u) + glm::uvec3(dunya::core::BRICK_CELLS - 1u))
+    / glm::uvec3(dunya::core::BRICK_CELLS);
+
+  const glm::uvec3 brickGroups = (bricks + glm::uvec3(3u)) / glm::uvec3(4u);
+
+  vkCmdDispatch(
+    cmd.cmdBuffer(),
+    brickGroups.x,
+    brickGroups.y,
+    brickGroups.z
+  );
 
   transitionVolumes(
     cmd.cmdBuffer(),
@@ -203,6 +256,59 @@ std::vector<uint8_t> readVolume(
   return bytes;
 }
 
+// Pulls one object's slot of the bound table back. Same shape as readVolume,
+// and used by the same check.
+std::vector<float> readBounds(
+  const dunya::gpu::Device& device,
+  const dunya::gpu::Buffer& bounds,
+  uint32_t volumeIndex,
+  uint32_t count
+) {
+  const VkDeviceSize sizeBytes =
+    static_cast<VkDeviceSize>(count) * sizeof(float);
+
+  dunya::gpu::Buffer readback(
+    device,
+    sizeBytes,
+    VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+  );
+
+  dunya::gpu::OneShotCommand cmd;
+  cmd.start(device);
+
+  VkBufferCopy region{};
+  region.srcOffset = static_cast<VkDeviceSize>(volumeIndex)
+                     * dunya::core::MAX_BRICKS_PER_OBJECT * sizeof(float);
+  region.dstOffset = 0;
+  region.size = sizeBytes;
+
+  vkCmdCopyBuffer(
+    cmd.cmdBuffer(),
+    bounds.buffer(),
+    readback.buffer(),
+    1,
+    &region
+  );
+
+  cmd.submit(device);
+
+  std::vector<float> values(count);
+
+  void* mapped = nullptr;
+  if (
+    vkMapMemory(device.vkDevice(), readback.memory(), 0, sizeBytes, 0, &mapped)
+    != VK_SUCCESS
+  ) {
+    throw std::runtime_error("Failed to map the bound readback buffer");
+  }
+
+  std::memcpy(values.data(), mapped, static_cast<size_t>(sizeBytes));
+  vkUnmapMemory(device.vkDevice(), readback.memory());
+
+  return values;
+}
+
 }  // namespace
 
 FieldBaker::FieldBaker(
@@ -214,6 +320,14 @@ FieldBaker::FieldBaker(
       m_bakePipeline(
         device.vkDevice(),
         "shaders/field-bake.comp.spv",
+        std::vector<VkDescriptorSetLayout>{table.setLayout()},
+        std::vector<VkPushConstantRange>{
+          {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(BakeParams)}
+        }
+      ),
+      m_lipschitzPipeline(
+        device.vkDevice(),
+        "shaders/field-lipschitz.comp.spv",
         std::vector<VkDescriptorSetLayout>{table.setLayout()},
         std::vector<VkPushConstantRange>{
           {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(BakeParams)}
@@ -265,6 +379,23 @@ void FieldBaker::verifyBake(
   std::cout << "bake check  worst distance " << std::scientific << worstDistance
             << "  material mismatches " << materialMismatches << " of "
             << reference.distances.size() << '\n';
+
+  const std::vector<float> bounds = readBounds(
+    m_device,
+    m_table.brickBounds(),
+    fieldObject.volumeIndex,
+    static_cast<uint32_t>(reference.brickLipschitz.size())
+  );
+
+  float worstBound = 0.0f;
+
+  for (size_t i = 0; i < reference.brickLipschitz.size(); ++i) {
+    worstBound =
+      std::max(worstBound, std::abs(bounds[i] - reference.brickLipschitz[i]));
+  }
+
+  std::cout << "bound check  worst brick " << std::scientific << worstBound
+            << " over " << reference.brickLipschitz.size() << " bricks\n";
 }
 
 }  // namespace dunya::renderer

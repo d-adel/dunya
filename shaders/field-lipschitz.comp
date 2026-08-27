@@ -1,0 +1,83 @@
+#version 450
+
+// One invocation per brick, run straight after the bake while the volume is
+// still GENERAL. It reads only what the bake wrote, so the bound belongs to the
+// interpolant the marcher will actually sample rather than to any source field.
+const int MAX_FIELD_OBJECTS = DUNYA_MAX_FIELD_OBJECTS;
+const uint BRICK_CELLS = DUNYA_BRICK_CELLS;
+
+layout(r32f,
+       set = 0,
+       binding = 4) uniform readonly image3D distanceVolume[MAX_FIELD_OBJECTS];
+
+layout(std430, set = 0, binding = 6) buffer BrickBounds {
+  float values[];
+} brickBounds;
+
+// The same block the bake takes, because it describes the same grid. volume.z
+// is this object's first entry in the bound table.
+layout(push_constant) uniform BakeParams {
+  vec4 origin;
+  vec4 voxelSize;
+  uvec4 resolution;
+  uvec4 volume;
+} params;
+
+layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
+
+void main() {
+  const uvec3 cells = params.resolution.xyz - 1u;
+  const uvec3 brickResolution = (cells + BRICK_CELLS - 1u) / BRICK_CELLS;
+
+  const uvec3 brick = gl_GlobalInvocationID;
+
+  if (any(greaterThanEqual(brick, brickResolution))) {
+    return;
+  }
+
+  const uvec3 base = brick * BRICK_CELLS;
+  const uvec3 end = min(base + BRICK_CELLS, cells);
+
+  const uint volume = params.volume.x;
+
+  float worst = 0.0;
+
+  for (uint z = base.z; z < end.z; ++z) {
+    for (uint y = base.y; y < end.y; ++y) {
+      for (uint x = base.x; x < end.x; ++x) {
+        float corner[8];
+
+        for (uint i = 0u; i < 8u; ++i) {
+          const uvec3 offset = uvec3(i & 1u, (i >> 1) & 1u, (i >> 2) & 1u);
+
+          corner[i] =
+            imageLoad(distanceVolume[volume], ivec3(uvec3(x, y, z) + offset)).r;
+        }
+
+        // Each partial derivative of the trilinear form is a bilinear blend of
+        // that axis' four edge slopes, so the largest of them bounds it. Same
+        // reduction as cellLipschitz in sampled.cc, cell for cell.
+        vec3 slope = vec3(0.0);
+
+        for (uint i = 0u; i < 8u; ++i) {
+          if ((i & 1u) == 0u) {
+            slope.x = max(slope.x, abs(corner[i | 1u] - corner[i]));
+          }
+          if ((i & 2u) == 0u) {
+            slope.y = max(slope.y, abs(corner[i | 2u] - corner[i]));
+          }
+          if ((i & 4u) == 0u) {
+            slope.z = max(slope.z, abs(corner[i | 4u] - corner[i]));
+          }
+        }
+
+        worst = max(worst, length(slope / params.voxelSize.xyz));
+      }
+    }
+  }
+
+  const uint index =
+    brick.x + brickResolution.x * (brick.y + brickResolution.y * brick.z);
+
+  brickBounds.values[params.volume.z + index] = worst;
+}

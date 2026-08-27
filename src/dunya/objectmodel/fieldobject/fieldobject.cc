@@ -26,6 +26,16 @@ FieldObjectGPU fromFieldObject(
 
   gpu.localOrigin = fieldObject.gridOrigin;
 
+  // .w carried a homogeneous 1 that nothing read. It now says where this
+  // object's brick bounds start, so one volume index still addresses every
+  // sampled resource it owns.
+  gpu.localOrigin.w =
+    fieldObject.volumeIndex == UINT32_MAX
+      ? 0.0f
+      : static_cast<float>(
+          fieldObject.volumeIndex * dunya::core::MAX_BRICKS_PER_OBJECT
+        );
+
   return gpu;
 }
 

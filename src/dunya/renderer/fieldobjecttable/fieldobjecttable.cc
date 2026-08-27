@@ -2,6 +2,14 @@
 
 namespace dunya::renderer {
 
+namespace {
+
+constexpr VkDeviceSize BRICK_BOUNDS_BYTES =
+  static_cast<VkDeviceSize>(dunya::core::MAX_FIELD_OBJECTS)
+  * dunya::core::MAX_BRICKS_PER_OBJECT * sizeof(float);
+
+}  // namespace
+
 FieldObjectTable::FieldObjectTable(const dunya::gpu::Device& device)
     : m_group(
         device,
@@ -34,9 +42,20 @@ FieldObjectTable::FieldObjectTable(const dunya::gpu::Device& device)
          {MATERIAL_VOLUMES_STORAGE,
           VK_SHADER_STAGE_COMPUTE_BIT,
           {},
-          dunya::core::MAX_FIELD_OBJECTS}}
+          dunya::core::MAX_FIELD_OBJECTS}},
+        {{BRICK_BOUNDS,
+          VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT}}
+      ),
+      m_brickBounds(
+        device,
+        BRICK_BOUNDS_BYTES,
+        // TRANSFER_SRC so the bake check can copy a slot back out.
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
       ) {
   m_gpuFieldObjects.resize(dunya::core::MAX_FIELD_OBJECTS);
+
+  m_group.writeBuffer(BRICK_BOUNDS, m_brickBounds.buffer(), BRICK_BOUNDS_BYTES);
 }
 
 void FieldObjectTable::registerVolume(
@@ -56,6 +75,10 @@ void FieldObjectTable::registerVolume(
     volumeIndex,
     materialView
   );
+}
+
+const dunya::gpu::Buffer& FieldObjectTable::brickBounds() const noexcept {
+  return m_brickBounds;
 }
 
 void FieldObjectTable::newFrame() {

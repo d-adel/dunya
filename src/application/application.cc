@@ -456,7 +456,6 @@ void Application::registerPanels() {
 
     // Above 1 would trust a value trilinear interpolation is known to
     // overestimate, which is how a march steps through a surface.
-    ImGui::SliderFloat("grid safety", &march.gridStepSafety, 0.1f, 1.0f);
 
     ImGui::SliderFloat("max distance", &march.maxDistance, 10.0f, 500.0f);
     ImGui::SliderFloat(

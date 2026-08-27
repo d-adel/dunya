@@ -8,7 +8,8 @@ DescriptorGroup::DescriptorGroup(
   std::vector<BufferBinding> buffers,
   std::vector<SampledImageBinding> sampledImages,
   std::vector<SamplerBinding> samplers,
-  std::vector<StorageImageBinding> storageImages
+  std::vector<StorageImageBinding> storageImages,
+  std::vector<DeviceBufferBinding> deviceBuffers
 )
     : m_device(device.vkDevice()), m_frameCount(frameCount) {
   for (const auto& storageImage : storageImages) {
@@ -35,17 +36,23 @@ DescriptorGroup::DescriptorGroup(
     }
   }
 
-  createSetLayout(buffers, sampledImages, samplers, storageImages);
+  createSetLayout(
+    buffers,
+    sampledImages,
+    samplers,
+    storageImages,
+    deviceBuffers
+  );
   createBuffers(device, buffers);
 
   if (
     buffers.empty() && sampledImages.empty() && samplers.empty()
-    && storageImages.empty()
+    && storageImages.empty() && deviceBuffers.empty()
   ) {
     throw std::runtime_error("A descriptor group needs at least one binding");
   }
 
-  createPool(sampledImages, samplers, storageImages);
+  createPool(sampledImages, samplers, storageImages, deviceBuffers);
   createSets(sampledImages, samplers, storageImages);
 }
 
@@ -150,6 +157,54 @@ void DescriptorGroup::writeImage(
   );
 }
 
+void DescriptorGroup::writeBuffer(
+  uint32_t binding,
+  VkBuffer buffer,
+  VkDeviceSize size
+) {
+  const auto it = std::find(
+    m_deviceBufferSlots.begin(),
+    m_deviceBufferSlots.end(),
+    binding
+  );
+
+  if (it == m_deviceBufferSlots.end()) {
+    throw std::runtime_error(
+      "Failed to write buffer, binding is not a device buffer"
+    );
+  }
+
+  VkDescriptorBufferInfo bufferInfo{};
+  bufferInfo.buffer = buffer;
+  bufferInfo.offset = 0;
+  bufferInfo.range = size;
+
+  VkWriteDescriptorSet write{};
+  write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+
+  write.dstBinding = binding;
+  write.dstArrayElement = 0;
+  write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+  write.descriptorCount = 1;
+  write.pBufferInfo = &bufferInfo;
+
+  std::vector<VkWriteDescriptorSet> writes;
+  writes.reserve(m_sets.size());
+
+  for (auto set : m_sets) {
+    write.dstSet = set;
+    writes.push_back(write);
+  }
+
+  vkUpdateDescriptorSets(
+    m_device,
+    static_cast<uint32_t>(writes.size()),
+    writes.data(),
+    0,
+    nullptr
+  );
+}
+
 void DescriptorGroup::writeStorageImage(
   uint32_t binding,
   uint32_t index,
@@ -213,10 +268,12 @@ void DescriptorGroup::createSetLayout(
   const std::vector<BufferBinding>& buffers,
   const std::vector<SampledImageBinding>& sampledImages,
   const std::vector<SamplerBinding>& samplers,
-  const std::vector<StorageImageBinding>& storageImages
+  const std::vector<StorageImageBinding>& storageImages,
+  const std::vector<DeviceBufferBinding>& deviceBuffers
 ) {
   const size_t bindingCount = buffers.size() + sampledImages.size()
-                              + samplers.size() + storageImages.size();
+                              + samplers.size() + storageImages.size()
+                              + deviceBuffers.size();
 
   std::vector<VkDescriptorSetLayoutBinding> bindings;
   std::vector<VkDescriptorBindingFlags> bindingFlags;
@@ -236,6 +293,20 @@ void DescriptorGroup::createSetLayout(
 
     bindings.push_back(layoutBinding);
     bindingFlags.push_back(0);
+  }
+
+  for (const DeviceBufferBinding& deviceBuffer : deviceBuffers) {
+    VkDescriptorSetLayoutBinding layoutBinding{};
+    layoutBinding.binding = deviceBuffer.binding;
+    layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    layoutBinding.descriptorCount = 1;
+    layoutBinding.stageFlags = deviceBuffer.stages;
+    layoutBinding.pImmutableSamplers = nullptr;
+
+    bindings.push_back(layoutBinding);
+    bindingFlags.push_back(0);
+
+    m_deviceBufferSlots.push_back(deviceBuffer.binding);
   }
 
   for (const SampledImageBinding& sampledImage : sampledImages) {
@@ -389,12 +460,13 @@ void DescriptorGroup::createBuffers(
 void DescriptorGroup::createPool(
   const std::vector<SampledImageBinding>& sampledImages,
   const std::vector<SamplerBinding>& samplers,
-  const std::vector<StorageImageBinding>& storageImages
+  const std::vector<StorageImageBinding>& storageImages,
+  const std::vector<DeviceBufferBinding>& deviceBuffers
 ) {
   std::vector<VkDescriptorPoolSize> poolSizes;
 
   uint32_t uniformCount = 0;
-  uint32_t storageCount = 0;
+  uint32_t storageCount = static_cast<uint32_t>(deviceBuffers.size());
 
   for (const Slot& slot : m_slots) {
     if (slot.type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) {

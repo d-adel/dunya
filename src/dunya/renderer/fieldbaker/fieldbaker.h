@@ -53,6 +53,10 @@ private:
   const FieldObjectTable& m_table;
 
   dunya::gpu::ComputePipeline m_bakePipeline;
+
+  // Runs on the bake's output, in the same submission, so no frame can see a
+  // volume whose bounds have not caught up with it.
+  dunya::gpu::ComputePipeline m_lipschitzPipeline;
 };
 
 }  // namespace dunya::renderer

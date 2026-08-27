@@ -1,6 +1,7 @@
 #pragma once
 
 #include <dunya/core/config/config.h>
+#include <dunya/gpu/buffer/buffer.h>
 #include <dunya/gpu/descriptorgroup/descriptorgroup.h>
 #include <dunya/gpu/device/device.h>
 #include <dunya/objectmodel/fieldobject/fieldobject.h>
@@ -20,6 +21,7 @@ public:
   static constexpr uint32_t PRIMITIVE_POOL = 3;
   static constexpr uint32_t DISTANCE_VOLUMES_STORAGE = 4;
   static constexpr uint32_t MATERIAL_VOLUMES_STORAGE = 5;
+  static constexpr uint32_t BRICK_BOUNDS = 6;
 
   explicit FieldObjectTable(const dunya::gpu::Device& device);
 
@@ -67,10 +69,19 @@ public:
     dunya::core::ObjectId objectIndex
   ) const;
 
+  // Exposed for the bake check, which reads a slot back and compares it with
+  // the same reduction run on the CPU.
+  const dunya::gpu::Buffer& brickBounds() const noexcept;
+
 private:
   std::vector<dunya::objectmodel::FieldObjectGPU> m_gpuFieldObjects;
   std::vector<dunya::core::ObjectId> m_bakeList;
   dunya::gpu::DescriptorGroup m_group;
+
+  // Device-local because the compute pass writes it and the fragment shader
+  // reads it: the CPU never touches these bytes. One fixed slot per volume
+  // index, so the same number addresses an object's volumes and its bounds.
+  dunya::gpu::Buffer m_brickBounds;
 };
 
 }  // namespace dunya::renderer

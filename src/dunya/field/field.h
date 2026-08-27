@@ -58,9 +58,4 @@ Primitive makePlane(
   uint32_t operation = 0
 );
 
-struct FieldSample {
-  float distance = 0.0f;
-  uint32_t material = 0;
-};
-
 }  // namespace dunya::field

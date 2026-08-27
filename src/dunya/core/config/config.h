@@ -86,6 +86,14 @@ constexpr float EDIT_BLEND = 0.6f * EDIT_ADVANCE;
 // Lattice points per axis for the sampled representation, and the slack added
 // around the primitives so the grid holds the surface rather than clipping it.
 constexpr uint32_t FIELD_GRID_RESOLUTION = 128;
+
+// Cells to a brick, and the table one object reserves in the bound buffer.
+// A grid coarser than the maximum uses the front of its slot and no more.
+constexpr uint32_t BRICK_CELLS = DUNYA_BRICK_CELLS;
+constexpr uint32_t BRICKS_PER_AXIS =
+  (FIELD_GRID_RESOLUTION - 1u + BRICK_CELLS - 1u) / BRICK_CELLS;
+constexpr uint32_t MAX_BRICKS_PER_OBJECT =
+  BRICKS_PER_AXIS * BRICKS_PER_AXIS * BRICKS_PER_AXIS;
 constexpr float FIELD_GRID_MARGIN = 0.5f;
 
 constexpr ObjectId INVALID_OBJECT_ID = UINT32_MAX;

@@ -32,7 +32,6 @@ target_link_libraries(dunya_renderer PUBLIC
 # frame.h reads them and consumers include frame.h, so PUBLIC - and no other
 # target declares them, which is idiom 27 held by the link graph.
 target_compile_definitions(dunya_renderer PUBLIC
-    DUNYA_GRID_STEP_SAFETY=${DUNYA_GRID_STEP_SAFETY}
     DUNYA_SHADOW_MAX_DISTANCE=${DUNYA_SHADOW_MAX_DISTANCE}
     DUNYA_SHADOW_SHARPNESS=${DUNYA_SHADOW_SHARPNESS}
 )

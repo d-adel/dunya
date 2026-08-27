@@ -28,23 +28,24 @@ struct CameraUniform {
  * Their defaults still come from CMake, so the value that ships is written down
  * in exactly one place.
  *
- * All scalars, so std140 packs them consecutively and the block is a multiple
- * of sixteen bytes without padding. The static_assert is what keeps that true.
+ * All scalars, so std140 packs them consecutively at their natural offsets.
+ * Seven of them is 28 bytes and std140 rounds the block itself up to 32, so the
+ * binding reserves that; the four trailing bytes are padding nothing reads. The
+ * static_assert is what catches a member being added or reordered.
  */
 struct MarchParams {
   float epsilon;
   float maxDistance;
   float omega;
-  float gridStepSafety;
-
   float gradientEpsilon;
+
   float shadowMaxDistance;
   float shadowSharpness;
   uint32_t maxIterations;
 };
 
 static_assert(
-  sizeof(MarchParams) == 32,
+  sizeof(MarchParams) == 28,
   "MarchParams must match its std140 block in field-shader.frag"
 );
 

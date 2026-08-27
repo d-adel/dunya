@@ -51,13 +51,23 @@ public:
     uint32_t capacity = 0;
   };
 
+  // A storage buffer this group describes but does not own. The buffers above
+  // are host-visible because the CPU fills them; one the GPU writes and the GPU
+  // reads wants to be device-local, so its owner allocates it and points the
+  // binding at it with writeBuffer.
+  struct DeviceBufferBinding {
+    uint32_t binding = 0;
+    VkShaderStageFlags stages = 0;
+  };
+
   DescriptorGroup(
     const Device& device,
     uint32_t frameCount,
     std::vector<BufferBinding> buffers,
     std::vector<SampledImageBinding> sampledImages = {},
     std::vector<SamplerBinding> samplers = {},
-    std::vector<StorageImageBinding> storageImages = {}
+    std::vector<StorageImageBinding> storageImages = {},
+    std::vector<DeviceBufferBinding> deviceBuffers = {}
   );
 
   DescriptorGroup(const DescriptorGroup&) = delete;
@@ -80,6 +90,10 @@ public:
     VkImageView imageView
   );
 
+  // Points a device-buffer binding at the buffer its owner allocated. The
+  // group never writes through it, so there is no mapping and no frame index.
+  void writeBuffer(uint32_t binding, VkBuffer buffer, VkDeviceSize size);
+
 private:
   struct Slot {
     uint32_t binding = 0;
@@ -100,7 +114,8 @@ private:
     const std::vector<BufferBinding>& buffers,
     const std::vector<SampledImageBinding>& sampledImages,
     const std::vector<SamplerBinding>& samplers,
-    const std::vector<StorageImageBinding>& storageImages
+    const std::vector<StorageImageBinding>& storageImages,
+    const std::vector<DeviceBufferBinding>& deviceBuffers
   );
 
   void createBuffers(
@@ -110,7 +125,8 @@ private:
   void createPool(
     const std::vector<SampledImageBinding>& sampledImages,
     const std::vector<SamplerBinding>& samplers,
-    const std::vector<StorageImageBinding>& storageImages
+    const std::vector<StorageImageBinding>& storageImages,
+    const std::vector<DeviceBufferBinding>& deviceBuffers
   );
   void createSets(
     const std::vector<SampledImageBinding>& sampledImages,
@@ -134,6 +150,7 @@ private:
   std::vector<VkDescriptorSet> m_sets;
   std::vector<Slot> m_slots;
   std::vector<ImageSlot> m_imageSlots;
+  std::vector<uint32_t> m_deviceBufferSlots;
 };
 
 }  // namespace dunya::gpu
