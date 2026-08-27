@@ -25,11 +25,18 @@ dunya::core::ObjectId ObjectRegistry::allocateObjectId() {
     }
   }
 
-  if (m_nextUnusedObjectId >= dunya::core::MAX_FIELD_OBJECTS) {
+  if (m_nextUnusedObjectId == dunya::core::MAX_FIELD_OBJECTS) {
     return dunya::core::INVALID_OBJECT_ID;
   }
 
-  return m_nextUnusedObjectId++;
+  while (m_fieldObjects[m_nextUnusedObjectId].object.has_value()) {
+    m_nextUnusedObjectId++;
+    if (m_nextUnusedObjectId == dunya::core::MAX_FIELD_OBJECTS) {
+      return dunya::core::INVALID_OBJECT_ID;
+    }
+  }
+
+  return m_nextUnusedObjectId;
 }
 
 dunya::core::ObjectId ObjectRegistry::addFieldObject(
@@ -41,7 +48,9 @@ dunya::core::ObjectId ObjectRegistry::addFieldObject(
     return dunya::core::INVALID_OBJECT_ID;
   }
 
-  addFieldObjectAt(objectId, fieldObject);
+  if (!addFieldObjectAt(objectId, fieldObject)) {
+    return dunya::core::INVALID_OBJECT_ID;
+  }
 
   return objectId;
 }

@@ -183,6 +183,7 @@ add_subdirectory(src/dunya/editor)
 add_subdirectory(src/dunya/platform)
 add_subdirectory(src/dunya/field)
 add_subdirectory(src/dunya/physics)
+add_subdirectory(src/dunya/runtime)
 
 # Image comparison, free of Vulkan for the same reason
 add_subdirectory(src/dunya/imagecompare)
