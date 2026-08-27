@@ -94,8 +94,15 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
  * not being measured on the same scene.
  */
 void FieldEditor::stress(uint32_t count) {
+  if (m_world.fieldObjects().empty()) {
+    std::cout << "No field object to carve into\n";
+    return;
+  }
+
+  const dunya::objectmodel::Entity target = m_world.fieldObjects()[0];
+
   std::span<const dunya::field::Primitive> primitives =
-    m_world.primitives(m_world.fieldObjects()[0]);
+    m_world.primitives(target);
 
   const std::optional<dunya::field::Aabb> extent =
     dunya::field::boundedExtent(primitives);
@@ -121,7 +128,7 @@ void FieldEditor::stress(uint32_t count) {
     // primitive per sample, so quietly changing it here would move published
     // numbers without saying so.
     if (!addPrimitive(
-          m_world.fieldObjects()[0],
+          target,
           extent->minimum + span * at,
           dunya::core::EDIT_RADIUS,
           0.0f,
@@ -133,8 +140,8 @@ void FieldEditor::stress(uint32_t count) {
     }
   }
 
-  primitives = m_world.primitives(m_world.fieldObjects()[0]);
-  m_world.setDirty(m_world.fieldObjects()[0], true);
+  primitives = m_world.primitives(target);
+  m_world.setDirty(target, true);
   std::cout << "stress  primitives " << before << " -> " << primitives.size()
             << '\n';
 }

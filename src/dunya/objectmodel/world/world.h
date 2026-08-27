@@ -52,8 +52,6 @@ public:
 
   bool removePrimitive(Entity entity, uint32_t index);
 
-  bool clearPrimitives(Entity entity);
-
   std::span<const dunya::field::Primitive> primitives(Entity entity) const;
 
   uint32_t primitiveCount(Entity entity) const;

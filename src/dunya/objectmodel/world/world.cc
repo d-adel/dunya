@@ -85,10 +85,6 @@ bool World::removePrimitive(Entity entity, uint32_t index) {
   return m_primitiveStore.remove(m_registry, entity, index);
 }
 
-bool World::clearPrimitives(Entity entity) {
-  return m_primitiveStore.clear(m_registry, entity);
-}
-
 std::span<const dunya::field::Primitive> World::primitives(
   Entity entity
 ) const {

@@ -206,3 +206,42 @@ TEST_CASE("clearing the registry returns every range", "[sdfstore]") {
 
   REQUIRE(store.pool().size() == 0);
 }
+
+TEST_CASE("clearing empties the primitives and keeps the allocation",
+          "[sdfstore]") {
+  // Distinct from removal: the range survives, so the arena does not shrink
+  // and the next append needs no growth.
+  entt::registry registry;
+  SdfPrimitiveStore store;
+
+  store.connect(registry);
+
+  const Entity entity = makeObject(registry);
+
+  store.append(registry, entity, marker(1));
+  store.append(registry, entity, marker(2));
+  store.append(registry, entity, marker(3));
+
+  const size_t allocated = store.pool().size();
+
+  registry.get<FieldObject>(entity).dirty = false;
+
+  REQUIRE(store.clear(registry, entity));
+
+  REQUIRE(store.count(registry, entity) == 0);
+  REQUIRE(store.primitives(registry, entity).empty());
+  REQUIRE(store.pool().size() == allocated);
+  REQUIRE(registry.get<FieldObject>(entity).dirty);
+}
+
+TEST_CASE("clearing an entity that holds no primitives is refused",
+          "[sdfstore]") {
+  entt::registry registry;
+  SdfPrimitiveStore store;
+
+  store.connect(registry);
+
+  const Entity entity = makeObject(registry);
+
+  REQUIRE_FALSE(store.clear(registry, entity));
+}

@@ -111,6 +111,8 @@ int Application::start(const StartupOptions& options) {
   registerPanels();
 
   bool bakeCheckPending = options.verifyBake;
+  bool tableFullReported = false;
+  bool volumePoolFullReported = false;
 
   FrameCheck frameCheck(m_context, m_swapChain, options);
 
@@ -220,6 +222,17 @@ int Application::start(const StartupOptions& options) {
     uint32_t objectIndex = 0;
 
     for (dunya::objectmodel::Entity entity : world.fieldObjects()) {
+      // The GPU table and its descriptor arrays hold MAX_FIELD_OBJECTS.
+      // The world has no such limit, so the frame is where the two meet.
+      if (objectIndex == dunya::core::MAX_FIELD_OBJECTS) {
+        if (!tableFullReported) {
+          tableFullReported = true;
+          std::cout << "Field object table full, the rest are not drawn\n";
+        }
+
+        break;
+      }
+
       const dunya::objectmodel::FieldObject& fieldObject =
         registry.get<dunya::objectmodel::FieldObject>(entity);
 
@@ -235,7 +248,19 @@ int Application::start(const StartupOptions& options) {
           fieldObject.resolution
         );
 
-        uint32_t index = m_volumePool.allocate(grid);
+        const uint32_t index = m_volumePool.allocate(grid);
+
+        // No volume means nothing to sample, and UINT32_MAX would index
+        // the volume array out of bounds on the GPU. Skip it entirely.
+        if (index == UINT32_MAX) {
+          if (!volumePoolFullReported) {
+            volumePoolFullReported = true;
+            std::cout << "Volume pool full, object not drawn\n";
+          }
+
+          continue;
+        }
+
         auto images = m_volumePool.images(index);
 
         m_fieldObjectTable.registerVolume(
@@ -297,6 +322,9 @@ int Application::start(const StartupOptions& options) {
                                 );
 
     if (!swapChainStale) {
+      // Bake-list entries are packing slots, so this re-derives the same
+      // span the loop above packed from. Nothing between the two mutates
+      // the world, and a removal would reorder it: swap-and-pop storage.
       const std::span<const dunya::objectmodel::Entity> fieldEntities =
         world.fieldObjects();
 
