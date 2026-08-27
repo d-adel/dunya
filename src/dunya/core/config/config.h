@@ -94,6 +94,19 @@ constexpr uint32_t BRICKS_PER_AXIS =
   (FIELD_GRID_RESOLUTION - 1u + BRICK_CELLS - 1u) / BRICK_CELLS;
 constexpr uint32_t MAX_BRICKS_PER_OBJECT =
   BRICKS_PER_AXIS * BRICKS_PER_AXIS * BRICKS_PER_AXIS;
+
+// Each object's range opens with one bound covering its whole grid, then the
+// per-brick ones. The global sits first so a shader can read it from the range's
+// own address without knowing how many bricks follow.
+constexpr uint32_t BRICK_TABLE_STRIDE = 1u + MAX_BRICKS_PER_OBJECT;
+
+// An object's first entry in the bound table travels to the shader as a float,
+// which represents integers exactly only up to 2^24. Raising either capacity
+// far enough would silently round the address of a later object's slot.
+static_assert(
+  static_cast<uint64_t>(MAX_FIELD_OBJECTS) * BRICK_TABLE_STRIDE < (1ull << 24),
+  "The bound table's largest index must stay exact in a float"
+);
 constexpr float FIELD_GRID_MARGIN = 0.5f;
 
 constexpr ObjectId INVALID_OBJECT_ID = UINT32_MAX;

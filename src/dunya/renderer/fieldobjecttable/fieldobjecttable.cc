@@ -6,7 +6,7 @@ namespace {
 
 constexpr VkDeviceSize BRICK_BOUNDS_BYTES =
   static_cast<VkDeviceSize>(dunya::core::MAX_FIELD_OBJECTS)
-  * dunya::core::MAX_BRICKS_PER_OBJECT * sizeof(float);
+  * dunya::core::BRICK_TABLE_STRIDE * sizeof(float);
 
 }  // namespace
 

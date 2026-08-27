@@ -33,7 +33,7 @@ FieldObjectGPU fromFieldObject(
     fieldObject.volumeIndex == UINT32_MAX
       ? 0.0f
       : static_cast<float>(
-          fieldObject.volumeIndex * dunya::core::MAX_BRICKS_PER_OBJECT
+          fieldObject.volumeIndex * dunya::core::BRICK_TABLE_STRIDE
         );
 
   return gpu;

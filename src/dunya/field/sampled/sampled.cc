@@ -90,13 +90,20 @@ void rebuildBricks(
       for (uint32_t bx = first.x; bx <= last.x; ++bx) {
         const glm::uvec3 base =
           glm::uvec3(bx, by, bz) * glm::uvec3(BRICK_CELLS);
-        const glm::uvec3 end = glm::min(base + glm::uvec3(BRICK_CELLS), cells);
+
+        // One cell of halo on every side. A step is allowed to cross the wall
+        // by up to half a voxel, so the bound has to describe the ground just
+        // beyond it as well - otherwise the excursion is outside what it says.
+        const glm::uvec3 start =
+          glm::max(base, glm::uvec3(1u)) - glm::uvec3(1u);
+        const glm::uvec3 end =
+          glm::min(base + glm::uvec3(BRICK_CELLS + 1u), cells);
 
         float worst = 0.0f;
 
-        for (uint32_t z = base.z; z < end.z; ++z) {
-          for (uint32_t y = base.y; y < end.y; ++y) {
-            for (uint32_t x = base.x; x < end.x; ++x) {
+        for (uint32_t z = start.z; z < end.z; ++z) {
+          for (uint32_t y = start.y; y < end.y; ++y) {
+            for (uint32_t x = start.x; x < end.x; ++x) {
               worst = std::max(worst, cellLipschitz(field, glm::uvec3(x, y, z)));
             }
           }
@@ -396,7 +403,14 @@ void write(
   const glm::uvec3 cellMaximum =
     glm::min(end - glm::uvec3(1u), cells - glm::uvec3(1u));
 
-  rebuildBricks(field, cellMinimum, cellMaximum);
+  // And one cell wider again before choosing bricks, because a brick's bound now
+  // reads a cell beyond its own walls: a change there belongs to both.
+  const glm::uvec3 reachMinimum =
+    glm::max(cellMinimum, glm::uvec3(1u)) - glm::uvec3(1u);
+  const glm::uvec3 reachMaximum =
+    glm::min(cellMaximum + glm::uvec3(1u), cells - glm::uvec3(1u));
+
+  rebuildBricks(field, reachMinimum, reachMaximum);
 }
 
 }  // namespace dunya::field

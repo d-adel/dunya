@@ -151,7 +151,7 @@ float brickBound(FieldObjectShared fieldObject, vec3 p) {
   uint index =
     brick.x + brickResolution.x * (brick.y + brickResolution.y * brick.z);
 
-  return brickBounds.values[uint(fieldObject.localOrigin.w) + index];
+  return brickBounds.values[uint(fieldObject.localOrigin.w) + 1u + index];
 }
 
 // How far the ray may go before leaving the brick whose bound it just read.
@@ -211,11 +211,14 @@ vec2 fieldDistance(FieldObjectShared fieldObject, vec3 p) {
 // What the field says, and how far the ray may act on it, are two things. They
 // differ only for the sampled representation, whose value is an interpolation
 // rather than a bound on the distance to its own surface.
+//
+// Both functions below return a step no zero of the field lies inside. They
+// differ in which bound they lean on, and that is a trade rather than a
+// preference: see the shadow one.
 float fieldStep(FieldObjectShared fieldObject,
                 vec3 p,
                 vec3 direction,
-                float value,
-                bool clampToBrick) {
+                float value) {
   if (fieldObject.config.y == 0u) {
     return abs(value);
   }
@@ -232,11 +235,31 @@ float fieldStep(FieldObjectShared fieldObject,
     return exit;
   }
 
-  if (!clampToBrick) {
-    return abs(value) / bound;
+  return min(abs(value) / bound, exit);
+}
+
+// The bound over the whole grid rather than one brick's. Looser, so the steps
+// are shorter, and in exchange it needs no wall to stop at - which matters here
+// because a soft shadow is a minimum over the samples the march happens to
+// take, and clamping to brick walls quantises where those fall. The penumbra
+// then carries the brick grid in it, which is visible where the geometry is
+// shallow.
+float fieldShadowStep(FieldObjectShared fieldObject, vec3 p, float value) {
+  if (fieldObject.config.y == 0u) {
+    return abs(value);
   }
 
-  return min(abs(value) / bound, exit);
+  if (outsideGrid(fieldObject, p) > 0.0) {
+    return abs(value);
+  }
+
+  float bound = brickBounds.values[uint(fieldObject.localOrigin.w)];
+
+  if (bound <= 0.0) {
+    return abs(value);
+  }
+
+  return abs(value) / bound;
 }
 
 float gradientOffset(FieldObjectShared fieldObject) {
@@ -302,7 +325,7 @@ bool march(FieldObjectShared fieldObject,
     // The bound the ray may travel on, which for the analytic field is the
     // distance itself. Stepping and the relaxation test both need a bound; the
     // hit test below wants the field's real value.
-    float radius = fieldStep(fieldObject, p, direction, field.x, true);
+    float radius = fieldStep(fieldObject, p, direction, field.x);
 
     bool relaxationFailed =
       omega > 1.0 && (radius + previousRadius) < stepLength;
@@ -363,7 +386,7 @@ float lightReachingLocal(FieldObjectShared fieldObject,
         // Inside the grid we have an actual sampled field distance, and a
         // separate bound saying how far the ray may act on it.
         distanceToSurface = fieldDistance(fieldObject, p).x;
-        step = fieldStep(fieldObject, p, direction, distanceToSurface, false);
+        step = fieldShadowStep(fieldObject, p, distanceToSurface);
       }
     }
 

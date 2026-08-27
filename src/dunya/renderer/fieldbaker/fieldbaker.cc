@@ -99,7 +99,7 @@ void FieldBaker::bake(
     glm::uvec4(
       gpu.resolutionVolumeIndex.w,
       gpu.config.w,
-      gpu.resolutionVolumeIndex.w * dunya::core::MAX_BRICKS_PER_OBJECT,
+      gpu.resolutionVolumeIndex.w * dunya::core::BRICK_TABLE_STRIDE,
       0u
     )
   };
@@ -156,6 +156,19 @@ void FieldBaker::bake(
     (resolution - glm::uvec3(1u) + glm::uvec3(dunya::core::BRICK_CELLS - 1u))
     / glm::uvec3(dunya::core::BRICK_CELLS);
 
+  // The table reserves a fixed slot per volume, sized from the largest grid the
+  // config allows. This dispatch sizes itself from the object's own resolution,
+  // so a larger one would write through the next object's slot. Checked here
+  // because this is the only code that writes the table.
+  const uint64_t brickCount =
+    static_cast<uint64_t>(bricks.x) * bricks.y * bricks.z;
+
+  if (brickCount > dunya::core::MAX_BRICKS_PER_OBJECT) {
+    throw std::runtime_error(
+      "Field resolution needs more bricks than the bound table reserves"
+    );
+  }
+
   const glm::uvec3 brickGroups = (bricks + glm::uvec3(3u)) / glm::uvec3(4u);
 
   vkCmdDispatch(
@@ -164,6 +177,38 @@ void FieldBaker::bake(
     brickGroups.y,
     brickGroups.z
   );
+
+  // And one more, folding those bricks into the bound over the whole grid that
+  // the shadow march reads. A second dispatch rather than an atomic, because it
+  // has to see every brick finished and the pass is one invocation.
+  VkMemoryBarrier2 boundsWritten{};
+  boundsWritten.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
+  boundsWritten.srcStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+  boundsWritten.srcAccessMask = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
+  boundsWritten.dstStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+  boundsWritten.dstAccessMask =
+    VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
+
+  VkDependencyInfo boundsDependency{};
+  boundsDependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+  boundsDependency.memoryBarrierCount = 1;
+  boundsDependency.pMemoryBarriers = &boundsWritten;
+
+  vkCmdPipelineBarrier2(cmd.cmdBuffer(), &boundsDependency);
+
+  BakeParams globalParams = params;
+  globalParams.volume.w = 1u;
+
+  vkCmdPushConstants(
+    cmd.cmdBuffer(),
+    m_lipschitzPipeline.pipelineLayout(),
+    VK_SHADER_STAGE_COMPUTE_BIT,
+    0,
+    sizeof(globalParams),
+    &globalParams
+  );
+
+  vkCmdDispatch(cmd.cmdBuffer(), 1, 1, 1);
 
   transitionVolumes(
     cmd.cmdBuffer(),
@@ -278,8 +323,12 @@ std::vector<float> readBounds(
   cmd.start(device);
 
   VkBufferCopy region{};
-  region.srcOffset = static_cast<VkDeviceSize>(volumeIndex)
-                     * dunya::core::MAX_BRICKS_PER_OBJECT * sizeof(float);
+  // Past the global at the front of the range, so what comes back lines up with
+  // the CPU's brick table entry for entry.
+  region.srcOffset = (static_cast<VkDeviceSize>(volumeIndex)
+                        * dunya::core::BRICK_TABLE_STRIDE
+                      + 1u)
+                     * sizeof(float);
   region.dstOffset = 0;
   region.size = sizeBytes;
 

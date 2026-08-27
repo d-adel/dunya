@@ -398,6 +398,46 @@ TEST_CASE("a step never shrinks to nothing at a brick wall", "[sampled][bound]")
   REQUIRE(step <= dunya::field::distance(field, point));
 }
 
+TEST_CASE("a flat brick does not license a step into a carved neighbour",
+          "[sampled][bound]") {
+  // The adversarial case for the progress floor. A ray sits a whisker inside
+  // one brick with the next one carved open a single cell past the wall. The
+  // floor lets it cross, so the crossing has to be inside what this brick's
+  // bound describes - which is why a brick reduces over a one-cell halo rather
+  // than its own cells alone.
+  const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
+
+  SampledField field = dunya::field::bake(
+    primitives,
+    glm::vec3(-2.0f),
+    glm::vec3(2.0f),
+    glm::uvec3(33u)
+  );
+
+  // Lattice 16 is the wall between the second and third brick; sample 17 is one
+  // cell past it. Well above the sphere, so nothing else is near.
+  const dunya::field::SampleBox carve{glm::uvec3(17u, 30u, 16u), glm::uvec3(1u)};
+  const std::vector<float> inside{-5.0f};
+  const std::vector<uint32_t> material{3u};
+
+  dunya::field::write(field, carve, inside, material);
+
+  const float wall = -2.0f + 16.0f * field.voxelSize.x;
+  const glm::vec3 point(wall - 0.0001f, 1.75f, 0.0f);
+  const glm::vec3 direction(1.0f, 0.0f, 0.0f);
+
+  REQUIRE(dunya::field::distance(field, point) > 0.0f);
+
+  const float step = dunya::field::stepBound(field, point, direction);
+
+  for (int s = 1; s <= 64; ++s) {
+    const glm::vec3 along =
+      point + direction * (step * static_cast<float>(s) / 64.0f);
+
+    REQUIRE(dunya::field::distance(field, along) > -ANALYTIC_TOLERANCE);
+  }
+}
+
 TEST_CASE("a write rebuilds the bricks on both sides of a boundary",
           "[sampled][write]") {
   const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};

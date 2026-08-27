@@ -14,8 +14,10 @@ layout(std430, set = 0, binding = 6) buffer BrickBounds {
   float values[];
 } brickBounds;
 
-// The same block the bake takes, because it describes the same grid. volume.z
-// is this object's first entry in the bound table.
+// The same block the bake takes, because it describes the same grid. volume.z is
+// this object's range in the bound table, whose first entry is one bound over
+// the whole grid and whose rest is one per brick. volume.w picks the pass: zero
+// reduces the bricks, one reduces those into the global.
 layout(push_constant) uniform BakeParams {
   vec4 origin;
   vec4 voxelSize;
@@ -29,6 +31,28 @@ void main() {
   const uvec3 cells = params.resolution.xyz - 1u;
   const uvec3 brickResolution = (cells + BRICK_CELLS - 1u) / BRICK_CELLS;
 
+  // Second pass: one invocation folds the bricks into the bound that covers the
+  // whole grid. The shadow march reads that one, so it needs no clamp and its
+  // samples do not snap to brick walls.
+  if (params.volume.w == 1u) {
+    if (any(greaterThan(gl_GlobalInvocationID, uvec3(0u)))) {
+      return;
+    }
+
+    const uint count =
+      brickResolution.x * brickResolution.y * brickResolution.z;
+
+    float worst = 0.0;
+
+    for (uint i = 0u; i < count; ++i) {
+      worst = max(worst, brickBounds.values[params.volume.z + 1u + i]);
+    }
+
+    brickBounds.values[params.volume.z] = worst;
+
+    return;
+  }
+
   const uvec3 brick = gl_GlobalInvocationID;
 
   if (any(greaterThanEqual(brick, brickResolution))) {
@@ -36,15 +60,20 @@ void main() {
   }
 
   const uvec3 base = brick * BRICK_CELLS;
-  const uvec3 end = min(base + BRICK_CELLS, cells);
+
+  // One cell of halo on every side, matching rebuildBricks in sampled.cc: a
+  // step may cross the wall by half a voxel, so the bound has to describe the
+  // ground just beyond it too.
+  const uvec3 start = max(base, uvec3(1u)) - 1u;
+  const uvec3 end = min(base + BRICK_CELLS + 1u, cells);
 
   const uint volume = params.volume.x;
 
   float worst = 0.0;
 
-  for (uint z = base.z; z < end.z; ++z) {
-    for (uint y = base.y; y < end.y; ++y) {
-      for (uint x = base.x; x < end.x; ++x) {
+  for (uint z = start.z; z < end.z; ++z) {
+    for (uint y = start.y; y < end.y; ++y) {
+      for (uint x = start.x; x < end.x; ++x) {
         float corner[8];
 
         for (uint i = 0u; i < 8u; ++i) {
@@ -79,5 +108,5 @@ void main() {
   const uint index =
     brick.x + brickResolution.x * (brick.y + brickResolution.y * brick.z);
 
-  brickBounds.values[params.volume.z + index] = worst;
+  brickBounds.values[params.volume.z + 1u + index] = worst;
 }
