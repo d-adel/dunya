@@ -146,7 +146,16 @@ FetchContent_Declare(
     SOURCE_SUBDIR   Build
 )
 
-FetchContent_MakeAvailable(glfw glm stb tinyobjloader imgui JoltPhysics)
+# Fetch EnTT. Header-only, so nothing is compiled here - the target is an
+# interface library carrying its include directory. v4 requires C++20 and
+# CMake 3.28, both of which this project already demands.
+FetchContent_Declare(
+    EnTT
+    GIT_REPOSITORY  https://github.com/skypjack/entt
+    GIT_TAG         v4.0.0
+)
+
+FetchContent_MakeAvailable(glfw glm stb tinyobjloader imgui JoltPhysics EnTT)
 
 # Find Vulkan SDK
 find_package(Vulkan REQUIRED)

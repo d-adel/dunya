@@ -9,6 +9,7 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(field_tests
     commandhistory_tests.cc
+    entt_tests.cc
     field_tests.cc
     fieldobject_tests.cc
     objectregistry_tests.cc

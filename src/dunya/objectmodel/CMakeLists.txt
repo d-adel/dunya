@@ -16,11 +16,13 @@ target_include_directories(dunya_objectmodel PUBLIC "${PROJECT_SOURCE_DIR}/src")
 target_compile_features(dunya_objectmodel PUBLIC cxx_std_20)
 
 # PUBLIC: FieldObject and Command carry glm and Primitive types in headers
-# consumers include.
+# consumers include, and ObjectId is an EnTT type. EnTT stops here on purpose:
+# field, gpu and platform have no entities and do not link this.
 target_link_libraries(dunya_objectmodel PUBLIC
     dunya::core
     dunya::field
     glm::glm
+    EnTT::EnTT
 )
 
 if (MSVC)
