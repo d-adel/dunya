@@ -41,7 +41,7 @@ private:
     const dunya::gpu::Device& device
   );
 
-  void addInitialPrimitives(dunya::core::ObjectId objectId);
+  void addInitialPrimitives(dunya::objectmodel::Entity entity);
 
   std::vector<dunya::objectmodel::Material> m_materials;
   std::vector<dunya::gpu::Sampler> m_samplers;

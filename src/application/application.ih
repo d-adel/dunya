@@ -4,6 +4,7 @@
 #include <dunya/field/analytic/analytic.h>
 #include <dunya/field/raycast/raycast.h>
 #include <dunya/objectmodel/fieldobject/fieldobject.h>
+#include <dunya/objectmodel/world/world.h>
 
 #include <imgui.h>
 

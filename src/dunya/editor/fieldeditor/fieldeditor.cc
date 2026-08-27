@@ -5,14 +5,18 @@ namespace dunya::editor {
 FieldEditor::FieldEditor(dunya::objectmodel::World& world) : m_world(world) {}
 
 void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
-  int objectIndex = -1;
+  dunya::objectmodel::Entity hitEntity = dunya::objectmodel::INVALID_ENTITY;
+
   dunya::field::RayHit minHit;
   dunya::field::Ray localRay;
+  const entt::registry& registry = m_world.registry();
 
-  const dunya::objectmodel::ObjectRegistry& registry = m_world.registry();
-  for (dunya::core::ObjectId id : registry.fieldObjectIds()) {
-    const auto& fieldObject = registry.getFieldObject(id);
-    const auto primitives = registry.getPrimitives(id);
+  for (dunya::objectmodel::Entity entity : m_world.fieldObjects()) {
+    const dunya::objectmodel::FieldObject& fieldObject =
+      registry.get<dunya::objectmodel::FieldObject>(entity);
+
+    std::span<const dunya::field::Primitive> primitives =
+      m_world.primitives(entity);
 
     glm::mat4 inverseModel = glm::inverse(fieldObject.model());
 
@@ -20,24 +24,32 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
 
     glm::vec3 direction = inverseModel * glm::vec4(ray.direction, 0.0f);
 
-    dunya::field::Ray curRay = {origin, direction};
+    dunya::field::Ray curRay{origin, direction};
 
-    std::optional<std::pair<float, float>> tOpt(std::nullopt);
-    dunya::field::Aabb box = dunya::objectmodel::gridBox(primitives);
-    tOpt = dunya::field::intersect(box, curRay);
+    const dunya::field::Aabb box = dunya::objectmodel::gridBox(primitives);
 
-    if (tOpt.has_value()) {
-      std::optional<dunya::field::RayHit> hit =
-        dunya::field::raymarch(primitives, curRay);
-      if (hit && (objectIndex == -1 || minHit.travelled > hit->travelled)) {
-        minHit = hit.value();
-        objectIndex = static_cast<int>(id);
-        localRay = curRay;
-      }
+    const auto tOpt = dunya::field::intersect(box, curRay);
+
+    if (!tOpt) {
+      continue;
+    }
+
+    const auto hit = dunya::field::raymarch(primitives, curRay);
+
+    if (
+    hit
+    && (
+      hitEntity == dunya::objectmodel::INVALID_ENTITY
+      || hit->travelled < minHit.travelled
+    )
+  ) {
+      minHit = *hit;
+      hitEntity = entity;
+      localRay = curRay;
     }
   }
 
-  if (objectIndex == -1) {
+  if (hitEntity == dunya::objectmodel::INVALID_ENTITY) {
     std::cout << "Nothing under the cursor\n";
     return;
   }
@@ -64,7 +76,7 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
                              : minHit.position + localRay.direction * offset;
 
   if (!addPrimitive(
-        objectIndex,
+        hitEntity,
         centre,
         dunya::core::EDIT_RADIUS,
         dunya::core::EDIT_BLEND,
@@ -82,8 +94,8 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
  * not being measured on the same scene.
  */
 void FieldEditor::stress(uint32_t count) {
-  const dunya::objectmodel::ObjectRegistry& registry = m_world.registry();
-  auto primitives = registry.getPrimitives(0);
+  std::span<const dunya::field::Primitive> primitives =
+    m_world.primitives(m_world.fieldObjects()[0]);
 
   const std::optional<dunya::field::Aabb> extent =
     dunya::field::boundedExtent(primitives);
@@ -109,7 +121,7 @@ void FieldEditor::stress(uint32_t count) {
     // primitive per sample, so quietly changing it here would move published
     // numbers without saying so.
     if (!addPrimitive(
-          0,
+          m_world.fieldObjects()[0],
           extent->minimum + span * at,
           dunya::core::EDIT_RADIUS,
           0.0f,
@@ -121,23 +133,24 @@ void FieldEditor::stress(uint32_t count) {
     }
   }
 
-  primitives = registry.getPrimitives(0);
-  m_world.setDirty(0, true);
+  primitives = m_world.primitives(m_world.fieldObjects()[0]);
+  m_world.setDirty(m_world.fieldObjects()[0], true);
   std::cout << "stress  primitives " << before << " -> " << primitives.size()
             << '\n';
 }
 
 bool FieldEditor::addPrimitive(
-  dunya::core::ObjectId objectId,
+  dunya::objectmodel::Entity entity,
   const glm::vec3& centre,
   float radius,
   float blend,
   uint32_t material,
   uint32_t operation
 ) {
-  dunya::objectmodel::ObjectRegistry& registry = m_world.registry();
-
-  if (!registry.contains(objectId)) {
+  if (
+    !m_world.registry().valid(entity)
+    || !m_world.registry().all_of<dunya::objectmodel::FieldObject>(entity)
+  ) {
     return false;
   }
 
@@ -145,20 +158,20 @@ bool FieldEditor::addPrimitive(
     dunya::field::makeSphere(centre, radius, material, operation, blend);
 
   AddPrimitiveCommand command(
-    objectId,
-    registry.primitiveCount(objectId),
+    entity,
+    m_world.primitiveCount(entity),
     primitive
   );
 
-  return m_commandHistory.execute(command, registry);
+  return m_commandHistory.execute(command, m_world);
 }
 
 void FieldEditor::undo() {
-  m_commandHistory.undo(m_world.registry());
+  m_commandHistory.undo(m_world);
 }
 
 void FieldEditor::redo() {
-  m_commandHistory.redo(m_world.registry());
+  m_commandHistory.redo(m_world);
 }
 
 }  // namespace dunya::editor

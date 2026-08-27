@@ -1,0 +1,286 @@
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
+
+#include <dunya/core/config/config.h>
+#include <dunya/objectmodel/fieldobject/fieldobject.h>
+#include <dunya/objectmodel/world/world.h>
+
+#include <entt/entity/registry.hpp>
+
+#include <algorithm>
+#include <cstdint>
+#include <span>
+#include <type_traits>
+#include <utility>
+
+#include "tolerances.h"
+
+namespace {
+
+using Catch::Matchers::WithinAbs;
+
+using dunya::objectmodel::Entity;
+using dunya::objectmodel::FieldObject;
+using dunya::objectmodel::World;
+
+// Materials number the primitives 1, 2, 3..., which is how a test tells one
+// from another after an edit has shifted them.
+dunya::field::Primitive marker(uint32_t material) {
+  return dunya::field::makeSphere(glm::vec3(0.0f), 1.0f, material);
+}
+
+// The derived refresh divides by the resolution, so a field object is only
+// usable once it has one.
+FieldObject blank() {
+  FieldObject object{};
+
+  object.resolution = glm::uvec3(dunya::core::FIELD_GRID_RESOLUTION);
+
+  return object;
+}
+
+const FieldObject& objectOf(const World& world, Entity entity) {
+  return world.registry().get<FieldObject>(entity);
+}
+
+uint32_t materialAt(const World& world, Entity entity, uint32_t index) {
+  return world.primitives(entity)[index].shapeConfig.y;
+}
+
+// Entities in use, not components. An orphan entity carries nothing, so it is
+// invisible to every other read in this file.
+//
+// A pointer because that is what the const overload returns, and never null
+// for the entity type: assure() hands back the registry's own member rather
+// than looking in the pools.
+uint32_t liveEntityCount(const World& world) {
+  return static_cast<uint32_t>(
+    world.registry().storage<Entity>()->free_list()
+  );
+}
+
+}  // namespace
+
+TEST_CASE("an added field object is live and listed", "[world]") {
+  World world;
+
+  const Entity entity = world.addFieldObject(blank());
+
+  REQUIRE(world.registry().valid(entity));
+  REQUIRE(world.registry().all_of<FieldObject>(entity));
+
+  REQUIRE(world.fieldObjects().size() == 1);
+  REQUIRE(world.fieldObjects()[0] == entity);
+}
+
+// The const-only accessor is the transaction boundary. A non-const overload
+// would put every field back within reach of every caller, so it is pinned
+// here rather than left to review.
+TEST_CASE("the registry is reachable read-only", "[world]") {
+  static_assert(
+    std::is_same_v<
+      decltype(std::declval<World&>().registry()),
+      const entt::registry&>,
+    "World::registry() must stay const-only"
+  );
+
+  SUCCEED("checked at compile time");
+}
+
+TEST_CASE("placing at a hint restores the exact identity", "[world]") {
+  World world;
+
+  FieldObject marked = blank();
+  marked.position.x = 10.0f;
+
+  const Entity entity = world.addFieldObject(marked);
+
+  REQUIRE(world.removeFieldObject(entity));
+  REQUIRE_FALSE(world.registry().valid(entity));
+
+  marked.position.x = 11.0f;
+
+  REQUIRE(world.addFieldObjectAt(entity, marked));
+
+  // The same value, version included, which is what undo needs: a command
+  // holding this entity must still address the object it restored.
+  REQUIRE(world.registry().valid(entity));
+  REQUIRE_THAT(
+    objectOf(world, entity).position.x,
+    WithinAbs(11.0f, ANALYTIC_TOLERANCE)
+  );
+}
+
+TEST_CASE("a taken hint is refused and leaves nothing behind", "[world]") {
+  World world;
+
+  const Entity first = world.addFieldObject(blank());
+
+  REQUIRE(world.removeFieldObject(first));
+
+  // EnTT recycles the freed slot, so this add takes the identity a redo would
+  // have asked for.
+  const Entity recycled = world.addFieldObject(blank());
+
+  const uint32_t before = liveEntityCount(world);
+
+  REQUIRE_FALSE(world.addFieldObjectAt(first, blank()));
+
+  // create(hint) does not fail, it substitutes. The substitute must not
+  // survive the refusal, as an object or as a bare entity.
+  REQUIRE(world.fieldObjects().size() == 1);
+  REQUIRE(world.fieldObjects()[0] == recycled);
+  REQUIRE(liveEntityCount(world) == before);
+}
+
+TEST_CASE("removing a field object returns its primitives to the pool",
+          "[world]") {
+  World world;
+
+  const Entity entity = world.addFieldObject(blank());
+
+  REQUIRE(world.addPrimitive(entity, marker(1)));
+  REQUIRE(world.addPrimitive(entity, marker(2)));
+  REQUIRE(world.addPrimitive(entity, marker(3)));
+
+  const size_t used = world.pool().size();
+
+  REQUIRE(used > 0);
+
+  REQUIRE(world.removeFieldObject(entity));
+
+  // The range sat at the end of the arena, so releasing it shrinks the pool
+  // rather than leaving a hole. A pool that stays put means the destroy signal
+  // never reached the store and the allocation leaked.
+  REQUIRE(world.pool().empty());
+
+  const Entity next = world.addFieldObject(blank());
+
+  REQUIRE(world.addPrimitive(next, marker(4)));
+  REQUIRE(world.addPrimitive(next, marker(5)));
+  REQUIRE(world.addPrimitive(next, marker(6)));
+
+  REQUIRE(world.pool().size() == used);
+}
+
+TEST_CASE("removing an entity that is not a field object is refused",
+          "[world]") {
+  World world;
+
+  const Entity entity = world.addFieldObject(blank());
+
+  REQUIRE(world.removeFieldObject(entity));
+
+  // registry.destroy on a dead entity is a precondition violation, so the
+  // refusal has to happen before it.
+  REQUIRE_FALSE(world.removeFieldObject(entity));
+}
+
+TEST_CASE("the primitive transactions are visible through the world",
+          "[world]") {
+  World world;
+
+  const Entity entity = world.addFieldObject(blank());
+
+  REQUIRE(world.addPrimitive(entity, marker(1)));
+  REQUIRE(world.addPrimitive(entity, marker(3)));
+  REQUIRE(world.insertPrimitive(entity, 1, marker(2)));
+
+  REQUIRE(world.primitiveCount(entity) == 3);
+  REQUIRE(materialAt(world, entity, 0) == 1);
+  REQUIRE(materialAt(world, entity, 1) == 2);
+  REQUIRE(materialAt(world, entity, 2) == 3);
+
+  REQUIRE(world.setPrimitive(entity, 1, marker(9)));
+  REQUIRE(materialAt(world, entity, 1) == 9);
+
+  REQUIRE(world.removePrimitive(entity, 0));
+  REQUIRE(world.primitiveCount(entity) == 2);
+  REQUIRE(materialAt(world, entity, 0) == 9);
+  REQUIRE(materialAt(world, entity, 1) == 3);
+}
+
+TEST_CASE("a primitive edit refreshes the derived field and marks it dirty",
+          "[world]") {
+  World world;
+
+  const Entity entity = world.addFieldObject(blank());
+
+  world.setDirty(entity, false);
+
+  REQUIRE(world.addPrimitive(entity, marker(1)));
+
+  const FieldObject& object = objectOf(world, entity);
+
+  REQUIRE(object.dirty);
+
+  // A unit sphere at the origin, plus the grid margin on every side.
+  const float expected = -(1.0f + dunya::core::FIELD_GRID_MARGIN);
+
+  REQUIRE_THAT(object.gridOrigin.x, WithinAbs(expected, ANALYTIC_TOLERANCE));
+  REQUIRE(object.voxelSize.x > 0.0f);
+}
+
+TEST_CASE("setPose writes position and rotation together", "[world]") {
+  World world;
+
+  const Entity entity = world.addFieldObject(blank());
+
+  const glm::vec3 position(1.0f, 2.0f, 3.0f);
+
+  const glm::quat rotation =
+    glm::angleAxis(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+  world.setPose(entity, position, rotation);
+
+  const FieldObject& object = objectOf(world, entity);
+
+  REQUIRE_THAT(object.position.x, WithinAbs(1.0f, ANALYTIC_TOLERANCE));
+  REQUIRE_THAT(object.position.z, WithinAbs(3.0f, ANALYTIC_TOLERANCE));
+
+  REQUIRE_THAT(object.rotation.w, WithinAbs(rotation.w, ANALYTIC_TOLERANCE));
+  REQUIRE_THAT(object.rotation.y, WithinAbs(rotation.y, ANALYTIC_TOLERANCE));
+}
+
+TEST_CASE("the component setters reach the object", "[world]") {
+  World world;
+
+  const Entity entity = world.addFieldObject(blank());
+
+  REQUIRE(objectOf(world, entity).volumeIndex == UINT32_MAX);
+
+  world.setVolumeIndex(entity, 3);
+  world.setDirty(entity, false);
+
+  REQUIRE(objectOf(world, entity).volumeIndex == 3);
+  REQUIRE_FALSE(objectOf(world, entity).dirty);
+
+  world.setDirty(entity, true);
+
+  REQUIRE(objectOf(world, entity).dirty);
+}
+
+TEST_CASE("the field object span follows adds and removes", "[world]") {
+  World world;
+
+  const Entity first = world.addFieldObject(blank());
+  const Entity second = world.addFieldObject(blank());
+  const Entity third = world.addFieldObject(blank());
+
+  REQUIRE(world.fieldObjects().size() == 3);
+
+  REQUIRE(world.removeFieldObject(second));
+
+  const std::span<const Entity> remaining = world.fieldObjects();
+
+  // Swap-and-pop storage, so the span holds live entities only. If FieldObject
+  // ever needs stable storage the dense array gains tombstones and this fails.
+  REQUIRE(remaining.size() == 2);
+
+  REQUIRE(std::find(remaining.begin(), remaining.end(), second)
+          == remaining.end());
+  REQUIRE(std::find(remaining.begin(), remaining.end(), first)
+          != remaining.end());
+  REQUIRE(std::find(remaining.begin(), remaining.end(), third)
+          != remaining.end());
+}

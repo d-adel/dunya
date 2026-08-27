@@ -43,7 +43,7 @@ public:
   );
 
   void makeGPUField(
-    dunya::core::ObjectId objectIndex,
+    uint32_t objectIndex,
     uint32_t primitiveOffset,
     uint32_t primitiveCount,
     const dunya::objectmodel::FieldObject& fieldObject,
@@ -59,14 +59,14 @@ public:
 
   void newFrame();
 
-  void appendToBakeList(dunya::core::ObjectId id);
+  void appendToBakeList(uint32_t slot);
 
   std::span<const dunya::objectmodel::FieldObjectGPU>
   gpuFieldObjects() const noexcept;
-  std::span<const dunya::core::ObjectId> bakeList() const noexcept;
+  std::span<const uint32_t> bakeList() const noexcept;
 
   const dunya::objectmodel::FieldObjectGPU& gpuFieldObject(
-    dunya::core::ObjectId objectIndex
+    uint32_t objectIndex
   ) const;
 
   // Exposed for the bake check, which reads a slot back and compares it with
@@ -75,7 +75,7 @@ public:
 
 private:
   std::vector<dunya::objectmodel::FieldObjectGPU> m_gpuFieldObjects;
-  std::vector<dunya::core::ObjectId> m_bakeList;
+  std::vector<uint32_t> m_bakeList;
   dunya::gpu::DescriptorGroup m_group;
 
   // Device-local because the compute pass writes it and the fragment shader

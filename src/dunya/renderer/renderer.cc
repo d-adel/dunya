@@ -301,9 +301,9 @@ void Renderer::recordCommandBuffer(
     );
 
     // After the pool write, because the dispatch reads this frame's copy.
-    for (dunya::core::ObjectId objectId : m_fieldObjectTable.bakeList()) {
+    for (uint32_t slot : m_fieldObjectTable.bakeList()) {
       const dunya::objectmodel::FieldObjectGPU& gpu =
-        m_fieldObjectTable.gpuFieldObject(objectId);
+        m_fieldObjectTable.gpuFieldObject(slot);
 
       const uint32_t volumeIndex = gpu.resolutionVolumeIndex.w;
 
@@ -329,8 +329,9 @@ void Renderer::recordCommandBuffer(
       nullptr
     );
 
-    for (dunya::core::ObjectId objectId : frameContext.fieldObjectIds) {
-      const dunya::gpu::PushConstants pushConstants{0, 0, objectId};
+    for (uint32_t slot = 0; slot != frameContext.fieldObjectCount;
+         ++slot) {
+      const dunya::gpu::PushConstants pushConstants{0, 0, slot};
 
       vkCmdPushConstants(
         m_commandBuffers[m_currentFrame],

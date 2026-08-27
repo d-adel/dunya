@@ -5,7 +5,21 @@
 
 namespace dunya::editor {
 
-void CommandHistory::undo(dunya::objectmodel::ObjectRegistry& registry) {
+namespace {
+
+// World deliberately has no contains. The liveness read goes through the const
+// registry, the same predicate FieldEditor::addPrimitive already uses.
+bool isFieldObject(
+  const dunya::objectmodel::World& world,
+  dunya::objectmodel::Entity entity
+) {
+  return world.registry().valid(entity)
+         && world.registry().all_of<dunya::objectmodel::FieldObject>(entity);
+}
+
+}  // namespace
+
+void CommandHistory::undo(dunya::objectmodel::World& world) {
   if (m_undo.empty()) {
     return;
   }
@@ -13,7 +27,7 @@ void CommandHistory::undo(dunya::objectmodel::ObjectRegistry& registry) {
   Command command = std::move(m_undo.back());
   m_undo.pop_back();
 
-  if (!revert(command, registry)) {
+  if (!revert(command, world)) {
     m_undo.push_back(std::move(command));
     return;
   }
@@ -21,7 +35,7 @@ void CommandHistory::undo(dunya::objectmodel::ObjectRegistry& registry) {
   m_redo.push_back(std::move(command));
 }
 
-void CommandHistory::redo(dunya::objectmodel::ObjectRegistry& registry) {
+void CommandHistory::redo(dunya::objectmodel::World& world) {
   if (m_redo.empty()) {
     return;
   }
@@ -29,7 +43,7 @@ void CommandHistory::redo(dunya::objectmodel::ObjectRegistry& registry) {
   Command command = std::move(m_redo.back());
   m_redo.pop_back();
 
-  if (!apply(command, registry)) {
+  if (!apply(command, world)) {
     m_redo.push_back(std::move(command));
     return;
   }
@@ -42,70 +56,66 @@ void CommandHistory::clear() {
   m_redo.clear();
 }
 
-bool CommandHistory::apply(
-  Command& command,
-  dunya::objectmodel::ObjectRegistry& registry
-) {
+bool CommandHistory::apply(Command& command, dunya::objectmodel::World& world) {
   return std::visit(
     [&](auto& cmd) -> bool {
       using T = std::decay_t<decltype(cmd)>;
 
       if constexpr (std::is_same_v<T, AddFieldObjectCommand>) {
-        if (cmd.id == dunya::core::INVALID_OBJECT_ID) {
-          cmd.id = registry.addFieldObject(cmd.object);
-          return cmd.id != dunya::core::INVALID_OBJECT_ID;
+        if (cmd.entity == dunya::objectmodel::INVALID_ENTITY) {
+          cmd.entity = world.addFieldObject(cmd.object);
+          return cmd.entity != dunya::objectmodel::INVALID_ENTITY;
         }
 
-        return registry.addFieldObjectAt(cmd.id, cmd.object);
+        return world.addFieldObjectAt(cmd.entity, cmd.object);
       }
 
       else if constexpr (std::is_same_v<T, RemoveFieldObjectCommand>) {
         if (!cmd.object.has_value()) {
-          if (!registry.contains(cmd.id)) {
+          if (!isFieldObject(world, cmd.entity)) {
             return false;
           }
 
-          cmd.object = registry.getFieldObject(cmd.id);
+          cmd.object =
+            world.registry().get<dunya::objectmodel::FieldObject>(
+              cmd.entity
+            );
 
-          const auto primitives = registry.getPrimitives(cmd.id);
+          const auto primitives = world.primitives(cmd.entity);
 
           cmd.primitives.assign(primitives.begin(), primitives.end());
         }
 
-        return registry.removeFieldObject(cmd.id);
+        return world.removeFieldObject(cmd.entity);
       }
 
       else if constexpr (std::is_same_v<T, TransformFieldObjectCommand>) {
-        if (!registry.contains(cmd.id)) {
+        if (!isFieldObject(world, cmd.entity)) {
           return false;
         }
 
-        dunya::objectmodel::FieldObject& object =
-          registry.getFieldObject(cmd.id);
-
-        object.position = cmd.newPosition;
-        object.rotation = cmd.newRotation;
+        world.setPose(cmd.entity, cmd.newPosition, cmd.newRotation);
 
         return true;
       }
 
       else if constexpr (std::is_same_v<T, AddPrimitiveCommand>) {
-        return registry.insertPrimitive(
-          cmd.objectId,
+        return world.insertPrimitive(
+          cmd.entity,
           cmd.primitiveIndex,
           cmd.primitive
         );
       }
 
       else if constexpr (std::is_same_v<T, RemovePrimitiveCommand>) {
-        return registry.removePrimitive(cmd.objectId, cmd.primitiveIndex);
+        return world.removePrimitive(cmd.entity, cmd.primitiveIndex);
       }
 
       else {
         static_assert(std::is_same_v<T, UpdatePrimitiveCommand>);
 
-        return registry.setPrimitive(
-          cmd.objectId,
+        return world.setPrimitive(
+          cmd.entity,
           cmd.primitiveIndex,
           cmd.newPrimitive
         );
@@ -117,14 +127,14 @@ bool CommandHistory::apply(
 
 bool CommandHistory::revert(
   const Command& command,
-  dunya::objectmodel::ObjectRegistry& registry
+  dunya::objectmodel::World& world
 ) {
   return std::visit(
     [&](const auto& cmd) -> bool {
       using T = std::decay_t<decltype(cmd)>;
 
       if constexpr (std::is_same_v<T, AddFieldObjectCommand>) {
-        return registry.removeFieldObject(cmd.id);
+        return world.removeFieldObject(cmd.entity);
       }
 
       else if constexpr (std::is_same_v<T, RemoveFieldObjectCommand>) {
@@ -132,12 +142,12 @@ bool CommandHistory::revert(
           return false;
         }
 
-        if (!registry.addFieldObjectAt(cmd.id, *cmd.object)) {
+        if (!world.addFieldObjectAt(cmd.entity, *cmd.object)) {
           return false;
         }
 
         for (const auto& primitive : cmd.primitives) {
-          if (!registry.addPrimitive(cmd.id, primitive)) {
+          if (!world.addPrimitive(cmd.entity, primitive)) {
             return false;
           }
         }
@@ -146,26 +156,22 @@ bool CommandHistory::revert(
       }
 
       else if constexpr (std::is_same_v<T, TransformFieldObjectCommand>) {
-        if (!registry.contains(cmd.id)) {
+        if (!isFieldObject(world, cmd.entity)) {
           return false;
         }
 
-        dunya::objectmodel::FieldObject& object =
-          registry.getFieldObject(cmd.id);
-
-        object.position = cmd.oldPosition;
-        object.rotation = cmd.oldRotation;
+        world.setPose(cmd.entity, cmd.oldPosition, cmd.oldRotation);
 
         return true;
       }
 
       else if constexpr (std::is_same_v<T, AddPrimitiveCommand>) {
-        return registry.removePrimitive(cmd.objectId, cmd.primitiveIndex);
+        return world.removePrimitive(cmd.entity, cmd.primitiveIndex);
       }
 
       else if constexpr (std::is_same_v<T, RemovePrimitiveCommand>) {
-        return registry.insertPrimitive(
-          cmd.objectId,
+        return world.insertPrimitive(
+          cmd.entity,
           cmd.primitiveIndex,
           cmd.primitive
         );
@@ -174,8 +180,8 @@ bool CommandHistory::revert(
       else {
         static_assert(std::is_same_v<T, UpdatePrimitiveCommand>);
 
-        return registry.setPrimitive(
-          cmd.objectId,
+        return world.setPrimitive(
+          cmd.entity,
           cmd.primitiveIndex,
           cmd.oldPrimitive
         );

@@ -42,7 +42,7 @@ public:
 
 private:
   bool addPrimitive(
-    dunya::core::ObjectId objectId,
+    dunya::objectmodel::Entity entity,
     const glm::vec3& centre,
     float radius,
     float blend,

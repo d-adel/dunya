@@ -26,15 +26,15 @@ Scene::Scene(const dunya::gpu::Context& context)
   dunya::objectmodel::FieldObject fieldObject{};
   fieldObject.position = glm::vec3(1.0f, 0.45f, 0.0f);
   fieldObject.resolution = glm::uvec3(dunya::core::FIELD_GRID_RESOLUTION);
-  dunya::core::ObjectId objectId =
-    m_world.registry().addFieldObject(fieldObject);
-  addInitialPrimitives(objectId);
+  const dunya::objectmodel::Entity fieldEntity =
+    m_world.addFieldObject(fieldObject);
+  addInitialPrimitives(fieldEntity);
 
   fieldObject.position = glm::vec3(0.0f, -2.0f, 0.0f);
-  dunya::core::ObjectId planeId =
-    m_world.registry().addFieldObject(fieldObject);
-  m_world.registry().addPrimitive(
-    planeId,
+  const dunya::objectmodel::Entity planeEntity =
+    m_world.addFieldObject(fieldObject);
+  m_world.addPrimitive(
+    planeEntity,
     dunya::field::makeBox(
       glm::vec3(0.0f, -0.5f, 0.0f),
       glm::vec3(10.0f, 0.5f, 10.0f),
@@ -52,8 +52,7 @@ void Scene::augmentFrameContext(dunya::renderer::Frame& frameContext) {
 
   frameContext.drawItems = m_world.drawItems();
   frameContext.meshes = meshes;
-  frameContext.fieldObjectIds = m_world.registry().fieldObjectIds();
-  frameContext.primitives = m_world.registry().primitivePool();
+  frameContext.primitives = m_world.pool();
 }
 
 const std::vector<dunya::objectmodel::Material>& Scene::
@@ -169,14 +168,14 @@ std::vector<dunya::objectmodel::Material> Scene::createMaterials() {
   return {fieldSphere, fieldPlane, vikingRoom, checker};
 }
 
-void Scene::addInitialPrimitives(dunya::core::ObjectId objectId) {
-  m_world.registry().addPrimitive(
-    objectId,
+void Scene::addInitialPrimitives(dunya::objectmodel::Entity entity) {
+  m_world.addPrimitive(
+    entity,
     dunya::field::makeSphere(glm::vec3(0.0f, 0.0f, 0.0f), 1.0f)
   );
 
-  m_world.registry().addPrimitive(
-    objectId,
+  m_world.addPrimitive(
+    entity,
     dunya::field::makeBox(
       glm::vec3(0.8f, -0.45f, 0.0f),
       glm::vec3(0.5f),

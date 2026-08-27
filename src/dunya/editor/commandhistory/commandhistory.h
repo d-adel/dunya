@@ -1,6 +1,7 @@
 #pragma once
 
 #include <dunya/editor/command/command.h>
+#include <dunya/objectmodel/world/world.h>
 
 #include <vector>
 
@@ -9,10 +10,10 @@ namespace dunya::editor {
 class CommandHistory {
 public:
   template<typename T>
-  bool execute(T command, dunya::objectmodel::ObjectRegistry& registry) {
+  bool execute(T command, dunya::objectmodel::World& world) {
     Command wrapped{std::move(command)};
 
-    if (!apply(wrapped, registry)) {
+    if (!apply(wrapped, world)) {
       return false;
     }
 
@@ -24,11 +25,11 @@ public:
 
   bool execute(
     AddFieldObjectCommand& command,
-    dunya::objectmodel::ObjectRegistry& registry
+    dunya::objectmodel::World& world
   ) {
     Command wrapped{command};
 
-    if (!apply(wrapped, registry)) {
+    if (!apply(wrapped, world)) {
       return false;
     }
 
@@ -40,8 +41,8 @@ public:
     return true;
   }
 
-  void undo(dunya::objectmodel::ObjectRegistry& registry);
-  void redo(dunya::objectmodel::ObjectRegistry& registry);
+  void undo(dunya::objectmodel::World& world);
+  void redo(dunya::objectmodel::World& world);
   void clear();
 
   bool canUndo() const {
@@ -53,15 +54,9 @@ public:
   }
 
 private:
-  static bool apply(
-    Command& command,
-    dunya::objectmodel::ObjectRegistry& registry
-  );
+  static bool apply(Command& command, dunya::objectmodel::World& world);
 
-  static bool revert(
-    const Command& command,
-    dunya::objectmodel::ObjectRegistry& registry
-  );
+  static bool revert(const Command& command, dunya::objectmodel::World& world);
 
   std::vector<Command> m_undo;
   std::vector<Command> m_redo;

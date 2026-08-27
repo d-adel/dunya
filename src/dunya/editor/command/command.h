@@ -1,40 +1,42 @@
 #pragma once
 
-#include <dunya/objectmodel/objectregistry/objectregistry.h>
+#include <dunya/objectmodel/entity/entity.h>
+#include <dunya/objectmodel/fieldobject/fieldobject.h>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
+#include <optional>
 #include <variant>
+#include <vector>
 
 namespace dunya::editor {
 
 struct AddFieldObjectCommand {
-  dunya::core::ObjectId id = dunya::core::INVALID_OBJECT_ID;
+  dunya::objectmodel::Entity entity = dunya::objectmodel::INVALID_ENTITY;
   dunya::objectmodel::FieldObject object;
 };
 
 struct RemoveFieldObjectCommand {
-  dunya::core::ObjectId id;
-
+  dunya::objectmodel::Entity entity;
   std::optional<dunya::objectmodel::FieldObject> object;
   std::vector<dunya::field::Primitive> primitives;
 };
 
 struct AddPrimitiveCommand {
-  dunya::core::ObjectId objectId;
+  dunya::objectmodel::Entity entity;
   uint32_t primitiveIndex;
   dunya::field::Primitive primitive;
 };
 
 struct RemovePrimitiveCommand {
-  dunya::core::ObjectId objectId;
+  dunya::objectmodel::Entity entity;
   uint32_t primitiveIndex;
   dunya::field::Primitive primitive;
 };
 
 struct UpdatePrimitiveCommand {
-  dunya::core::ObjectId objectId;
+  dunya::objectmodel::Entity entity;
   uint32_t primitiveIndex;
 
   dunya::field::Primitive oldPrimitive;
@@ -42,7 +44,7 @@ struct UpdatePrimitiveCommand {
 };
 
 struct TransformFieldObjectCommand {
-  dunya::core::ObjectId id;
+  dunya::objectmodel::Entity entity;
 
   glm::vec3 oldPosition;
   glm::quat oldRotation;

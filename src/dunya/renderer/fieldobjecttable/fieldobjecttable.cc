@@ -85,12 +85,12 @@ void FieldObjectTable::newFrame() {
   m_bakeList.clear();
 }
 
-void FieldObjectTable::appendToBakeList(dunya::core::ObjectId id) {
-  m_bakeList.push_back(id);
+void FieldObjectTable::appendToBakeList(uint32_t slot) {
+  m_bakeList.push_back(slot);
 }
 
 void FieldObjectTable::makeGPUField(
-  dunya::core::ObjectId objectIndex,
+  uint32_t objectIndex,
   uint32_t primitiveOffset,
   uint32_t primitiveCount,
   const dunya::objectmodel::FieldObject& fieldObject,
@@ -139,13 +139,13 @@ std::span<const dunya::objectmodel::FieldObjectGPU> FieldObjectTable::
   return m_gpuFieldObjects;
 }
 
-std::span<const dunya::core::ObjectId> FieldObjectTable::
+std::span<const uint32_t> FieldObjectTable::
   bakeList() const noexcept {
   return m_bakeList;
 }
 
 const dunya::objectmodel::FieldObjectGPU& FieldObjectTable::gpuFieldObject(
-  dunya::core::ObjectId objectIndex
+  uint32_t objectIndex
 ) const {
   return m_gpuFieldObjects.at(objectIndex);
 }

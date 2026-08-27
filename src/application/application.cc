@@ -214,15 +214,18 @@ int Application::start(const StartupOptions& options) {
     m_frameContext.view = m_camera.viewMatrix();
     m_frameContext.cameraPos = m_camera.position();
 
-    dunya::objectmodel::ObjectRegistry& registry = m_scene.world().registry();
+    dunya::objectmodel::World& world = m_scene.world();
+    const entt::registry& registry = world.registry();
 
-    for (dunya::core::ObjectId id : registry.fieldObjectIds()) {
+    uint32_t objectIndex = 0;
+
+    for (dunya::objectmodel::Entity entity : world.fieldObjects()) {
       const dunya::objectmodel::FieldObject& fieldObject =
-        registry.getFieldObject(id);
+        registry.get<dunya::objectmodel::FieldObject>(entity);
 
       if (fieldObject.volumeIndex == UINT32_MAX) {
         std::span<const dunya::field::Primitive> primitives =
-          registry.getPrimitives(id);
+          world.primitives(entity);
 
         dunya::field::Aabb box = dunya::objectmodel::gridBox(primitives);
         const dunya::field::SampledField& grid = dunya::field::bake(
@@ -241,14 +244,18 @@ int Application::start(const StartupOptions& options) {
           index
         );
 
-        m_scene.world().setVolumeIndex(id, index);
+        world.setVolumeIndex(entity, index);
       }
 
-      uint32_t primitiveCount = registry.primitiveCount(id);
-      uint32_t primitiveOffset = registry.primitiveOffset(id);
+      const auto* range =
+        registry.try_get<dunya::objectmodel::SdfPrimitiveRange>(entity);
+
+      const uint32_t primitiveOffset = range == nullptr ? 0u : range->offset;
+
+      const uint32_t primitiveCount = range == nullptr ? 0u : range->count;
 
       m_fieldObjectTable.makeGPUField(
-        id,
+        objectIndex,
         primitiveOffset,
         primitiveCount,
         fieldObject,
@@ -256,9 +263,13 @@ int Application::start(const StartupOptions& options) {
       );
 
       if (fieldObject.dirty) {
-        m_fieldObjectTable.appendToBakeList(id);
+        m_fieldObjectTable.appendToBakeList(objectIndex);
       }
+
+      ++objectIndex;
     }
+
+    m_frameContext.fieldObjectCount = objectIndex;
 
     m_scene.augmentFrameContext(m_frameContext);
     // -----------------------------------
@@ -286,24 +297,26 @@ int Application::start(const StartupOptions& options) {
                                 );
 
     if (!swapChainStale) {
-      for (dunya::core::ObjectId objectId : m_fieldObjectTable.bakeList()) {
-        registry.getFieldObject(objectId).dirty = false;
+      const std::span<const dunya::objectmodel::Entity> fieldEntities =
+        world.fieldObjects();
+
+      for (uint32_t idx : m_fieldObjectTable.bakeList()) {
+        world.setDirty(fieldEntities[idx], false);
       }
     } else {
       m_swapChain.recreate();
     }
-
     // After a frame, because the compute bake runs as part of one. Before it,
     // the volumes still hold the CPU bake and the check would be comparing
     // that against itself.
     if (bakeCheckPending) {
       bakeCheckPending = false;
       m_context.device().waitIdle();
-      for (dunya::core::ObjectId id : registry.fieldObjectIds()) {
+      for (dunya::objectmodel::Entity entity : world.fieldObjects()) {
         const dunya::objectmodel::FieldObject& fieldObject =
-          registry.getFieldObject(id);
+          registry.get<dunya::objectmodel::FieldObject>(entity);
         std::span<const dunya::field::Primitive> primitives =
-          registry.getPrimitives(id);
+          world.primitives(entity);
         dunya::renderer::VolumeImages images =
           m_volumePool.images(fieldObject.volumeIndex);
         m_fieldBaker.verifyBake(fieldObject, primitives, images);
@@ -415,9 +428,7 @@ void Application::registerPanels() {
       m_swapChain.extent().height
     );
 
-    const dunya::objectmodel::ObjectRegistry& registry =
-      m_scene.world().registry();
-    size_t primitiveCount = registry.primitivePool().size();
+    size_t primitiveCount = m_scene.world().pool().size();
 
     ImGui::Text("%zu primitives", primitiveCount);
     ImGui::Text(
