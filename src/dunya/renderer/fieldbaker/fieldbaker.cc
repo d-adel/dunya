@@ -204,6 +204,22 @@ void FieldBaker::bake(
 
   vkCmdDispatch(cmd.cmdBuffer(), 1, 1, 1);
 
+  // The volumes get a layout transition below, which carries their writes to
+  // the fragment shader. The bound buffer needs a dependency of its own.
+  VkMemoryBarrier2 boundsVisible{};
+  boundsVisible.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
+  boundsVisible.srcStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+  boundsVisible.srcAccessMask = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
+  boundsVisible.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+  boundsVisible.dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT;
+
+  VkDependencyInfo visibleDependency{};
+  visibleDependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+  visibleDependency.memoryBarrierCount = 1;
+  visibleDependency.pMemoryBarriers = &boundsVisible;
+
+  vkCmdPipelineBarrier2(cmd.cmdBuffer(), &visibleDependency);
+
   transitionVolumes(
     cmd.cmdBuffer(),
     images.distance.image(),
