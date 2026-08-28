@@ -1,7 +1,7 @@
 #pragma once
 
 #include <dunya/gpu/computepipeline/computepipeline.h>
-#include <dunya/renderer/fieldobjecttable/fieldobjecttable.h>
+#include <dunya/renderer/fieldrecordtable/fieldrecordtable.h>
 #include <dunya/renderer/fieldrecord/fieldrecord.h>
 #include <dunya/renderer/volumepool/volumepool.h>
 #include <dunya/gpu/device/device.h>
@@ -29,7 +29,7 @@ static_assert(
 
 class FieldBaker {
 public:
-  FieldBaker(const dunya::gpu::Device& device, const FieldObjectTable& table);
+  FieldBaker(const dunya::gpu::Device& device, const FieldRecordTable& table);
 
   FieldBaker(const FieldBaker&) = delete;
   FieldBaker& operator=(const FieldBaker&) = delete;
@@ -47,7 +47,7 @@ public:
 
 private:
   const dunya::gpu::Device& m_device;
-  const FieldObjectTable& m_table;
+  const FieldRecordTable& m_table;
 
   dunya::gpu::ComputePipeline m_bakePipeline;
 

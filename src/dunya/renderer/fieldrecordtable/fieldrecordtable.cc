@@ -1,21 +1,21 @@
-#include "fieldobjecttable.ih"
+#include "fieldrecordtable.ih"
 
 namespace dunya::renderer {
 
 namespace {
 
 constexpr VkDeviceSize BRICK_BOUNDS_BYTES =
-  static_cast<VkDeviceSize>(dunya::core::MAX_FIELD_OBJECTS)
+  static_cast<VkDeviceSize>(dunya::core::MAX_FIELD_VOLUMES)
   * dunya::core::BRICK_TABLE_STRIDE * sizeof(float);
 
 }  // namespace
 
-FieldObjectTable::FieldObjectTable(const dunya::gpu::Device& device)
+FieldRecordTable::FieldRecordTable(const dunya::gpu::Device& device)
     : m_group(
         device,
         dunya::core::MAX_FRAMES_IN_FLIGHT,
         {{ENTRIES,
-          dunya::core::MAX_FIELD_OBJECTS * sizeof(FieldRecord),
+          dunya::core::MAX_FIELD_RECORDS * sizeof(FieldRecord),
           VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
             | VK_SHADER_STAGE_COMPUTE_BIT,
           dunya::gpu::DescriptorGroup::BufferUpdate::PerFrame,
@@ -28,20 +28,20 @@ FieldObjectTable::FieldObjectTable(const dunya::gpu::Device& device)
         {{DISTANCE_VOLUMES,
           VK_SHADER_STAGE_FRAGMENT_BIT,
           {},
-          dunya::core::MAX_FIELD_OBJECTS},
+          dunya::core::MAX_FIELD_VOLUMES},
          {MATERIAL_VOLUMES,
           VK_SHADER_STAGE_FRAGMENT_BIT,
           {},
-          dunya::core::MAX_FIELD_OBJECTS}},
+          dunya::core::MAX_FIELD_VOLUMES}},
         {},
         {{DISTANCE_VOLUMES_STORAGE,
           VK_SHADER_STAGE_COMPUTE_BIT,
           {},
-          dunya::core::MAX_FIELD_OBJECTS},
+          dunya::core::MAX_FIELD_VOLUMES},
          {MATERIAL_VOLUMES_STORAGE,
           VK_SHADER_STAGE_COMPUTE_BIT,
           {},
-          dunya::core::MAX_FIELD_OBJECTS}},
+          dunya::core::MAX_FIELD_VOLUMES}},
         {{BRICK_BOUNDS,
           VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT}}
       ),
@@ -52,12 +52,12 @@ FieldObjectTable::FieldObjectTable(const dunya::gpu::Device& device)
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
       ) {
-  m_gpuFieldObjects.resize(dunya::core::MAX_FIELD_OBJECTS);
+  m_records.resize(dunya::core::MAX_FIELD_RECORDS);
 
   m_group.writeBuffer(BRICK_BOUNDS, m_brickBounds.buffer(), BRICK_BOUNDS_BYTES);
 }
 
-void FieldObjectTable::registerVolume(
+void FieldRecordTable::registerVolume(
   VkImageView distanceView,
   VkImageView materialView,
   uint32_t volumeIndex
@@ -76,20 +76,20 @@ void FieldObjectTable::registerVolume(
   );
 }
 
-const dunya::gpu::Buffer& FieldObjectTable::brickBounds() const noexcept {
+const dunya::gpu::Buffer& FieldRecordTable::brickBounds() const noexcept {
   return m_brickBounds;
 }
 
-void FieldObjectTable::newFrame() {
+void FieldRecordTable::newFrame() {
   m_bakeList.clear();
 }
 
-void FieldObjectTable::appendToBakeList(uint32_t slot) {
+void FieldRecordTable::appendToBakeList(uint32_t slot) {
   m_bakeList.push_back(slot);
 }
 
-void FieldObjectTable::makeGPUField(
-  uint32_t objectIndex,
+void FieldRecordTable::setRecord(
+  uint32_t recordIndex,
   uint32_t primitiveOffset,
   uint32_t primitiveCount,
   const dunya::objectmodel::Pose& pose,
@@ -97,7 +97,7 @@ void FieldObjectTable::makeGPUField(
   const dunya::objectmodel::BakedVolume& volume,
   uint32_t fieldRepresentation
 ) {
-  m_gpuFieldObjects[objectIndex] = makeFieldRecord(
+  m_records[recordIndex] = makeFieldRecord(
     pose,
     grid,
     volume,
@@ -107,13 +107,13 @@ void FieldObjectTable::makeGPUField(
   );
 }
 
-void FieldObjectTable::update(uint32_t frame) {
-  std::span<const FieldRecord> objects(m_gpuFieldObjects);
+void FieldRecordTable::update(uint32_t frame) {
+  std::span<const FieldRecord> objects(m_records);
 
   m_group.write(ENTRIES, frame, objects.data(), objects.size_bytes());
 }
 
-void FieldObjectTable::updatePrimitives(
+void FieldRecordTable::updatePrimitives(
   uint32_t frame,
   std::span<const dunya::field::Primitive> primitives
 ) {
@@ -125,29 +125,26 @@ void FieldObjectTable::updatePrimitives(
   );
 }
 
-const VkDescriptorSet& FieldObjectTable::descriptorSet(
+const VkDescriptorSet& FieldRecordTable::descriptorSet(
   uint32_t frame
 ) const noexcept {
   return m_group.descriptorSet(frame);
 }
 
-const VkDescriptorSetLayout& FieldObjectTable::setLayout() const noexcept {
+const VkDescriptorSetLayout& FieldRecordTable::setLayout() const noexcept {
   return m_group.setLayout();
 }
 
-std::span<const FieldRecord> FieldObjectTable::
-  gpuFieldObjects() const noexcept {
-  return m_gpuFieldObjects;
+std::span<const FieldRecord> FieldRecordTable::records() const noexcept {
+  return m_records;
 }
 
-std::span<const uint32_t> FieldObjectTable::bakeList() const noexcept {
+std::span<const uint32_t> FieldRecordTable::bakeList() const noexcept {
   return m_bakeList;
 }
 
-const FieldRecord& FieldObjectTable::gpuFieldObject(
-  uint32_t objectIndex
-) const {
-  return m_gpuFieldObjects.at(objectIndex);
+const FieldRecord& FieldRecordTable::record(uint32_t recordIndex) const {
+  return m_records.at(recordIndex);
 }
 
 }  // namespace dunya::renderer

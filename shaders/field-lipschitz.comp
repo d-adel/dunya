@@ -3,12 +3,12 @@
 // One invocation per brick, run straight after the bake while the volume is
 // still GENERAL. It reads only what the bake wrote, so the bound belongs to the
 // interpolant the marcher will actually sample rather than to any source field.
-const int MAX_FIELD_OBJECTS = DUNYA_MAX_FIELD_OBJECTS;
+const int MAX_FIELD_VOLUMES = DUNYA_MAX_FIELD_VOLUMES;
 const uint BRICK_CELLS = DUNYA_BRICK_CELLS;
 
 layout(r32f,
        set = 0,
-       binding = 4) uniform readonly image3D distanceVolume[MAX_FIELD_OBJECTS];
+       binding = 4) uniform readonly image3D distanceVolume[MAX_FIELD_VOLUMES];
 
 layout(std430, set = 0, binding = 6) buffer BrickBounds {
   float values[];

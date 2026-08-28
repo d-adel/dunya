@@ -6,7 +6,7 @@
 // Set 0 here is the same descriptor set layout the fragment shader declares at
 // set 2. A set can be bound at different indices by different pipelines as long
 // as the layout at that index matches, so no placeholder sets are needed.
-const int MAX_FIELD_OBJECTS = DUNYA_MAX_FIELD_OBJECTS;
+const int MAX_FIELD_VOLUMES = DUNYA_MAX_FIELD_VOLUMES;
 
 layout(std430, set = 0, binding = 3) readonly buffer FieldScene {
   Primitive primitives[];
@@ -14,11 +14,11 @@ layout(std430, set = 0, binding = 3) readonly buffer FieldScene {
 
 layout(r32f,
        set = 0,
-       binding = 4) uniform writeonly image3D distanceVolume[MAX_FIELD_OBJECTS];
+       binding = 4) uniform writeonly image3D distanceVolume[MAX_FIELD_VOLUMES];
 layout(r8ui,
        set = 0,
        binding = 5)
-  uniform writeonly uimage3D materialVolume[MAX_FIELD_OBJECTS];
+  uniform writeonly uimage3D materialVolume[MAX_FIELD_VOLUMES];
 
 layout(push_constant) uniform BakeParams {
   vec4 origin;

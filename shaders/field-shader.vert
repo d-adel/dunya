@@ -8,7 +8,7 @@ layout(std140, set = 0, binding = 0) uniform CameraUniform {
   vec4 position;
 } camera;
 
-struct FieldObjectShared {
+struct FieldRecordShared {
   mat4 model;
   mat4 inverseModel;
   vec4 voxelSize;
@@ -17,18 +17,18 @@ struct FieldObjectShared {
   vec4 localOrigin;
 };
 
-layout(std140, set = 2, binding = 0) readonly buffer FieldObjectTable {
-  FieldObjectShared objects[];
-} fieldObjectTable;
+layout(std140, set = 2, binding = 0) readonly buffer FieldRecordTable {
+  FieldRecordShared objects[];
+} fieldRecordTable;
 
 layout(push_constant) uniform PushConstants {
   mat4 model;
   uint materialIndex;
-  uint objectIndex;
+  uint recordIndex;
 } push;
 
 layout(location = 0) out vec4 clipPosition;
-layout(location = 1) flat out uint objectIndex;
+layout(location = 1) flat out uint recordIndex;
 
 // Eight possible box corners:
 //
@@ -92,8 +92,8 @@ const uint CUBE_INDICES[36] = uint[](
   7);
 
 void main() {
-  objectIndex = push.objectIndex;
-  FieldObjectShared object = fieldObjectTable.objects[push.objectIndex];
+  recordIndex = push.recordIndex;
+  FieldRecordShared object = fieldRecordTable.objects[push.recordIndex];
 
   // The CPU has already derived the grid. localOrigin is its minimum
   // lattice point, and N lattice points span N - 1 cells.

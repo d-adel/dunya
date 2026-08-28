@@ -23,8 +23,8 @@ Application::Application()
         m_scene.samplers(),
         m_scene.materials()
       ),
-      m_fieldObjectTable(m_context.device()),
-      m_fieldBaker(m_context.device(), m_fieldObjectTable),
+      m_recordTable(m_context.device()),
+      m_fieldBaker(m_context.device(), m_recordTable),
       m_volumePool(m_context.device()),
       m_meshPipeline(
         dunya::gpu::PipelineType::Mesh,
@@ -43,13 +43,13 @@ Application::Application()
         std::vector<VkDescriptorSetLayout>{
           m_frameGlobals.setLayout(),
           m_resourceTable.setLayout(),
-          m_fieldObjectTable.setLayout()
+          m_recordTable.setLayout()
         },
         m_swapChain
       ),
       m_renderer(
         m_context.device(),
-        m_fieldObjectTable,
+        m_recordTable,
         m_fieldBaker,
         m_volumePool,
         m_frameGlobals,
@@ -210,7 +210,7 @@ int Application::start(const StartupOptions& options) {
     float aspect = static_cast<float>(m_swapChain.extent().width)
                    / static_cast<float>(m_swapChain.extent().height);
 
-    m_fieldObjectTable.newFrame();
+    m_recordTable.newFrame();
     // ---------- Frame context ----------
     m_frameContext.proj = m_camera.projectionMatrix(aspect);
     m_frameContext.view = m_camera.viewMatrix();
@@ -219,15 +219,15 @@ int Application::start(const StartupOptions& options) {
     dunya::objectmodel::World& world = m_scene.world();
     const entt::registry& registry = world.registry();
 
-    uint32_t objectIndex = 0;
+    uint32_t recordIndex = 0;
 
-    for (dunya::objectmodel::Entity entity : world.fieldObjects()) {
-      // The GPU table and its descriptor arrays hold MAX_FIELD_OBJECTS.
+    for (dunya::objectmodel::Entity entity : world.fields()) {
+      // The GPU record table holds MAX_FIELD_RECORDS.
       // The world has no such limit, so the frame is where the two meet.
-      if (objectIndex == dunya::core::MAX_FIELD_OBJECTS) {
+      if (recordIndex == dunya::core::MAX_FIELD_RECORDS) {
         if (!tableFullReported) {
           tableFullReported = true;
-          std::cout << "Field object table full, the rest are not drawn\n";
+          std::cout << "Field record table full, the rest are not drawn\n";
         }
 
         break;
@@ -265,7 +265,7 @@ int Application::start(const StartupOptions& options) {
 
         auto images = m_volumePool.images(index);
 
-        m_fieldObjectTable.registerVolume(
+        m_recordTable.registerVolume(
           images.distance.imageView(),
           images.material.imageView(),
           index
@@ -281,8 +281,8 @@ int Application::start(const StartupOptions& options) {
 
       const uint32_t primitiveCount = range == nullptr ? 0u : range->count;
 
-      m_fieldObjectTable.makeGPUField(
-        objectIndex,
+      m_recordTable.setRecord(
+        recordIndex,
         primitiveOffset,
         primitiveCount,
         registry.get<dunya::objectmodel::Pose>(entity),
@@ -292,13 +292,13 @@ int Application::start(const StartupOptions& options) {
       );
 
       if (world.needsBake(entity)) {
-        m_fieldObjectTable.appendToBakeList(objectIndex);
+        m_recordTable.appendToBakeList(recordIndex);
       }
 
-      ++objectIndex;
+      ++recordIndex;
     }
 
-    m_frameContext.fieldObjectCount = objectIndex;
+    m_frameContext.fieldRecordCount = recordIndex;
 
     m_scene.augmentFrameContext(m_frameContext);
     // -----------------------------------
@@ -330,9 +330,9 @@ int Application::start(const StartupOptions& options) {
       // span the loop above packed from. Nothing between the two mutates
       // the world, and a removal would reorder it: swap-and-pop storage.
       const std::span<const dunya::objectmodel::Entity> fieldEntities =
-        world.fieldObjects();
+        world.fields();
 
-      for (uint32_t idx : m_fieldObjectTable.bakeList()) {
+      for (uint32_t idx : m_recordTable.bakeList()) {
         world.markBaked(fieldEntities[idx]);
       }
     } else {
@@ -344,7 +344,7 @@ int Application::start(const StartupOptions& options) {
     if (bakeCheckPending) {
       bakeCheckPending = false;
       m_context.device().waitIdle();
-      for (dunya::objectmodel::Entity entity : world.fieldObjects()) {
+      for (dunya::objectmodel::Entity entity : world.fields()) {
         const dunya::objectmodel::FieldGrid& grid =
           registry.get<dunya::objectmodel::FieldGrid>(entity);
         const auto* volume =

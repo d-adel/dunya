@@ -31,7 +31,21 @@ set(DUNYA_MAX_FIELD_PRIMITIVES 128)
 set(DUNYA_MAX_TEXTURES 16)
 set(DUNYA_MAX_SAMPLERS 8)
 set(DUNYA_MAX_MATERIALS 64)
-set(DUNYA_MAX_FIELD_OBJECTS 64)
+# One number used to bound three unrelated things. Split so each says what it
+# bounds; all three keep the value they had.
+#
+# RECORDS: how many field entities one frame can hand the GPU. A packing slot,
+# generated while assembling the frame.
+# VOLUMES: how many baked distance/material volume pairs the pool owns, and the
+# size of the descriptor arrays and the brick-bound table that are indexed by a
+# volume slot. A resource, owned for as long as the entity holds it.
+set(DUNYA_MAX_FIELD_RECORDS 64)
+set(DUNYA_MAX_FIELD_VOLUMES 64)
+
+# The primitive arena, in primitives. It used to be MAX_FIELD_OBJECTS times
+# MAX_FIELD_PRIMITIVES, which implied a per-entity ceiling the World does not
+# have. It is a budget, so it says so.
+set(DUNYA_MAX_PRIMITIVE_POOL 8192)
 
 # Cells to a brick on each axis. Both toolchains index the bound table with
 # it, so it is a declaration rather than a tunable.
@@ -69,7 +83,8 @@ set(SHADER_DEFINES
     "-DDUNYA_MAX_TEXTURES=${DUNYA_MAX_TEXTURES}"
     "-DDUNYA_MAX_SAMPLERS=${DUNYA_MAX_SAMPLERS}"
     "-DDUNYA_MAX_MATERIALS=${DUNYA_MAX_MATERIALS}"
-    "-DDUNYA_MAX_FIELD_OBJECTS=${DUNYA_MAX_FIELD_OBJECTS}"
+    "-DDUNYA_MAX_FIELD_RECORDS=${DUNYA_MAX_FIELD_RECORDS}"
+    "-DDUNYA_MAX_FIELD_VOLUMES=${DUNYA_MAX_FIELD_VOLUMES}"
     "-DDUNYA_BRICK_CELLS=${DUNYA_BRICK_CELLS}"
     "-DDUNYA_SAMPLER_LINEAR_REPEAT=${DUNYA_SAMPLER_LINEAR_REPEAT}"
     "-DDUNYA_SAMPLER_LINEAR_CLAMP=${DUNYA_SAMPLER_LINEAR_CLAMP}"

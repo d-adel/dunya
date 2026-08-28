@@ -29,12 +29,12 @@ Scene::Scene(const dunya::gpu::Context& context)
   dunya::objectmodel::Pose pose{};
   pose.position = glm::vec3(1.0f, 0.45f, 0.0f);
   const dunya::objectmodel::Entity fieldEntity =
-    m_world.addFieldObject(pose, grid);
+    m_world.createField(pose, grid);
   addInitialPrimitives(fieldEntity);
 
   pose.position = glm::vec3(0.0f, -2.0f, 0.0f);
   const dunya::objectmodel::Entity planeEntity =
-    m_world.addFieldObject(pose, grid);
+    m_world.createField(pose, grid);
   m_world.addPrimitive(
     planeEntity,
     dunya::field::makeBox(

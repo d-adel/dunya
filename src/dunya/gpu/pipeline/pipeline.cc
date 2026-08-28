@@ -83,8 +83,8 @@ void Pipeline::makeConfig() {
       m_config.setLayouts = m_setLayouts;
 
       pushConstant.offset = 0;
-      pushConstant.size = offsetof(PushConstants, objectIndex)
-                          + sizeof(PushConstants::objectIndex);
+      pushConstant.size = offsetof(PushConstants, recordIndex)
+                          + sizeof(PushConstants::recordIndex);
       pushConstant.stageFlags =
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
@@ -102,8 +102,8 @@ void Pipeline::makeConfig() {
       m_config.setLayouts = m_setLayouts;
 
       pushConstant.offset = 0;
-      pushConstant.size = offsetof(PushConstants, objectIndex)
-                          + sizeof(PushConstants::objectIndex);
+      pushConstant.size = offsetof(PushConstants, recordIndex)
+                          + sizeof(PushConstants::recordIndex);
       pushConstant.stageFlags =
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 

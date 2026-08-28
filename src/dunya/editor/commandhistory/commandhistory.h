@@ -23,17 +23,14 @@ public:
     return true;
   }
 
-  bool execute(
-    AddFieldObjectCommand& command,
-    dunya::objectmodel::World& world
-  ) {
+  bool execute(CreateFieldCommand& command, dunya::objectmodel::World& world) {
     Command wrapped{command};
 
     if (!apply(wrapped, world)) {
       return false;
     }
 
-    command = std::get<AddFieldObjectCommand>(wrapped);
+    command = std::get<CreateFieldCommand>(wrapped);
 
     m_undo.push_back(std::move(wrapped));
     m_redo.clear();

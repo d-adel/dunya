@@ -49,7 +49,7 @@ private:
 
   const dunya::gpu::Device& m_device;
 
-  std::array<std::optional<Volume>, dunya::core::MAX_FIELD_OBJECTS> m_volumes;
+  std::array<std::optional<Volume>, dunya::core::MAX_FIELD_VOLUMES> m_volumes;
   std::vector<uint32_t> m_freeIndices;
 };
 

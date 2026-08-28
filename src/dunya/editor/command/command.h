@@ -13,13 +13,13 @@
 
 namespace dunya::editor {
 
-struct AddFieldObjectCommand {
+struct CreateFieldCommand {
   dunya::objectmodel::Entity entity = dunya::objectmodel::INVALID_ENTITY;
   dunya::objectmodel::Pose pose;
   dunya::objectmodel::FieldGrid object;
 };
 
-struct RemoveFieldObjectCommand {
+struct DestroyFieldCommand {
   dunya::objectmodel::Entity entity;
   std::optional<dunya::objectmodel::Pose> pose;
   std::optional<dunya::objectmodel::FieldGrid> object;
@@ -46,7 +46,7 @@ struct UpdatePrimitiveCommand {
   dunya::field::Primitive newPrimitive;
 };
 
-struct TransformFieldObjectCommand {
+struct TransformFieldCommand {
   dunya::objectmodel::Entity entity;
 
   glm::vec3 oldPosition;
@@ -57,9 +57,9 @@ struct TransformFieldObjectCommand {
 };
 
 using Command = std::variant<
-  AddFieldObjectCommand,
-  RemoveFieldObjectCommand,
-  TransformFieldObjectCommand,
+  CreateFieldCommand,
+  DestroyFieldCommand,
+  TransformFieldCommand,
   AddPrimitiveCommand,
   RemovePrimitiveCommand,
   UpdatePrimitiveCommand>;

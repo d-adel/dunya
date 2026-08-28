@@ -29,14 +29,14 @@ public:
   const entt::registry& registry() const noexcept;
 
   // Field-object lifetime.
-  Entity addFieldObject(const Pose& pose, const FieldGrid& grid);
+  Entity createField(const Pose& pose, const FieldGrid& grid);
 
-  bool addFieldObjectAt(Entity hint, const Pose& pose, const FieldGrid& grid);
+  bool createFieldAt(Entity hint, const Pose& pose, const FieldGrid& grid);
 
-  bool removeFieldObject(Entity entity);
+  bool destroyField(Entity entity);
 
   // Dense list of entities carrying FieldGrid.
-  std::span<const Entity> fieldObjects() const noexcept;
+  std::span<const Entity> fields() const noexcept;
 
   // Primitive transactions.
   bool addPrimitive(Entity entity, const dunya::field::Primitive& primitive);

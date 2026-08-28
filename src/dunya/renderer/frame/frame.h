@@ -20,7 +20,7 @@ struct Frame {
   std::span<const dunya::objectmodel::DrawItem> drawItems = {};
   std::span<const Mesh> meshes = {};
 
-  uint32_t fieldObjectCount = 0;
+  uint32_t fieldRecordCount = 0;
   std::span<const dunya::field::Primitive> primitives = {};
 
   dunya::gpu::PipelineType mode = dunya::gpu::PipelineType::Both;

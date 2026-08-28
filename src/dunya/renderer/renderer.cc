@@ -4,7 +4,7 @@ namespace dunya::renderer {
 
 Renderer::Renderer(
   const dunya::gpu::Device& device,
-  FieldObjectTable& fieldObjectTable,
+  FieldRecordTable& fieldRecordTable,
   const FieldBaker& fieldBaker,
   const VolumePool& volumePool,
   FrameGlobals& frameGlobals,
@@ -20,7 +20,7 @@ Renderer::Renderer(
       m_meshPipeline(meshPipeline),
       m_fieldPipeline(fieldPipeline),
       m_resourceTable(resourceTable),
-      m_fieldObjectTable(fieldObjectTable),
+      m_recordTable(fieldRecordTable),
       m_fieldBaker(fieldBaker),
       m_volumePool(volumePool),
       m_frameGlobals(frameGlobals) {
@@ -294,15 +294,12 @@ void Renderer::recordCommandBuffer(
   }
 
   if (drawField) {
-    m_fieldObjectTable.update(m_currentFrame);
-    m_fieldObjectTable.updatePrimitives(
-      m_currentFrame,
-      frameContext.primitives
-    );
+    m_recordTable.update(m_currentFrame);
+    m_recordTable.updatePrimitives(m_currentFrame, frameContext.primitives);
 
     // After the pool write, because the dispatch reads this frame's copy.
-    for (uint32_t slot : m_fieldObjectTable.bakeList()) {
-      const FieldRecord& gpu = m_fieldObjectTable.gpuFieldObject(slot);
+    for (uint32_t slot : m_recordTable.bakeList()) {
+      const FieldRecord& gpu = m_recordTable.record(slot);
 
       const uint32_t volumeIndex = gpu.resolutionVolumeIndex.w;
 
@@ -323,12 +320,12 @@ void Renderer::recordCommandBuffer(
       m_fieldPipeline.pipelineLayout(),
       2,
       1,
-      &m_fieldObjectTable.descriptorSet(m_currentFrame),
+      &m_recordTable.descriptorSet(m_currentFrame),
       0,
       nullptr
     );
 
-    for (uint32_t slot = 0; slot != frameContext.fieldObjectCount; ++slot) {
+    for (uint32_t slot = 0; slot != frameContext.fieldRecordCount; ++slot) {
       const dunya::gpu::PushConstants pushConstants{0, 0, slot};
 
       vkCmdPushConstants(
@@ -336,8 +333,8 @@ void Renderer::recordCommandBuffer(
         m_fieldPipeline.pipelineLayout(),
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         0,
-        offsetof(dunya::gpu::PushConstants, objectIndex)
-          + sizeof(dunya::gpu::PushConstants::objectIndex),
+        offsetof(dunya::gpu::PushConstants, recordIndex)
+          + sizeof(dunya::gpu::PushConstants::recordIndex),
         &pushConstants
       );
 

@@ -353,7 +353,7 @@ std::vector<float> readBounds(
 
 FieldBaker::FieldBaker(
   const dunya::gpu::Device& device,
-  const FieldObjectTable& table
+  const FieldRecordTable& table
 )
     : m_device(device),
       m_table(table),

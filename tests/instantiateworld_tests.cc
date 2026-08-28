@@ -57,13 +57,13 @@ TEST_CASE("every object arrives at the id it had", "[instantiate]") {
   // one number, so a translation table is exactly what this must avoid.
   World authored;
 
-  const Entity first = authored.addFieldObject(marked(10.0f));
-  const Entity second = authored.addFieldObject(marked(11.0f));
+  const Entity first = authored.createField(marked(10.0f));
+  const Entity second = authored.createField(marked(11.0f));
 
   World runtime;
   dunya::objectmodel::instantiateWorld(authored, runtime);
 
-  REQUIRE(runtime.fieldObjects().size() == 2);
+  REQUIRE(runtime.fields().size() == 2);
   REQUIRE(runtime.registry().all_of<FieldGrid>(first));
   REQUIRE(runtime.registry().all_of<FieldGrid>(second));
   REQUIRE(markerAt(runtime, first) == 10.0f);
@@ -78,8 +78,8 @@ TEST_CASE("ids with holes in them are preserved", "[instantiate]") {
   const Entity zero{0};
   const Entity five{5};
 
-  REQUIRE(authored.addFieldObjectAt(zero, marked(10.0f)));
-  REQUIRE(authored.addFieldObjectAt(five, marked(15.0f)));
+  REQUIRE(authored.createFieldAt(zero, marked(10.0f)));
+  REQUIRE(authored.createFieldAt(five, marked(15.0f)));
 
   World runtime;
   dunya::objectmodel::instantiateWorld(authored, runtime);
@@ -95,7 +95,7 @@ TEST_CASE("primitives arrive in csg order", "[instantiate]") {
   // preserves the set but not the sequence produces a different shape.
   World authored;
 
-  const Entity id = authored.addFieldObject(marked(10.0f));
+  const Entity id = authored.createField(marked(10.0f));
 
   authored.addPrimitive(id, marker(1));
   authored.addPrimitive(id, marker(2));
@@ -116,7 +116,7 @@ TEST_CASE("volumeIndex does not cross the boundary", "[instantiate]") {
   // volume and dents it. Copying FieldGrid wholesale gets this wrong.
   World authored;
 
-  const Entity id = authored.addFieldObject(marked(10.0f));
+  const Entity id = authored.createField(marked(10.0f));
   authored.setVolumeIndex(id, 3);
 
   World runtime;
@@ -146,14 +146,14 @@ TEST_CASE("draw items arrive in order", "[instantiate]") {
 TEST_CASE("instantiating leaves the authored world alone", "[instantiate]") {
   World authored;
 
-  const Entity id = authored.addFieldObject(marked(10.0f));
+  const Entity id = authored.createField(marked(10.0f));
   authored.addPrimitive(id, marker(1));
   authored.addDrawItem(DrawItem{0, 0, glm::mat4(1.0f)});
 
   World runtime;
   dunya::objectmodel::instantiateWorld(authored, runtime);
 
-  REQUIRE(authored.fieldObjects().size() == 1);
+  REQUIRE(authored.fields().size() == 1);
   REQUIRE(authored.primitiveCount(id) == 1);
   REQUIRE(authored.drawItems().size() == 1);
   REQUIRE(markerAt(authored, id) == 10.0f);
@@ -167,7 +167,7 @@ TEST_CASE(
   // Everything a runtime does to its world has to die with that world.
   World authored;
 
-  const Entity id = authored.addFieldObject(marked(10.0f));
+  const Entity id = authored.createField(marked(10.0f));
   authored.addPrimitive(id, marker(1));
 
   World runtime;

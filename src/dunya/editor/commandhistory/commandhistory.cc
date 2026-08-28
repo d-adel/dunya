@@ -9,7 +9,7 @@ namespace {
 
 // World deliberately has no contains. The liveness read goes through the const
 // registry, the same predicate FieldEditor::addPrimitive already uses.
-bool isFieldObject(
+bool isField(
   const dunya::objectmodel::World& world,
   dunya::objectmodel::Entity entity
 ) {
@@ -61,18 +61,18 @@ bool CommandHistory::apply(Command& command, dunya::objectmodel::World& world) {
     [&](auto& cmd) -> bool {
       using T = std::decay_t<decltype(cmd)>;
 
-      if constexpr (std::is_same_v<T, AddFieldObjectCommand>) {
+      if constexpr (std::is_same_v<T, CreateFieldCommand>) {
         if (cmd.entity == dunya::objectmodel::INVALID_ENTITY) {
-          cmd.entity = world.addFieldObject(cmd.pose, cmd.object);
+          cmd.entity = world.createField(cmd.pose, cmd.object);
           return cmd.entity != dunya::objectmodel::INVALID_ENTITY;
         }
 
-        return world.addFieldObjectAt(cmd.entity, cmd.pose, cmd.object);
+        return world.createFieldAt(cmd.entity, cmd.pose, cmd.object);
       }
 
-      else if constexpr (std::is_same_v<T, RemoveFieldObjectCommand>) {
+      else if constexpr (std::is_same_v<T, DestroyFieldCommand>) {
         if (!cmd.object.has_value()) {
-          if (!isFieldObject(world, cmd.entity)) {
+          if (!isField(world, cmd.entity)) {
             return false;
           }
 
@@ -86,11 +86,11 @@ bool CommandHistory::apply(Command& command, dunya::objectmodel::World& world) {
           cmd.primitives.assign(primitives.begin(), primitives.end());
         }
 
-        return world.removeFieldObject(cmd.entity);
+        return world.destroyField(cmd.entity);
       }
 
-      else if constexpr (std::is_same_v<T, TransformFieldObjectCommand>) {
-        if (!isFieldObject(world, cmd.entity)) {
+      else if constexpr (std::is_same_v<T, TransformFieldCommand>) {
+        if (!isField(world, cmd.entity)) {
           return false;
         }
 
@@ -133,16 +133,16 @@ bool CommandHistory::revert(
     [&](const auto& cmd) -> bool {
       using T = std::decay_t<decltype(cmd)>;
 
-      if constexpr (std::is_same_v<T, AddFieldObjectCommand>) {
-        return world.removeFieldObject(cmd.entity);
+      if constexpr (std::is_same_v<T, CreateFieldCommand>) {
+        return world.destroyField(cmd.entity);
       }
 
-      else if constexpr (std::is_same_v<T, RemoveFieldObjectCommand>) {
+      else if constexpr (std::is_same_v<T, DestroyFieldCommand>) {
         if (!cmd.object.has_value() || !cmd.pose.has_value()) {
           return false;
         }
 
-        if (!world.addFieldObjectAt(cmd.entity, *cmd.pose, *cmd.object)) {
+        if (!world.createFieldAt(cmd.entity, *cmd.pose, *cmd.object)) {
           return false;
         }
 
@@ -155,8 +155,8 @@ bool CommandHistory::revert(
         return true;
       }
 
-      else if constexpr (std::is_same_v<T, TransformFieldObjectCommand>) {
-        if (!isFieldObject(world, cmd.entity)) {
+      else if constexpr (std::is_same_v<T, TransformFieldCommand>) {
+        if (!isField(world, cmd.entity)) {
           return false;
         }
 

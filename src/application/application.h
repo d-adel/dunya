@@ -17,7 +17,7 @@
 #include <framecheck/framecheck.h>
 #include <overlay/overlay.h>
 #include <startupoptions/startupoptions.h>
-#include <dunya/renderer/fieldobjecttable/fieldobjecttable.h>
+#include <dunya/renderer/fieldrecordtable/fieldrecordtable.h>
 #include <dunya/renderer/volumepool/volumepool.h>
 #include <dunya/renderer/fieldbaker/fieldbaker.h>
 #include <dunya/editor/commandhistory/commandhistory.h>
@@ -69,7 +69,7 @@ private:
   Scene m_scene;
   dunya::renderer::FrameGlobals m_frameGlobals;
   dunya::renderer::ResourceTable m_resourceTable;
-  dunya::renderer::FieldObjectTable m_fieldObjectTable;
+  dunya::renderer::FieldRecordTable m_recordTable;
   dunya::renderer::FieldBaker m_fieldBaker;
   dunya::renderer::VolumePool m_volumePool;
   dunya::gpu::Pipeline m_meshPipeline;

@@ -11,7 +11,7 @@
 
 namespace dunya::renderer {
 
-class FieldObjectTable {
+class FieldRecordTable {
 public:
   // Set 2's layout, shared with field-shader.frag and field-bake.comp. The
   // bake kept its 4/5, which is why the buffers are not consecutive.
@@ -23,14 +23,14 @@ public:
   static constexpr uint32_t MATERIAL_VOLUMES_STORAGE = 5;
   static constexpr uint32_t BRICK_BOUNDS = 6;
 
-  explicit FieldObjectTable(const dunya::gpu::Device& device);
+  explicit FieldRecordTable(const dunya::gpu::Device& device);
 
-  FieldObjectTable(const FieldObjectTable&) = delete;
-  FieldObjectTable& operator=(const FieldObjectTable&) = delete;
-  FieldObjectTable(FieldObjectTable&&) = delete;
-  FieldObjectTable& operator=(FieldObjectTable&&) = delete;
+  FieldRecordTable(const FieldRecordTable&) = delete;
+  FieldRecordTable& operator=(const FieldRecordTable&) = delete;
+  FieldRecordTable(FieldRecordTable&&) = delete;
+  FieldRecordTable& operator=(FieldRecordTable&&) = delete;
 
-  ~FieldObjectTable() = default;
+  ~FieldRecordTable() = default;
 
   const VkDescriptorSet& descriptorSet(uint32_t frame) const noexcept;
   const VkDescriptorSetLayout& setLayout() const noexcept;
@@ -42,8 +42,8 @@ public:
     uint32_t volumeIndex
   );
 
-  void makeGPUField(
-    uint32_t objectIndex,
+  void setRecord(
+    uint32_t recordIndex,
     uint32_t primitiveOffset,
     uint32_t primitiveCount,
     const dunya::objectmodel::Pose& pose,
@@ -63,17 +63,17 @@ public:
 
   void appendToBakeList(uint32_t slot);
 
-  std::span<const FieldRecord> gpuFieldObjects() const noexcept;
+  std::span<const FieldRecord> records() const noexcept;
   std::span<const uint32_t> bakeList() const noexcept;
 
-  const FieldRecord& gpuFieldObject(uint32_t objectIndex) const;
+  const FieldRecord& record(uint32_t recordIndex) const;
 
   // Exposed for the bake check, which reads a slot back and compares it with
   // the same reduction run on the CPU.
   const dunya::gpu::Buffer& brickBounds() const noexcept;
 
 private:
-  std::vector<FieldRecord> m_gpuFieldObjects;
+  std::vector<FieldRecord> m_records;
   std::vector<uint32_t> m_bakeList;
   dunya::gpu::DescriptorGroup m_group;
 

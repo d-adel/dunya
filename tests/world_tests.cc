@@ -66,10 +66,10 @@ uint32_t liveEntityCount(const World& world) {
 
 }  // namespace
 
-TEST_CASE("an added field object is live and listed", "[world]") {
+TEST_CASE("a created field is live and listed", "[world]") {
   World world;
 
-  const Entity entity = world.addFieldObject(Pose{}, blank());
+  const Entity entity = world.createField(Pose{}, blank());
 
   // The dirty flag this replaced defaulted to true, so creation has always
   // implied a first bake.
@@ -78,8 +78,8 @@ TEST_CASE("an added field object is live and listed", "[world]") {
   REQUIRE(world.registry().valid(entity));
   REQUIRE(world.registry().all_of<FieldGrid>(entity));
 
-  REQUIRE(world.fieldObjects().size() == 1);
-  REQUIRE(world.fieldObjects()[0] == entity);
+  REQUIRE(world.fields().size() == 1);
+  REQUIRE(world.fields()[0] == entity);
 }
 
 // The const-only accessor is the transaction boundary. A non-const overload
@@ -102,14 +102,14 @@ TEST_CASE("placing at a hint restores the exact identity", "[world]") {
   Pose marked{};
   marked.position.x = 10.0f;
 
-  const Entity entity = world.addFieldObject(marked, blank());
+  const Entity entity = world.createField(marked, blank());
 
-  REQUIRE(world.removeFieldObject(entity));
+  REQUIRE(world.destroyField(entity));
   REQUIRE_FALSE(world.registry().valid(entity));
 
   marked.position.x = 11.0f;
 
-  REQUIRE(world.addFieldObjectAt(entity, marked, blank()));
+  REQUIRE(world.createFieldAt(entity, marked, blank()));
 
   // The same value, version included, which is what undo needs: a command
   // holding this entity must still address the object it restored.
@@ -123,32 +123,29 @@ TEST_CASE("placing at a hint restores the exact identity", "[world]") {
 TEST_CASE("a taken hint is refused and leaves nothing behind", "[world]") {
   World world;
 
-  const Entity first = world.addFieldObject(Pose{}, blank());
+  const Entity first = world.createField(Pose{}, blank());
 
-  REQUIRE(world.removeFieldObject(first));
+  REQUIRE(world.destroyField(first));
 
   // EnTT recycles the freed slot, so this add takes the identity a redo would
   // have asked for.
-  const Entity recycled = world.addFieldObject(Pose{}, blank());
+  const Entity recycled = world.createField(Pose{}, blank());
 
   const uint32_t before = liveEntityCount(world);
 
-  REQUIRE_FALSE(world.addFieldObjectAt(first, Pose{}, blank()));
+  REQUIRE_FALSE(world.createFieldAt(first, Pose{}, blank()));
 
   // create(hint) does not fail, it substitutes. The substitute must not
   // survive the refusal, as an object or as a bare entity.
-  REQUIRE(world.fieldObjects().size() == 1);
-  REQUIRE(world.fieldObjects()[0] == recycled);
+  REQUIRE(world.fields().size() == 1);
+  REQUIRE(world.fields()[0] == recycled);
   REQUIRE(liveEntityCount(world) == before);
 }
 
-TEST_CASE(
-  "removing a field object returns its primitives to the pool",
-  "[world]"
-) {
+TEST_CASE("destroying a field returns its primitives to the pool", "[world]") {
   World world;
 
-  const Entity entity = world.addFieldObject(Pose{}, blank());
+  const Entity entity = world.createField(Pose{}, blank());
 
   REQUIRE(world.addPrimitive(entity, marker(1)));
   REQUIRE(world.addPrimitive(entity, marker(2)));
@@ -158,14 +155,14 @@ TEST_CASE(
 
   REQUIRE(used > 0);
 
-  REQUIRE(world.removeFieldObject(entity));
+  REQUIRE(world.destroyField(entity));
 
   // The range sat at the end of the arena, so releasing it shrinks the pool
   // rather than leaving a hole. A pool that stays put means the destroy signal
   // never reached the store and the allocation leaked.
   REQUIRE(world.pool().empty());
 
-  const Entity next = world.addFieldObject(Pose{}, blank());
+  const Entity next = world.createField(Pose{}, blank());
 
   REQUIRE(world.addPrimitive(next, marker(4)));
   REQUIRE(world.addPrimitive(next, marker(5)));
@@ -174,19 +171,16 @@ TEST_CASE(
   REQUIRE(world.pool().size() == used);
 }
 
-TEST_CASE(
-  "removing an entity that is not a field object is refused",
-  "[world]"
-) {
+TEST_CASE("destroying an entity that carries no field is refused", "[world]") {
   World world;
 
-  const Entity entity = world.addFieldObject(Pose{}, blank());
+  const Entity entity = world.createField(Pose{}, blank());
 
-  REQUIRE(world.removeFieldObject(entity));
+  REQUIRE(world.destroyField(entity));
 
   // registry.destroy on a dead entity is a precondition violation, so the
   // refusal has to happen before it.
-  REQUIRE_FALSE(world.removeFieldObject(entity));
+  REQUIRE_FALSE(world.destroyField(entity));
 }
 
 TEST_CASE(
@@ -195,7 +189,7 @@ TEST_CASE(
 ) {
   World world;
 
-  const Entity entity = world.addFieldObject(Pose{}, blank());
+  const Entity entity = world.createField(Pose{}, blank());
 
   REQUIRE(world.addPrimitive(entity, marker(1)));
   REQUIRE(world.addPrimitive(entity, marker(3)));
@@ -221,7 +215,7 @@ TEST_CASE(
 ) {
   World world;
 
-  const Entity entity = world.addFieldObject(Pose{}, blank());
+  const Entity entity = world.createField(Pose{}, blank());
 
   world.markBaked(entity);
 
@@ -243,7 +237,7 @@ TEST_CASE(
 TEST_CASE("setPose writes position and rotation together", "[world]") {
   World world;
 
-  const Entity entity = world.addFieldObject(Pose{}, blank());
+  const Entity entity = world.createField(Pose{}, blank());
 
   const glm::vec3 position(1.0f, 2.0f, 3.0f);
 
@@ -264,7 +258,7 @@ TEST_CASE("setPose writes position and rotation together", "[world]") {
 TEST_CASE("the component setters reach the object", "[world]") {
   World world;
 
-  const Entity entity = world.addFieldObject(Pose{}, blank());
+  const Entity entity = world.createField(Pose{}, blank());
 
   // A fresh field entity owns no pool slot, and that is said by the component
   // not being there at all rather than by a sentinel value inside one. The
@@ -285,7 +279,7 @@ TEST_CASE(
   // overwrite the old number. emplace would abort on the second call.
   World world;
 
-  const Entity entity = world.addFieldObject(Pose{}, blank());
+  const Entity entity = world.createField(Pose{}, blank());
 
   world.setBakedVolume(entity, 3);
   world.setBakedVolume(entity, 7);
@@ -293,18 +287,18 @@ TEST_CASE(
   REQUIRE(world.registry().get<BakedVolume>(entity).index == 7);
 }
 
-TEST_CASE("the field object span follows adds and removes", "[world]") {
+TEST_CASE("the field span follows creates and destroys", "[world]") {
   World world;
 
-  const Entity first = world.addFieldObject(Pose{}, blank());
-  const Entity second = world.addFieldObject(Pose{}, blank());
-  const Entity third = world.addFieldObject(Pose{}, blank());
+  const Entity first = world.createField(Pose{}, blank());
+  const Entity second = world.createField(Pose{}, blank());
+  const Entity third = world.createField(Pose{}, blank());
 
-  REQUIRE(world.fieldObjects().size() == 3);
+  REQUIRE(world.fields().size() == 3);
 
-  REQUIRE(world.removeFieldObject(second));
+  REQUIRE(world.destroyField(second));
 
-  const std::span<const Entity> remaining = world.fieldObjects();
+  const std::span<const Entity> remaining = world.fields();
 
   // Swap-and-pop storage, so the span holds live entities only. If FieldGrid
   // ever needs stable storage the dense array gains tombstones and this fails.

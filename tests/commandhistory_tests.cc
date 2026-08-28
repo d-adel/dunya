@@ -26,7 +26,7 @@ dunya::objectmodel::Entity makeObject(
   object.resolution = glm::uvec3(dunya::core::FIELD_GRID_RESOLUTION);
 
   const dunya::objectmodel::Entity id =
-    world.addFieldObject(dunya::objectmodel::Pose{}, object);
+    world.createField(dunya::objectmodel::Pose{}, object);
 
   for (uint32_t i = 0; i != primitives; ++i) {
     world.addPrimitive(
@@ -244,7 +244,7 @@ TEST_CASE(
 
   history.undo(world);
 
-  world.removeFieldObject(id);
+  world.destroyField(id);
 
   history.redo(world);
 
@@ -267,7 +267,7 @@ TEST_CASE(
     history.execute(dunya::editor::AddPrimitiveCommand{id, 1, marker(9)}, world)
   );
 
-  world.removeFieldObject(id);
+  world.destroyField(id);
 
   history.undo(world);
 
@@ -294,7 +294,7 @@ TEST_CASE("undoing a transform restores the old pose", "[commandhistory]") {
   world.setPose(id, oldPosition, oldRotation);
 
   REQUIRE(history.execute(
-    dunya::editor::TransformFieldObjectCommand{
+    dunya::editor::TransformFieldCommand{
       id,
       oldPosition,
       oldRotation,

@@ -11,7 +11,7 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
   dunya::field::Ray localRay;
   const entt::registry& registry = m_world.registry();
 
-  for (dunya::objectmodel::Entity entity : m_world.fieldObjects()) {
+  for (dunya::objectmodel::Entity entity : m_world.fields()) {
     std::span<const dunya::field::Primitive> primitives =
       m_world.primitives(entity);
 
@@ -93,12 +93,12 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
  * not being measured on the same scene.
  */
 void FieldEditor::stress(uint32_t count) {
-  if (m_world.fieldObjects().empty()) {
-    std::cout << "No field object to carve into\n";
+  if (m_world.fields().empty()) {
+    std::cout << "No field to carve into\n";
     return;
   }
 
-  const dunya::objectmodel::Entity target = m_world.fieldObjects()[0];
+  const dunya::objectmodel::Entity target = m_world.fields()[0];
 
   std::span<const dunya::field::Primitive> primitives =
     m_world.primitives(target);

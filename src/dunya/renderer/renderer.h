@@ -6,7 +6,7 @@
 #include <dunya/renderer/resourcetable/resourcetable.h>
 #include <dunya/renderer/frameglobals/frameglobals.h>
 #include <dunya/renderer/frame/frame.h>
-#include <dunya/renderer/fieldobjecttable/fieldobjecttable.h>
+#include <dunya/renderer/fieldrecordtable/fieldrecordtable.h>
 #include <dunya/renderer/volumepool/volumepool.h>
 #include <dunya/renderer/fieldbaker/fieldbaker.h>
 
@@ -21,7 +21,7 @@ class Renderer {
 public:
   Renderer(
     const dunya::gpu::Device& device,
-    FieldObjectTable& fieldObjectTable,
+    FieldRecordTable& fieldRecordTable,
     const FieldBaker& fieldBaker,
     const VolumePool& volumePool,
     FrameGlobals& frameGlobals,
@@ -79,7 +79,7 @@ private:
   const dunya::gpu::Pipeline& m_meshPipeline;
   const dunya::gpu::Pipeline& m_fieldPipeline;
   const ResourceTable& m_resourceTable;
-  FieldObjectTable& m_fieldObjectTable;
+  FieldRecordTable& m_recordTable;
   const FieldBaker& m_fieldBaker;
   const VolumePool& m_volumePool;
   FrameGlobals& m_frameGlobals;

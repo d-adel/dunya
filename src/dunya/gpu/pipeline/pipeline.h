@@ -17,11 +17,11 @@ namespace dunya::gpu {
 struct PushConstants {
   glm::mat4 model;
   uint32_t materialIndex;
-  uint32_t objectIndex;
+  uint32_t recordIndex;
 };
 
 static_assert(
-  offsetof(PushConstants, objectIndex) == 68,
+  offsetof(PushConstants, recordIndex) == 68,
   "The push constant block must match its declaration in both mesh shaders"
 );
 

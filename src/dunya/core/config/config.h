@@ -11,11 +11,10 @@ constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
 constexpr uint32_t MAX_TEXTURES = DUNYA_MAX_TEXTURES;
 constexpr uint32_t MAX_SAMPLERS = DUNYA_MAX_SAMPLERS;
 constexpr uint32_t MAX_MATERIALS = DUNYA_MAX_MATERIALS;
-constexpr uint32_t MAX_FIELD_OBJECTS = DUNYA_MAX_FIELD_OBJECTS;
+constexpr uint32_t MAX_FIELD_RECORDS = DUNYA_MAX_FIELD_RECORDS;
+constexpr uint32_t MAX_FIELD_VOLUMES = DUNYA_MAX_FIELD_VOLUMES;
 constexpr uint32_t MAX_FIELD_PRIMITIVES = DUNYA_MAX_FIELD_PRIMITIVES;
-constexpr size_t MAX_PRIMITIVE_POOL =
-  static_cast<size_t>(MAX_FIELD_OBJECTS)
-  * static_cast<size_t>(MAX_FIELD_PRIMITIVES);
+constexpr size_t MAX_PRIMITIVE_POOL = DUNYA_MAX_PRIMITIVE_POOL;
 
 constexpr uint32_t TEXTURE_WHITE = 0;
 constexpr uint32_t TEXTURE_FLAT_NORMAL = 1;
@@ -94,15 +93,15 @@ constexpr uint32_t MAX_BRICKS_PER_OBJECT =
   BRICKS_PER_AXIS * BRICKS_PER_AXIS * BRICKS_PER_AXIS;
 
 // Each object's range opens with one bound covering its whole grid, then the
-// per-brick ones. The global sits first so a shader can read it from the range's
-// own address without knowing how many bricks follow.
+// per-brick ones. The global sits first so a shader can read it from the
+// range's own address without knowing how many bricks follow.
 constexpr uint32_t BRICK_TABLE_STRIDE = 1u + MAX_BRICKS_PER_OBJECT;
 
 // An object's first entry in the bound table travels to the shader as a float,
 // which represents integers exactly only up to 2^24. Raising either capacity
 // far enough would silently round the address of a later object's slot.
 static_assert(
-  static_cast<uint64_t>(MAX_FIELD_OBJECTS) * BRICK_TABLE_STRIDE < (1ull << 24),
+  static_cast<uint64_t>(MAX_FIELD_VOLUMES) * BRICK_TABLE_STRIDE < (1ull << 24),
   "The bound table's largest index must stay exact in a float"
 );
 constexpr float FIELD_GRID_MARGIN = 0.5f;

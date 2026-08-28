@@ -25,7 +25,7 @@ const entt::registry& World::registry() const noexcept {
   return m_registry;
 }
 
-Entity World::addFieldObject(const Pose& pose, const FieldGrid& grid) {
+Entity World::createField(const Pose& pose, const FieldGrid& grid) {
   const Entity entity = m_registry.create();
 
   m_registry.emplace<Pose>(entity, pose);
@@ -34,7 +34,7 @@ Entity World::addFieldObject(const Pose& pose, const FieldGrid& grid) {
   return entity;
 }
 
-bool World::addFieldObjectAt(
+bool World::createFieldAt(
   Entity hint,
   const Pose& pose,
   const FieldGrid& grid
@@ -56,7 +56,7 @@ bool World::addFieldObjectAt(
   return true;
 }
 
-bool World::removeFieldObject(Entity entity) {
+bool World::destroyField(Entity entity) {
   if (!m_registry.valid(entity) || !m_registry.all_of<FieldGrid>(entity)) {
     return false;
   }
@@ -69,7 +69,7 @@ bool World::removeFieldObject(Entity entity) {
   return true;
 }
 
-std::span<const Entity> World::fieldObjects() const noexcept {
+std::span<const Entity> World::fields() const noexcept {
   const auto* storage = m_registry.storage<FieldGrid>();
 
   if (storage == nullptr) {

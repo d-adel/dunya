@@ -4,7 +4,7 @@
 add_library(dunya_renderer STATIC
     renderer.cc
     fieldbaker/fieldbaker.cc
-    fieldobjecttable/fieldobjecttable.cc
+    fieldrecordtable/fieldrecordtable.cc
     fieldrecord/fieldrecord.cc
     frame/frame.cc
     frameglobals/frameglobals.cc

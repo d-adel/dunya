@@ -5,10 +5,10 @@ namespace dunya::renderer {
 using dunya::field::SampledField;
 
 VolumePool::VolumePool(const dunya::gpu::Device& device) : m_device(device) {
-  m_freeIndices.reserve(dunya::core::MAX_FIELD_OBJECTS);
+  m_freeIndices.reserve(dunya::core::MAX_FIELD_VOLUMES);
 
-  for (uint32_t i = 0; i < dunya::core::MAX_FIELD_OBJECTS; ++i) {
-    m_freeIndices.push_back(dunya::core::MAX_FIELD_OBJECTS - 1 - i);
+  for (uint32_t i = 0; i < dunya::core::MAX_FIELD_VOLUMES; ++i) {
+    m_freeIndices.push_back(dunya::core::MAX_FIELD_VOLUMES - 1 - i);
   }
 }
 
