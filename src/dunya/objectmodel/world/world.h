@@ -7,12 +7,14 @@
 #include <dunya/objectmodel/pose/pose.h>
 #include <dunya/objectmodel/sdfgrid/sdfgrid.h>
 #include <dunya/objectmodel/sdfprimitivestore/sdfprimitivestore.h>
+#include <dunya/objectmodel/selfcontained/selfcontained.h>
 
 #include <entt/core/hashed_string.hpp>
 #include <entt/entity/registry.hpp>
 
 #include <cstdint>
 #include <span>
+#include <utility>
 #include <vector>
 
 namespace dunya::objectmodel {
@@ -68,13 +70,22 @@ public:
 
   std::span<const dunya::field::Primitive> pool() const noexcept;
 
-  // Component mutations that C still keeps on SdfGrid.
-  void setPose(
-    Entity entity,
-    const glm::vec3& position,
-    const glm::quat& rotation
-  );
+  // The one generic mutation: on_update fires by construction, so a new
+  // self-contained component needs no new method here.
+  template<SelfContained T, typename Fn>
+  void patch(Entity entity, Fn&& fn) {
+    m_registry.patch<T>(entity, std::forward<Fn>(fn));
+  }
 
+  // Whole-component replacement. EnTT's verb and EnTT's precondition: the
+  // component has to be there already.
+  template<SelfContained T>
+  void replace(Entity entity, const T& value) {
+    m_registry.replace<T>(entity, value);
+  }
+
+  // Owns a slot in the renderer's volume pool, so it is not self-contained
+  // and keeps a method of its own.
   void setBakedVolume(Entity entity, uint32_t index);
 
   // Change tracking, not a flag: the queue is entt::reactive storage filled

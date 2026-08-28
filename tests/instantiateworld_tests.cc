@@ -189,10 +189,9 @@ TEST_CASE(
   dunya::objectmodel::instantiateWorld(authored, runtime);
 
   // Simulate: the body moves and something carves a dent into it.
-  runtime.setPose(
+  runtime.replace<Pose>(
     id,
-    glm::vec3(99.0f, 0.0f, 0.0f),
-    glm::quat(1.0f, 0.0f, 0.0f, 0.0f)
+    Pose{glm::vec3(99.0f, 0.0f, 0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f)}
   );
   runtime.addPrimitive(id, marker(2));
   runtime.createMesh(Pose{}, Mesh{7}, Material{7});

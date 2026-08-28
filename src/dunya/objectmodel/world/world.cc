@@ -114,17 +114,6 @@ std::span<const dunya::field::Primitive> World::pool() const noexcept {
   return m_primitiveStore.pool();
 }
 
-void World::setPose(
-  Entity entity,
-  const glm::vec3& position,
-  const glm::quat& rotation
-) {
-  Pose& target = m_registry.get<Pose>(entity);
-
-  target.position = position;
-  target.rotation = rotation;
-}
-
 void World::setBakedVolume(Entity entity, uint32_t index) {
   m_registry.emplace_or_replace<BakedVolume>(entity, index);
 }

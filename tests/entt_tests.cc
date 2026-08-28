@@ -55,3 +55,45 @@ TEST_CASE("a recycled entity is not the same number", "[entt]") {
     static_cast<std::uint32_t>(second) != static_cast<std::uint32_t>(first)
   );
 }
+
+namespace {
+
+struct UpdateCounter {
+  uint32_t count = 0;
+
+  void bump(entt::registry&, entt::entity) {
+    ++count;
+  }
+};
+
+}  // namespace
+
+TEST_CASE(
+  "patch and replace publish on_update, a write through get does not",
+  "[entt]"
+) {
+  // What World::patch and World::replace are built on. The silent third case is
+  // why World::setPose went: an in-place write is invisible to every listener.
+  entt::registry registry;
+
+  UpdateCounter counter;
+  registry.on_update<Marker>().connect<&UpdateCounter::bump>(counter);
+
+  const entt::entity entity = registry.create();
+  registry.emplace<Marker>(entity, 1.0f);
+
+  REQUIRE(counter.count == 0);
+
+  registry.patch<Marker>(entity, [](Marker& marker) { marker.value = 2.0f; });
+
+  REQUIRE(counter.count == 1);
+
+  registry.replace<Marker>(entity, Marker{3.0f});
+
+  REQUIRE(counter.count == 2);
+
+  registry.get<Marker>(entity).value = 4.0f;
+
+  REQUIRE(counter.count == 2);
+  REQUIRE(registry.get<Marker>(entity).value == 4.0f);
+}

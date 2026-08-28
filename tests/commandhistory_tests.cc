@@ -291,15 +291,16 @@ TEST_CASE("undoing a transform restores the old pose", "[commandhistory]") {
   const glm::quat newRotation =
     glm::angleAxis(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
-  world.setPose(id, oldPosition, oldRotation);
+  world.replace<dunya::objectmodel::Pose>(
+    id,
+    dunya::objectmodel::Pose{oldPosition, oldRotation}
+  );
 
   REQUIRE(history.execute(
     dunya::editor::TransformFieldCommand{
       id,
-      oldPosition,
-      oldRotation,
-      newPosition,
-      newRotation
+      dunya::objectmodel::Pose{oldPosition, oldRotation},
+      dunya::objectmodel::Pose{newPosition, newRotation}
     },
     world
   ));

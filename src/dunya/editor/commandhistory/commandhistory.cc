@@ -94,7 +94,7 @@ bool CommandHistory::apply(Command& command, dunya::objectmodel::World& world) {
           return false;
         }
 
-        world.setPose(cmd.entity, cmd.newPosition, cmd.newRotation);
+        world.replace<dunya::objectmodel::Pose>(cmd.entity, cmd.newPose);
 
         return true;
       }
@@ -160,7 +160,7 @@ bool CommandHistory::revert(
           return false;
         }
 
-        world.setPose(cmd.entity, cmd.oldPosition, cmd.oldRotation);
+        world.replace<dunya::objectmodel::Pose>(cmd.entity, cmd.oldPose);
 
         return true;
       }

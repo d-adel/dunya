@@ -4,9 +4,6 @@
 #include <dunya/objectmodel/sdfgrid/sdfgrid.h>
 #include <dunya/objectmodel/pose/pose.h>
 
-#include <glm/glm.hpp>
-#include <glm/gtc/quaternion.hpp>
-
 #include <optional>
 #include <variant>
 #include <vector>
@@ -49,11 +46,8 @@ struct UpdatePrimitiveCommand {
 struct TransformFieldCommand {
   dunya::objectmodel::Entity entity;
 
-  glm::vec3 oldPosition;
-  glm::quat oldRotation;
-
-  glm::vec3 newPosition;
-  glm::quat newRotation;
+  dunya::objectmodel::Pose oldPose;
+  dunya::objectmodel::Pose newPose;
 };
 
 using Command = std::variant<

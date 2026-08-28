@@ -3,7 +3,10 @@
 
 #include <dunya/core/config/config.h>
 #include <dunya/objectmodel/sdfgrid/sdfgrid.h>
+#include <dunya/objectmodel/material/material.h>
+#include <dunya/objectmodel/mesh/mesh.h>
 #include <dunya/objectmodel/pose/pose.h>
+#include <dunya/objectmodel/selfcontained/selfcontained.h>
 #include <dunya/objectmodel/world/world.h>
 
 #include <entt/entity/registry.hpp>
@@ -234,7 +237,7 @@ TEST_CASE(
   REQUIRE(grid.voxelSize.x > 0.0f);
 }
 
-TEST_CASE("setPose writes position and rotation together", "[world]") {
+TEST_CASE("replace writes the whole pose", "[world]") {
   World world;
 
   const Entity entity = world.createField(Pose{}, blank());
@@ -244,7 +247,7 @@ TEST_CASE("setPose writes position and rotation together", "[world]") {
   const glm::quat rotation =
     glm::angleAxis(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
-  world.setPose(entity, position, rotation);
+  world.replace<Pose>(entity, Pose{position, rotation});
 
   const Pose& pose = poseOf(world, entity);
 
@@ -313,4 +316,42 @@ TEST_CASE("the field span follows creates and destroys", "[world]") {
   REQUIRE(
     std::find(remaining.begin(), remaining.end(), third) != remaining.end()
   );
+}
+
+TEST_CASE(
+  "only self-contained components reach the generic mutations",
+  "[world]"
+) {
+  static_assert(dunya::objectmodel::SelfContained<Pose>);
+  static_assert(dunya::objectmodel::SelfContained<dunya::objectmodel::Mesh>);
+  static_assert(
+    dunya::objectmodel::SelfContained<dunya::objectmodel::Material>
+  );
+
+  // Each of these owns something outside its own bytes: state derived from the
+  // primitives, a pool slot in the renderer, a range in the arena.
+  static_assert(!dunya::objectmodel::SelfContained<SdfGrid>);
+  static_assert(!dunya::objectmodel::SelfContained<BakedVolume>);
+  static_assert(
+    !dunya::objectmodel::SelfContained<dunya::objectmodel::SdfPrimitiveRange>
+  );
+
+  SUCCEED("checked at compile time");
+}
+
+TEST_CASE("patch writes only what it touches", "[world]") {
+  World world;
+
+  const glm::quat rotation =
+    glm::angleAxis(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+  const Entity entity =
+    world.createField(Pose{glm::vec3(0.0f), rotation}, blank());
+
+  world.patch<Pose>(entity, [](Pose& pose) { pose.position.x = 5.0f; });
+
+  const Pose& pose = poseOf(world, entity);
+
+  REQUIRE_THAT(pose.position.x, WithinAbs(5.0f, ANALYTIC_TOLERANCE));
+  REQUIRE_THAT(pose.rotation.y, WithinAbs(rotation.y, ANALYTIC_TOLERANCE));
 }
