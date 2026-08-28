@@ -1,6 +1,6 @@
 #pragma once
 
-#include <dunya/objectmodel/fieldgrid/fieldgrid.h>
+#include <dunya/objectmodel/sdfgrid/sdfgrid.h>
 #include <dunya/objectmodel/bakedvolume/bakedvolume.h>
 #include <dunya/objectmodel/pose/pose.h>
 
@@ -63,7 +63,7 @@ static_assert(
 
 FieldRecord makeFieldRecord(
   const dunya::objectmodel::Pose& pose,
-  const dunya::objectmodel::FieldGrid& grid,
+  const dunya::objectmodel::SdfGrid& grid,
   const dunya::objectmodel::BakedVolume& volume,
   uint32_t primitiveOffset,
   uint32_t primitiveCount,

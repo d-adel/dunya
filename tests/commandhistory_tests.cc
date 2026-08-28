@@ -22,7 +22,7 @@ dunya::objectmodel::Entity makeObject(
   dunya::objectmodel::World& world,
   uint32_t primitives
 ) {
-  dunya::objectmodel::FieldGrid object{};
+  dunya::objectmodel::SdfGrid object{};
   object.resolution = glm::uvec3(dunya::core::FIELD_GRID_RESOLUTION);
 
   const dunya::objectmodel::Entity id =
@@ -50,11 +50,11 @@ dunya::field::Primitive marker(uint32_t material) {
   return dunya::field::makeSphere(glm::vec3(0.0f), 1.0f, material);
 }
 
-const dunya::objectmodel::FieldGrid& gridOf(
+const dunya::objectmodel::SdfGrid& gridOf(
   const dunya::objectmodel::World& world,
   dunya::objectmodel::Entity entity
 ) {
-  return world.registry().get<dunya::objectmodel::FieldGrid>(entity);
+  return world.registry().get<dunya::objectmodel::SdfGrid>(entity);
 }
 
 const dunya::objectmodel::Pose& poseOf(

@@ -246,8 +246,8 @@ void Renderer::recordCommandBuffer(
       m_meshPipeline.pipeline()
     );
 
-    for (const auto& item : frameContext.drawItems) {
-      if (item.meshIndex >= frameContext.meshes.size()) {
+    for (const auto& item : frameContext.meshRecords) {
+      if (item.mesh >= frameContext.meshes.size()) {
         throw std::runtime_error(
 
           "A draw item names a mesh the frame does not carry"
@@ -256,7 +256,7 @@ void Renderer::recordCommandBuffer(
       }
 
       VkBuffer vertexBuffers[] = {
-        frameContext.meshes[item.meshIndex].vertexBuffer().buffer()
+        frameContext.meshes[item.mesh].vertexBuffer().buffer()
       };
       VkDeviceSize offsets[] = {0};
       vkCmdBindVertexBuffers(
@@ -268,15 +268,12 @@ void Renderer::recordCommandBuffer(
       );
       vkCmdBindIndexBuffer(
         m_commandBuffers[m_currentFrame],
-        frameContext.meshes[item.meshIndex].indexBuffer().buffer(),
+        frameContext.meshes[item.mesh].indexBuffer().buffer(),
         0,
         VK_INDEX_TYPE_UINT32
       );
 
-      const dunya::gpu::PushConstants pushConstants{
-        item.model,
-        item.materialIndex
-      };
+      const dunya::gpu::PushConstants pushConstants{item.model, item.material};
 
       vkCmdPushConstants(
         m_commandBuffers[m_currentFrame],
@@ -290,7 +287,7 @@ void Renderer::recordCommandBuffer(
 
       vkCmdDrawIndexed(
         m_commandBuffers[m_currentFrame],
-        static_cast<uint32_t>(frameContext.meshes[item.meshIndex].indexCount()),
+        static_cast<uint32_t>(frameContext.meshes[item.mesh].indexCount()),
         1,
         0,
         0,

@@ -1,12 +1,13 @@
 #pragma once
 
 #include <dunya/field/field.h>
-#include <dunya/objectmodel/material/material.h>
-#include <dunya/renderer/mesh/mesh.h>
+#include <dunya/renderer/materialrecord/materialrecord.h>
+#include <dunya/renderer/meshbuffers/meshbuffers.h>
+#include <dunya/renderer/meshrecord/meshrecord.h>
 #include <dunya/gpu/sampler/sampler.h>
 #include <dunya/gpu/texture/texture.h>
 #include <dunya/renderer/frame/frame.h>
-#include <dunya/objectmodel/fieldgrid/fieldgrid.h>
+#include <dunya/objectmodel/sdfgrid/sdfgrid.h>
 #include <dunya/objectmodel/world/world.h>
 
 #include <glm/glm.hpp>
@@ -27,12 +28,13 @@ public:
   const dunya::objectmodel::World& world() const noexcept;
   dunya::objectmodel::World& world() noexcept;
 
-  const std::vector<dunya::objectmodel::Material>& materials() const noexcept;
+  const std::vector<dunya::renderer::MaterialRecord>&
+  materials() const noexcept;
   const std::vector<dunya::gpu::Texture>& textures() const noexcept;
   const std::vector<dunya::gpu::Sampler>& samplers() const noexcept;
 
 private:
-  static std::vector<dunya::objectmodel::Material> createMaterials();
+  static std::vector<dunya::renderer::MaterialRecord> createMaterials();
   static std::vector<dunya::gpu::Texture> createTextures(
     const dunya::gpu::Device& device
   );
@@ -42,10 +44,13 @@ private:
 
   void addInitialPrimitives(dunya::objectmodel::Entity entity);
 
-  std::vector<dunya::objectmodel::Material> m_materials;
+  std::vector<dunya::renderer::MaterialRecord> m_materials;
   std::vector<dunya::gpu::Sampler> m_samplers;
   std::vector<dunya::gpu::Texture> m_textures;
-  std::vector<dunya::renderer::Mesh> m_meshes;
+  std::vector<dunya::renderer::MeshBuffers> m_meshes;
+
+  // Rebuilt every frame; a member so the span handed to Frame stays alive.
+  std::vector<dunya::renderer::MeshRecord> m_meshRecords;
 
   dunya::objectmodel::World m_world;
 };

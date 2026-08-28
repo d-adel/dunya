@@ -374,7 +374,7 @@ FieldBaker::FieldBaker(
       ) {}
 
 void FieldBaker::verifyBake(
-  const dunya::objectmodel::FieldGrid& grid,
+  const dunya::objectmodel::SdfGrid& grid,
   uint32_t volumeIndex,
   std::span<const dunya::field::Primitive> primitives,
   VolumeImages images

@@ -137,7 +137,7 @@ bool FieldEditor::addPrimitive(
 ) {
   if (
     !m_world.registry().valid(entity)
-    || !m_world.registry().all_of<dunya::objectmodel::FieldGrid>(entity)
+    || !m_world.registry().all_of<dunya::objectmodel::SdfGrid>(entity)
   ) {
     return false;
   }

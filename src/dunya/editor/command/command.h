@@ -1,7 +1,7 @@
 #pragma once
 
 #include <dunya/objectmodel/entity/entity.h>
-#include <dunya/objectmodel/fieldgrid/fieldgrid.h>
+#include <dunya/objectmodel/sdfgrid/sdfgrid.h>
 #include <dunya/objectmodel/pose/pose.h>
 
 #include <glm/glm.hpp>
@@ -16,13 +16,13 @@ namespace dunya::editor {
 struct CreateFieldCommand {
   dunya::objectmodel::Entity entity = dunya::objectmodel::INVALID_ENTITY;
   dunya::objectmodel::Pose pose;
-  dunya::objectmodel::FieldGrid grid;
+  dunya::objectmodel::SdfGrid grid;
 };
 
 struct DestroyFieldCommand {
   dunya::objectmodel::Entity entity;
   std::optional<dunya::objectmodel::Pose> pose;
-  std::optional<dunya::objectmodel::FieldGrid> grid;
+  std::optional<dunya::objectmodel::SdfGrid> grid;
   std::vector<dunya::field::Primitive> primitives;
 };
 

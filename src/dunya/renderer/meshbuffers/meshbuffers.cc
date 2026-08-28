@@ -1,24 +1,30 @@
-#include "mesh.ih"
+#include "meshbuffers.ih"
 
 namespace dunya::renderer {
 
-Mesh::Mesh(const dunya::gpu::Device& device, std::string modelPath) {
+MeshBuffers::MeshBuffers(
+  const dunya::gpu::Device& device,
+  std::string modelPath
+) {
   loadModel(device, modelPath);
 }
 
-size_t Mesh::indexCount() const noexcept {
+size_t MeshBuffers::indexCount() const noexcept {
   return m_indexCount;
 }
 
-const dunya::gpu::Buffer& Mesh::vertexBuffer() const noexcept {
+const dunya::gpu::Buffer& MeshBuffers::vertexBuffer() const noexcept {
   return m_vertexBuffer;
 }
 
-const dunya::gpu::Buffer& Mesh::indexBuffer() const noexcept {
+const dunya::gpu::Buffer& MeshBuffers::indexBuffer() const noexcept {
   return m_indexBuffer;
 }
 
-void Mesh::loadModel(const dunya::gpu::Device& device, std::string modelPath) {
+void MeshBuffers::loadModel(
+  const dunya::gpu::Device& device,
+  std::string modelPath
+) {
   std::vector<Vertex> vertices;
   std::unordered_map<Vertex, uint32_t> uniqueVertices{};
   std::vector<uint32_t> indices;

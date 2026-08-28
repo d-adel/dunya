@@ -2,7 +2,7 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include <dunya/core/config/config.h>
-#include <dunya/objectmodel/fieldgrid/fieldgrid.h>
+#include <dunya/objectmodel/sdfgrid/sdfgrid.h>
 #include <dunya/objectmodel/pose/pose.h>
 #include <dunya/objectmodel/world/world.h>
 
@@ -22,8 +22,8 @@ using Catch::Matchers::WithinAbs;
 
 using dunya::objectmodel::BakedVolume;
 using dunya::objectmodel::Entity;
-using dunya::objectmodel::FieldGrid;
 using dunya::objectmodel::Pose;
+using dunya::objectmodel::SdfGrid;
 using dunya::objectmodel::World;
 
 // Materials number the primitives 1, 2, 3..., which is how a test tells one
@@ -34,16 +34,16 @@ dunya::field::Primitive marker(uint32_t material) {
 
 // fitToPrimitives divides by the resolution, so a grid is only usable once it
 // has one.
-FieldGrid blank() {
-  FieldGrid grid{};
+SdfGrid blank() {
+  SdfGrid grid{};
 
   grid.resolution = glm::uvec3(dunya::core::FIELD_GRID_RESOLUTION);
 
   return grid;
 }
 
-const FieldGrid& gridOf(const World& world, Entity entity) {
-  return world.registry().get<FieldGrid>(entity);
+const SdfGrid& gridOf(const World& world, Entity entity) {
+  return world.registry().get<SdfGrid>(entity);
 }
 
 const Pose& poseOf(const World& world, Entity entity) {
@@ -76,7 +76,7 @@ TEST_CASE("a created field is live and listed", "[world]") {
   REQUIRE(world.needsBake(entity));
 
   REQUIRE(world.registry().valid(entity));
-  REQUIRE(world.registry().all_of<FieldGrid>(entity));
+  REQUIRE(world.registry().all_of<SdfGrid>(entity));
 
   REQUIRE(world.fields().size() == 1);
   REQUIRE(world.fields()[0] == entity);
@@ -223,7 +223,7 @@ TEST_CASE(
 
   REQUIRE(world.addPrimitive(entity, marker(1)));
 
-  const FieldGrid& grid = gridOf(world, entity);
+  const SdfGrid& grid = gridOf(world, entity);
 
   REQUIRE(world.needsBake(entity));
 
@@ -300,7 +300,7 @@ TEST_CASE("the field span follows creates and destroys", "[world]") {
 
   const std::span<const Entity> remaining = world.fields();
 
-  // Swap-and-pop storage, so the span holds live entities only. If FieldGrid
+  // Swap-and-pop storage, so the span holds live entities only. If SdfGrid
   // ever needs stable storage the dense array gains tombstones and this fails.
   REQUIRE(remaining.size() == 2);
 

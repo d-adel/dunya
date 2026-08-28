@@ -1,7 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <dunya/core/config/config.h>
-#include <dunya/objectmodel/fieldgrid/fieldgrid.h>
+#include <dunya/objectmodel/sdfgrid/sdfgrid.h>
 #include <dunya/objectmodel/sdfprimitivestore/sdfprimitivestore.h>
 
 #include <entt/core/hashed_string.hpp>
@@ -12,7 +12,7 @@
 namespace {
 
 using dunya::objectmodel::Entity;
-using dunya::objectmodel::FieldGrid;
+using dunya::objectmodel::SdfGrid;
 using dunya::objectmodel::SdfPrimitiveRange;
 using dunya::objectmodel::SdfPrimitiveStore;
 
@@ -21,7 +21,7 @@ using dunya::objectmodel::SdfPrimitiveStore;
 // and it is the whole of what the old dirty bool meant.
 auto& bakeQueue(entt::registry& registry) {
   auto& queue = registry.storage<entt::reactive>(entt::hashed_string{"bake"});
-  queue.on_update<FieldGrid>();
+  queue.on_update<SdfGrid>();
   return queue;
 }
 
@@ -34,10 +34,10 @@ dunya::field::Primitive marker(uint32_t material) {
 Entity makeObject(entt::registry& registry) {
   const Entity entity = registry.create();
 
-  FieldGrid grid{};
+  SdfGrid grid{};
   grid.resolution = glm::uvec3(dunya::core::FIELD_GRID_RESOLUTION);
 
-  registry.emplace<FieldGrid>(entity, grid);
+  registry.emplace<SdfGrid>(entity, grid);
 
   return entity;
 }
@@ -166,7 +166,7 @@ TEST_CASE(
   REQUIRE(store.append(registry, entity, marker(1)));
 
   REQUIRE(queue.contains(entity));
-  REQUIRE(registry.get<FieldGrid>(entity).voxelSize.x > 0.0f);
+  REQUIRE(registry.get<SdfGrid>(entity).voxelSize.x > 0.0f);
 }
 
 TEST_CASE("destroying an entity returns its range to the arena", "[sdfstore]") {

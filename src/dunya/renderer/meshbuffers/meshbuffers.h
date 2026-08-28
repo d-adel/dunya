@@ -9,21 +9,21 @@
 
 namespace dunya::renderer {
 
-class Mesh {
+class MeshBuffers {
 public:
-  Mesh(const dunya::gpu::Device& device, std::string modelPath);
+  MeshBuffers(const dunya::gpu::Device& device, std::string modelPath);
 
-  Mesh(const Mesh&) = delete;
-  Mesh& operator=(const Mesh&) = delete;
+  MeshBuffers(const MeshBuffers&) = delete;
+  MeshBuffers& operator=(const MeshBuffers&) = delete;
 
-  Mesh(Mesh&&) noexcept = default;
-  Mesh& operator=(Mesh&&) noexcept = default;
+  MeshBuffers(MeshBuffers&&) noexcept = default;
+  MeshBuffers& operator=(MeshBuffers&&) noexcept = default;
 
   size_t indexCount() const noexcept;
   const dunya::gpu::Buffer& vertexBuffer() const noexcept;
   const dunya::gpu::Buffer& indexBuffer() const noexcept;
 
-  ~Mesh() = default;
+  ~MeshBuffers() = default;
 
 private:
   void loadModel(const dunya::gpu::Device& device, std::string modelPath);

@@ -22,6 +22,9 @@
 #include <dunya/renderer/fieldbaker/fieldbaker.h>
 #include <dunya/editor/commandhistory/commandhistory.h>
 
+#include <array>
+#include <vector>
+
 // Wiring, and the loop. Owns the subsystems and hands them each other, but does
 // none of their work - an edit lives in FieldEditor, a harness run in
 // FrameCheck.
@@ -93,6 +96,11 @@ private:
   // Which entity filled each packing slot, recorded as the frame is assembled.
   // Not a position in fields(): a skip consumes no slot, so the two diverge.
   std::vector<dunya::objectmodel::Entity> m_recordEntities;
+
+  // Which entity owns each volume pool slot, so a slot can be reclaimed when
+  // its entity goes. Nothing else observes a destroyed field object.
+  std::array<dunya::objectmodel::Entity, dunya::core::MAX_FIELD_VOLUMES>
+    m_volumeOwners;
 
   dunya::core::EventDispatcher::SubscriptionId m_keySubscription{};
   dunya::core::EventDispatcher::SubscriptionId m_mouseSubscription{};

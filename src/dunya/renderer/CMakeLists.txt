@@ -8,8 +8,8 @@ add_library(dunya_renderer STATIC
     fieldrecord/fieldrecord.cc
     frame/frame.cc
     frameglobals/frameglobals.cc
-    mesh/mesh.cc
-    mesh/tiny_obj_loader_impl.cc
+    meshbuffers/meshbuffers.cc
+    meshbuffers/tiny_obj_loader_impl.cc
     resourcetable/resourcetable.cc
     vertex/vertex.cc
     volumepool/volumepool.cc

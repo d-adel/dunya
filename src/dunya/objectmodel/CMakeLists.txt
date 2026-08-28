@@ -4,7 +4,7 @@
 
 add_library(dunya_objectmodel STATIC
     camera/camera.cc
-    fieldgrid/fieldgrid.cc
+    sdfgrid/sdfgrid.cc
     sdfprimitivestore/sdfprimitivestore.cc
     world/world.cc
 )
@@ -15,7 +15,7 @@ target_include_directories(dunya_objectmodel PUBLIC "${PROJECT_SOURCE_DIR}/src")
 
 target_compile_features(dunya_objectmodel PUBLIC cxx_std_20)
 
-# PUBLIC: FieldGrid and Pose carry glm types, SdfPrimitiveRange carries
+# PUBLIC: SdfGrid and Pose carry glm types, SdfPrimitiveRange carries
 # Primitive, all in headers consumers include, and Entity is an EnTT type.
 # EnTT stops here on purpose: field, gpu and platform have no entities and do
 # not link this.

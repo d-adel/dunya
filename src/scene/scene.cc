@@ -6,24 +6,27 @@ Scene::Scene(const dunya::gpu::Context& context)
     : m_materials(createMaterials()),
       m_samplers(createSamplers(context.device())),
       m_textures(createTextures(context.device())) {
-  glm::mat4 model = glm::rotate(
-    glm::mat4(1.0f),
-    glm::radians(-90.0f),
-    glm::vec3(1.0f, 0.0f, 0.0f)
+  // Both meshes are the same room at the same orientation; only the placement
+  // and the material differ. The rotation is what DrawItem's matrix carried.
+  const glm::quat rotation =
+    glm::angleAxis(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+
+  m_meshes.emplace_back(
+    dunya::renderer::MeshBuffers(context.device(), "models/viking_room.obj")
   );
 
-  glm::mat4 model2 =
-    glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -2.0f)) * model;
-  m_meshes.emplace_back(
-    dunya::renderer::Mesh(context.device(), "models/viking_room.obj")
+  m_world.createMesh(
+    dunya::objectmodel::Pose{glm::vec3(0.0f), rotation},
+    dunya::objectmodel::Mesh{0},
+    dunya::objectmodel::Material{2}
   );
-  m_meshes.emplace_back(
-    dunya::renderer::Mesh(context.device(), "models/viking_room.obj")
+  m_world.createMesh(
+    dunya::objectmodel::Pose{glm::vec3(0.0f, 0.0f, -2.0f), rotation},
+    dunya::objectmodel::Mesh{0},
+    dunya::objectmodel::Material{3}
   );
-  m_world.addDrawItem(dunya::objectmodel::DrawItem({0, 2, model}));
-  m_world.addDrawItem(dunya::objectmodel::DrawItem({0, 3, model2}));
 
-  dunya::objectmodel::FieldGrid grid{};
+  dunya::objectmodel::SdfGrid grid{};
   grid.resolution = glm::uvec3(dunya::core::FIELD_GRID_RESOLUTION);
 
   dunya::objectmodel::Pose pose{};
@@ -56,14 +59,28 @@ Scene::Scene(const dunya::gpu::Context& context)
 }
 
 void Scene::augmentFrameContext(dunya::renderer::Frame& frameContext) {
-  std::span<const dunya::renderer::Mesh> meshes(m_meshes);
+  const entt::registry& registry = m_world.registry();
 
-  frameContext.drawItems = m_world.drawItems();
-  frameContext.meshes = meshes;
+  // Packed here rather than stored, because a mesh record is per-frame data
+  // derived from three components. A member so the span outlives the call.
+  m_meshRecords.clear();
+
+  for (dunya::objectmodel::Entity entity : m_world.meshes()) {
+    m_meshRecords.push_back(
+      {registry.get<dunya::objectmodel::Mesh>(entity).index,
+       registry.get<dunya::objectmodel::Material>(entity).index,
+       dunya::objectmodel::model(
+         registry.get<dunya::objectmodel::Pose>(entity)
+       )}
+    );
+  }
+
+  frameContext.meshRecords = m_meshRecords;
+  frameContext.meshes = m_meshes;
   frameContext.primitives = m_world.pool();
 }
 
-const std::vector<dunya::objectmodel::Material>& Scene::
+const std::vector<dunya::renderer::MaterialRecord>& Scene::
   materials() const noexcept {
   return m_materials;
 }
@@ -140,8 +157,8 @@ std::vector<dunya::gpu::Texture> Scene::createTextures(
   return textures;
 }
 
-std::vector<dunya::objectmodel::Material> Scene::createMaterials() {
-  dunya::objectmodel::Material neutral{};
+std::vector<dunya::renderer::MaterialRecord> Scene::createMaterials() {
+  dunya::renderer::MaterialRecord neutral{};
   neutral.baseColor = glm::vec4(1.0f);
   neutral.emissive = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
   neutral.metallic = 0.0f;
@@ -161,16 +178,16 @@ std::vector<dunya::objectmodel::Material> Scene::createMaterials() {
   neutral.emissiveTexture = dunya::core::TEXTURE_BLACK;
   neutral.emissiveSampler = dunya::core::SAMPLER_LINEAR_REPEAT;
 
-  dunya::objectmodel::Material fieldSphere = neutral;
+  dunya::renderer::MaterialRecord fieldSphere = neutral;
   fieldSphere.baseColor = glm::vec4(0.5f, 0.0f, 0.3f, 1.0f);
 
-  dunya::objectmodel::Material fieldPlane = neutral;
+  dunya::renderer::MaterialRecord fieldPlane = neutral;
   fieldPlane.baseColor = glm::vec4(0.7f, 0.6f, 0.3f, 1.0f);
 
-  dunya::objectmodel::Material vikingRoom = neutral;
+  dunya::renderer::MaterialRecord vikingRoom = neutral;
   vikingRoom.baseColorTexture = dunya::core::RESERVED_TEXTURES;
 
-  dunya::objectmodel::Material checker = neutral;
+  dunya::renderer::MaterialRecord checker = neutral;
   checker.baseColorTexture = dunya::core::RESERVED_TEXTURES + 1;
 
   return {fieldSphere, fieldPlane, vikingRoom, checker};

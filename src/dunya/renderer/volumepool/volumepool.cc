@@ -31,11 +31,25 @@ uint32_t VolumePool::allocate(const SampledField& grid) {
 }
 
 void VolumePool::release(uint32_t index) {
+  if (index >= m_volumes.size() || !m_volumes[index].has_value()) {
+    throw std::runtime_error("Releasing a volume slot that is not allocated");
+  }
+
+  // Frames in flight may still name these images, and destroying a VkImage a
+  // submitted command buffer references is a use-after-free. Releases are rare
+  // - only an undone create - so this waits rather than deferring, the same
+  // trade the swapchain already makes when it recreates.
+  m_device.waitIdle();
+
   m_volumes[index].reset();
   m_freeIndices.push_back(index);
 }
 
 VolumeImages VolumePool::images(uint32_t index) const {
+  if (index >= m_volumes.size() || !m_volumes[index].has_value()) {
+    throw std::runtime_error("Reading a volume slot that is not allocated");
+  }
+
   const Volume& volume = *m_volumes[index];
 
   return {volume.distance.image(), volume.material.image()};

@@ -17,28 +17,24 @@ World::World() {
   // to true, so a field entity has always needed its first bake on creation.
   // on_update fires from registry.patch, which is why the store patches.
   m_registry.storage<entt::reactive>(BAKE_QUEUE)
-    .on_construct<FieldGrid>()
-    .on_update<FieldGrid>();
+    .on_construct<SdfGrid>()
+    .on_update<SdfGrid>();
 }
 
 const entt::registry& World::registry() const noexcept {
   return m_registry;
 }
 
-Entity World::createField(const Pose& pose, const FieldGrid& grid) {
+Entity World::createField(const Pose& pose, const SdfGrid& grid) {
   const Entity entity = m_registry.create();
 
   m_registry.emplace<Pose>(entity, pose);
-  m_registry.emplace<FieldGrid>(entity, grid);
+  m_registry.emplace<SdfGrid>(entity, grid);
 
   return entity;
 }
 
-bool World::createFieldAt(
-  Entity hint,
-  const Pose& pose,
-  const FieldGrid& grid
-) {
+bool World::createFieldAt(Entity hint, const Pose& pose, const SdfGrid& grid) {
   const Entity entity = m_registry.create(hint);
 
   // EnTT treats a hint as a request, not a requirement. For undo/redo that is
@@ -49,13 +45,13 @@ bool World::createFieldAt(
   }
 
   m_registry.emplace<Pose>(entity, pose);
-  m_registry.emplace<FieldGrid>(entity, grid);
+  m_registry.emplace<SdfGrid>(entity, grid);
 
   return true;
 }
 
 bool World::destroyField(Entity entity) {
-  if (!m_registry.valid(entity) || !m_registry.all_of<FieldGrid>(entity)) {
+  if (!m_registry.valid(entity) || !m_registry.all_of<SdfGrid>(entity)) {
     return false;
   }
 
@@ -68,7 +64,7 @@ bool World::destroyField(Entity entity) {
 }
 
 std::span<const Entity> World::fields() const noexcept {
-  const auto* storage = m_registry.storage<FieldGrid>();
+  const auto* storage = m_registry.storage<SdfGrid>();
 
   if (storage == nullptr) {
     return {};
@@ -145,12 +141,28 @@ void World::markBaked(Entity entity) {
   m_registry.storage<entt::reactive>(BAKE_QUEUE).remove(entity);
 }
 
-std::span<const DrawItem> World::drawItems() const noexcept {
-  return m_drawItems;
+Entity World::createMesh(
+  const Pose& pose,
+  const Mesh& mesh,
+  const Material& material
+) {
+  const Entity entity = m_registry.create();
+
+  m_registry.emplace<Pose>(entity, pose);
+  m_registry.emplace<Mesh>(entity, mesh);
+  m_registry.emplace<Material>(entity, material);
+
+  return entity;
 }
 
-void World::addDrawItem(const DrawItem& drawItem) {
-  m_drawItems.push_back(drawItem);
+std::span<const Entity> World::meshes() const noexcept {
+  const auto* storage = m_registry.storage<Mesh>();
+
+  if (storage == nullptr) {
+    return {};
+  }
+
+  return {storage->data(), storage->size()};
 }
 
 }  // namespace dunya::objectmodel

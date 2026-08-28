@@ -1,4 +1,4 @@
-#include "fieldgrid.h"
+#include "sdfgrid.h"
 
 #include <dunya/core/config/config.h>
 #include <dunya/field/sampled/sampled.h>

@@ -2,11 +2,11 @@
 
 #include <dunya/core/config/config.h>
 #include <dunya/renderer/frameglobals/frameglobals.h>
-#include <dunya/renderer/mesh/mesh.h>
+#include <dunya/renderer/meshbuffers/meshbuffers.h>
 #include <dunya/gpu/pipeline/pipeline.h>
 #include <dunya/field/field.h>
-#include <dunya/objectmodel/drawitem/drawitem.h>
-#include <dunya/objectmodel/fieldgrid/fieldgrid.h>
+#include <dunya/renderer/meshrecord/meshrecord.h>
+#include <dunya/objectmodel/sdfgrid/sdfgrid.h>
 
 #include <glm/glm.hpp>
 #include <span>
@@ -17,8 +17,8 @@ struct Frame {
   glm::mat4 view = glm::mat4(1.0f);
   glm::mat4 proj = glm::mat4(1.0f);
   glm::vec4 cameraPos = glm::vec4(1.0f);
-  std::span<const dunya::objectmodel::DrawItem> drawItems = {};
-  std::span<const Mesh> meshes = {};
+  std::span<const MeshRecord> meshRecords = {};
+  std::span<const MeshBuffers> meshes = {};
 
   uint32_t fieldRecordCount = 0;
   std::span<const dunya::field::Primitive> primitives = {};

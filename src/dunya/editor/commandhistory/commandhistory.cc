@@ -14,7 +14,7 @@ bool isField(
   dunya::objectmodel::Entity entity
 ) {
   return world.registry().valid(entity)
-         && world.registry().all_of<dunya::objectmodel::FieldGrid>(entity);
+         && world.registry().all_of<dunya::objectmodel::SdfGrid>(entity);
 }
 
 }  // namespace
@@ -79,7 +79,7 @@ bool CommandHistory::apply(Command& command, dunya::objectmodel::World& world) {
           cmd.pose = world.registry().get<dunya::objectmodel::Pose>(cmd.entity);
 
           cmd.grid =
-            world.registry().get<dunya::objectmodel::FieldGrid>(cmd.entity);
+            world.registry().get<dunya::objectmodel::SdfGrid>(cmd.entity);
 
           const auto primitives = world.primitives(cmd.entity);
 

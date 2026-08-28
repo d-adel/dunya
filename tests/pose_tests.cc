@@ -2,6 +2,7 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 #include <dunya/field/field.h>
 #include <dunya/field/raycast/raycast.h>
@@ -9,6 +10,8 @@
 
 #include "tolerances.h"
 
+#include <algorithm>
+#include <cmath>
 #include <optional>
 #include <vector>
 
@@ -111,4 +114,34 @@ TEST_CASE("a default pose is the identity", "[pose]") {
   // wrong quaternion default would place every object subtly askew rather than
   // failing loudly.
   REQUIRE(model(Pose{}) == glm::mat4(1.0f));
+}
+
+TEST_CASE(
+  "a pose reproduces the matrix it replaced, to a float ulp",
+  "[pose]"
+) {
+  // Step 6 turned a stored mat4 into a Pose, so the same transform is now built
+  // by mat4_cast(angleAxis(...)) instead of glm::rotate. Algebraically equal,
+  // and this pins how far apart the two float paths actually land.
+  const float angle = glm::radians(-90.0f);
+  const glm::vec3 axis(1.0f, 0.0f, 0.0f);
+  const glm::vec3 position(0.0f, 0.0f, -2.0f);
+
+  const glm::mat4 stored = glm::translate(glm::mat4(1.0f), position)
+                           * glm::rotate(glm::mat4(1.0f), angle, axis);
+
+  const glm::mat4 posed = model(Pose{position, glm::angleAxis(angle, axis)});
+
+  float worst = 0.0f;
+
+  for (int column = 0; column != 4; ++column) {
+    for (int row = 0; row != 4; ++row) {
+      worst =
+        std::max(worst, std::abs(stored[column][row] - posed[column][row]));
+    }
+  }
+
+  // One ulp near 1.0 is 1.19e-07. Anything larger is a different transform, not
+  // a different way of spelling the same one.
+  REQUIRE(worst < 2.0e-07f);
 }

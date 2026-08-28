@@ -1,4 +1,4 @@
-#include "fieldgrid.ih"
+#include "sdfgrid.ih"
 
 namespace dunya::objectmodel {
 
@@ -17,7 +17,7 @@ dunya::field::Aabb gridBox(
 }
 
 void fitToPrimitives(
-  FieldGrid& grid,
+  SdfGrid& grid,
   std::span<const dunya::field::Primitive> primitives
 ) {
   const dunya::field::Aabb box = gridBox(primitives);

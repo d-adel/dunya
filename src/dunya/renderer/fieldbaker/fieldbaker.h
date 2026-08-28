@@ -39,7 +39,7 @@ public:
   void bake(const FieldRecord& grid, uint32_t frame, VolumeImages images) const;
 
   void verifyBake(
-    const dunya::objectmodel::FieldGrid& grid,
+    const dunya::objectmodel::SdfGrid& grid,
     uint32_t volumeIndex,
     std::span<const dunya::field::Primitive> primitives,
     VolumeImages images

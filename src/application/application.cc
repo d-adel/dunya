@@ -30,6 +30,7 @@ Application::Application()
         dunya::gpu::PipelineType::Mesh,
         m_context.device().vkDevice(),
         std::vector<VkDescriptorSetLayout>{
+
           m_frameGlobals.setLayout(),
           m_resourceTable.setLayout()
         },
@@ -66,6 +67,8 @@ Application::Application()
       m_reloadRequested(false)
 
 {
+  m_volumeOwners.fill(dunya::objectmodel::INVALID_ENTITY);
+
   m_keySubscription = dunya::core::EventDispatcher::instance()
                         .subscribe<dunya::platform::KeyEvent>(
                           [this](const dunya::platform::KeyEvent& event) {
@@ -219,6 +222,28 @@ int Application::start(const StartupOptions& options) {
     dunya::objectmodel::World& world = m_scene.world();
     const entt::registry& registry = world.registry();
 
+    // Reclaim slots whose entity is gone, before anything asks for a new one.
+    // Done here rather than by a listener inside VolumePool, because the pool
+    // is a renderer resource and the registry is world state: the frame is
+    // where the two meet.
+    for (uint32_t slot = 0; slot != m_volumeOwners.size(); ++slot) {
+      const dunya::objectmodel::Entity owner = m_volumeOwners[slot];
+
+      if (owner == dunya::objectmodel::INVALID_ENTITY) {
+        continue;
+      }
+
+      if (
+        registry.valid(owner)
+        && registry.all_of<dunya::objectmodel::BakedVolume>(owner)
+      ) {
+        continue;
+      }
+
+      m_volumePool.release(slot);
+      m_volumeOwners[slot] = dunya::objectmodel::INVALID_ENTITY;
+    }
+
     uint32_t recordIndex = 0;
 
     m_recordEntities.clear();
@@ -235,8 +260,8 @@ int Application::start(const StartupOptions& options) {
         break;
       }
 
-      const dunya::objectmodel::FieldGrid& grid =
-        registry.get<dunya::objectmodel::FieldGrid>(entity);
+      const dunya::objectmodel::SdfGrid& grid =
+        registry.get<dunya::objectmodel::SdfGrid>(entity);
 
       // No BakedVolume means no pool slot yet. Absence is the state; there is
       // no sentinel to get wrong.
@@ -272,6 +297,8 @@ int Application::start(const StartupOptions& options) {
           images.material.imageView(),
           index
         );
+
+        m_volumeOwners[index] = entity;
 
         world.setBakedVolume(entity, index);
       }
@@ -345,8 +372,8 @@ int Application::start(const StartupOptions& options) {
       bakeCheckPending = false;
       m_context.device().waitIdle();
       for (dunya::objectmodel::Entity entity : world.fields()) {
-        const dunya::objectmodel::FieldGrid& grid =
-          registry.get<dunya::objectmodel::FieldGrid>(entity);
+        const dunya::objectmodel::SdfGrid& grid =
+          registry.get<dunya::objectmodel::SdfGrid>(entity);
         const auto* volume =
           registry.try_get<dunya::objectmodel::BakedVolume>(entity);
 

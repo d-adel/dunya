@@ -32,13 +32,13 @@ ResourceTable::ResourceTable(
   const dunya::gpu::Device& device,
   std::span<const dunya::gpu::Texture> textures,
   std::span<const dunya::gpu::Sampler> samplers,
-  std::span<const dunya::objectmodel::Material> materials
+  std::span<const dunya::renderer::MaterialRecord> materials
 )
     : m_group(
         device,
         dunya::core::MAX_FRAMES_IN_FLIGHT,
         {{0,
-          dunya::core::MAX_MATERIALS * sizeof(dunya::objectmodel::Material),
+          dunya::core::MAX_MATERIALS * sizeof(dunya::renderer::MaterialRecord),
           VK_SHADER_STAGE_FRAGMENT_BIT,
           dunya::gpu::DescriptorGroup::BufferUpdate::Static}},
         {{1,
@@ -56,7 +56,7 @@ ResourceTable::ResourceTable(
 
   // PARTIALLY_BOUND makes an unwritten array slot undefined rather than an
   // error, so an out-of-range index here would sample garbage silently.
-  for (const dunya::objectmodel::Material& material : materials) {
+  for (const dunya::renderer::MaterialRecord& material : materials) {
     const std::array<uint32_t, 5> images{
       material.baseColorTexture,
       material.metallicRoughnessTexture,

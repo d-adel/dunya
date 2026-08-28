@@ -31,7 +31,7 @@ void SdfPrimitiveStore::refresh(entt::registry& registry, Entity entity) {
   // patch, not a write through get<>: the update signal is what puts this
   // entity in the bake queue, and a bare reference write is invisible to it.
   // Queue membership is the flag now, and nobody writes it by hand.
-  registry.patch<FieldGrid>(entity, [primitives](FieldGrid& object) {
+  registry.patch<SdfGrid>(entity, [primitives](SdfGrid& object) {
     fitToPrimitives(object, primitives);
   });
 }
@@ -44,7 +44,7 @@ bool SdfPrimitiveStore::insert(
 ) {
   // A grid is required, not implied: primitives describe a field, and a field
   // has to have a lattice to be sampled onto before it can hold any.
-  if (!registry.valid(entity) || !registry.all_of<FieldGrid>(entity)) {
+  if (!registry.valid(entity) || !registry.all_of<SdfGrid>(entity)) {
     return false;
   }
 
@@ -93,7 +93,7 @@ bool SdfPrimitiveStore::append(
   Entity entity,
   const Primitive& primitive
 ) {
-  if (!registry.valid(entity) || !registry.all_of<FieldGrid>(entity)) {
+  if (!registry.valid(entity) || !registry.all_of<SdfGrid>(entity)) {
     return false;
   }
 

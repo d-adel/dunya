@@ -4,10 +4,15 @@
 #include <dunya/renderer/frame/frame.h>
 #include <dunya/gpu/context/context.h>
 #include <dunya/core/config/config.h>
-#include <dunya/objectmodel/fieldgrid/fieldgrid.h>
+#include <dunya/objectmodel/sdfgrid/sdfgrid.h>
+#include <dunya/objectmodel/material/material.h>
+#include <dunya/objectmodel/mesh/mesh.h>
+#include <dunya/objectmodel/pose/pose.h>
 #include <dunya/editor/command/command.h>
 
 #include <stdexcept>
 #include <array>
 #include <cstdint>
 #include <span>
+
+#include <glm/gtc/quaternion.hpp>

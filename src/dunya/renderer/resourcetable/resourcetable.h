@@ -2,7 +2,7 @@
 
 #include <dunya/gpu/descriptorgroup/descriptorgroup.h>
 #include <dunya/gpu/device/device.h>
-#include <dunya/objectmodel/material/material.h>
+#include <dunya/renderer/materialrecord/materialrecord.h>
 #include <dunya/gpu/sampler/sampler.h>
 #include <dunya/gpu/texture/texture.h>
 
@@ -17,7 +17,7 @@ public:
     const dunya::gpu::Device& device,
     std::span<const dunya::gpu::Texture> textures,
     std::span<const dunya::gpu::Sampler> samplers,
-    std::span<const dunya::objectmodel::Material> materials
+    std::span<const dunya::renderer::MaterialRecord> materials
   );
 
   ResourceTable(const ResourceTable&) = delete;

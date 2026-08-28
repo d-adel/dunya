@@ -1,7 +1,7 @@
 #include "sdfprimitivestore.h"
 
 #include <dunya/core/config/config.h>
-#include <dunya/objectmodel/fieldgrid/fieldgrid.h>
+#include <dunya/objectmodel/sdfgrid/sdfgrid.h>
 
 #include <entt/entity/registry.hpp>
 
