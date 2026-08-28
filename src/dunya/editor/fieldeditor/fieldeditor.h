@@ -6,13 +6,8 @@
 
 #include <cstdint>
 
-/* Changing the field at runtime.
- *
- * Takes a ray rather than a cursor: turning a mouse position into a world ray
- * needs the window and the camera, and neither of those is any of this class's
- * business. What it owns is what an edit *is* - where the cutter goes relative
- * to the surface, and getting the result to the GPU afterwards.
- */
+// Changing the field at runtime. Takes a ray rather than a cursor, because
+// turning a mouse position into one needs the window and the camera.
 
 namespace dunya::editor {
 

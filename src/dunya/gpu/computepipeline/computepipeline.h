@@ -7,11 +7,8 @@
 #include <string>
 #include <vector>
 
-/* Separate from Pipeline rather than a branch inside it: almost everything
- * PipelineConfig carries - vertex input, rasterisation, blending, depth,
- * dynamic state, colour attachment formats - has no meaning for compute, and a
- * type whose fields are half inapplicable teaches the reader the wrong shape.
- */
+// Separate from Pipeline rather than a branch inside it: most of PipelineConfig
+// has no meaning for compute, and a half-inapplicable type misleads.
 
 namespace dunya::gpu {
 

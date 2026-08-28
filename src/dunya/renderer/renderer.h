@@ -35,14 +35,8 @@ public:
   Renderer& operator=(Renderer const&) = delete;
   ~Renderer();
 
-  /* Draws one frame, optionally handing the finished image to a reader first.
-   *
-   * onFrameReady runs after the render work has completed and *before* the
-   * image is presented, because that is the only window in which touching it is
-   * legal: once vkQueuePresentKHR has been called the image belongs to the
-   * presentation engine again, and reading it there is a validation error
-   * rather than a race you get away with.
-   */
+  // Draws one frame. onFrameReady runs before present: after that the image
+  // belongs to the presentation engine and reading it is a validation error.
   [[nodiscard]]
   bool drawFrame(
     const dunya::gpu::SwapChain& swapChain,

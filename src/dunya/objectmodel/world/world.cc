@@ -41,10 +41,8 @@ bool World::createFieldAt(
 ) {
   const Entity entity = m_registry.create(hint);
 
-  // EnTT treats a hint as a request, not a requirement. If that exact
-  // identity is unavailable it creates another entity instead.
-  //
-  // For undo/redo that is failure: identity is part of the operation.
+  // EnTT treats a hint as a request, not a requirement. For undo/redo that is
+  // failure, because identity is part of the operation.
   if (entity != hint) {
     m_registry.destroy(entity);
     return false;

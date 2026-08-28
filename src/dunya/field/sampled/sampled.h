@@ -14,21 +14,13 @@
 
 namespace dunya::field {
 
-/* A distance field baked onto a regular lattice.
- *
- * Values sit at lattice points, not voxel centres, so a resolution of N spans
- * N-1 cells along each axis and a sample taken exactly at a lattice point
- * returns the baked value untouched.
- *
- * The grid is bounded and the field it came from may not be, so sampling
- * outside returns the distance to the grid's box. That is a valid lower bound
- * on the distance to anything inside it, which is what keeps a ray marching
- * toward the grid rather than stepping past it.
- */
+// A distance field on a regular lattice, values at lattice points, so
+// resolution N spans N-1 cells. Sampling outside returns the distance to the
+// grid's box, a lower bound that keeps a ray marching toward it.
 
-// Cells per brick on each axis. A dent invalidates the bricks it touches
-// instead of the whole grid, and the maxima below stay tight. The shaders
-// index the same table, so the number comes from CMake.
+// Cells per brick on each axis, so a dent invalidates the bricks it touches
+// instead of the whole grid. The shaders index the same table, so the number
+// comes from CMake.
 inline constexpr uint32_t BRICK_CELLS = DUNYA_BRICK_CELLS;
 
 struct SampledField {

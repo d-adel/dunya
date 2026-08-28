@@ -1,0 +1,60 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: windows / msvc / debug
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the Vulkan SDK
+        run: |
+          curl -L -o vulkan_sdk.exe https://sdk.lunarg.com/sdk/download/latest/windows/vulkan_sdk.exe
+          .\vulkan_sdk.exe --accept-licenses --default-answer --confirm-command install
+          $sdk = (Get-ChildItem C:\VulkanSDK | Sort-Object Name -Descending | Select-Object -First 1).FullName
+          "VULKAN_SDK=$sdk" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Cache fetched dependencies
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          # No restore-keys: a _deps from different pins fails the configure with
+          # "Does not match the generator used previously".
+          key: deps-${{ runner.os }}-${{ hashFiles('CMakeLists.txt', 'tests/CMakeLists.txt') }}
+
+      # The commands the README gives, verbatim, so this also tests those.
+      - name: Configure
+        run: cmake -S . -B build
+
+      - name: Build
+        run: cmake --build build --config Debug
+
+      # Goldens excluded: no GPU on the runners. Run them locally before any
+      # commit touching shaders, the march or the bake.
+      - name: Test
+        run: ctest --test-dir build -C Debug --output-on-failure -E "^golden"
+
+  format:
+    name: clang-format
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Must match the local formatter, or comments rewrap and files nobody
+      # touched go red. CLAUDE.md names the one in use.
+      - name: Install clang-format
+        run: pipx install "clang-format==22.1.3"
+
+      - name: Check formatting
+        run: git ls-files '*.cc' '*.h' '*.ih' | xargs clang-format --dry-run -Werror

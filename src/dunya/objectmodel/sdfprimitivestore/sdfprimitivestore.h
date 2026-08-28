@@ -19,10 +19,9 @@ struct SdfPrimitiveRange {
   uint32_t capacity = 0;
 };
 
-// The arena the registry does not own, plus the edits that have to touch both
-// it and the entity's components at once. Every mutation is a transaction:
-// move the elements, update the range, and re-fit the grid - which publishes
-// the update signal a bake queue listens for.
+// The arena the registry does not own. Every mutation is a transaction: move
+// the elements, update the range, re-fit the grid - which signals the bake
+// queue.
 class SdfPrimitiveStore {
 public:
   SdfPrimitiveStore();

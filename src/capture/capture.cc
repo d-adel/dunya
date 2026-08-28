@@ -6,10 +6,8 @@ namespace {
 
 constexpr uint32_t CHANNELS = 4;
 
-// Whether the format's first byte is blue rather than red. Presentable formats
-// are usually BGRA and a PNG is RGBA, so getting this wrong does not fail - it
-// silently produces an image with the red and blue swapped, which is exactly
-// the kind of wrongness a golden image would then enshrine as correct.
+// Whether the format's first byte is blue rather than red. Getting it wrong
+// does not fail - it swaps red and blue, which a golden would then enshrine.
 bool blueFirst(VkFormat format) {
   switch (format) {
     case VK_FORMAT_R8G8B8A8_UNORM:

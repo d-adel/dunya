@@ -185,10 +185,9 @@ void Pipeline::reload() {
 
   makeConfig();
 
-  // Build first, swap second: the old pipeline stays bound and usable unless a
-  // replacement actually exists. buildPipeline reads the .spv from disk, so it
-  // throws when a file is missing, and a throw out of here would leave the
-  // frame loop with no pipeline and unwind out of main.
+  // Build first, swap second: the old pipeline stays usable unless a
+  // replacement exists. buildPipeline throws on a missing .spv, and a throw
+  // here would leave the frame loop with none.
   VkPipeline rebuilt = VK_NULL_HANDLE;
 
   try {

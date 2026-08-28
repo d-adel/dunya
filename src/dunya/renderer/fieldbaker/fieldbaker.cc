@@ -156,10 +156,9 @@ void FieldBaker::bake(
     (resolution - glm::uvec3(1u) + glm::uvec3(dunya::core::BRICK_CELLS - 1u))
     / glm::uvec3(dunya::core::BRICK_CELLS);
 
-  // The table reserves a fixed slot per volume, sized from the largest grid the
-  // config allows. This dispatch sizes itself from the object's own resolution,
-  // so a larger one would write through the next object's slot. Checked here
-  // because this is the only code that writes the table.
+  // The table reserves a fixed slot sized from the largest grid allowed, while
+  // this dispatch sizes itself from the object's own resolution - a larger one
+  // would write through the next slot.
   const uint64_t brickCount =
     static_cast<uint64_t>(bricks.x) * bricks.y * bricks.z;
 
@@ -435,10 +434,8 @@ void FieldBaker::verifyBake(
     gpuLargestBrick = std::max(gpuLargestBrick, gpuBrick);
   }
 
-  // The shadow march reads this one float and nothing else, so it gets two
-  // comparisons: against the bricks the GPU itself produced, which catches a
-  // second reduction that read the wrong slot or ran before the barrier, and
-  // against the CPU's own reduction.
+  // The shadow march reads this one float, so it gets two comparisons: against
+  // the bricks the GPU produced, and against the CPU's own reduction.
   const float gpuGlobal = bounds[0];
 
   std::cout << "bound check  worst brick " << std::scientific << worstBound

@@ -18,11 +18,9 @@ std::optional<RayHit> raymarch(
   const Ray& ray,
   const MarchSettings& settings
 ) {
-  // Enhanced sphere tracing: step by omega times the distance, and when the
-  // current unbounding sphere no longer reaches back to the previous one the
-  // step may have jumped a surface, so undo part of it and continue unrelaxed.
-  // Mirrored exactly in field-shader.frag; a CPU march that disagreed with the
-  // shader would carve somewhere other than where the cursor pointed.
+  // Enhanced sphere tracing: step omega times the distance, and back off
+  // unrelaxed when the unbounding sphere no longer reaches the previous one.
+  // Mirrored exactly in field-shader.frag, or a click carves the wrong place.
   float omega = settings.omega;
   float travelled = 0.0f;
   float previousRadius = 0.0f;

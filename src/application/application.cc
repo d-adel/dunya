@@ -331,9 +331,7 @@ int Application::start(const StartupOptions& options) {
 
     if (!swapChainStale) {
       // Bake-list entries are packing slots, so they index the mapping the
-      // packing loop recorded - not fields(). The two diverge as soon as an
-      // entity is skipped for want of a volume, because a skip consumes no
-      // slot.
+      // packing loop recorded, not fields(). A skip consumes no slot.
       for (uint32_t idx : m_recordTable.bakeList()) {
         world.markBaked(m_recordEntities[idx]);
       }
@@ -392,14 +390,9 @@ void Application::handleMouseButtonEvent(
     return;
   }
 
-  // The overlay gets first refusal on the cursor. Without this a click that
-  // lands on a slider also carves the world behind it - the click reaches both,
-  // because they are two systems reading the same button rather than one
-  // passing it to the other.
-  //
-  // Not applied while looking: the cursor is captured then, its reported
-  // position is virtual, and the overlay has no claim on a button being used to
-  // fly.
+  // The overlay gets first refusal on the cursor, or a click on a slider also
+  // carves behind it. Not while looking: the cursor is captured and its
+  // reported position is virtual.
   if (!m_looking && m_overlay.wantsMouse()) {
     return;
   }
@@ -454,11 +447,8 @@ void Application::setLookMode(bool looking) {
   );
 }
 
-/* Every panel this process shows, declared where the data it reads lives.
- *
- * They capture this, and the overlay outlives nothing that they touch: it is a
- * member of the class that owns everything they read.
- */
+// Every panel this process shows, declared where the data it reads lives. They
+// capture this, which outlives them.
 void Application::registerPanels() {
   m_overlay.panel("Frame", [this] {
     ImGui::Text(

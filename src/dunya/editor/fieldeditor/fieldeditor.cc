@@ -53,22 +53,9 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
     return;
   }
 
-  /* Place the sphere so that its far wall lands exactly one advance past the
-   * surface, which is what makes a click move the surface by EDIT_ADVANCE.
-   *
-   * For a carve that means pulling it back out of the material toward the eye;
-   * for an add, pushing it in. Same distance, opposite sign, because a carve
-   * moves the surface away from the eye and an add moves it toward.
-   *
-   * The offset is bounded by the radius at both ends, and both ends are
-   * degenerate. Push a carve a full radius in and the clicked point lands
-   * exactly *on* the cutter, so its distance there is zero, so max(acc, -0)
-   * leaves the field untouched: the surface does not move where it was aimed,
-   * the next march finds the same point, and clicking repeatedly appends
-   * identical primitives and does nothing. Pull it a full radius out and the
-   * cutter no longer reaches the surface at all. Everything useful is strictly
-   * between, and which point in between is EDIT_ADVANCE's decision.
-   */
+  // Place the sphere so its far wall lands one advance past the surface. Both
+  // ends of the range are degenerate: a full radius in puts the clicked point
+  // on the cutter, where max(acc, -0) does nothing.
   const float offset = dunya::core::EDIT_RADIUS - dunya::core::EDIT_ADVANCE;
   const glm::vec3 centre = dunya::core::fieldOpRemovesMaterial(operation)
                              ? minHit.position - localRay.direction * offset
@@ -87,11 +74,8 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
   }
 }
 
-/* The placement is a low-discrepancy sequence rather than random: the carves
- * have to spread through the volume instead of stacking in a line, and they
- * have to land in the same places on every run, or the two representations are
- * not being measured on the same scene.
- */
+// Low-discrepancy rather than random: the carves spread through the volume, and
+// land in the same places every run so both representations see one scene.
 void FieldEditor::stress(uint32_t count) {
   if (m_world.fields().empty()) {
     std::cout << "No field to carve into\n";
@@ -122,10 +106,9 @@ void FieldEditor::stress(uint32_t count) {
       * glm::vec3(0.8191725f, 0.6710436f, 0.5497005f)
     );
 
-    // Deliberately the hard op with no blend, unlike a click. M17's comparison
-    // table was measured with this, and a smooth carve costs an extra smin per
-    // primitive per sample, so quietly changing it here would move published
-    // numbers without saying so.
+    // Deliberately the hard op with no blend, unlike a click: M17's comparison
+    // table was measured with this, so changing it would move published
+    // numbers.
     if (!addPrimitive(
           target,
           extent->minimum + span * at,

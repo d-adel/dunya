@@ -51,10 +51,8 @@ public:
     uint32_t capacity = 0;
   };
 
-  // A storage buffer this group describes but does not own. The buffers above
-  // are host-visible because the CPU fills them; one the GPU writes and the GPU
-  // reads wants to be device-local, so its owner allocates it and points the
-  // binding at it with writeBuffer.
+  // A storage buffer this group describes but does not own: one the GPU both
+  // writes and reads wants to be device-local, so its owner allocates it.
   struct DeviceBufferBinding {
     uint32_t binding = 0;
     VkShaderStageFlags stages = 0;
@@ -140,11 +138,9 @@ private:
   VkDescriptorSetLayout m_setLayout = VK_NULL_HANDLE;
   VkDescriptorPool m_pool = VK_NULL_HANDLE;
 
-  // Decided once by createSetLayout from the binding flags it actually used,
-  // because a layout carrying the bit can only be allocated from a pool that
-  // carries it too. Re-deriving it in createPool would be a second source of
-  // truth for one decision, and the two would drift the moment a binding kind
-  // changes its flags - which storage images already did.
+  // Decided once by createSetLayout from the flags it used, because a layout
+  // carrying the bit needs a pool that carries it too. Re-deriving it in
+  // createPool would be a second source of truth.
   bool m_updateAfterBind = false;
 
   std::vector<VkDescriptorSet> m_sets;

@@ -1,20 +1,9 @@
 #ifndef DUNYA_FIELD_COMMON_GLSL
 #define DUNYA_FIELD_COMMON_GLSL
 
-/* The evaluation half of the field, shared by every shader that needs it.
- *
- * The CSG fold lives here and nowhere else in GLSL. It exists a second time in
- * analytic.cc, and two copies already produced a silent divergence during M16 -
- * a third would be worse. Idiom 27 one level up: one algorithm, written once.
- *
- * The buffer holding the primitives is not declared here, because a fragment
- * shader and a compute shader bind it differently. Each includer defines:
- *
- *   FIELD_PRIMITIVE_AT(i)   - the i'th Primitive
- *   FIELD_PRIMITIVE_COUNT   - how many are live
- *
- * before including this file.
- */
+// The CSG fold, shared by every shader. It exists a second time in analytic.cc,
+// and two copies already diverged silently at M16. Each includer defines
+// FIELD_PRIMITIVE_AT(i) and FIELD_PRIMITIVE_COUNT first.
 
 #include "field-types.glsl"
 
@@ -78,19 +67,8 @@ bool skippable(vec3 p, Primitive prim, float acc) {
   }
 }
 
-/* The fold over the first count primitives, optionally restricted to the ones
- * no grid can hold.
- *
- * Splitting a fold is only exact when the excluded half participates by union,
- * which is true of the plane today. A subtraction whose cutter is bounded would
- * be applied to the grid and not to the analytic remainder, so carving the
- * ground would not carve it in the hybrid. That is the cost of D5 and it is
- * recorded rather than hidden.
- *
- * count exists because reading a primitive only to skip it still reads it. The
- * caller that wants the unbounded ones passes the index just past the last of
- * them, so the loop stops instead of walking every edit ever made.
- */
+// The fold over the first count primitives, optionally only the ones no grid
+// can hold. Exact only while the excluded half unions - the cost of D5.
 vec2 foldDistance(vec3 p, uint count, bool unboundedOnly) {
   vec2 acc = vec2(1e9, 0);
   for (uint i = 0u; i < count; ++i) {

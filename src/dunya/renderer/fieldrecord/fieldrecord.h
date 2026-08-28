@@ -12,17 +12,14 @@
 namespace dunya::renderer {
 
 // A frame's record of a field entity, packed the way field-shader.frag reads
-// it. Not a mirror of any one CPU type - it carries the pose, the grid, the
-// primitive window and the bound offset together, and derives model,
-// inverseModel and that offset on the way in.
+// it. Derives model, inverseModel and the bound offset on the way in.
 //
 // voxelSize.w: grid margin
 // resolutionVolumeIndex.w: volume index
 // config.x = primitive count
 // config.y = field representation: 0 = analytical, 1 = sampled
-// config.z = live. Still written, no longer read: the shadow loop is bounded
-// by SceneCounts.fieldRecords, so every slot it visits is live by construction.
-// Kept as a lane in case records are ever packed sparsely.
+// config.z = live; written but no longer read, the shadow loop is bounded by
+//            SceneCounts.fieldRecords
 // config.w = primitive offset
 struct FieldRecord {
   glm::mat4 model;                   // 64 bytes (offset 0)

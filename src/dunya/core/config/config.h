@@ -36,11 +36,8 @@ constexpr uint32_t FIELD_OP_SMOOTH_UNION = 1;
 constexpr uint32_t FIELD_OP_INTERSECTION = 2;
 constexpr uint32_t FIELD_OP_SUBTRACTION = 3;
 
-// Its own id rather than a blend radius on the hard one, which is how smooth
-// union already relates to union. It also keeps the degenerate case out of the
-// code entirely: smin at k = 0 is min by way of a division by zero, and 0/0
-// where the two arguments are equal, so "zero means hard" would put a
-// parameter exactly on a singularity (idiom 30).
+// Its own id rather than a blend radius on the hard one. It also keeps the
+// degenerate case out: smin at k = 0 is min by way of 0/0 (idiom 30).
 constexpr uint32_t FIELD_OP_SMOOTH_SUBTRACTION = 4;
 
 // Which family an operation belongs to, asked in one place. Callers care about
@@ -53,31 +50,12 @@ constexpr bool fieldOpRemovesMaterial(uint32_t operation) {
 
 constexpr float EDIT_RADIUS = 0.35f;
 
-/* How far one click moves the surface, which is not the same question as how
- * wide a bite is.
- *
- * Welding the two forces the advance to a full radius, and that is the worst
- * stamp spacing there is: the union of equal spheres spaced s apart has a wall
- * oscillating between sqrt(R^2 - (s/2)^2) and R, so s = R corrugates it by 13%
- * - visible rings down a tunnel and a scalloped rim around a hollow. At half a
- * radius the corrugation is 3.2%, or 0.011 units, which is under a voxel at
- * the current grid resolution and therefore cannot be represented, let alone
- * seen. Sculpting tools space their stamps at a quarter to a half of the brush
- * for the same reason.
- */
+// How far one click moves the surface, which is not how wide a bite is. A full
+// radius is the worst spacing: equal spheres corrugate the wall by 13%.
 constexpr float EDIT_ADVANCE = 0.5f * EDIT_RADIUS;
 
-/* The radius over which one carve rounds into the last.
- *
- * Spacing alone cannot fix the rings a string of carves leaves, because they
- * are a crease and not an amplitude: a union of spheres is C0 but not C1, and
- * halving the spacing only halves the crease angle. Rounding the joint is a
- * change of continuity class, which is the only thing that removes it.
- *
- * Sized against the advance rather than the radius, since the advance is what
- * sets how far apart the joints are. Larger eats noticeably more material than
- * was aimed at, because smooth max sits up to k/4 above the hard one.
- */
+// The radius over which one carve rounds into the last. Spacing cannot fix the
+// rings - they are a crease, not an amplitude.
 constexpr float EDIT_BLEND = 0.6f * EDIT_ADVANCE;
 
 // Lattice points per axis for the sampled representation, and the slack added

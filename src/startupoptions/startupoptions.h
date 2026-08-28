@@ -4,13 +4,8 @@
 #include <span>
 #include <string>
 
-/* What the process was asked to do before the first frame.
- *
- * A measurement harness, not a feature. Reproducing a comparison means running
- * the same scene at the same primitive count in each representation, and a hand
- * on the keyboard reproduces neither between runs. Every option here exists to
- * make a measurement repeatable; none of them changes what the renderer is.
- */
+// What the process was asked to do before the first frame. A measurement
+// harness: every option makes a comparison repeatable, none changes the render.
 struct StartupOptions {
   StartupOptions() = default;
   explicit StartupOptions(std::span<char*> arguments);

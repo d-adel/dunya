@@ -2,15 +2,8 @@
 
 namespace {
 
-/* What counts as noise rather than change.
- *
- * Deliberately strict, because the run-to-run spread on this machine was
- * measured rather than guessed at: three runs of the same scene produced
- * bit-identical frames. A tolerance wider than the noise is a regression this
- * gate would wave through. It will need widening the day a driver update moves
- * the numbers - and *that* is the moment to measure again, not to raise it
- * until the red goes away.
- */
+// What counts as noise rather than change. Strict, because three runs here
+// produced bit-identical frames; widen it by measuring, not to clear red.
 constexpr dunya::image::Tolerance TOLERANCE{0, 0, 255};
 
 }  // namespace
@@ -57,11 +50,8 @@ dunya::image::Bitmap FrameCheck::read(VkImage image) const {
   );
 }
 
-/* A missing reference writes one and still fails.
- *
- * Passing instead would mean a mistyped path silently reports success forever,
- * which is the failure mode that makes a test worse than no test at all.
- */
+// A missing reference writes one and still fails; passing would let a mistyped
+// path report success forever.
 bool FrameCheck::compareToReference(const dunya::image::Bitmap& frame) const {
   const std::filesystem::path reference(m_reference);
 

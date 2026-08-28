@@ -22,13 +22,9 @@
 #include <dunya/renderer/fieldbaker/fieldbaker.h>
 #include <dunya/editor/commandhistory/commandhistory.h>
 
-/* Wiring, and the loop.
- *
- * Owns the subsystems and hands them each other; turns input into intent and
- * intent into calls on whichever of them the intent belongs to. What it should
- * *not* do is any of their work - an edit lives in FieldEditor, a harness run
- * in FrameCheck, argument parsing in StartupOptions.
- */
+// Wiring, and the loop. Owns the subsystems and hands them each other, but does
+// none of their work - an edit lives in FieldEditor, a harness run in
+// FrameCheck.
 class Application {
 public:
   Application();
@@ -94,10 +90,8 @@ private:
   // that registered it and a captured reference to a local would dangle.
   double m_lastFrameMs = 0.0;
 
-  // Which entity each packing slot was filled from, recorded while the frame is
-  // assembled. The slot is not a position in fields(): the loop skips an entity
-  // whose volume could not be allocated without consuming a slot, so from that
-  // point on the two disagree. A member so the capacity survives the frame.
+  // Which entity filled each packing slot, recorded as the frame is assembled.
+  // Not a position in fields(): a skip consumes no slot, so the two diverge.
   std::vector<dunya::objectmodel::Entity> m_recordEntities;
 
   dunya::core::EventDispatcher::SubscriptionId m_keySubscription{};

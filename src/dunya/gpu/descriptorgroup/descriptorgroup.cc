@@ -359,9 +359,8 @@ void DescriptorGroup::createSetLayout(
     bindings.push_back(layoutBinding);
 
     // Partially bound, because a volume array has empty slots until objects
-    // fill them. No update-after-bind: that would need
-    // descriptorBindingStorageImageUpdateAfterBind, so these can only be
-    // written while no submitted work references the set.
+    // fill them. No update-after-bind, so these can only be written while no
+    // submitted work references the set.
     bindingFlags.push_back(VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT);
 
     ImageSlot slot{};

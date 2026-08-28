@@ -6,12 +6,8 @@
 
 namespace dunya::objectmodel {
 
-// Where an entity is. Deliberately shared rather than field-specific: step 6
-// gives meshes this same component, which is the point of the split.
-//
-// No scale. Nothing in the scene uses one today, and a field entity cannot take
-// a non-uniform scale without breaking the distance property - so the asymmetry
-// gets decided rather than inherited.
+// Where an entity is. No scale: a field entity cannot take a non-uniform one
+// without breaking the distance property.
 struct Pose {
   glm::vec3 position{0.0f};
   glm::quat rotation{1.0f, 0.0f, 0.0f, 0.0f};

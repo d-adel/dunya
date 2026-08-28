@@ -76,11 +76,9 @@ public:
 
   void setBakedVolume(Entity entity, uint32_t index);
 
-  // Change tracking, not a flag. The queue is an entt::reactive storage the
-  // registry fills from its own signals, so a mutation path added later is
-  // covered without anyone remembering to mark it - and a second consumer
-  // (a physics re-fit, an acceleration structure) gets its own window off the
-  // same signal instead of fighting over one bool.
+  // Change tracking, not a flag: the queue is entt::reactive storage filled
+  // from the registry's own signals, so a new mutation path is covered without
+  // anyone remembering to mark it.
   bool needsBake(Entity entity) const noexcept;
   void markBaked(Entity entity);
 

@@ -60,10 +60,9 @@ bool skippable(
     case 1u:
       return bound > accumulated;
 
-    // Subtraction is max(acc, -cur), which only bites when the cutter reaches
-    // within the accumulated distance. The smooth one bites k sooner, and that
-    // k is already folded into the stored radius by updateBounds, so the two
-    // share this test rather than needing a second one.
+    // Subtraction only bites when the cutter reaches within the accumulated
+    // distance. The smooth one bites k sooner, and updateBounds already folded
+    // k into the stored radius, so both share this test.
     case 3u:
     case 4u:
       return bound >= -accumulated;
@@ -98,11 +97,8 @@ void updateBounds(Primitive& primitive) {
       break;
   }
 
-  // A blend reaches further than the shape does, in both directions: a smooth
-  // union pulls the surface toward a neighbour that has not touched it yet, and
-  // a smooth subtraction starts rounding before the cutter arrives. Either way
-  // the primitive matters k earlier than its own radius says, so the bound has
-  // to carry k or skippable() will cull one that still had work to do.
+  // A blend reaches k further than the shape does, both ways, so the bound has
+  // to carry k or skippable() culls a primitive that still had work to do.
   if (
     radius > 0.0f
     && (primitive.shapeConfig.z == 1u || primitive.shapeConfig.z == 4u)
@@ -179,15 +175,9 @@ AnalyticSample sample(
         };
         break;
 
-      // Smooth subtraction, which is smooth max applied to the negated cutter:
-      // smax(a, b, k) = -smin(-a, -b, k), and b is -cur, so the inner negation
-      // cancels. One blend primitive, used both ways.
-      //
-      // Where a hard subtraction leaves a crease at every intersection circle,
-      // this rounds it - and a crease is what shading shows, because a normal
-      // is a derivative (idiom 31). It costs a little conservatism: smax sits
-      // up to k/4 above the hard max, so unlike smin it is not automatically a
-      // safe under-estimate for sphere tracing.
+      // Smooth subtraction: smax(a, b, k) = -smin(-a, -b, k), and b is -cur, so
+      // the inner negation cancels. smax sits up to k/4 above the hard max, so
+      // it is not a safe under-estimate for sphere tracing.
       case 4u:
         accumulated = {
           -smoothMin(

@@ -30,8 +30,7 @@ void SdfPrimitiveStore::refresh(entt::registry& registry, Entity entity) {
 
   // patch, not a write through get<>: the update signal is what puts this
   // entity in the bake queue, and a bare reference write is invisible to it.
-  // This call is the whole of what "mark dirty" used to mean.
-  // The queue membership is the flag now, and nobody writes it by hand.
+  // Queue membership is the flag now, and nobody writes it by hand.
   registry.patch<FieldGrid>(entity, [primitives](FieldGrid& object) {
     fitToPrimitives(object, primitives);
   });

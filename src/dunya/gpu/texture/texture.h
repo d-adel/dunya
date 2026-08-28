@@ -24,10 +24,8 @@ public:
     const void* pixels
   );
 
-  // The general form: a volume of any format, so the caller states the byte
-  // count rather than having it inferred from a texel size that varies. Extra
-  // usage is for images a shader will also write, which need STORAGE_BIT
-  // declared at creation and cannot gain it later.
+  // The general form: any format, so the caller states the byte count. Extra
+  // usage is for images a shader writes, which need STORAGE_BIT at creation.
   Texture(
     const Device& device,
     uint32_t width,

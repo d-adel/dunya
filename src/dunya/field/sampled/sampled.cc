@@ -327,9 +327,9 @@ float stepBound(
   }
 
   // A ray starting next to a wall has almost no room before it, and stepping
-  // that gap over and over never leaves the brick. Half a voxel is the floor:
-  // enough to cross, short enough that the bound still describes the ground it
-  // covers. Without it a march stops advancing instead of failing.
+  // that gap repeatedly never leaves the brick. Half a voxel is the floor:
+  // enough to cross, short enough that the bound still describes what it
+  // covers.
   const glm::vec3 voxel = field.voxelSize;
 
   exit = std::max(exit, 0.5f * std::min(voxel.x, std::min(voxel.y, voxel.z)));

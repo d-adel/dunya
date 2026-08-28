@@ -181,10 +181,9 @@ float brickExit(FieldRecordShared record, vec3 p, vec3 direction) {
     exit = min(exit, (wall - p[axis]) / direction[axis]);
   }
 
-  // A ray starting next to a wall has almost no room before it, and stepping
-  // that gap over and over is a crawl that never leaves the brick. Half a voxel
-  // is the floor: enough to cross, and short enough that the bound it was
-  // measured under still describes the ground it covers.
+  // A ray next to a wall has almost no room, and stepping that gap never leaves
+  // the brick. Half a voxel is the floor: enough to cross, short enough that
+  // the bound still describes it.
   vec3 voxel = record.voxelSize.xyz;
 
   return max(exit, 0.5 * min(voxel.x, min(voxel.y, voxel.z)));
@@ -206,13 +205,9 @@ vec2 fieldDistance(FieldRecordShared record, vec3 p) {
   return gridSample(record, p);
 }
 
-// What the field says, and how far the ray may act on it, are two things. They
-// differ only for the sampled representation, whose value is an interpolation
-// rather than a bound on the distance to its own surface.
-//
-// Both functions below return a step no zero of the field lies inside. They
-// differ in which bound they lean on, and that is a trade rather than a
-// preference: see the shadow one.
+// What the field says and how far the ray may act on it are two things; they
+// differ only for the sampled representation. Both functions below return a
+// step no zero of the field lies inside.
 float fieldStep(FieldRecordShared record,
                 vec3 p,
                 vec3 direction,
@@ -236,12 +231,9 @@ float fieldStep(FieldRecordShared record,
   return min(abs(value) / bound, exit);
 }
 
-// The bound over the whole grid rather than one brick's. Looser, so the steps
-// are shorter, and in exchange it needs no wall to stop at - which matters here
-// because a soft shadow is a minimum over the samples the march happens to
-// take, and clamping to brick walls quantises where those fall. The penumbra
-// then carries the brick grid in it, which is visible where the geometry is
-// shallow.
+// The bound over the whole grid rather than one brick's: looser, so shorter
+// steps, but it needs no wall to stop at. Clamping to brick walls would
+// quantise where a soft shadow's samples fall.
 float fieldShadowStep(FieldRecordShared record, vec3 p, float value) {
   if (record.config.y == 0u) {
     return abs(value);
@@ -416,18 +408,13 @@ float lightReachingLocal(FieldRecordShared record,
 float lightReaching(vec3 worldOrigin, vec3 worldDirection) {
   float result = 1.0;
 
-  // Bounded by the count, not by the table's capacity. Walking all 64 slots
-  // per fragment was both the cost and the bug: nothing ever cleared a slot, so
-  // one left over from a busier frame still claimed to be live and cast a
-  // shadow from an object that had gone.
+  // Bounded by the count, not the table's capacity. Nothing clears a slot, so
+  // one left from a busier frame would still claim to be live.
   for (uint i = 0u; i < counts.fieldRecords; ++i) {
     FieldRecordShared record = fieldRecordTable.records[i];
 
-    // Same world -> local crossing as the primary ray:
-    // point w = 1
-    // direction w = 0
-    //
-    // Do not renormalise the direction.
+    // Same world -> local crossing as the primary ray: point w = 1, direction
+    // w = 0. Do not renormalise the direction.
     vec3 localOrigin = (record.inverseModel * vec4(worldOrigin, 1.0)).xyz;
 
     vec3 localDirection = (record.inverseModel * vec4(worldDirection, 0.0)).xyz;

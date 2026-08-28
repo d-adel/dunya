@@ -9,13 +9,8 @@
 
 #include <string>
 
-/* What a harness run does with the frame it asked for.
- *
- * Reads the finished image back and then either writes it out or holds it
- * against a committed reference. Both are things a *test* wants from a
- * renderer, which is why they live here rather than growing inside the class
- * that owns the frame loop.
- */
+// Reads the finished frame back, then writes it out or holds it against a
+// committed reference. Both are things a test wants, not the frame loop.
 class FrameCheck {
 public:
   FrameCheck(

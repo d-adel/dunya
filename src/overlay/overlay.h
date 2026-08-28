@@ -10,17 +10,9 @@
 #include <string>
 #include <vector>
 
-/* The development overlay.
- *
- * A tool, not part of the picture: nothing the renderer draws depends on it,
- * and a run that captures a frame simply never builds one.
- *
- * The frame is split the way the rest of the project already splits one -
- * Application decides *what* to show, Renderer decides *when* it is recorded -
- * so building the widgets and submitting their geometry are separate calls.
- * ImGui::Render() happens at the end of building rather than at recording, so a
- * frame whose swapchain went stale still closes the ImGui frame it opened.
- */
+// A tool, not part of the picture: nothing the renderer draws depends on it.
+// Building the widgets and submitting them are separate calls, so a stale
+// swapchain still closes the ImGui frame it opened.
 class Overlay {
 public:
   Overlay(
@@ -35,14 +27,8 @@ public:
 
   ~Overlay();
 
-  /* Registers a panel. The callback draws it with ImGui calls of its own.
-   *
-   * The overlay never learns what is inside one, which is the whole point: a
-   * panel belongs next to the data it shows, so whoever owns the data writes
-   * it, and adding one costs nothing here. The alternative - a method per
-   * panel, like the hardcoded stats window this replaced - makes the overlay
-   * grow a dependency on every subsystem in the project.
-   */
+  // Registers a panel. The callback draws it, so a panel lives next to the data
+  // it shows and the overlay depends on no subsystem.
   void panel(std::string name, std::function<void()> draw);
 
   // Opens a frame, fills it from the registered panels, and closes it. Always

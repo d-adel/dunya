@@ -14,10 +14,8 @@ layout(std430, set = 0, binding = 6) buffer BrickBounds {
   float values[];
 } brickBounds;
 
-// The same block the bake takes, because it describes the same grid. volume.z is
-// this object's range in the bound table, whose first entry is one bound over
-// the whole grid and whose rest is one per brick. volume.w picks the pass: zero
-// reduces the bricks, one reduces those into the global.
+// The same block the bake takes. volume.z is this object's range in the bound
+// table, volume.w picks the pass: zero reduces bricks, one reduces the global.
 layout(push_constant) uniform BakeParams {
   vec4 origin;
   vec4 voxelSize;
