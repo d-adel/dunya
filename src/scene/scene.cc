@@ -60,6 +60,20 @@ Scene::Scene(
 
     );
   }
+
+  // The body M18 drops onto the ground above. A field object rather than a
+  // mesh, because D1 says every physical body is a field.
+  pose.position = glm::vec3(-1.5f, 0.4f, 0.0f);
+  const dunya::objectmodel::Entity bodyEntity = m_world.createField(pose, grid);
+
+  if (!m_world.addPrimitive(
+        bodyEntity,
+        dunya::field::makeSphere(glm::vec3(0.0f), 0.5f)
+      )) {
+    throw std::runtime_error(
+      "Scene: the drop sphere did not fit the primitive arena"
+    );
+  }
 }
 
 void Scene::augmentFrameContext(

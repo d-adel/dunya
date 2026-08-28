@@ -1,8 +1,0 @@
-#include "physicsdemo.h"
-
-#include <Jolt/Physics/Body/BodyCreationSettings.h>
-#include <Jolt/Physics/Collision/Shape/BoxShape.h>
-#include <Jolt/Physics/Collision/Shape/SphereShape.h>
-
-#include <cstdio>
-#include <stdexcept>

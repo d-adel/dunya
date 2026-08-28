@@ -130,7 +130,6 @@ int Application::start(const StartupOptions& options) {
   double pipelineReloadCheck = 0;
   double statWindowStart = prevTime;
   double physicsAccumulator = 0.0;
-  uint64_t physicsStep = 0;
   uint32_t statFrames = 0;
 
   while (!glfwWindowShouldClose(m_context.window().handle())) {
@@ -146,11 +145,6 @@ int Application::start(const StartupOptions& options) {
 
       while (physicsAccumulator >= dunya::physics::PhysicsWorld::TIME_STEP) {
         m_runtime->physics().step();
-        ++physicsStep;
-
-        if (physicsStep % 30 == 0 && m_physicsDemo) {
-          m_physicsDemo->log();
-        }
 
         physicsAccumulator -= dunya::physics::PhysicsWorld::TIME_STEP;
       }
@@ -489,7 +483,6 @@ void Application::play() {
   releaseAllVolumes();
 
   m_runtime.emplace(m_authoredWorld, m_joltLibrary);
-  m_physicsDemo.emplace(m_runtime->physics());
 
   std::cout << "Play" << std::endl;
 }
@@ -501,7 +494,6 @@ void Application::stop() {
 
   releaseAllVolumes();
 
-  m_physicsDemo.reset();
   m_runtime.reset();
 
   std::cout << "Stop" << std::endl;

@@ -223,7 +223,6 @@ add_executable(${PROJECT_NAME}
     src/framecheck/framecheck.cc
     src/application/application.cc
     src/scene/scene.cc
-    src/physicsdemo/physicsdemo.cc
 )
 
 find_program(

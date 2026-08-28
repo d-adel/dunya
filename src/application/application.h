@@ -3,7 +3,6 @@
 #include <dunya/physics/joltlibrary/joltlibrary.h>
 #include <dunya/physics/physicsworld/physicsworld.h>
 #include <dunya/runtime/runtime/runtime.h>
-#include <physicsdemo/physicsdemo.h>
 #include <dunya/gpu/context/context.h>
 #include <dunya/gpu/swapchain/swapchain.h>
 #include <scene/scene.h>
@@ -83,10 +82,8 @@ private:
   // there is, so E5 holds by construction rather than by a gate.
   std::optional<dunya::runtime::Runtime> m_runtime;
 
-  // After m_runtime: it holds a reference into that PhysicsWorld, and members
-  // are destroyed in reverse declaration order.
-  std::optional<PhysicsDemo> m_physicsDemo;
   Scene m_scene;
+
   dunya::renderer::FrameGlobals m_frameGlobals;
   dunya::renderer::ResourceTable m_resourceTable;
   dunya::renderer::FieldRecordTable m_recordTable;
