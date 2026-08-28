@@ -25,7 +25,7 @@ target_link_libraries(dunya_physics PUBLIC
 )
 
 if (MSVC)
-    target_compile_options(dunya_physics PRIVATE /W4 /WX /Zc:__cplusplus)
+    target_compile_options(dunya_physics PRIVATE /W4 /WX /w15038 /Zc:__cplusplus)
 else()
     target_compile_options(dunya_physics PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()

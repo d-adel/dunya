@@ -32,7 +32,7 @@ target_compile_definitions(dunya_core PUBLIC
 )
 
 if (MSVC)
-    target_compile_options(dunya_core PRIVATE /W4 /WX /Zc:__cplusplus)
+    target_compile_options(dunya_core PRIVATE /W4 /WX /w15038 /Zc:__cplusplus)
 else()
     target_compile_options(dunya_core PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()

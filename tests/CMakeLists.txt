@@ -26,7 +26,7 @@ target_include_directories(unit_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(unit_tests PRIVATE dunya::core dunya::editor dunya::field dunya::objectmodel dunya::physics dunya::runtime Catch2::Catch2WithMain)
 
 if (MSVC)
-    target_compile_options(unit_tests PRIVATE /W4 /WX /Zc:__cplusplus)
+    target_compile_options(unit_tests PRIVATE /W4 /WX /w15038 /Zc:__cplusplus)
 else()
     target_compile_options(unit_tests PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
@@ -41,7 +41,7 @@ add_executable(image_tests
 target_link_libraries(image_tests PRIVATE dunya::imagecompare Catch2::Catch2WithMain)
 
 if (MSVC)
-    target_compile_options(image_tests PRIVATE /W4 /WX /Zc:__cplusplus)
+    target_compile_options(image_tests PRIVATE /W4 /WX /w15038 /Zc:__cplusplus)
 else()
     target_compile_options(image_tests PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()

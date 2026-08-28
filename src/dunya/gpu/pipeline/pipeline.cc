@@ -34,8 +34,8 @@ Pipeline::Pipeline(
         attributeDescriptions.begin(),
         attributeDescriptions.end()
       ),
-      m_type(type),
-      m_depthImageFormat(swapChain.depthImage().format()) {
+      m_depthImageFormat(swapChain.depthImage().format()),
+      m_type(type) {
   try {
     create();
   } catch (...) {

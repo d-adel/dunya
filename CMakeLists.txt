@@ -305,7 +305,7 @@ add_dependencies(${PROJECT_NAME} SHADER_TARGET)
 
 # Target
 if (MSVC)
-    target_compile_options(${PROJECT_NAME} PRIVATE /W4 /WX /Zc:__cplusplus)
+    target_compile_options(${PROJECT_NAME} PRIVATE /W4 /WX /w15038 /Zc:__cplusplus)
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
