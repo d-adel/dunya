@@ -4,6 +4,7 @@
 
 add_library(dunya_objectmodel STATIC
     camera/camera.cc
+    instantiate/instantiate.cc
     sdfgrid/sdfgrid.cc
     sdfprimitivestore/sdfprimitivestore.cc
     world/world.cc

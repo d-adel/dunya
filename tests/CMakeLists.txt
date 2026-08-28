@@ -11,6 +11,7 @@ add_executable(unit_tests
     commandhistory_tests.cc
     entt_tests.cc
     field_tests.cc
+    instantiateworld_tests.cc
     pose_tests.cc
     physics_tests.cc
     rangestore_tests.cc

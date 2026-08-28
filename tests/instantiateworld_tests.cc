@@ -15,6 +15,7 @@
 
 #include <dunya/core/config/config.h>
 #include <dunya/field/field.h>
+#include <dunya/objectmodel/instantiate/instantiate.h>
 #include <dunya/objectmodel/world/world.h>
 
 #include <cstdint>
@@ -107,9 +108,9 @@ TEST_CASE("primitives arrive in csg order", "[instantiate]") {
 
   const Entity id = authored.createField(marked(10.0f), blank());
 
-  authored.addPrimitive(id, marker(1));
-  authored.addPrimitive(id, marker(2));
-  authored.addPrimitive(id, marker(3));
+  REQUIRE(authored.addPrimitive(id, marker(1)));
+  REQUIRE(authored.addPrimitive(id, marker(2)));
+  REQUIRE(authored.addPrimitive(id, marker(3)));
 
   World runtime;
   dunya::objectmodel::instantiateWorld(authored, runtime);
@@ -162,7 +163,7 @@ TEST_CASE("instantiating leaves the authored world alone", "[instantiate]") {
   World authored;
 
   const Entity id = authored.createField(marked(10.0f), blank());
-  authored.addPrimitive(id, marker(1));
+  REQUIRE(authored.addPrimitive(id, marker(1)));
   authored.createMesh(Pose{}, Mesh{0}, Material{0});
 
   World runtime;
@@ -183,7 +184,7 @@ TEST_CASE(
   World authored;
 
   const Entity id = authored.createField(marked(10.0f), blank());
-  authored.addPrimitive(id, marker(1));
+  REQUIRE(authored.addPrimitive(id, marker(1)));
 
   World runtime;
   dunya::objectmodel::instantiateWorld(authored, runtime);
@@ -193,7 +194,7 @@ TEST_CASE(
     id,
     Pose{glm::vec3(99.0f, 0.0f, 0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f)}
   );
-  runtime.addPrimitive(id, marker(2));
+  REQUIRE(runtime.addPrimitive(id, marker(2)));
   runtime.createMesh(Pose{}, Mesh{7}, Material{7});
 
   // Stop.
@@ -201,4 +202,25 @@ TEST_CASE(
   REQUIRE(authored.primitiveCount(id) == 1);
   REQUIRE(materialAt(authored, id, 0) == 1);
   REQUIRE(authored.meshes().size() == 0);
+}
+
+TEST_CASE("mesh entities arrive at the ids they had", "[instantiate]") {
+  // The order case above would pass with fresh ids. At M18 a mesh entity
+  // carries a physics body, and a body keyed off an id that changed on the way
+  // across is a silent bug, so identity is pinned separately here.
+  World authored;
+
+  const Entity two{2};
+  const Entity seven{7};
+
+  REQUIRE(authored.createMeshAt(two, Pose{}, Mesh{0}, Material{1}));
+  REQUIRE(authored.createMeshAt(seven, Pose{}, Mesh{1}, Material{2}));
+
+  World runtime;
+  dunya::objectmodel::instantiateWorld(authored, runtime);
+
+  REQUIRE(runtime.registry().all_of<Mesh>(two));
+  REQUIRE(runtime.registry().all_of<Mesh>(seven));
+  REQUIRE_FALSE(runtime.registry().all_of<Mesh>(Entity{3}));
+  REQUIRE(runtime.registry().get<Material>(seven).index == 2);
 }

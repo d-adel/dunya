@@ -144,6 +144,28 @@ Entity World::createMesh(
   return entity;
 }
 
+bool World::createMeshAt(
+  Entity hint,
+  const Pose& pose,
+  const Mesh& mesh,
+  const Material& material
+) {
+  const Entity entity = m_registry.create(hint);
+
+  // Same contract as createFieldAt: a hint EnTT declines is a failure,
+  // because instantiation keys physics and volumes off the id.
+  if (entity != hint) {
+    m_registry.destroy(entity);
+    return false;
+  }
+
+  m_registry.emplace<Pose>(entity, pose);
+  m_registry.emplace<Mesh>(entity, mesh);
+  m_registry.emplace<Material>(entity, material);
+
+  return true;
+}
+
 std::span<const Entity> World::meshes() const noexcept {
   const auto* storage = m_registry.storage<Mesh>();
 

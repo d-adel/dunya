@@ -101,6 +101,14 @@ public:
     const Material& material
   );
 
+  [[nodiscard]]
+  bool createMeshAt(
+    Entity hint,
+    const Pose& pose,
+    const Mesh& mesh,
+    const Material& material
+  );
+
   // Dense list of entities carrying Mesh.
   std::span<const Entity> meshes() const noexcept;
 
