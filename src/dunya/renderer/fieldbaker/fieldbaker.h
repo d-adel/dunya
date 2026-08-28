@@ -2,7 +2,7 @@
 
 #include <dunya/gpu/computepipeline/computepipeline.h>
 #include <dunya/renderer/fieldobjecttable/fieldobjecttable.h>
-#include <dunya/objectmodel/fieldobject/fieldobject.h>
+#include <dunya/renderer/fieldrecord/fieldrecord.h>
 #include <dunya/renderer/volumepool/volumepool.h>
 #include <dunya/gpu/device/device.h>
 
@@ -37,7 +37,7 @@ public:
   FieldBaker& operator=(FieldBaker&&) = delete;
 
   void bake(
-    const dunya::objectmodel::FieldObjectGPU& fieldObject,
+    const FieldRecord& fieldObject,
     uint32_t frame,
     VolumeImages images
   ) const;

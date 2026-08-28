@@ -15,8 +15,7 @@ FieldObjectTable::FieldObjectTable(const dunya::gpu::Device& device)
         device,
         dunya::core::MAX_FRAMES_IN_FLIGHT,
         {{ENTRIES,
-          dunya::core::MAX_FIELD_OBJECTS
-            * sizeof(dunya::objectmodel::FieldObjectGPU),
+          dunya::core::MAX_FIELD_OBJECTS * sizeof(FieldRecord),
           VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
             | VK_SHADER_STAGE_COMPUTE_BIT,
           dunya::gpu::DescriptorGroup::BufferUpdate::PerFrame,
@@ -96,7 +95,7 @@ void FieldObjectTable::makeGPUField(
   const dunya::objectmodel::FieldObject& fieldObject,
   uint32_t fieldRepresentation
 ) {
-  m_gpuFieldObjects[objectIndex] = dunya::objectmodel::fromFieldObject(
+  m_gpuFieldObjects[objectIndex] = makeFieldRecord(
     fieldObject,
     primitiveOffset,
     primitiveCount,
@@ -105,9 +104,7 @@ void FieldObjectTable::makeGPUField(
 }
 
 void FieldObjectTable::update(uint32_t frame) {
-  std::span<const dunya::objectmodel::FieldObjectGPU> objects(
-    m_gpuFieldObjects
-  );
+  std::span<const FieldRecord> objects(m_gpuFieldObjects);
 
   m_group.write(ENTRIES, frame, objects.data(), objects.size_bytes());
 }
@@ -134,17 +131,16 @@ const VkDescriptorSetLayout& FieldObjectTable::setLayout() const noexcept {
   return m_group.setLayout();
 }
 
-std::span<const dunya::objectmodel::FieldObjectGPU> FieldObjectTable::
+std::span<const FieldRecord> FieldObjectTable::
   gpuFieldObjects() const noexcept {
   return m_gpuFieldObjects;
 }
 
-std::span<const uint32_t> FieldObjectTable::
-  bakeList() const noexcept {
+std::span<const uint32_t> FieldObjectTable::bakeList() const noexcept {
   return m_bakeList;
 }
 
-const dunya::objectmodel::FieldObjectGPU& FieldObjectTable::gpuFieldObject(
+const FieldRecord& FieldObjectTable::gpuFieldObject(
   uint32_t objectIndex
 ) const {
   return m_gpuFieldObjects.at(objectIndex);

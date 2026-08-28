@@ -52,7 +52,7 @@ void transitionVolumes(
 }  // namespace
 
 void FieldBaker::bake(
-  const dunya::objectmodel::FieldObjectGPU& gpu,
+  const FieldRecord& gpu,
   uint32_t frame,
   VolumeImages images
 ) const {
@@ -171,12 +171,7 @@ void FieldBaker::bake(
 
   const glm::uvec3 brickGroups = (bricks + glm::uvec3(3u)) / glm::uvec3(4u);
 
-  vkCmdDispatch(
-    cmd.cmdBuffer(),
-    brickGroups.x,
-    brickGroups.y,
-    brickGroups.z
-  );
+  vkCmdDispatch(cmd.cmdBuffer(), brickGroups.x, brickGroups.y, brickGroups.z);
 
   // And one more, folding those bricks into the bound over the whole grid that
   // the shadow march reads. A second dispatch rather than an atomic, because it

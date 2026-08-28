@@ -4,7 +4,7 @@
 #include <dunya/gpu/buffer/buffer.h>
 #include <dunya/gpu/descriptorgroup/descriptorgroup.h>
 #include <dunya/gpu/device/device.h>
-#include <dunya/objectmodel/fieldobject/fieldobject.h>
+#include <dunya/renderer/fieldrecord/fieldrecord.h>
 
 #include <cstdint>
 #include <span>
@@ -61,20 +61,17 @@ public:
 
   void appendToBakeList(uint32_t slot);
 
-  std::span<const dunya::objectmodel::FieldObjectGPU>
-  gpuFieldObjects() const noexcept;
+  std::span<const FieldRecord> gpuFieldObjects() const noexcept;
   std::span<const uint32_t> bakeList() const noexcept;
 
-  const dunya::objectmodel::FieldObjectGPU& gpuFieldObject(
-    uint32_t objectIndex
-  ) const;
+  const FieldRecord& gpuFieldObject(uint32_t objectIndex) const;
 
   // Exposed for the bake check, which reads a slot back and compares it with
   // the same reduction run on the CPU.
   const dunya::gpu::Buffer& brickBounds() const noexcept;
 
 private:
-  std::vector<dunya::objectmodel::FieldObjectGPU> m_gpuFieldObjects;
+  std::vector<FieldRecord> m_gpuFieldObjects;
   std::vector<uint32_t> m_bakeList;
   dunya::gpu::DescriptorGroup m_group;
 
