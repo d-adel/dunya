@@ -4,9 +4,9 @@ namespace dunya::platform {
 
 Input::Input(GLFWwindow* window, KeyTiming timing)
     : m_enabled(true),
+      m_cursorDeltaInvalid(false),
       m_window(window),
-      m_timing(timing),
-      m_cursorDeltaInvalid(false) {
+      m_timing(timing) {
   if (m_window == nullptr) {
     throw std::invalid_argument("Input requires a valid GLFWwindow");
   }

@@ -14,7 +14,7 @@
 
 class Scene {
 public:
-  Scene(const dunya::gpu::Context& context);
+  explicit Scene(const dunya::gpu::Context& context);
   ~Scene() = default;
 
   Scene(const Scene&) = delete;

@@ -3,6 +3,8 @@
 #include <dunya/physics/joltlibrary/joltlibrary.h>
 #include <dunya/physics/layers/layers.h>
 #include <dunya/physics/physicsworld/physicsworld.h>
+#include <dunya/objectmodel/world/world.h>
+#include <dunya/runtime/runtime/runtime.h>
 
 #include <Jolt/Jolt.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
@@ -152,8 +154,10 @@ std::vector<float> dropTrajectory(int steps) {
 
 }  // namespace
 
-TEST_CASE("the same initial conditions reproduce the same trajectory",
-          "[physics]") {
+TEST_CASE(
+  "the same initial conditions reproduce the same trajectory",
+  "[physics]"
+) {
   const std::vector<float> first = dropTrajectory(120);
   const std::vector<float> second = dropTrajectory(120);
 
@@ -165,4 +169,26 @@ TEST_CASE("the same initial conditions reproduce the same trajectory",
     INFO("step " << i);
     REQUIRE(first[i] == second[i]);
   }
+}
+
+/* Runtime's constructor was declared and never defined, and nothing linked
+ *
+ * dunya::runtime, so nobody found out - the same shape as the phantom main.hpp
+
+ * * idiom 15 records. This case exists to make the link real: constructing one
+ * is
+ * what forces the definition to be pulled out of the static library.
+ *
+
+ * * It pins nothing about what Runtime *does*, because it does not do anything
+
+ * * yet. That is step 9's.
+ */
+TEST_CASE("a runtime can be constructed", "[runtime]") {
+  JoltLibrary library;
+  dunya::objectmodel::World source;
+
+  dunya::runtime::Runtime runtime(source, library);
+
+  SUCCEED();
 }

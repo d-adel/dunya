@@ -17,4 +17,19 @@ struct Primitive {
   vec4 bounds;
 };
 
+/* The per-frame record of a field entity, as both field shaders read it.
+ * Must match FieldRecord in src/dunya/renderer/fieldrecord/fieldrecord.h,
+ * whose static_asserts pin every member offset and the 192-byte total. It used
+ * to be restated in field-shader.frag and field-shader.vert; two copies of a
+ * byte layout is idiom 13 waiting to happen.
+ */
+struct FieldRecordShared {
+  mat4 model;
+  mat4 inverseModel;
+  vec4 voxelSize;
+  uvec4 resolutionVolumeIndex;
+  uvec4 config;
+  vec4 localOrigin;
+};
+
 #endif

@@ -13,7 +13,7 @@ constexpr bool enableValidationLayers = true;
 
 class Instance {
 public:
-  Instance(const std::vector<char const*>& validationLayers);
+  explicit Instance(const std::vector<char const*>& validationLayers);
   Instance(Instance const&) = delete;
   Instance& operator=(Instance const&) = delete;
   ~Instance();

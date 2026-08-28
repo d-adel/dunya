@@ -1,5 +1,5 @@
 /* The specification for the editor/runtime split, written before the code it
- * describes. Not on the field_tests target yet: instantiateWorld does not
+ * describes. Not on the unit_tests target yet: instantiateWorld does not
  * exist, so this file cannot compile. Add it to tests/CMakeLists.txt the
  * moment it does. The reads and writes below are on the World surface
  * settled at M31 increment C, so only the function is missing.
@@ -21,19 +21,28 @@
 
 namespace {
 
+using dunya::objectmodel::BakedVolume;
 using dunya::objectmodel::DrawItem;
 using dunya::objectmodel::Entity;
 using dunya::objectmodel::FieldGrid;
+using dunya::objectmodel::Pose;
 using dunya::objectmodel::World;
 
-// position.x carries a marker, so a test can say which object it is looking at
-// after instantiation has moved everything into a second registry.
-FieldGrid marked(float marker) {
-  FieldGrid object{};
-  object.resolution = glm::uvec3(dunya::core::FIELD_GRID_RESOLUTION);
-  object.position.x = marker;
+// A grid is only usable once it has a resolution; the marker rides in the Pose
+// beside it, so a test can say which entity it is looking at after
+// instantiation has moved everything into a second registry.
+FieldGrid blank() {
+  FieldGrid grid{};
+  grid.resolution = glm::uvec3(dunya::core::FIELD_GRID_RESOLUTION);
 
-  return object;
+  return grid;
+}
+
+Pose marked(float marker) {
+  Pose pose{};
+  pose.position.x = marker;
+
+  return pose;
 }
 
 // Materials number the primitives 1, 2, 3..., which is how a test tells one
@@ -43,7 +52,7 @@ dunya::field::Primitive marker(uint32_t material) {
 }
 
 float markerAt(const World& world, Entity entity) {
-  return world.registry().get<FieldGrid>(entity).position.x;
+  return world.registry().get<Pose>(entity).position.x;
 }
 
 uint32_t materialAt(const World& world, Entity entity, uint32_t index) {
@@ -57,8 +66,8 @@ TEST_CASE("every object arrives at the id it had", "[instantiate]") {
   // one number, so a translation table is exactly what this must avoid.
   World authored;
 
-  const Entity first = authored.createField(marked(10.0f));
-  const Entity second = authored.createField(marked(11.0f));
+  const Entity first = authored.createField(marked(10.0f), blank());
+  const Entity second = authored.createField(marked(11.0f), blank());
 
   World runtime;
   dunya::objectmodel::instantiateWorld(authored, runtime);
@@ -78,8 +87,8 @@ TEST_CASE("ids with holes in them are preserved", "[instantiate]") {
   const Entity zero{0};
   const Entity five{5};
 
-  REQUIRE(authored.createFieldAt(zero, marked(10.0f)));
-  REQUIRE(authored.createFieldAt(five, marked(15.0f)));
+  REQUIRE(authored.createFieldAt(zero, marked(10.0f), blank()));
+  REQUIRE(authored.createFieldAt(five, marked(15.0f), blank()));
 
   World runtime;
   dunya::objectmodel::instantiateWorld(authored, runtime);
@@ -95,7 +104,7 @@ TEST_CASE("primitives arrive in csg order", "[instantiate]") {
   // preserves the set but not the sequence produces a different shape.
   World authored;
 
-  const Entity id = authored.createField(marked(10.0f));
+  const Entity id = authored.createField(marked(10.0f), blank());
 
   authored.addPrimitive(id, marker(1));
   authored.addPrimitive(id, marker(2));
@@ -110,20 +119,23 @@ TEST_CASE("primitives arrive in csg order", "[instantiate]") {
   REQUIRE(materialAt(runtime, id, 2) == 3);
 }
 
-TEST_CASE("volumeIndex does not cross the boundary", "[instantiate]") {
-  // Bug B2. The frame loop bakes only when volumeIndex is UINT32_MAX, so an
-  // instantiated object that keeps the editor's index renders the editor's
-  // volume and dents it. Copying FieldGrid wholesale gets this wrong.
+TEST_CASE("a baked volume does not cross the boundary", "[instantiate]") {
+  // Bug B2. The frame loop allocates only for an entity with no BakedVolume,
+  // so an instantiated entity that keeps the editor's component renders the
+  // editor's volume and dents it. Naming the components to copy is what stops
+  // this; a wholesale registry copy would take it.
   World authored;
 
-  const Entity id = authored.createField(marked(10.0f));
-  authored.setVolumeIndex(id, 3);
+  const Entity id = authored.createField(marked(10.0f), blank());
+  authored.setBakedVolume(id, 3);
 
   World runtime;
   dunya::objectmodel::instantiateWorld(authored, runtime);
 
-  REQUIRE(runtime.registry().get<FieldGrid>(id).volumeIndex == UINT32_MAX);
-  REQUIRE(authored.registry().get<FieldGrid>(id).volumeIndex == 3);
+  // Absence is the state, so the runtime entity must not carry the component
+  // at all - not carry it holding a sentinel.
+  REQUIRE_FALSE(runtime.registry().all_of<BakedVolume>(id));
+  REQUIRE(authored.registry().get<BakedVolume>(id).index == 3);
 }
 
 TEST_CASE("draw items arrive in order", "[instantiate]") {
@@ -146,7 +158,7 @@ TEST_CASE("draw items arrive in order", "[instantiate]") {
 TEST_CASE("instantiating leaves the authored world alone", "[instantiate]") {
   World authored;
 
-  const Entity id = authored.createField(marked(10.0f));
+  const Entity id = authored.createField(marked(10.0f), blank());
   authored.addPrimitive(id, marker(1));
   authored.addDrawItem(DrawItem{0, 0, glm::mat4(1.0f)});
 
@@ -167,7 +179,7 @@ TEST_CASE(
   // Everything a runtime does to its world has to die with that world.
   World authored;
 
-  const Entity id = authored.createField(marked(10.0f));
+  const Entity id = authored.createField(marked(10.0f), blank());
   authored.addPrimitive(id, marker(1));
 
   World runtime;

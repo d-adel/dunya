@@ -139,7 +139,8 @@ TEST_CASE("bounds culling does not change the field", "[field][bounds]") {
 TEST_CASE("an empty field is far away and has material zero", "[field]") {
   const std::vector<Primitive> primitives;
 
-  const AnalyticSample result = dunya::field::sample(primitives, glm::vec3(0.0f));
+  const AnalyticSample result =
+    dunya::field::sample(primitives, glm::vec3(0.0f));
 
   REQUIRE(result.distance > 1e8f);
   REQUIRE(result.material == 0);
@@ -310,13 +311,17 @@ TEST_CASE("subtraction keeps the accumulated material", "[field][csg]") {
     )
   };
 
-  const AnalyticSample result = dunya::field::sample(primitives, glm::vec3(0.0f));
+  const AnalyticSample result =
+    dunya::field::sample(primitives, glm::vec3(0.0f));
 
   REQUIRE_THAT(result.distance, WithinAbs(0.5f, ANALYTIC_TOLERANCE));
   REQUIRE(result.material == 3);
 }
 
-TEST_CASE("smooth subtraction rounds where the hard one creases", "[field][csg]") {
+TEST_CASE(
+  "smooth subtraction rounds where the hard one creases",
+  "[field][csg]"
+) {
   // A unit sphere with a smaller sphere cut out of it, k = 0.5. At radius 0.75
   // the accumulated distance is -0.25 and the cutter's is +0.25, so the two
   // arguments of the smooth max are equal: h is 0.5 and the blend adds

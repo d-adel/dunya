@@ -16,6 +16,7 @@ public:
   ~Window();
 
   GLFWwindow* handle() const noexcept;
+  [[nodiscard]]
   bool takeResized() noexcept;
   bool focused() const noexcept;
 

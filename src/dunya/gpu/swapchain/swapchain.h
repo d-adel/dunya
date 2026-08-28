@@ -8,7 +8,7 @@ namespace dunya::gpu {
 
 class SwapChain {
 public:
-  SwapChain(const Context& context);
+  explicit SwapChain(const Context& context);
   SwapChain(SwapChain const&) = delete;
   SwapChain& operator=(SwapChain const&) = delete;
   ~SwapChain();

@@ -34,10 +34,10 @@ dunya::field::Primitive marker(uint32_t material) {
 Entity makeObject(entt::registry& registry) {
   const Entity entity = registry.create();
 
-  FieldGrid object{};
-  object.resolution = glm::uvec3(dunya::core::FIELD_GRID_RESOLUTION);
+  FieldGrid grid{};
+  grid.resolution = glm::uvec3(dunya::core::FIELD_GRID_RESOLUTION);
 
-  registry.emplace<FieldGrid>(entity, object);
+  registry.emplace<FieldGrid>(entity, grid);
 
   return entity;
 }
@@ -84,8 +84,8 @@ TEST_CASE("inserting shifts the primitives after it", "[sdfstore]") {
 
   const Entity entity = makeObject(registry);
 
-  store.append(registry, entity, marker(1));
-  store.append(registry, entity, marker(3));
+  REQUIRE(store.append(registry, entity, marker(1)));
+  REQUIRE(store.append(registry, entity, marker(3)));
 
   REQUIRE(store.insert(registry, entity, 1, marker(2)));
 
@@ -101,9 +101,9 @@ TEST_CASE("removing shifts the primitives down", "[sdfstore]") {
 
   const Entity entity = makeObject(registry);
 
-  store.append(registry, entity, marker(1));
-  store.append(registry, entity, marker(2));
-  store.append(registry, entity, marker(3));
+  REQUIRE(store.append(registry, entity, marker(1)));
+  REQUIRE(store.append(registry, entity, marker(2)));
+  REQUIRE(store.append(registry, entity, marker(3)));
 
   REQUIRE(store.remove(registry, entity, 1));
 
@@ -118,8 +118,8 @@ TEST_CASE("setting replaces in place", "[sdfstore]") {
 
   const Entity entity = makeObject(registry);
 
-  store.append(registry, entity, marker(1));
-  store.append(registry, entity, marker(2));
+  REQUIRE(store.append(registry, entity, marker(1)));
+  REQUIRE(store.append(registry, entity, marker(2)));
 
   REQUIRE(store.set(registry, entity, 0, marker(9)));
 
@@ -178,7 +178,7 @@ TEST_CASE("destroying an entity returns its range to the arena", "[sdfstore]") {
   store.connect(registry);
 
   const Entity entity = makeObject(registry);
-  store.append(registry, entity, marker(1));
+  REQUIRE(store.append(registry, entity, marker(1)));
 
   REQUIRE(store.pool().size() == 4);
 
@@ -195,7 +195,7 @@ TEST_CASE("removing the range component alone returns it too", "[sdfstore]") {
   store.connect(registry);
 
   const Entity entity = makeObject(registry);
-  store.append(registry, entity, marker(1));
+  REQUIRE(store.append(registry, entity, marker(1)));
 
   registry.remove<SdfPrimitiveRange>(entity);
 
@@ -212,8 +212,8 @@ TEST_CASE("clearing the registry returns every range", "[sdfstore]") {
   const Entity first = makeObject(registry);
   const Entity second = makeObject(registry);
 
-  store.append(registry, first, marker(1));
-  store.append(registry, second, marker(2));
+  REQUIRE(store.append(registry, first, marker(1)));
+  REQUIRE(store.append(registry, second, marker(2)));
 
   REQUIRE(store.pool().size() == 8);
 
@@ -237,9 +237,9 @@ TEST_CASE(
 
   const Entity entity = makeObject(registry);
 
-  store.append(registry, entity, marker(1));
-  store.append(registry, entity, marker(2));
-  store.append(registry, entity, marker(3));
+  REQUIRE(store.append(registry, entity, marker(1)));
+  REQUIRE(store.append(registry, entity, marker(2)));
+  REQUIRE(store.append(registry, entity, marker(3)));
 
   const size_t allocated = store.pool().size();
 

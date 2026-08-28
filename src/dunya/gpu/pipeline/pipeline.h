@@ -69,6 +69,7 @@ public:
   const VkPipelineLayout& pipelineLayout() const noexcept;
 
   void reload();
+  [[nodiscard]]
   bool sourcesChanged() const;
 
 private:

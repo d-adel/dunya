@@ -238,7 +238,10 @@ TEST_CASE("the global bound is the largest brick bound", "[sampled][bound]") {
   REQUIRE_THAT(field.globalLipschitz, WithinAbs(1.7320508f, 1e-4f));
 }
 
-TEST_CASE("the sampled gradient is the interpolant's own", "[sampled][gradient]") {
+TEST_CASE(
+  "the sampled gradient is the interpolant's own",
+  "[sampled][gradient]"
+) {
   const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
 
   const SampledField field = dunya::field::bake(
@@ -304,8 +307,7 @@ TEST_CASE("a stepBound step never crosses the surface", "[sampled][bound]") {
             break;
           }
 
-          const float step =
-            dunya::field::stepBound(field, point, direction);
+          const float step = dunya::field::stepBound(field, point, direction);
 
           // The whole guarantee, stated directly: no zero of the field lies in
           // the step. Checking only where it lands would miss a thin negative
@@ -327,8 +329,10 @@ TEST_CASE("a stepBound step never crosses the surface", "[sampled][bound]") {
   REQUIRE(stepsTaken > 1000u);
 }
 
-TEST_CASE("a step stops at the wall of the brick it was measured in",
-          "[sampled][bound]") {
+TEST_CASE(
+  "a step stops at the wall of the brick it was measured in",
+  "[sampled][bound]"
+) {
   const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
 
   SampledField field = dunya::field::bake(
@@ -341,7 +345,10 @@ TEST_CASE("a step stops at the wall of the brick it was measured in",
   // A carve written into one brick puts a surface inside it that the
   // neighbouring brick's samples know nothing about: its own values still
   // describe an empty stretch, so only the wall can stop the step.
-  const dunya::field::SampleBox carve{glm::uvec3(12u, 30u, 16u), glm::uvec3(1u)};
+  const dunya::field::SampleBox carve{
+    glm::uvec3(12u, 30u, 16u),
+    glm::uvec3(1u)
+  };
   const std::vector<float> inside{-5.0f};
   const std::vector<uint32_t> material{3u};
 
@@ -364,7 +371,10 @@ TEST_CASE("a step stops at the wall of the brick it was measured in",
   }
 }
 
-TEST_CASE("a step never shrinks to nothing at a brick wall", "[sampled][bound]") {
+TEST_CASE(
+  "a step never shrinks to nothing at a brick wall",
+  "[sampled][bound]"
+) {
   // A ray that starts beside a wall has almost no room before it, and a step
   // that small can land short of the wall again, in the brick it never left.
   // The march then stops advancing - which no assertion about crossing the
@@ -398,8 +408,10 @@ TEST_CASE("a step never shrinks to nothing at a brick wall", "[sampled][bound]")
   REQUIRE(step <= dunya::field::distance(field, point));
 }
 
-TEST_CASE("a flat brick does not license a step into a carved neighbour",
-          "[sampled][bound]") {
+TEST_CASE(
+  "a flat brick does not license a step into a carved neighbour",
+  "[sampled][bound]"
+) {
   // The adversarial case for the progress floor. A ray sits a whisker inside
   // one brick with the next one carved open a single cell past the wall. The
   // floor lets it cross, so the crossing has to be inside what this brick's
@@ -416,7 +428,10 @@ TEST_CASE("a flat brick does not license a step into a carved neighbour",
 
   // Lattice 16 is the wall between the second and third brick; sample 17 is one
   // cell past it. Well above the sphere, so nothing else is near.
-  const dunya::field::SampleBox carve{glm::uvec3(17u, 30u, 16u), glm::uvec3(1u)};
+  const dunya::field::SampleBox carve{
+    glm::uvec3(17u, 30u, 16u),
+    glm::uvec3(1u)
+  };
   const std::vector<float> inside{-5.0f};
   const std::vector<uint32_t> material{3u};
 
@@ -438,8 +453,10 @@ TEST_CASE("a flat brick does not license a step into a carved neighbour",
   }
 }
 
-TEST_CASE("a write rebuilds the bricks on both sides of a boundary",
-          "[sampled][write]") {
+TEST_CASE(
+  "a write rebuilds the bricks on both sides of a boundary",
+  "[sampled][write]"
+) {
   const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
 
   SampledField field = dunya::field::bake(
@@ -459,9 +476,9 @@ TEST_CASE("a write rebuilds the bricks on both sides of a boundary",
 
   dunya::field::write(field, box, spike, material);
 
-  const uint32_t touched = 0u;      // brick (0, 0, 0)
-  const uint32_t neighbour = 1u;    // brick (1, 0, 0)
-  const uint32_t untouched = 6u;    // brick (0, 1, 1)
+  const uint32_t touched = 0u;    // brick (0, 0, 0)
+  const uint32_t neighbour = 1u;  // brick (1, 0, 0)
+  const uint32_t untouched = 6u;  // brick (0, 1, 1)
 
   REQUIRE(field.brickLipschitz[touched] > before[touched]);
   REQUIRE(field.brickLipschitz[neighbour] > before[neighbour]);

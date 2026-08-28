@@ -3,5 +3,6 @@
 
 #include <stb_image.h>
 
+#include <cstring>
 #include <string>
 #include <stdexcept>

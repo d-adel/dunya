@@ -104,12 +104,14 @@ void rebuildBricks(
         for (uint32_t z = start.z; z < end.z; ++z) {
           for (uint32_t y = start.y; y < end.y; ++y) {
             for (uint32_t x = start.x; x < end.x; ++x) {
-              worst = std::max(worst, cellLipschitz(field, glm::uvec3(x, y, z)));
+              worst =
+                std::max(worst, cellLipschitz(field, glm::uvec3(x, y, z)));
             }
           }
         }
 
-        field.brickLipschitz[brickIndex(bricks, glm::uvec3(bx, by, bz))] = worst;
+        field.brickLipschitz[brickIndex(bricks, glm::uvec3(bx, by, bz))] =
+          worst;
       }
     }
   }
@@ -303,10 +305,8 @@ float stepBound(
   const Cell cell = locate(field, point);
   const glm::uvec3 bricks = brickCounts(field);
 
-  const glm::uvec3 brick = glm::min(
-    cell.base / glm::uvec3(BRICK_CELLS),
-    bricks - glm::uvec3(1u)
-  );
+  const glm::uvec3 brick =
+    glm::min(cell.base / glm::uvec3(BRICK_CELLS), bricks - glm::uvec3(1u));
 
   glm::vec3 minimum(0.0f);
   glm::vec3 maximum(0.0f);
@@ -332,10 +332,7 @@ float stepBound(
   // covers. Without it a march stops advancing instead of failing.
   const glm::vec3 voxel = field.voxelSize;
 
-  exit = std::max(
-    exit,
-    0.5f * std::min(voxel.x, std::min(voxel.y, voxel.z))
-  );
+  exit = std::max(exit, 0.5f * std::min(voxel.x, std::min(voxel.y, voxel.z)));
 
   const float bound = field.brickLipschitz[brickIndex(bricks, brick)];
 
@@ -403,8 +400,8 @@ void write(
   const glm::uvec3 cellMaximum =
     glm::min(end - glm::uvec3(1u), cells - glm::uvec3(1u));
 
-  // And one cell wider again before choosing bricks, because a brick's bound now
-  // reads a cell beyond its own walls: a change there belongs to both.
+  // And one cell wider again before choosing bricks, because a brick's bound
+  // now reads a cell beyond its own walls: a change there belongs to both.
   const glm::uvec3 reachMinimum =
     glm::max(cellMinimum, glm::uvec3(1u)) - glm::uvec3(1u);
   const glm::uvec3 reachMaximum =

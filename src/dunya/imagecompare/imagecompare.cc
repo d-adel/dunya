@@ -173,8 +173,7 @@ Bitmap differenceImage(
     // Quartered rather than a proper luminance: this is context to recognise
     // the scene by, and it has to stay clearly darker than the marks.
     const uint8_t grey = static_cast<uint8_t>(
-      (static_cast<uint32_t>(reference.pixels[at])
-       + reference.pixels[at + 1]
+      (static_cast<uint32_t>(reference.pixels[at]) + reference.pixels[at + 1]
        + reference.pixels[at + 2])
       / 12u
     );

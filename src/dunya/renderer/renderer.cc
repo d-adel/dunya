@@ -247,7 +247,13 @@ void Renderer::recordCommandBuffer(
     );
 
     for (const auto& item : frameContext.drawItems) {
-      assert(item.meshIndex < frameContext.meshes.size());
+      if (item.meshIndex >= frameContext.meshes.size()) {
+        throw std::runtime_error(
+
+          "A draw item names a mesh the frame does not carry"
+
+        );
+      }
 
       VkBuffer vertexBuffers[] = {
         frameContext.meshes[item.meshIndex].vertexBuffer().buffer()
@@ -437,7 +443,9 @@ bool Renderer::drawFrame(
     frameContext.cameraPos
   };
 
-  m_frameGlobals.update(m_currentFrame, camera, frameContext.march);
+  const SceneCounts counts{frameContext.fieldRecordCount};
+
+  m_frameGlobals.update(m_currentFrame, camera, frameContext.march, counts);
 
   recordCommandBuffer(swapChain, frameContext, onOverlay);
 

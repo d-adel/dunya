@@ -18,7 +18,7 @@ namespace dunya::editor {
 
 class FieldEditor {
 public:
-  FieldEditor(dunya::objectmodel::World& world);
+  explicit FieldEditor(dunya::objectmodel::World& world);
 
   FieldEditor(const FieldEditor&) = delete;
   FieldEditor& operator=(const FieldEditor&) = delete;
@@ -41,6 +41,7 @@ public:
   void redo();
 
 private:
+  [[nodiscard]]
   bool addPrimitive(
     dunya::objectmodel::Entity entity,
     const glm::vec3& centre,

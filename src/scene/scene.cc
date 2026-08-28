@@ -35,18 +35,24 @@ Scene::Scene(const dunya::gpu::Context& context)
   pose.position = glm::vec3(0.0f, -2.0f, 0.0f);
   const dunya::objectmodel::Entity planeEntity =
     m_world.createField(pose, grid);
-  m_world.addPrimitive(
-    planeEntity,
-    dunya::field::makeBox(
-      glm::vec3(0.0f, -0.5f, 0.0f),
-      glm::vec3(10.0f, 0.5f, 10.0f),
-      glm::radians(0.0f),
-      glm::vec3(0.0f, 1.0f, 0.0f),
-      1,
-      0,
-      0.0f
-    )
-  );
+  if (!m_world.addPrimitive(
+        planeEntity,
+        dunya::field::makeBox(
+          glm::vec3(0.0f, -0.5f, 0.0f),
+          glm::vec3(10.0f, 0.5f, 10.0f),
+          glm::radians(0.0f),
+          glm::vec3(0.0f, 1.0f, 0.0f),
+          1,
+          0,
+          0.0f
+        )
+      )) {
+    throw std::runtime_error(
+
+      "Scene: the ground plane box did not fit the primitive arena"
+
+    );
+  }
 }
 
 void Scene::augmentFrameContext(dunya::renderer::Frame& frameContext) {
@@ -171,21 +177,33 @@ std::vector<dunya::objectmodel::Material> Scene::createMaterials() {
 }
 
 void Scene::addInitialPrimitives(dunya::objectmodel::Entity entity) {
-  m_world.addPrimitive(
-    entity,
-    dunya::field::makeSphere(glm::vec3(0.0f, 0.0f, 0.0f), 1.0f)
-  );
+  if (!m_world.addPrimitive(
+        entity,
+        dunya::field::makeSphere(glm::vec3(0.0f, 0.0f, 0.0f), 1.0f)
+      )) {
+    throw std::runtime_error(
 
-  m_world.addPrimitive(
-    entity,
-    dunya::field::makeBox(
-      glm::vec3(0.8f, -0.45f, 0.0f),
-      glm::vec3(0.5f),
-      glm::radians(30.0f),
-      glm::vec3(0.0f, 1.0f, 0.0f),
-      0,
-      1,
-      0.4f
-    )
-  );
+      "Scene: the field sphere did not fit the primitive arena"
+
+    );
+  }
+
+  if (!m_world.addPrimitive(
+        entity,
+        dunya::field::makeBox(
+          glm::vec3(0.8f, -0.45f, 0.0f),
+          glm::vec3(0.5f),
+          glm::radians(30.0f),
+          glm::vec3(0.0f, 1.0f, 0.0f),
+          0,
+          1,
+          0.4f
+        )
+      )) {
+    throw std::runtime_error(
+
+      "Scene: the initial carve box did not fit the primitive arena"
+
+    );
+  }
 }

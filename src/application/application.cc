@@ -221,6 +221,8 @@ int Application::start(const StartupOptions& options) {
 
     uint32_t recordIndex = 0;
 
+    m_recordEntities.clear();
+
     for (dunya::objectmodel::Entity entity : world.fields()) {
       // The GPU record table holds MAX_FIELD_RECORDS.
       // The world has no such limit, so the frame is where the two meet.
@@ -295,6 +297,8 @@ int Application::start(const StartupOptions& options) {
         m_recordTable.appendToBakeList(recordIndex);
       }
 
+      m_recordEntities.push_back(entity);
+
       ++recordIndex;
     }
 
@@ -326,14 +330,12 @@ int Application::start(const StartupOptions& options) {
                                 );
 
     if (!swapChainStale) {
-      // Bake-list entries are packing slots, so this re-derives the same
-      // span the loop above packed from. Nothing between the two mutates
-      // the world, and a removal would reorder it: swap-and-pop storage.
-      const std::span<const dunya::objectmodel::Entity> fieldEntities =
-        world.fields();
-
+      // Bake-list entries are packing slots, so they index the mapping the
+      // packing loop recorded - not fields(). The two diverge as soon as an
+      // entity is skipped for want of a volume, because a skip consumes no
+      // slot.
       for (uint32_t idx : m_recordTable.bakeList()) {
-        world.markBaked(fieldEntities[idx]);
+        world.markBaked(m_recordEntities[idx]);
       }
     } else {
       m_swapChain.recreate();

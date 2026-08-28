@@ -14,7 +14,7 @@ namespace dunya::objectmodel {
 // One contiguous arena handed out as variable-length ranges. Contiguous
 // because the GPU indexes the whole pool with per-range offsets, so the
 // elements of one range cannot live in their own vector.
-template <typename T>
+template<typename T>
 class RangeStore {
 public:
   struct Range {
@@ -48,8 +48,7 @@ public:
     }
 
     for (uint32_t i = 0; i != count; ++i) {
-      m_elements[grown->offset + i] =
-        std::move(m_elements[current.offset + i]);
+      m_elements[grown->offset + i] = std::move(m_elements[current.offset + i]);
     }
 
     release(current);

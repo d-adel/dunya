@@ -94,6 +94,12 @@ private:
   // that registered it and a captured reference to a local would dangle.
   double m_lastFrameMs = 0.0;
 
+  // Which entity each packing slot was filled from, recorded while the frame is
+  // assembled. The slot is not a position in fields(): the loop skips an entity
+  // whose volume could not be allocated without consuming a slot, so from that
+  // point on the two disagree. A member so the capacity survives the frame.
+  std::vector<dunya::objectmodel::Entity> m_recordEntities;
+
   dunya::core::EventDispatcher::SubscriptionId m_keySubscription{};
   dunya::core::EventDispatcher::SubscriptionId m_mouseSubscription{};
 };

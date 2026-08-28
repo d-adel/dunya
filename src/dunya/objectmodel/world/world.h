@@ -31,28 +31,34 @@ public:
   // Field-object lifetime.
   Entity createField(const Pose& pose, const FieldGrid& grid);
 
+  [[nodiscard]]
   bool createFieldAt(Entity hint, const Pose& pose, const FieldGrid& grid);
 
+  [[nodiscard]]
   bool destroyField(Entity entity);
 
   // Dense list of entities carrying FieldGrid.
   std::span<const Entity> fields() const noexcept;
 
   // Primitive transactions.
+  [[nodiscard]]
   bool addPrimitive(Entity entity, const dunya::field::Primitive& primitive);
 
+  [[nodiscard]]
   bool insertPrimitive(
     Entity entity,
     uint32_t index,
     const dunya::field::Primitive& primitive
   );
 
+  [[nodiscard]]
   bool setPrimitive(
     Entity entity,
     uint32_t index,
     const dunya::field::Primitive& primitive
   );
 
+  [[nodiscard]]
   bool removePrimitive(Entity entity, uint32_t index);
 
   std::span<const dunya::field::Primitive> primitives(Entity entity) const;

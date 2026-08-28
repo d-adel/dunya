@@ -16,13 +16,13 @@ namespace dunya::editor {
 struct CreateFieldCommand {
   dunya::objectmodel::Entity entity = dunya::objectmodel::INVALID_ENTITY;
   dunya::objectmodel::Pose pose;
-  dunya::objectmodel::FieldGrid object;
+  dunya::objectmodel::FieldGrid grid;
 };
 
 struct DestroyFieldCommand {
   dunya::objectmodel::Entity entity;
   std::optional<dunya::objectmodel::Pose> pose;
-  std::optional<dunya::objectmodel::FieldGrid> object;
+  std::optional<dunya::objectmodel::FieldGrid> grid;
   std::vector<dunya::field::Primitive> primitives;
 };
 

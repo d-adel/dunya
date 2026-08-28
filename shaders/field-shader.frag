@@ -19,6 +19,12 @@ layout(std140, set = 0, binding = 1) uniform MarchParams {
   uint maxIterations;
 } params;
 
+// How many record slots this frame actually filled. The table is a fixed 64;
+// the count is what says where the real ones stop.
+layout(std140, set = 0, binding = 2) uniform SceneCounts {
+  uint fieldRecords;
+} counts;
+
 #include "field-types.glsl"
 
 struct Material {
@@ -62,17 +68,8 @@ layout(std430, set = 2, binding = 3) readonly buffer FieldScene {
   Primitive primitives[];
 } scene;
 
-struct FieldRecordShared {
-  mat4 model;
-  mat4 inverseModel;
-  vec4 voxelSize;
-  uvec4 resolutionVolumeIndex;
-  uvec4 config;
-  vec4 localOrigin;
-};
-
 layout(std140, set = 2, binding = 0) readonly buffer FieldRecordTable {
-  FieldRecordShared objects[];
+  FieldRecordShared records[];
 } fieldRecordTable;
 
 const int MAX_SAMPLERS = DUNYA_MAX_SAMPLERS;
@@ -419,29 +416,25 @@ float lightReachingLocal(FieldRecordShared record,
 float lightReaching(vec3 worldOrigin, vec3 worldDirection) {
   float result = 1.0;
 
-  for (uint i = 0u; i < uint(MAX_FIELD_RECORDS); ++i) {
-    FieldRecordShared object = fieldRecordTable.objects[i];
-
-    // config.z = liveness.
-    //
-    // Dead slots are zero-filled. In particular their volume index is zero,
-    // which is a real volume, so they absolutely must not be marched.
-    if (object.config.z == 0u) {
-      continue;
-    }
+  // Bounded by the count, not by the table's capacity. Walking all 64 slots
+  // per fragment was both the cost and the bug: nothing ever cleared a slot, so
+  // one left over from a busier frame still claimed to be live and cast a
+  // shadow from an object that had gone.
+  for (uint i = 0u; i < counts.fieldRecords; ++i) {
+    FieldRecordShared record = fieldRecordTable.records[i];
 
     // Same world -> local crossing as the primary ray:
     // point w = 1
     // direction w = 0
     //
     // Do not renormalise the direction.
-    vec3 localOrigin = (object.inverseModel * vec4(worldOrigin, 1.0)).xyz;
+    vec3 localOrigin = (record.inverseModel * vec4(worldOrigin, 1.0)).xyz;
 
-    vec3 localDirection = (object.inverseModel * vec4(worldDirection, 0.0)).xyz;
+    vec3 localDirection = (record.inverseModel * vec4(worldDirection, 0.0)).xyz;
 
-    float objectLight = lightReachingLocal(object, localOrigin, localDirection);
+    float recordLight = lightReachingLocal(record, localOrigin, localDirection);
 
-    result = min(result, objectLight);
+    result = min(result, recordLight);
 
     // A hard occluder cannot get any darker.
     if (result <= 0.0) {
@@ -457,7 +450,7 @@ vec3 albedo(float materialId) {
 }
 
 void main() {
-  FieldRecordShared record = fieldRecordTable.objects[recordIndex];
+  FieldRecordShared record = fieldRecordTable.records[recordIndex];
 
   vec2 ndc = clipPosition.xy / clipPosition.w;
 

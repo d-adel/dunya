@@ -126,8 +126,10 @@ TEST_CASE("allocation takes the smallest hole that fits", "[rangestore]") {
   REQUIRE(fitted->offset == small.offset);
 }
 
-TEST_CASE("growing moves the elements and frees the old range",
-          "[rangestore]") {
+TEST_CASE(
+  "growing moves the elements and frees the old range",
+  "[rangestore]"
+) {
   Store store(POOL);
 
   const Range range = *store.grow(Range{}, 0, 4, MAX_RANGE);
@@ -167,8 +169,10 @@ TEST_CASE("capacity doubles from four", "[rangestore]") {
   REQUIRE(third.capacity == 32);
 }
 
-TEST_CASE("capacity is capped and a larger request is refused",
-          "[rangestore]") {
+TEST_CASE(
+  "capacity is capped and a larger request is refused",
+  "[rangestore]"
+) {
   Store store(POOL);
 
   const std::optional<Range> capped =
@@ -177,9 +181,7 @@ TEST_CASE("capacity is capped and a larger request is refused",
   REQUIRE(capped.has_value());
   REQUIRE(capped->capacity == MAX_RANGE);
 
-  REQUIRE_FALSE(
-    store.grow(Range{}, 0, MAX_RANGE + 1, MAX_RANGE).has_value()
-  );
+  REQUIRE_FALSE(store.grow(Range{}, 0, MAX_RANGE + 1, MAX_RANGE).has_value());
 }
 
 TEST_CASE("the pool refuses to grow past its capacity", "[rangestore]") {

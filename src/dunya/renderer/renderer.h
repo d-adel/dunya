@@ -43,6 +43,7 @@ public:
    * presentation engine again, and reading it there is a validation error
    * rather than a race you get away with.
    */
+  [[nodiscard]]
   bool drawFrame(
     const dunya::gpu::SwapChain& swapChain,
     const Frame& frameContext,

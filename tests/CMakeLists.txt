@@ -7,7 +7,7 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(Catch2)
 
-add_executable(field_tests
+add_executable(unit_tests
     commandhistory_tests.cc
     entt_tests.cc
     field_tests.cc
@@ -20,19 +20,19 @@ add_executable(field_tests
     world_tests.cc
 )
 
-target_include_directories(field_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_include_directories(unit_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 
-target_link_libraries(field_tests PRIVATE dunya::core dunya::editor dunya::field dunya::objectmodel dunya::physics Catch2::Catch2WithMain)
+target_link_libraries(unit_tests PRIVATE dunya::core dunya::editor dunya::field dunya::objectmodel dunya::physics dunya::runtime Catch2::Catch2WithMain)
 
 if (MSVC)
-    target_compile_options(field_tests PRIVATE /W4 /WX /Zc:__cplusplus)
+    target_compile_options(unit_tests PRIVATE /W4 /WX /Zc:__cplusplus)
 else()
-    target_compile_options(field_tests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    target_compile_options(unit_tests PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
 
-# Its own target rather than more files in field_tests: the two link different
-# libraries, and a target named for the field should not be the place image
-# comparison lives.
+# Its own target rather than more files in unit_tests: the two link different
+# libraries, and image comparison has no business sharing a binary with the
+# object model and the field.
 add_executable(image_tests
     image_tests.cc
 )
@@ -48,7 +48,7 @@ endif()
 list(APPEND CMAKE_MODULE_PATH "${catch2_SOURCE_DIR}/extras")
 include(Catch)
 
-catch_discover_tests(field_tests)
+catch_discover_tests(unit_tests)
 catch_discover_tests(image_tests)
 
 # The golden image tests are add_test rather than Catch2 cases because they run

@@ -44,6 +44,7 @@ public:
 
 private:
   dunya::image::Bitmap read(VkImage image) const;
+  [[nodiscard]]
   bool compareToReference(const dunya::image::Bitmap& frame) const;
 
   const dunya::gpu::Context& m_context;

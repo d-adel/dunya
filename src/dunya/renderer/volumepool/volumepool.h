@@ -19,7 +19,7 @@ struct VolumeImages {
 
 class VolumePool {
 public:
-  VolumePool(const dunya::gpu::Device& device);
+  explicit VolumePool(const dunya::gpu::Device& device);
 
   VolumePool(const VolumePool&) = delete;
   VolumePool& operator=(const VolumePool&) = delete;

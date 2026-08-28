@@ -29,10 +29,10 @@ dunya::objectmodel::Entity makeObject(
     world.createField(dunya::objectmodel::Pose{}, object);
 
   for (uint32_t i = 0; i != primitives; ++i) {
-    world.addPrimitive(
+    REQUIRE(world.addPrimitive(
       id,
       dunya::field::makeSphere(glm::vec3(0.0f), 1.0f, i + 1)
-    );
+    ));
   }
 
   return id;
@@ -244,7 +244,7 @@ TEST_CASE(
 
   history.undo(world);
 
-  world.destroyField(id);
+  REQUIRE(world.destroyField(id));
 
   history.redo(world);
 
@@ -267,7 +267,7 @@ TEST_CASE(
     history.execute(dunya::editor::AddPrimitiveCommand{id, 1, marker(9)}, world)
   );
 
-  world.destroyField(id);
+  REQUIRE(world.destroyField(id));
 
   history.undo(world);
 

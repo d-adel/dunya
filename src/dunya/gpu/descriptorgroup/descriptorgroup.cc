@@ -162,11 +162,8 @@ void DescriptorGroup::writeBuffer(
   VkBuffer buffer,
   VkDeviceSize size
 ) {
-  const auto it = std::find(
-    m_deviceBufferSlots.begin(),
-    m_deviceBufferSlots.end(),
-    binding
-  );
+  const auto it =
+    std::find(m_deviceBufferSlots.begin(), m_deviceBufferSlots.end(), binding);
 
   if (it == m_deviceBufferSlots.end()) {
     throw std::runtime_error(

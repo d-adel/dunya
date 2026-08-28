@@ -63,22 +63,22 @@ bool CommandHistory::apply(Command& command, dunya::objectmodel::World& world) {
 
       if constexpr (std::is_same_v<T, CreateFieldCommand>) {
         if (cmd.entity == dunya::objectmodel::INVALID_ENTITY) {
-          cmd.entity = world.createField(cmd.pose, cmd.object);
+          cmd.entity = world.createField(cmd.pose, cmd.grid);
           return cmd.entity != dunya::objectmodel::INVALID_ENTITY;
         }
 
-        return world.createFieldAt(cmd.entity, cmd.pose, cmd.object);
+        return world.createFieldAt(cmd.entity, cmd.pose, cmd.grid);
       }
 
       else if constexpr (std::is_same_v<T, DestroyFieldCommand>) {
-        if (!cmd.object.has_value()) {
+        if (!cmd.grid.has_value()) {
           if (!isField(world, cmd.entity)) {
             return false;
           }
 
           cmd.pose = world.registry().get<dunya::objectmodel::Pose>(cmd.entity);
 
-          cmd.object =
+          cmd.grid =
             world.registry().get<dunya::objectmodel::FieldGrid>(cmd.entity);
 
           const auto primitives = world.primitives(cmd.entity);
@@ -138,11 +138,11 @@ bool CommandHistory::revert(
       }
 
       else if constexpr (std::is_same_v<T, DestroyFieldCommand>) {
-        if (!cmd.object.has_value() || !cmd.pose.has_value()) {
+        if (!cmd.grid.has_value() || !cmd.pose.has_value()) {
           return false;
         }
 
-        if (!world.createFieldAt(cmd.entity, *cmd.pose, *cmd.object)) {
+        if (!world.createFieldAt(cmd.entity, *cmd.pose, *cmd.grid)) {
           return false;
         }
 

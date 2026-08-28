@@ -20,7 +20,9 @@ namespace dunya::renderer {
 // resolutionVolumeIndex.w: volume index
 // config.x = primitive count
 // config.y = field representation: 0 = analytical, 1 = sampled
-// config.z = live
+// config.z = live. Still written, no longer read: the shadow loop is bounded
+// by SceneCounts.fieldRecords, so every slot it visits is live by construction.
+// Kept as a lane in case records are ever packed sparsely.
 // config.w = primitive offset
 struct FieldRecord {
   glm::mat4 model;                   // 64 bytes (offset 0)

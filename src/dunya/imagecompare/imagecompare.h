@@ -68,6 +68,7 @@ Difference compare(
   const Tolerance& tolerance
 );
 
+[[nodiscard]]
 bool passes(const Difference& difference, const Tolerance& tolerance) noexcept;
 
 /* The reference dimmed to grey, with differing pixels marked in red.

@@ -49,9 +49,27 @@ static_assert(
   "MarchParams must match its std140 block in field-shader.frag"
 );
 
+/* How many of each thing this frame carries.
+ *
+ * Its own block rather than four spare bytes inside MarchParams, because a
+ * count is not a tunable and the next record type will want one too. Shaders
+ * that iterate a record table read their bound from here instead of walking the
+ * table's capacity, which is what stops a slot left over from a busier frame
+ * being marched - and what keeps the cost proportional to the objects that
+ * exist rather than to the ceiling.
+ */
+struct SceneCounts {
+  uint32_t fieldRecords;
+};
+
+static_assert(
+  sizeof(SceneCounts) == 4,
+  "SceneCounts must match its std140 block in field-shader.frag"
+);
+
 class FrameGlobals {
 public:
-  FrameGlobals(const dunya::gpu::Device& device);
+  explicit FrameGlobals(const dunya::gpu::Device& device);
 
   FrameGlobals(FrameGlobals const&) = delete;
   FrameGlobals& operator=(FrameGlobals const&) = delete;
@@ -63,7 +81,8 @@ public:
   void update(
     uint32_t frame,
     const CameraUniform& camera,
-    const MarchParams& march
+    const MarchParams& march,
+    const SceneCounts& counts
   );
 
   const VkDescriptorSet& descriptorSet(uint32_t frame) const noexcept;

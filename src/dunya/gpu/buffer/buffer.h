@@ -4,6 +4,8 @@
 
 #include <vulkan/vulkan.h>
 
+#include <cstring>
+#include <vector>
 #include <stdexcept>
 #include <utility>
 

@@ -35,11 +35,11 @@ dunya::field::Primitive marker(uint32_t material) {
 // fitToPrimitives divides by the resolution, so a grid is only usable once it
 // has one.
 FieldGrid blank() {
-  FieldGrid object{};
+  FieldGrid grid{};
 
-  object.resolution = glm::uvec3(dunya::core::FIELD_GRID_RESOLUTION);
+  grid.resolution = glm::uvec3(dunya::core::FIELD_GRID_RESOLUTION);
 
-  return object;
+  return grid;
 }
 
 const FieldGrid& gridOf(const World& world, Entity entity) {
@@ -223,15 +223,15 @@ TEST_CASE(
 
   REQUIRE(world.addPrimitive(entity, marker(1)));
 
-  const FieldGrid& object = gridOf(world, entity);
+  const FieldGrid& grid = gridOf(world, entity);
 
   REQUIRE(world.needsBake(entity));
 
   // A unit sphere at the origin, plus the grid margin on every side.
   const float expected = -(1.0f + dunya::core::FIELD_GRID_MARGIN);
 
-  REQUIRE_THAT(object.origin.x, WithinAbs(expected, ANALYTIC_TOLERANCE));
-  REQUIRE(object.voxelSize.x > 0.0f);
+  REQUIRE_THAT(grid.origin.x, WithinAbs(expected, ANALYTIC_TOLERANCE));
+  REQUIRE(grid.voxelSize.x > 0.0f);
 }
 
 TEST_CASE("setPose writes position and rotation together", "[world]") {

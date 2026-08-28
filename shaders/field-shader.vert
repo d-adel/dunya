@@ -1,4 +1,7 @@
 #version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "field-types.glsl"
 
 layout(std140, set = 0, binding = 0) uniform CameraUniform {
   mat4 view;
@@ -8,17 +11,8 @@ layout(std140, set = 0, binding = 0) uniform CameraUniform {
   vec4 position;
 } camera;
 
-struct FieldRecordShared {
-  mat4 model;
-  mat4 inverseModel;
-  vec4 voxelSize;
-  uvec4 resolutionVolumeIndex;
-  uvec4 config;
-  vec4 localOrigin;
-};
-
 layout(std140, set = 2, binding = 0) readonly buffer FieldRecordTable {
-  FieldRecordShared objects[];
+  FieldRecordShared records[];
 } fieldRecordTable;
 
 layout(push_constant) uniform PushConstants {
@@ -93,14 +87,14 @@ const uint CUBE_INDICES[36] = uint[](
 
 void main() {
   recordIndex = push.recordIndex;
-  FieldRecordShared object = fieldRecordTable.objects[push.recordIndex];
+  FieldRecordShared record = fieldRecordTable.records[push.recordIndex];
 
   // The CPU has already derived the grid. localOrigin is its minimum
   // lattice point, and N lattice points span N - 1 cells.
-  vec3 boxMin = object.localOrigin.xyz;
+  vec3 boxMin = record.localOrigin.xyz;
 
   vec3 span =
-    object.voxelSize.xyz * vec3(object.resolutionVolumeIndex.xyz - 1u);
+    record.voxelSize.xyz * vec3(record.resolutionVolumeIndex.xyz - 1u);
 
   vec3 boxMax = boxMin + span;
 
@@ -118,7 +112,7 @@ void main() {
                             (corner & 2u) != 0u ? boxMax.y : boxMin.y,
                             (corner & 4u) != 0u ? boxMax.z : boxMin.z);
 
-  clipPosition = camera.viewProj * object.model * vec4(localPosition, 1.0);
+  clipPosition = camera.viewProj * record.model * vec4(localPosition, 1.0);
 
   gl_Position = clipPosition;
 }

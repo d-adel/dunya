@@ -7,6 +7,7 @@
 #include <dunya/objectmodel/fieldgrid/fieldgrid.h>
 #include <dunya/editor/command/command.h>
 
+#include <stdexcept>
 #include <array>
 #include <cstdint>
 #include <span>

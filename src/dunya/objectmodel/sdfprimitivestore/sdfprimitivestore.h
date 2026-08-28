@@ -37,6 +37,7 @@ public:
   // listener captures this store, so the store must outlive the registry.
   void connect(entt::registry& registry);
 
+  [[nodiscard]]
   bool insert(
     entt::registry& registry,
     Entity entity,
@@ -44,12 +45,14 @@ public:
     const dunya::field::Primitive& primitive
   );
 
+  [[nodiscard]]
   bool append(
     entt::registry& registry,
     Entity entity,
     const dunya::field::Primitive& primitive
   );
 
+  [[nodiscard]]
   bool set(
     entt::registry& registry,
     Entity entity,
@@ -57,8 +60,10 @@ public:
     const dunya::field::Primitive& primitive
   );
 
+  [[nodiscard]]
   bool remove(entt::registry& registry, Entity entity, uint32_t index);
 
+  [[nodiscard]]
   bool clear(entt::registry& registry, Entity entity);
 
   std::span<const dunya::field::Primitive> primitives(
