@@ -2,9 +2,22 @@
 
 namespace dunya::runtime {
 
-// Neither parameter is read yet; the names are omitted to say so. The
-// JoltLibrary reference is a lifetime requirement: PhysicsWorld allocates
-// through the pointer RegisterDefaultAllocator installs.
-Runtime::Runtime(const objectmodel::World&, physics::JoltLibrary&) {}
+// The JoltLibrary reference is a lifetime requirement rather than data:
+// PhysicsWorld allocates through the pointer RegisterDefaultAllocator installs.
+Runtime::Runtime(const objectmodel::World& source, physics::JoltLibrary&) {
+  objectmodel::instantiateWorld(source, m_world);
+}
+
+objectmodel::World& Runtime::world() noexcept {
+  return m_world;
+}
+
+const objectmodel::World& Runtime::world() const noexcept {
+  return m_world;
+}
+
+physics::PhysicsWorld& Runtime::physics() noexcept {
+  return m_physicsWorld;
+}
 
 }  // namespace dunya::runtime

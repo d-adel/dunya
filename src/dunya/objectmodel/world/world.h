@@ -88,6 +88,10 @@ public:
   // and keeps a method of its own.
   void setBakedVolume(Entity entity, uint32_t index);
 
+  // Presence is the state, so giving a slot back means removing the
+  // component, not writing a sentinel into it.
+  void clearBakedVolume(Entity entity);
+
   // Change tracking, not a flag: the queue is entt::reactive storage filled
   // from the registry's own signals, so a new mutation path is covered without
   // anyone remembering to mark it.

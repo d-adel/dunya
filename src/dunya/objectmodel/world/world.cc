@@ -118,6 +118,10 @@ void World::setBakedVolume(Entity entity, uint32_t index) {
   m_registry.emplace_or_replace<BakedVolume>(entity, index);
 }
 
+void World::clearBakedVolume(Entity entity) {
+  m_registry.remove<BakedVolume>(entity);
+}
+
 bool World::needsBake(Entity entity) const noexcept {
   const auto* queue = m_registry.storage<entt::reactive>(BAKE_QUEUE);
 

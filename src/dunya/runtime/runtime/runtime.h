@@ -15,6 +15,11 @@ public:
   Runtime(Runtime&&) = delete;
   Runtime& operator=(Runtime&&) = delete;
 
+  objectmodel::World& world() noexcept;
+  const objectmodel::World& world() const noexcept;
+
+  physics::PhysicsWorld& physics() noexcept;
+
 private:
   // Declaration order is load-bearing: m_physicsWorld holds bodies that refer
   // to entities in m_world, and members are destroyed in reverse declaration

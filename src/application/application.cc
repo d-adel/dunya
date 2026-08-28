@@ -12,10 +12,9 @@ const auto MESH_ATTRIBUTES =
 }  // namespace
 
 Application::Application()
-    : m_physicsDemo(m_physicsWorld),
-      m_input(m_context.window().handle()),
+    : m_input(m_context.window().handle()),
       m_swapChain(m_context),
-      m_scene(m_context),
+      m_scene(m_context, m_authoredWorld),
       m_frameGlobals(m_context.device()),
       m_resourceTable(
         m_context.device(),
@@ -61,7 +60,7 @@ Application::Application()
         m_swapChain.imageCount()
       ),
       m_overlay(m_context, m_swapChain),
-      m_fieldEditor(m_scene.world()),
+      m_fieldEditor(m_authoredWorld),
       m_cameraInput({}),
       m_prevAcceptsInput(false),
       m_reloadRequested(false)
@@ -140,17 +139,21 @@ int Application::start(const StartupOptions& options) {
 
     prevTime = now;
 
-    physicsAccumulator += dt;
+    // E5: no runtime, no physics. The accumulator only advances while a
+    // runtime exists, so Play does not begin by discharging a backlog.
+    if (m_runtime) {
+      physicsAccumulator += dt;
 
-    while (physicsAccumulator >= dunya::physics::PhysicsWorld::TIME_STEP) {
-      m_physicsWorld.step();
-      ++physicsStep;
+      while (physicsAccumulator >= dunya::physics::PhysicsWorld::TIME_STEP) {
+        m_runtime->physics().step();
+        ++physicsStep;
 
-      if (physicsStep % 30 == 0) {
-        m_physicsDemo.log();
+        if (physicsStep % 30 == 0 && m_physicsDemo) {
+          m_physicsDemo->log();
+        }
+
+        physicsAccumulator -= dunya::physics::PhysicsWorld::TIME_STEP;
       }
-
-      physicsAccumulator -= dunya::physics::PhysicsWorld::TIME_STEP;
     }
 
     ++statFrames;
@@ -219,7 +222,7 @@ int Application::start(const StartupOptions& options) {
     m_frameContext.view = m_camera.viewMatrix();
     m_frameContext.cameraPos = m_camera.position();
 
-    dunya::objectmodel::World& world = m_scene.world();
+    dunya::objectmodel::World& world = activeWorld();
     const entt::registry& registry = world.registry();
 
     // Reclaim slots whose entity is gone, before anything asks for a new one.
@@ -331,7 +334,7 @@ int Application::start(const StartupOptions& options) {
 
     m_frameContext.fieldRecordCount = recordIndex;
 
-    m_scene.augmentFrameContext(m_frameContext);
+    m_scene.augmentFrameContext(m_frameContext, world);
     // -----------------------------------
 
     // A capture run builds no overlay at all, which is what keeps it out of the
@@ -452,6 +455,58 @@ void Application::handleMouseButtonEvent(
   );
 }
 
+dunya::objectmodel::World& Application::activeWorld() noexcept {
+  return m_runtime ? m_runtime->world() : m_authoredWorld;
+}
+
+void Application::releaseAllVolumes() {
+  dunya::objectmodel::World& world = activeWorld();
+
+  for (uint32_t slot = 0; slot != m_volumeOwners.size(); ++slot) {
+    if (m_volumeOwners[slot] == dunya::objectmodel::INVALID_ENTITY) {
+      continue;
+    }
+
+    // The component must go with the slot, or the world this belonged to
+    // renders through a freed volume the next time it is active.
+    if (world.registry().valid(m_volumeOwners[slot])) {
+      world.clearBakedVolume(m_volumeOwners[slot]);
+    }
+
+    m_volumePool.release(slot);
+    m_volumeOwners[slot] = dunya::objectmodel::INVALID_ENTITY;
+  }
+}
+
+void Application::play() {
+  if (m_runtime) {
+    return;
+  }
+
+  // Identity is preserved across instantiation, so an authored entity id is
+  // also valid in the runtime world. The owner table cannot tell them apart,
+  // so every slot goes back and the new world bakes its own.
+  releaseAllVolumes();
+
+  m_runtime.emplace(m_authoredWorld, m_joltLibrary);
+  m_physicsDemo.emplace(m_runtime->physics());
+
+  std::cout << "Play" << std::endl;
+}
+
+void Application::stop() {
+  if (!m_runtime) {
+    return;
+  }
+
+  releaseAllVolumes();
+
+  m_physicsDemo.reset();
+  m_runtime.reset();
+
+  std::cout << "Stop" << std::endl;
+}
+
 void Application::setLookMode(bool looking) {
   if (m_looking == looking) {
     return;
@@ -489,7 +544,7 @@ void Application::registerPanels() {
       m_swapChain.extent().height
     );
 
-    size_t primitiveCount = m_scene.world().pool().size();
+    size_t primitiveCount = m_authoredWorld.pool().size();
 
     ImGui::Text("%zu primitives", primitiveCount);
     ImGui::Text(
@@ -602,6 +657,19 @@ void Application::handleKeyEvent(const dunya::platform::KeyEvent& event) {
     && event.type == dunya::platform::KeyEventType::SinglePressed
   ) {
     m_fieldEditor.stress(10);
+    return;
+  }
+
+  if (
+    event.key == GLFW_KEY_F5
+    && event.type == dunya::platform::KeyEventType::SinglePressed
+  ) {
+    if (m_runtime) {
+      stop();
+    } else {
+      play();
+    }
+
     return;
   }
 

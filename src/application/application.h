@@ -2,6 +2,7 @@
 
 #include <dunya/physics/joltlibrary/joltlibrary.h>
 #include <dunya/physics/physicsworld/physicsworld.h>
+#include <dunya/runtime/runtime/runtime.h>
 #include <physicsdemo/physicsdemo.h>
 #include <dunya/gpu/context/context.h>
 #include <dunya/gpu/swapchain/swapchain.h>
@@ -23,6 +24,7 @@
 #include <dunya/editor/commandhistory/commandhistory.h>
 
 #include <array>
+#include <optional>
 #include <vector>
 
 // Wiring, and the loop. Owns the subsystems and hands them each other, but does
@@ -48,6 +50,18 @@ private:
   void handleKeyEvent(const dunya::platform::KeyEvent& event);
   void handleMouseButtonEvent(const dunya::platform::MouseButtonEvent& event);
   void setLookMode(bool looking);
+
+  // Play instantiates a runtime from the authored world and Stop destroys it.
+  // Physics lives inside Runtime, so it cannot touch authored state at all.
+  void play();
+  void stop();
+
+  // Whichever world the frame draws and the volume pool serves.
+  dunya::objectmodel::World& activeWorld() noexcept;
+
+  // Every pool slot goes back on a world switch: the sampled field is
+  // rebuilt for the new world rather than carried across.
+  void releaseAllVolumes();
   void registerPanels();
   bool acceptsInput() const noexcept;
 
@@ -58,13 +72,20 @@ private:
   dunya::gpu::Context m_context;
 
   dunya::physics::JoltLibrary m_joltLibrary;
-  dunya::physics::PhysicsWorld m_physicsWorld;
-  // Important: demo after library and world initialization
-  PhysicsDemo m_physicsDemo;
-
   dunya::platform::Input m_input;
   dunya::objectmodel::Camera m_camera;
   dunya::gpu::SwapChain m_swapChain;
+  // The authored world. Play instantiates a runtime beside it; this one is
+  // never simulated, so an undo stack can be trusted after a Play session.
+  dunya::objectmodel::World m_authoredWorld;
+
+  // Absent while editing. Owns the runtime world and the only PhysicsWorld
+  // there is, so E5 holds by construction rather than by a gate.
+  std::optional<dunya::runtime::Runtime> m_runtime;
+
+  // After m_runtime: it holds a reference into that PhysicsWorld, and members
+  // are destroyed in reverse declaration order.
+  std::optional<PhysicsDemo> m_physicsDemo;
   Scene m_scene;
   dunya::renderer::FrameGlobals m_frameGlobals;
   dunya::renderer::ResourceTable m_resourceTable;

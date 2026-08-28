@@ -15,7 +15,7 @@
 
 class Scene {
 public:
-  explicit Scene(const dunya::gpu::Context& context);
+  Scene(const dunya::gpu::Context& context, dunya::objectmodel::World& world);
   ~Scene() = default;
 
   Scene(const Scene&) = delete;
@@ -23,10 +23,12 @@ public:
   Scene(Scene&&) = delete;
   Scene& operator=(Scene&&) = delete;
 
-  void augmentFrameContext(dunya::renderer::Frame& frameContext);
-
-  const dunya::objectmodel::World& world() const noexcept;
-  dunya::objectmodel::World& world() noexcept;
+  // Takes the world to read rather than using the one it filled: with Play
+  // there are two, and the frame must not mix records from both.
+  void augmentFrameContext(
+    dunya::renderer::Frame& frameContext,
+    const dunya::objectmodel::World& world
+  );
 
   const std::vector<dunya::renderer::MaterialRecord>&
   materials() const noexcept;
@@ -52,5 +54,7 @@ private:
   // Rebuilt every frame; a member so the span handed to Frame stays alive.
   std::vector<dunya::renderer::MeshRecord> m_meshRecords;
 
-  dunya::objectmodel::World m_world;
+  // The authored world, owned by Application. Scene fills it and reads it;
+  // it does not own it, because Play needs a second one beside it.
+  dunya::objectmodel::World& m_world;
 };

@@ -2,10 +2,14 @@
 
 using dunya::field::Primitive;
 
-Scene::Scene(const dunya::gpu::Context& context)
+Scene::Scene(
+  const dunya::gpu::Context& context,
+  dunya::objectmodel::World& world
+)
     : m_materials(createMaterials()),
       m_samplers(createSamplers(context.device())),
-      m_textures(createTextures(context.device())) {
+      m_textures(createTextures(context.device())),
+      m_world(world) {
   // Both meshes are the same room at the same orientation; only the placement
   // and the material differ. The rotation is what DrawItem's matrix carried.
   const glm::quat rotation =
@@ -58,14 +62,17 @@ Scene::Scene(const dunya::gpu::Context& context)
   }
 }
 
-void Scene::augmentFrameContext(dunya::renderer::Frame& frameContext) {
-  const entt::registry& registry = m_world.registry();
+void Scene::augmentFrameContext(
+  dunya::renderer::Frame& frameContext,
+  const dunya::objectmodel::World& world
+) {
+  const entt::registry& registry = world.registry();
 
   // Packed here rather than stored, because a mesh record is per-frame data
   // derived from three components. A member so the span outlives the call.
   m_meshRecords.clear();
 
-  for (dunya::objectmodel::Entity entity : m_world.meshes()) {
+  for (dunya::objectmodel::Entity entity : world.meshes()) {
     m_meshRecords.push_back(
       {registry.get<dunya::objectmodel::Mesh>(entity).index,
        registry.get<dunya::objectmodel::Material>(entity).index,
@@ -77,7 +84,7 @@ void Scene::augmentFrameContext(dunya::renderer::Frame& frameContext) {
 
   frameContext.meshRecords = m_meshRecords;
   frameContext.meshes = m_meshes;
-  frameContext.primitives = m_world.pool();
+  frameContext.primitives = world.pool();
 }
 
 const std::vector<dunya::renderer::MaterialRecord>& Scene::
@@ -91,14 +98,6 @@ const std::vector<dunya::gpu::Texture>& Scene::textures() const noexcept {
 
 const std::vector<dunya::gpu::Sampler>& Scene::samplers() const noexcept {
   return m_samplers;
-}
-
-const dunya::objectmodel::World& Scene::world() const noexcept {
-  return m_world;
-}
-
-dunya::objectmodel::World& Scene::world() noexcept {
-  return m_world;
 }
 
 std::vector<dunya::gpu::Sampler> Scene::createSamplers(

@@ -321,6 +321,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     dunya::renderer
     dunya::field
     dunya::physics
+    dunya::runtime
 
     # Also where stb's implementations now live, for the whole project: texture
     # loading gets them from here rather than from a second copy that would
