@@ -2,23 +2,43 @@
 
 namespace dunya::objectmodel {
 
+namespace {
+
+// Named, because the point of reactive storage over a flag is that a second
+// consumer opens its own pool rather than sharing this one.
+constexpr entt::id_type BAKE_QUEUE = entt::hashed_string{"bake"};
+
+}  // namespace
+
 World::World() {
   m_primitiveStore.connect(m_registry);
+
+  // on_construct as well as on_update: the dirty flag this replaced defaulted
+  // to true, so a field entity has always needed its first bake on creation.
+  // on_update fires from registry.patch, which is why the store patches.
+  m_registry.storage<entt::reactive>(BAKE_QUEUE)
+    .on_construct<FieldGrid>()
+    .on_update<FieldGrid>();
 }
 
 const entt::registry& World::registry() const noexcept {
   return m_registry;
 }
 
-Entity World::addFieldObject(const FieldObject& fieldObject) {
+Entity World::addFieldObject(const Pose& pose, const FieldGrid& grid) {
   const Entity entity = m_registry.create();
 
-  m_registry.emplace<FieldObject>(entity, fieldObject);
+  m_registry.emplace<Pose>(entity, pose);
+  m_registry.emplace<FieldGrid>(entity, grid);
 
   return entity;
 }
 
-bool World::addFieldObjectAt(Entity hint, const FieldObject& fieldObject) {
+bool World::addFieldObjectAt(
+  Entity hint,
+  const Pose& pose,
+  const FieldGrid& grid
+) {
   const Entity entity = m_registry.create(hint);
 
   // EnTT treats a hint as a request, not a requirement. If that exact
@@ -30,13 +50,14 @@ bool World::addFieldObjectAt(Entity hint, const FieldObject& fieldObject) {
     return false;
   }
 
-  m_registry.emplace<FieldObject>(entity, fieldObject);
+  m_registry.emplace<Pose>(entity, pose);
+  m_registry.emplace<FieldGrid>(entity, grid);
 
   return true;
 }
 
 bool World::removeFieldObject(Entity entity) {
-  if (!m_registry.valid(entity) || !m_registry.all_of<FieldObject>(entity)) {
+  if (!m_registry.valid(entity) || !m_registry.all_of<FieldGrid>(entity)) {
     return false;
   }
 
@@ -49,7 +70,7 @@ bool World::removeFieldObject(Entity entity) {
 }
 
 std::span<const Entity> World::fieldObjects() const noexcept {
-  const auto* storage = m_registry.storage<FieldObject>();
+  const auto* storage = m_registry.storage<FieldGrid>();
 
   if (storage == nullptr) {
     return {};
@@ -104,18 +125,26 @@ void World::setPose(
   const glm::vec3& position,
   const glm::quat& rotation
 ) {
-  FieldObject& object = m_registry.get<FieldObject>(entity);
+  Pose& target = m_registry.get<Pose>(entity);
 
-  object.position = position;
-  object.rotation = rotation;
+  target.position = position;
+  target.rotation = rotation;
 }
 
-void World::setVolumeIndex(Entity entity, uint32_t volumeIndex) {
-  m_registry.get<FieldObject>(entity).volumeIndex = volumeIndex;
+void World::setBakedVolume(Entity entity, uint32_t index) {
+  m_registry.emplace_or_replace<BakedVolume>(entity, index);
 }
 
-void World::setDirty(Entity entity, bool value) {
-  m_registry.get<FieldObject>(entity).dirty = value;
+bool World::needsBake(Entity entity) const noexcept {
+  const auto* queue = m_registry.storage<entt::reactive>(BAKE_QUEUE);
+
+  return queue != nullptr && queue->contains(entity);
+}
+
+void World::markBaked(Entity entity) {
+  // remove, not erase: erase asserts on an entity the queue never held, and
+  // the caller re-derives its list from packing slots rather than from here.
+  m_registry.storage<entt::reactive>(BAKE_QUEUE).remove(entity);
 }
 
 std::span<const DrawItem> World::drawItems() const noexcept {

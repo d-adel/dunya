@@ -1,19 +1,29 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <dunya/core/config/config.h>
-#include <dunya/objectmodel/fieldobject/fieldobject.h>
+#include <dunya/objectmodel/fieldgrid/fieldgrid.h>
 #include <dunya/objectmodel/sdfprimitivestore/sdfprimitivestore.h>
 
+#include <entt/core/hashed_string.hpp>
 #include <entt/entity/registry.hpp>
 
 #include <cstdint>
 
 namespace {
 
-using dunya::objectmodel::FieldObject;
 using dunya::objectmodel::Entity;
+using dunya::objectmodel::FieldGrid;
 using dunya::objectmodel::SdfPrimitiveRange;
 using dunya::objectmodel::SdfPrimitiveStore;
+
+// A reactive pool standing in for the one World opens. The store owes an
+// on_update every time it refreshes derived state; this is what watches for it,
+// and it is the whole of what the old dirty bool meant.
+auto& bakeQueue(entt::registry& registry) {
+  auto& queue = registry.storage<entt::reactive>(entt::hashed_string{"bake"});
+  queue.on_update<FieldGrid>();
+  return queue;
+}
 
 // Materials number the primitives 1, 2, 3..., which is how a test tells one
 // from another after an edit has shifted them.
@@ -24,10 +34,10 @@ dunya::field::Primitive marker(uint32_t material) {
 Entity makeObject(entt::registry& registry) {
   const Entity entity = registry.create();
 
-  FieldObject object{};
+  FieldGrid object{};
   object.resolution = glm::uvec3(dunya::core::FIELD_GRID_RESOLUTION);
 
-  registry.emplace<FieldObject>(entity, object);
+  registry.emplace<FieldGrid>(entity, object);
 
   return entity;
 }
@@ -43,7 +53,7 @@ uint32_t materialAt(
 
 }  // namespace
 
-TEST_CASE("primitives need a field object to describe", "[sdfstore]") {
+TEST_CASE("primitives need a grid to be sampled onto", "[sdfstore]") {
   entt::registry registry;
   SdfPrimitiveStore store;
 
@@ -118,8 +128,10 @@ TEST_CASE("setting replaces in place", "[sdfstore]") {
   REQUIRE(materialAt(store, registry, entity, 1) == 2);
 }
 
-TEST_CASE("crossing the capacity boundary preserves the primitives",
-          "[sdfstore]") {
+TEST_CASE(
+  "crossing the capacity boundary preserves the primitives",
+  "[sdfstore]"
+) {
   // The first range holds four. The fifth append has to move the other four.
   entt::registry registry;
   SdfPrimitiveStore store;
@@ -138,23 +150,26 @@ TEST_CASE("crossing the capacity boundary preserves the primitives",
   }
 }
 
-TEST_CASE("an edit marks the object dirty and refreshes its box",
-          "[sdfstore]") {
+TEST_CASE(
+  "an edit queues the grid for bake and re-fits its box",
+  "[sdfstore]"
+) {
   entt::registry registry;
   SdfPrimitiveStore store;
 
+  auto& queue = bakeQueue(registry);
+
   const Entity entity = makeObject(registry);
 
-  registry.get<FieldObject>(entity).dirty = false;
+  REQUIRE_FALSE(queue.contains(entity));
 
   REQUIRE(store.append(registry, entity, marker(1)));
 
-  REQUIRE(registry.get<FieldObject>(entity).dirty);
-  REQUIRE(registry.get<FieldObject>(entity).voxelSize.x > 0.0f);
+  REQUIRE(queue.contains(entity));
+  REQUIRE(registry.get<FieldGrid>(entity).voxelSize.x > 0.0f);
 }
 
-TEST_CASE("destroying an entity returns its range to the arena",
-          "[sdfstore]") {
+TEST_CASE("destroying an entity returns its range to the arena", "[sdfstore]") {
   // The invariant the destruction signal exists for. A leak here is silent:
   // the arena simply never hears that the range is free.
   entt::registry registry;
@@ -207,14 +222,18 @@ TEST_CASE("clearing the registry returns every range", "[sdfstore]") {
   REQUIRE(store.pool().size() == 0);
 }
 
-TEST_CASE("clearing empties the primitives and keeps the allocation",
-          "[sdfstore]") {
+TEST_CASE(
+  "clearing empties the primitives and keeps the allocation",
+  "[sdfstore]"
+) {
   // Distinct from removal: the range survives, so the arena does not shrink
   // and the next append needs no growth.
   entt::registry registry;
   SdfPrimitiveStore store;
 
   store.connect(registry);
+
+  auto& queue = bakeQueue(registry);
 
   const Entity entity = makeObject(registry);
 
@@ -224,18 +243,20 @@ TEST_CASE("clearing empties the primitives and keeps the allocation",
 
   const size_t allocated = store.pool().size();
 
-  registry.get<FieldObject>(entity).dirty = false;
+  queue.remove(entity);
 
   REQUIRE(store.clear(registry, entity));
 
   REQUIRE(store.count(registry, entity) == 0);
   REQUIRE(store.primitives(registry, entity).empty());
   REQUIRE(store.pool().size() == allocated);
-  REQUIRE(registry.get<FieldObject>(entity).dirty);
+  REQUIRE(queue.contains(entity));
 }
 
-TEST_CASE("clearing an entity that holds no primitives is refused",
-          "[sdfstore]") {
+TEST_CASE(
+  "clearing an entity that holds no primitives is refused",
+  "[sdfstore]"
+) {
   entt::registry registry;
   SdfPrimitiveStore store;
 

@@ -92,11 +92,15 @@ void FieldObjectTable::makeGPUField(
   uint32_t objectIndex,
   uint32_t primitiveOffset,
   uint32_t primitiveCount,
-  const dunya::objectmodel::FieldObject& fieldObject,
+  const dunya::objectmodel::Pose& pose,
+  const dunya::objectmodel::FieldGrid& grid,
+  const dunya::objectmodel::BakedVolume& volume,
   uint32_t fieldRepresentation
 ) {
   m_gpuFieldObjects[objectIndex] = makeFieldRecord(
-    fieldObject,
+    pose,
+    grid,
+    volume,
     primitiveOffset,
     primitiveCount,
     fieldRepresentation

@@ -23,16 +23,18 @@ Scene::Scene(const dunya::gpu::Context& context)
   m_world.addDrawItem(dunya::objectmodel::DrawItem({0, 2, model}));
   m_world.addDrawItem(dunya::objectmodel::DrawItem({0, 3, model2}));
 
-  dunya::objectmodel::FieldObject fieldObject{};
-  fieldObject.position = glm::vec3(1.0f, 0.45f, 0.0f);
-  fieldObject.resolution = glm::uvec3(dunya::core::FIELD_GRID_RESOLUTION);
+  dunya::objectmodel::FieldGrid grid{};
+  grid.resolution = glm::uvec3(dunya::core::FIELD_GRID_RESOLUTION);
+
+  dunya::objectmodel::Pose pose{};
+  pose.position = glm::vec3(1.0f, 0.45f, 0.0f);
   const dunya::objectmodel::Entity fieldEntity =
-    m_world.addFieldObject(fieldObject);
+    m_world.addFieldObject(pose, grid);
   addInitialPrimitives(fieldEntity);
 
-  fieldObject.position = glm::vec3(0.0f, -2.0f, 0.0f);
+  pose.position = glm::vec3(0.0f, -2.0f, 0.0f);
   const dunya::objectmodel::Entity planeEntity =
-    m_world.addFieldObject(fieldObject);
+    m_world.addFieldObject(pose, grid);
   m_world.addPrimitive(
     planeEntity,
     dunya::field::makeBox(

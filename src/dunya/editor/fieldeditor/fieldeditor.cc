@@ -12,13 +12,12 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
   const entt::registry& registry = m_world.registry();
 
   for (dunya::objectmodel::Entity entity : m_world.fieldObjects()) {
-    const dunya::objectmodel::FieldObject& fieldObject =
-      registry.get<dunya::objectmodel::FieldObject>(entity);
-
     std::span<const dunya::field::Primitive> primitives =
       m_world.primitives(entity);
 
-    glm::mat4 inverseModel = glm::inverse(fieldObject.model());
+    glm::mat4 inverseModel = glm::inverse(
+      dunya::objectmodel::model(registry.get<dunya::objectmodel::Pose>(entity))
+    );
 
     glm::vec3 origin = inverseModel * glm::vec4(ray.origin, 1.0f);
 
@@ -141,7 +140,6 @@ void FieldEditor::stress(uint32_t count) {
   }
 
   primitives = m_world.primitives(target);
-  m_world.setDirty(target, true);
   std::cout << "stress  primitives " << before << " -> " << primitives.size()
             << '\n';
 }
@@ -156,7 +154,7 @@ bool FieldEditor::addPrimitive(
 ) {
   if (
     !m_world.registry().valid(entity)
-    || !m_world.registry().all_of<dunya::objectmodel::FieldObject>(entity)
+    || !m_world.registry().all_of<dunya::objectmodel::FieldGrid>(entity)
   ) {
     return false;
   }

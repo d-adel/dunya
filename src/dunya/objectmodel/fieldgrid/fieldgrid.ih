@@ -1,4 +1,6 @@
-#include "fieldobject.h"
+#include "fieldgrid.h"
 
 #include <dunya/core/config/config.h>
 #include <dunya/field/sampled/sampled.h>
+
+#include <optional>

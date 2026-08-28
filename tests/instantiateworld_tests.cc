@@ -21,15 +21,15 @@
 
 namespace {
 
-using dunya::objectmodel::Entity;
 using dunya::objectmodel::DrawItem;
-using dunya::objectmodel::FieldObject;
+using dunya::objectmodel::Entity;
+using dunya::objectmodel::FieldGrid;
 using dunya::objectmodel::World;
 
 // position.x carries a marker, so a test can say which object it is looking at
 // after instantiation has moved everything into a second registry.
-FieldObject marked(float marker) {
-  FieldObject object{};
+FieldGrid marked(float marker) {
+  FieldGrid object{};
   object.resolution = glm::uvec3(dunya::core::FIELD_GRID_RESOLUTION);
   object.position.x = marker;
 
@@ -43,7 +43,7 @@ dunya::field::Primitive marker(uint32_t material) {
 }
 
 float markerAt(const World& world, Entity entity) {
-  return world.registry().get<FieldObject>(entity).position.x;
+  return world.registry().get<FieldGrid>(entity).position.x;
 }
 
 uint32_t materialAt(const World& world, Entity entity, uint32_t index) {
@@ -64,8 +64,8 @@ TEST_CASE("every object arrives at the id it had", "[instantiate]") {
   dunya::objectmodel::instantiateWorld(authored, runtime);
 
   REQUIRE(runtime.fieldObjects().size() == 2);
-  REQUIRE(runtime.registry().all_of<FieldObject>(first));
-  REQUIRE(runtime.registry().all_of<FieldObject>(second));
+  REQUIRE(runtime.registry().all_of<FieldGrid>(first));
+  REQUIRE(runtime.registry().all_of<FieldGrid>(second));
   REQUIRE(markerAt(runtime, first) == 10.0f);
   REQUIRE(markerAt(runtime, second) == 11.0f);
 }
@@ -84,9 +84,9 @@ TEST_CASE("ids with holes in them are preserved", "[instantiate]") {
   World runtime;
   dunya::objectmodel::instantiateWorld(authored, runtime);
 
-  REQUIRE(runtime.registry().all_of<FieldObject>(zero));
-  REQUIRE(runtime.registry().all_of<FieldObject>(five));
-  REQUIRE_FALSE(runtime.registry().all_of<FieldObject>(Entity{1}));
+  REQUIRE(runtime.registry().all_of<FieldGrid>(zero));
+  REQUIRE(runtime.registry().all_of<FieldGrid>(five));
+  REQUIRE_FALSE(runtime.registry().all_of<FieldGrid>(Entity{1}));
   REQUIRE(markerAt(runtime, five) == 15.0f);
 }
 
@@ -113,7 +113,7 @@ TEST_CASE("primitives arrive in csg order", "[instantiate]") {
 TEST_CASE("volumeIndex does not cross the boundary", "[instantiate]") {
   // Bug B2. The frame loop bakes only when volumeIndex is UINT32_MAX, so an
   // instantiated object that keeps the editor's index renders the editor's
-  // volume and dents it. Copying FieldObject wholesale gets this wrong.
+  // volume and dents it. Copying FieldGrid wholesale gets this wrong.
   World authored;
 
   const Entity id = authored.addFieldObject(marked(10.0f));
@@ -122,8 +122,8 @@ TEST_CASE("volumeIndex does not cross the boundary", "[instantiate]") {
   World runtime;
   dunya::objectmodel::instantiateWorld(authored, runtime);
 
-  REQUIRE(runtime.registry().get<FieldObject>(id).volumeIndex == UINT32_MAX);
-  REQUIRE(authored.registry().get<FieldObject>(id).volumeIndex == 3);
+  REQUIRE(runtime.registry().get<FieldGrid>(id).volumeIndex == UINT32_MAX);
+  REQUIRE(authored.registry().get<FieldGrid>(id).volumeIndex == 3);
 }
 
 TEST_CASE("draw items arrive in order", "[instantiate]") {

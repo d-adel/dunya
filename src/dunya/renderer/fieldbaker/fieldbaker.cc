@@ -375,30 +375,27 @@ FieldBaker::FieldBaker(
       ) {}
 
 void FieldBaker::verifyBake(
-  const dunya::objectmodel::FieldObject& fieldObject,
+  const dunya::objectmodel::FieldGrid& grid,
+  uint32_t volumeIndex,
   std::span<const dunya::field::Primitive> primitives,
   VolumeImages images
 ) const {
   const dunya::field::Aabb box = dunya::objectmodel::gridBox(primitives);
 
-  const SampledField reference = dunya::field::bake(
-    primitives,
-    box.minimum,
-    box.maximum,
-    fieldObject.resolution
-  );
+  const SampledField reference =
+    dunya::field::bake(primitives, box.minimum, box.maximum, grid.resolution);
 
   const std::vector<uint8_t> distanceBytes = readVolume(
     m_device,
     images.distance,
-    fieldObject.resolution,
+    grid.resolution,
     reference.distances.size() * sizeof(float)
   );
 
   const std::vector<uint8_t> materialBytes = readVolume(
     m_device,
     images.material,
-    fieldObject.resolution,
+    grid.resolution,
     reference.materials.size()
   );
 
@@ -423,7 +420,7 @@ void FieldBaker::verifyBake(
   const std::vector<float> bounds = readBounds(
     m_device,
     m_table.brickBounds(),
-    fieldObject.volumeIndex,
+    volumeIndex,
     1u + static_cast<uint32_t>(reference.brickLipschitz.size())
   );
 

@@ -1,4 +1,4 @@
-#include "fieldobject.ih"
+#include "fieldgrid.ih"
 
 namespace dunya::objectmodel {
 
@@ -16,16 +16,16 @@ dunya::field::Aabb gridBox(
   return {boundedExtentBox.minimum - margin, boundedExtentBox.maximum + margin};
 }
 
-void refreshDerived(
-  FieldObject& fieldObject,
+void fitToPrimitives(
+  FieldGrid& grid,
   std::span<const dunya::field::Primitive> primitives
 ) {
   const dunya::field::Aabb box = gridBox(primitives);
 
-  fieldObject.gridOrigin = glm::vec4(box.minimum, 1.0f);
+  grid.origin = glm::vec4(box.minimum, 1.0f);
 
-  fieldObject.voxelSize =
-    dunya::field::voxelSize(box.minimum, box.maximum, fieldObject.resolution);
+  grid.voxelSize =
+    dunya::field::voxelSize(box.minimum, box.maximum, grid.resolution);
 }
 
 }  // namespace dunya::objectmodel

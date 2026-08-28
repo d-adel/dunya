@@ -14,7 +14,7 @@ bool isFieldObject(
   dunya::objectmodel::Entity entity
 ) {
   return world.registry().valid(entity)
-         && world.registry().all_of<dunya::objectmodel::FieldObject>(entity);
+         && world.registry().all_of<dunya::objectmodel::FieldGrid>(entity);
 }
 
 }  // namespace
@@ -63,11 +63,11 @@ bool CommandHistory::apply(Command& command, dunya::objectmodel::World& world) {
 
       if constexpr (std::is_same_v<T, AddFieldObjectCommand>) {
         if (cmd.entity == dunya::objectmodel::INVALID_ENTITY) {
-          cmd.entity = world.addFieldObject(cmd.object);
+          cmd.entity = world.addFieldObject(cmd.pose, cmd.object);
           return cmd.entity != dunya::objectmodel::INVALID_ENTITY;
         }
 
-        return world.addFieldObjectAt(cmd.entity, cmd.object);
+        return world.addFieldObjectAt(cmd.entity, cmd.pose, cmd.object);
       }
 
       else if constexpr (std::is_same_v<T, RemoveFieldObjectCommand>) {
@@ -76,10 +76,10 @@ bool CommandHistory::apply(Command& command, dunya::objectmodel::World& world) {
             return false;
           }
 
+          cmd.pose = world.registry().get<dunya::objectmodel::Pose>(cmd.entity);
+
           cmd.object =
-            world.registry().get<dunya::objectmodel::FieldObject>(
-              cmd.entity
-            );
+            world.registry().get<dunya::objectmodel::FieldGrid>(cmd.entity);
 
           const auto primitives = world.primitives(cmd.entity);
 
@@ -138,11 +138,11 @@ bool CommandHistory::revert(
       }
 
       else if constexpr (std::is_same_v<T, RemoveFieldObjectCommand>) {
-        if (!cmd.object.has_value()) {
+        if (!cmd.object.has_value() || !cmd.pose.has_value()) {
           return false;
         }
 
-        if (!world.addFieldObjectAt(cmd.entity, *cmd.object)) {
+        if (!world.addFieldObjectAt(cmd.entity, *cmd.pose, *cmd.object)) {
           return false;
         }
 

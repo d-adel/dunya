@@ -6,7 +6,7 @@
 #include <dunya/gpu/sampler/sampler.h>
 #include <dunya/gpu/texture/texture.h>
 #include <dunya/renderer/frame/frame.h>
-#include <dunya/objectmodel/fieldobject/fieldobject.h>
+#include <dunya/objectmodel/fieldgrid/fieldgrid.h>
 #include <dunya/objectmodel/world/world.h>
 
 #include <glm/glm.hpp>

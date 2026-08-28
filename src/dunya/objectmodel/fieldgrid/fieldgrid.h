@@ -1,0 +1,38 @@
+#pragma once
+
+#include <dunya/field/analytic/analytic.h>
+#include <dunya/field/field.h>
+
+#include <glm/glm.hpp>
+
+#include <span>
+
+namespace dunya::objectmodel {
+
+// The lattice a field is sampled onto - not the field itself, which is
+// dunya::field's business.
+//
+// origin keeps its vec4 shape because FieldRecord copies it wholesale into
+// localOrigin before overwriting .w with the brick-bound offset. Narrowing it
+// to a vec3 is a data change, so it is not part of a move.
+struct FieldGrid {
+  glm::vec3 voxelSize{1.0f};
+  glm::uvec3 resolution{0u};
+  glm::vec4 origin{0.0f};
+};
+
+// The box a grid has to cover: the primitives' bounded extent, plus the margin
+// on every side.
+dunya::field::Aabb gridBox(std::span<const dunya::field::Primitive> primitives);
+
+// Re-fit the lattice to the primitives it samples. Was refreshDerived, which
+// named when it ran rather than what it does.
+//
+// Resolution is authored and stays put; origin and voxelSize are derived, so
+// this is the only thing allowed to write them.
+void fitToPrimitives(
+  FieldGrid& grid,
+  std::span<const dunya::field::Primitive> primitives
+);
+
+}  // namespace dunya::objectmodel

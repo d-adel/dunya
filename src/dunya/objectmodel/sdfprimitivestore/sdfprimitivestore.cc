@@ -25,14 +25,16 @@ void SdfPrimitiveStore::onDestroyRange(
 void SdfPrimitiveStore::refresh(entt::registry& registry, Entity entity) {
   const SdfPrimitiveRange& range = registry.get<SdfPrimitiveRange>(entity);
 
-  FieldObject& object = registry.get<FieldObject>(entity);
+  const std::span<const Primitive> primitives =
+    m_primitives.at({range.offset, range.capacity}, range.count);
 
-  refreshDerived(
-    object,
-    m_primitives.at({range.offset, range.capacity}, range.count)
-  );
-
-  object.dirty = true;
+  // patch, not a write through get<>: the update signal is what puts this
+  // entity in the bake queue, and a bare reference write is invisible to it.
+  // This call is the whole of what "mark dirty" used to mean.
+  // The queue membership is the flag now, and nobody writes it by hand.
+  registry.patch<FieldGrid>(entity, [primitives](FieldGrid& object) {
+    fitToPrimitives(object, primitives);
+  });
 }
 
 bool SdfPrimitiveStore::insert(
@@ -41,27 +43,25 @@ bool SdfPrimitiveStore::insert(
   uint32_t index,
   const Primitive& primitive
 ) {
-  // A field object is required, not implied: an entity can carry primitives
-  // only if there is something for them to describe.
-  if (!registry.valid(entity) || !registry.all_of<FieldObject>(entity)) {
+  // A grid is required, not implied: primitives describe a field, and a field
+  // has to have a lattice to be sampled onto before it can hold any.
+  if (!registry.valid(entity) || !registry.all_of<FieldGrid>(entity)) {
     return false;
   }
 
   SdfPrimitiveRange& range = registry.get_or_emplace<SdfPrimitiveRange>(entity);
 
-  if (index > range.count
-      || range.count >= dunya::core::MAX_FIELD_PRIMITIVES) {
+  if (index > range.count || range.count >= dunya::core::MAX_FIELD_PRIMITIVES) {
     return false;
   }
 
   if (range.count == range.capacity) {
-    const std::optional<RangeStore<Primitive>::Range> grown =
-      m_primitives.grow(
-        {range.offset, range.capacity},
-        range.count,
-        range.count + 1,
-        dunya::core::MAX_FIELD_PRIMITIVES
-      );
+    const std::optional<RangeStore<Primitive>::Range> grown = m_primitives.grow(
+      {range.offset, range.capacity},
+      range.count,
+      range.count + 1,
+      dunya::core::MAX_FIELD_PRIMITIVES
+    );
 
     if (!grown) {
       return false;
@@ -94,13 +94,18 @@ bool SdfPrimitiveStore::append(
   Entity entity,
   const Primitive& primitive
 ) {
-  if (!registry.valid(entity) || !registry.all_of<FieldObject>(entity)) {
+  if (!registry.valid(entity) || !registry.all_of<FieldGrid>(entity)) {
     return false;
   }
 
   const SdfPrimitiveRange* range = registry.try_get<SdfPrimitiveRange>(entity);
 
-  return insert(registry, entity, range == nullptr ? 0 : range->count, primitive);
+  return insert(
+    registry,
+    entity,
+    range == nullptr ? 0 : range->count,
+    primitive
+  );
 }
 
 bool SdfPrimitiveStore::set(

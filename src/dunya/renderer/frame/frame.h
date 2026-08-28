@@ -6,7 +6,7 @@
 #include <dunya/gpu/pipeline/pipeline.h>
 #include <dunya/field/field.h>
 #include <dunya/objectmodel/drawitem/drawitem.h>
-#include <dunya/objectmodel/fieldobject/fieldobject.h>
+#include <dunya/objectmodel/fieldgrid/fieldgrid.h>
 
 #include <glm/glm.hpp>
 #include <span>

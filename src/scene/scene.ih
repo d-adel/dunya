@@ -4,7 +4,7 @@
 #include <dunya/renderer/frame/frame.h>
 #include <dunya/gpu/context/context.h>
 #include <dunya/core/config/config.h>
-#include <dunya/objectmodel/fieldobject/fieldobject.h>
+#include <dunya/objectmodel/fieldgrid/fieldgrid.h>
 #include <dunya/editor/command/command.h>
 
 #include <array>

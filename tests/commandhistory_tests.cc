@@ -5,6 +5,7 @@
 #include <dunya/editor/commandhistory/commandhistory.h>
 #include <dunya/core/config/config.h>
 #include <dunya/field/field.h>
+#include <dunya/objectmodel/pose/pose.h>
 #include <dunya/objectmodel/world/world.h>
 
 #include "tolerances.h"
@@ -21,10 +22,11 @@ dunya::objectmodel::Entity makeObject(
   dunya::objectmodel::World& world,
   uint32_t primitives
 ) {
-  dunya::objectmodel::FieldObject object{};
+  dunya::objectmodel::FieldGrid object{};
   object.resolution = glm::uvec3(dunya::core::FIELD_GRID_RESOLUTION);
 
-  const dunya::objectmodel::Entity id = world.addFieldObject(object);
+  const dunya::objectmodel::Entity id =
+    world.addFieldObject(dunya::objectmodel::Pose{}, object);
 
   for (uint32_t i = 0; i != primitives; ++i) {
     world.addPrimitive(
@@ -48,17 +50,24 @@ dunya::field::Primitive marker(uint32_t material) {
   return dunya::field::makeSphere(glm::vec3(0.0f), 1.0f, material);
 }
 
-const dunya::objectmodel::FieldObject& objectOf(
+const dunya::objectmodel::FieldGrid& gridOf(
   const dunya::objectmodel::World& world,
   dunya::objectmodel::Entity entity
 ) {
-  return world.registry().get<dunya::objectmodel::FieldObject>(entity);
+  return world.registry().get<dunya::objectmodel::FieldGrid>(entity);
+}
+
+const dunya::objectmodel::Pose& poseOf(
+  const dunya::objectmodel::World& world,
+  dunya::objectmodel::Entity entity
+) {
+  return world.registry().get<dunya::objectmodel::Pose>(entity);
 }
 
 }  // namespace
 
 TEST_CASE(
-  "undoing an added primitive restores the count and marks it dirty",
+  "undoing an added primitive restores the count and requeues the bake",
   "[commandhistory]"
 ) {
   // The bake only runs for objects the world flagged, so an undo that
@@ -67,22 +76,21 @@ TEST_CASE(
   dunya::editor::CommandHistory history;
 
   const dunya::objectmodel::Entity id = makeObject(world, 2);
-  world.setDirty(id, false);
+  world.markBaked(id);
 
-  REQUIRE(history.execute(
-    dunya::editor::AddPrimitiveCommand{id, 2, marker(9)},
-    world
-  ));
+  REQUIRE(
+    history.execute(dunya::editor::AddPrimitiveCommand{id, 2, marker(9)}, world)
+  );
 
   REQUIRE(world.primitiveCount(id) == 3);
-  REQUIRE(objectOf(world, id).dirty);
+  REQUIRE(world.needsBake(id));
 
-  world.setDirty(id, false);
+  world.markBaked(id);
 
   history.undo(world);
 
   REQUIRE(world.primitiveCount(id) == 2);
-  REQUIRE(objectOf(world, id).dirty);
+  REQUIRE(world.needsBake(id));
 }
 
 TEST_CASE(
@@ -95,7 +103,11 @@ TEST_CASE(
   dunya::editor::CommandHistory history;
 
   REQUIRE_FALSE(history.execute(
-    dunya::editor::AddPrimitiveCommand{dunya::objectmodel::Entity{0}, 0, marker(1)},
+    dunya::editor::AddPrimitiveCommand{
+      dunya::objectmodel::Entity{0},
+      0,
+      marker(1)
+    },
     world
   ));
 
@@ -109,10 +121,9 @@ TEST_CASE("redo replays an undone edit", "[commandhistory]") {
 
   const dunya::objectmodel::Entity id = makeObject(world, 2);
 
-  REQUIRE(history.execute(
-    dunya::editor::AddPrimitiveCommand{id, 2, marker(9)},
-    world
-  ));
+  REQUIRE(
+    history.execute(dunya::editor::AddPrimitiveCommand{id, 2, marker(9)}, world)
+  );
 
   history.undo(world);
 
@@ -134,19 +145,17 @@ TEST_CASE("a fresh edit clears the redo stack", "[commandhistory]") {
 
   const dunya::objectmodel::Entity id = makeObject(world, 1);
 
-  REQUIRE(history.execute(
-    dunya::editor::AddPrimitiveCommand{id, 1, marker(9)},
-    world
-  ));
+  REQUIRE(
+    history.execute(dunya::editor::AddPrimitiveCommand{id, 1, marker(9)}, world)
+  );
 
   history.undo(world);
 
   REQUIRE(history.canRedo());
 
-  REQUIRE(history.execute(
-    dunya::editor::AddPrimitiveCommand{id, 1, marker(8)},
-    world
-  ));
+  REQUIRE(
+    history.execute(dunya::editor::AddPrimitiveCommand{id, 1, marker(8)}, world)
+  );
 
   REQUIRE_FALSE(history.canRedo());
   REQUIRE(materialAt(world, id, 1) == 8);
@@ -161,18 +170,15 @@ TEST_CASE("undo runs last-in-first-out across objects", "[commandhistory]") {
   const dunya::objectmodel::Entity a = makeObject(world, 1);
   const dunya::objectmodel::Entity b = makeObject(world, 1);
 
-  REQUIRE(history.execute(
-    dunya::editor::AddPrimitiveCommand{a, 1, marker(10)},
-    world
-  ));
-  REQUIRE(history.execute(
-    dunya::editor::AddPrimitiveCommand{b, 1, marker(20)},
-    world
-  ));
-  REQUIRE(history.execute(
-    dunya::editor::AddPrimitiveCommand{a, 2, marker(30)},
-    world
-  ));
+  REQUIRE(
+    history.execute(dunya::editor::AddPrimitiveCommand{a, 1, marker(10)}, world)
+  );
+  REQUIRE(
+    history.execute(dunya::editor::AddPrimitiveCommand{b, 1, marker(20)}, world)
+  );
+  REQUIRE(
+    history.execute(dunya::editor::AddPrimitiveCommand{a, 2, marker(30)}, world)
+  );
 
   REQUIRE(world.primitiveCount(a) == 3);
   REQUIRE(world.primitiveCount(b) == 2);
@@ -232,10 +238,9 @@ TEST_CASE(
 
   const dunya::objectmodel::Entity id = makeObject(world, 1);
 
-  REQUIRE(history.execute(
-    dunya::editor::AddPrimitiveCommand{id, 1, marker(9)},
-    world
-  ));
+  REQUIRE(
+    history.execute(dunya::editor::AddPrimitiveCommand{id, 1, marker(9)}, world)
+  );
 
   history.undo(world);
 
@@ -258,10 +263,9 @@ TEST_CASE(
 
   const dunya::objectmodel::Entity id = makeObject(world, 1);
 
-  REQUIRE(history.execute(
-    dunya::editor::AddPrimitiveCommand{id, 1, marker(9)},
-    world
-  ));
+  REQUIRE(
+    history.execute(dunya::editor::AddPrimitiveCommand{id, 1, marker(9)}, world)
+  );
 
   world.removeFieldObject(id);
 
@@ -300,12 +304,27 @@ TEST_CASE("undoing a transform restores the old pose", "[commandhistory]") {
     world
   ));
 
-  REQUIRE_THAT(objectOf(world, id).position.x, WithinAbs(newPosition.x, ANALYTIC_TOLERANCE));
-  REQUIRE_THAT(objectOf(world, id).rotation.w, WithinAbs(newRotation.w, ANALYTIC_TOLERANCE));
+  REQUIRE_THAT(
+    poseOf(world, id).position.x,
+    WithinAbs(newPosition.x, ANALYTIC_TOLERANCE)
+  );
+  REQUIRE_THAT(
+    poseOf(world, id).rotation.w,
+    WithinAbs(newRotation.w, ANALYTIC_TOLERANCE)
+  );
 
   history.undo(world);
 
-  REQUIRE_THAT(objectOf(world, id).position.x, WithinAbs(oldPosition.x, ANALYTIC_TOLERANCE));
-  REQUIRE_THAT(objectOf(world, id).position.z, WithinAbs(oldPosition.z, ANALYTIC_TOLERANCE));
-  REQUIRE_THAT(objectOf(world, id).rotation.w, WithinAbs(oldRotation.w, ANALYTIC_TOLERANCE));
+  REQUIRE_THAT(
+    poseOf(world, id).position.x,
+    WithinAbs(oldPosition.x, ANALYTIC_TOLERANCE)
+  );
+  REQUIRE_THAT(
+    poseOf(world, id).position.z,
+    WithinAbs(oldPosition.z, ANALYTIC_TOLERANCE)
+  );
+  REQUIRE_THAT(
+    poseOf(world, id).rotation.w,
+    WithinAbs(oldRotation.w, ANALYTIC_TOLERANCE)
+  );
 }

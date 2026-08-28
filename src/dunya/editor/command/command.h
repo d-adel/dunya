@@ -1,7 +1,8 @@
 #pragma once
 
 #include <dunya/objectmodel/entity/entity.h>
-#include <dunya/objectmodel/fieldobject/fieldobject.h>
+#include <dunya/objectmodel/fieldgrid/fieldgrid.h>
+#include <dunya/objectmodel/pose/pose.h>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -14,12 +15,14 @@ namespace dunya::editor {
 
 struct AddFieldObjectCommand {
   dunya::objectmodel::Entity entity = dunya::objectmodel::INVALID_ENTITY;
-  dunya::objectmodel::FieldObject object;
+  dunya::objectmodel::Pose pose;
+  dunya::objectmodel::FieldGrid object;
 };
 
 struct RemoveFieldObjectCommand {
   dunya::objectmodel::Entity entity;
-  std::optional<dunya::objectmodel::FieldObject> object;
+  std::optional<dunya::objectmodel::Pose> pose;
+  std::optional<dunya::objectmodel::FieldGrid> object;
   std::vector<dunya::field::Primitive> primitives;
 };
 

@@ -36,14 +36,11 @@ public:
   FieldBaker(FieldBaker&&) = delete;
   FieldBaker& operator=(FieldBaker&&) = delete;
 
-  void bake(
-    const FieldRecord& fieldObject,
-    uint32_t frame,
-    VolumeImages images
-  ) const;
+  void bake(const FieldRecord& grid, uint32_t frame, VolumeImages images) const;
 
   void verifyBake(
-    const dunya::objectmodel::FieldObject& fieldObject,
+    const dunya::objectmodel::FieldGrid& grid,
+    uint32_t volumeIndex,
     std::span<const dunya::field::Primitive> primitives,
     VolumeImages images
   ) const;

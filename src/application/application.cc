@@ -233,22 +233,24 @@ int Application::start(const StartupOptions& options) {
         break;
       }
 
-      const dunya::objectmodel::FieldObject& fieldObject =
-        registry.get<dunya::objectmodel::FieldObject>(entity);
+      const dunya::objectmodel::FieldGrid& grid =
+        registry.get<dunya::objectmodel::FieldGrid>(entity);
 
-      if (fieldObject.volumeIndex == UINT32_MAX) {
+      // No BakedVolume means no pool slot yet. Absence is the state; there is
+      // no sentinel to get wrong.
+      if (!registry.all_of<dunya::objectmodel::BakedVolume>(entity)) {
         std::span<const dunya::field::Primitive> primitives =
           world.primitives(entity);
 
         dunya::field::Aabb box = dunya::objectmodel::gridBox(primitives);
-        const dunya::field::SampledField& grid = dunya::field::bake(
+        const dunya::field::SampledField& baked = dunya::field::bake(
           primitives,
           box.minimum,
           box.maximum,
-          fieldObject.resolution
+          grid.resolution
         );
 
-        const uint32_t index = m_volumePool.allocate(grid);
+        const uint32_t index = m_volumePool.allocate(baked);
 
         // No volume means nothing to sample, and UINT32_MAX would index
         // the volume array out of bounds on the GPU. Skip it entirely.
@@ -269,7 +271,7 @@ int Application::start(const StartupOptions& options) {
           index
         );
 
-        world.setVolumeIndex(entity, index);
+        world.setBakedVolume(entity, index);
       }
 
       const auto* range =
@@ -283,11 +285,13 @@ int Application::start(const StartupOptions& options) {
         objectIndex,
         primitiveOffset,
         primitiveCount,
-        fieldObject,
+        registry.get<dunya::objectmodel::Pose>(entity),
+        grid,
+        registry.get<dunya::objectmodel::BakedVolume>(entity),
         m_frameContext.fieldRepresentation
       );
 
-      if (fieldObject.dirty) {
+      if (world.needsBake(entity)) {
         m_fieldObjectTable.appendToBakeList(objectIndex);
       }
 
@@ -329,7 +333,7 @@ int Application::start(const StartupOptions& options) {
         world.fieldObjects();
 
       for (uint32_t idx : m_fieldObjectTable.bakeList()) {
-        world.setDirty(fieldEntities[idx], false);
+        world.markBaked(fieldEntities[idx]);
       }
     } else {
       m_swapChain.recreate();
@@ -341,13 +345,23 @@ int Application::start(const StartupOptions& options) {
       bakeCheckPending = false;
       m_context.device().waitIdle();
       for (dunya::objectmodel::Entity entity : world.fieldObjects()) {
-        const dunya::objectmodel::FieldObject& fieldObject =
-          registry.get<dunya::objectmodel::FieldObject>(entity);
+        const dunya::objectmodel::FieldGrid& grid =
+          registry.get<dunya::objectmodel::FieldGrid>(entity);
+        const auto* volume =
+          registry.try_get<dunya::objectmodel::BakedVolume>(entity);
+
+        // Nothing was baked for this entity, so there is nothing to check
+        // against. Reading the pool at a sentinel would be the bug the
+        // component's absence exists to prevent.
+        if (volume == nullptr) {
+          continue;
+        }
+
         std::span<const dunya::field::Primitive> primitives =
           world.primitives(entity);
         dunya::renderer::VolumeImages images =
-          m_volumePool.images(fieldObject.volumeIndex);
-        m_fieldBaker.verifyBake(fieldObject, primitives, images);
+          m_volumePool.images(volume->index);
+        m_fieldBaker.verifyBake(grid, volume->index, primitives, images);
       }
     }
 
