@@ -16,6 +16,7 @@
 #include <dunya/core/config/config.h>
 #include <dunya/field/field.h>
 #include <dunya/objectmodel/instantiate/instantiate.h>
+#include <dunya/objectmodel/staticbody/staticbody.h>
 #include <dunya/objectmodel/world/world.h>
 
 #include <cstdint>
@@ -223,4 +224,24 @@ TEST_CASE("mesh entities arrive at the ids they had", "[instantiate]") {
   REQUIRE(runtime.registry().all_of<Mesh>(seven));
   REQUIRE_FALSE(runtime.registry().all_of<Mesh>(Entity{3}));
   REQUIRE(runtime.registry().get<Material>(seven).index == 2);
+}
+
+TEST_CASE("a static body stays static across instantiation", "[instantiate]") {
+  // The copy names its components one at a time, which is what keeps
+  // BakedVolume out. The same list silently drops anything nobody adds to it,
+  // and an untagged ground falls through the world instead of holding it up.
+  World authored;
+
+  const Entity ground = authored.createField(marked(10.0f), blank());
+  const Entity faller = authored.createField(marked(11.0f), blank());
+
+  authored.addStaticBody(ground);
+
+  World runtime;
+  dunya::objectmodel::instantiateWorld(authored, runtime);
+
+  REQUIRE(runtime.registry().all_of<dunya::objectmodel::StaticBody>(ground));
+  REQUIRE_FALSE(
+    runtime.registry().all_of<dunya::objectmodel::StaticBody>(faller)
+  );
 }

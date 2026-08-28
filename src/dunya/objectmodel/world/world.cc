@@ -100,6 +100,14 @@ bool World::removePrimitive(Entity entity, uint32_t index) {
   return m_primitiveStore.remove(m_registry, entity, index);
 }
 
+void World::addStaticBody(Entity entity) {
+  m_registry.emplace_or_replace<StaticBody>(entity);
+}
+
+void World::removeStaticBody(Entity entity) {
+  m_registry.remove<StaticBody>(entity);
+}
+
 std::span<const dunya::field::Primitive> World::primitives(
   Entity entity
 ) const {
@@ -116,6 +124,10 @@ std::span<const dunya::field::Primitive> World::pool() const noexcept {
 
 void World::setBakedVolume(Entity entity, uint32_t index) {
   m_registry.emplace_or_replace<BakedVolume>(entity, index);
+}
+
+void World::setRigidBody(Entity entity, uint32_t index) {
+  m_registry.emplace_or_replace<RigidBody>(entity, index);
 }
 
 void World::clearBakedVolume(Entity entity) {

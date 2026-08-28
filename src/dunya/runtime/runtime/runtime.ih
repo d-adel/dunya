@@ -1,3 +1,15 @@
 #include "runtime.h"
 
+#include <dunya/objectmodel/staticbody/staticbody.h>
+
+#include <Jolt/Physics/Body/BodyCreationSettings.h>
+#include <Jolt/Physics/Body/BodyInterface.h>
+#include <Jolt/Physics/Body/BodyManager.h>
+#include <Jolt/Physics/Body/BodyType.h>
+#include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
+#include <Jolt/Physics/EActivation.h>
+
 #include <dunya/objectmodel/instantiate/instantiate.h>
+
+#include <stdexcept>

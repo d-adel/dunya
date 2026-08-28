@@ -50,4 +50,12 @@ const BodyInterface& PhysicsWorld::bodies() const {
   return m_system.GetBodyInterface();
 }
 
+PhysicsSystem& PhysicsWorld::system() {
+  return m_system;
+}
+
+const PhysicsSystem& PhysicsWorld::system() const {
+  return m_system;
+}
+
 }  // namespace dunya::physics

@@ -6,7 +6,9 @@
 #include <dunya/objectmodel/material/material.h>
 #include <dunya/objectmodel/mesh/mesh.h>
 #include <dunya/objectmodel/pose/pose.h>
+#include <dunya/objectmodel/rigidbody/rigidbody.h>
 #include <dunya/objectmodel/selfcontained/selfcontained.h>
+#include <dunya/objectmodel/staticbody/staticbody.h>
 #include <dunya/objectmodel/world/world.h>
 
 #include <entt/entity/registry.hpp>
@@ -336,6 +338,15 @@ TEST_CASE(
     !dunya::objectmodel::SelfContained<dunya::objectmodel::SdfPrimitiveRange>
   );
 
+  // A RigidBody id names a Jolt body that must be created and destroyed with
+  // it, and a tag has nothing to write at all.
+  static_assert(
+    !dunya::objectmodel::SelfContained<dunya::objectmodel::RigidBody>
+  );
+  static_assert(
+    !dunya::objectmodel::SelfContained<dunya::objectmodel::StaticBody>
+  );
+
   SUCCEED("checked at compile time");
 }
 
@@ -354,4 +365,17 @@ TEST_CASE("patch writes only what it touches", "[world]") {
 
   REQUIRE_THAT(pose.position.x, WithinAbs(5.0f, ANALYTIC_TOLERANCE));
   REQUIRE_THAT(pose.rotation.y, WithinAbs(rotation.y, ANALYTIC_TOLERANCE));
+}
+
+TEST_CASE(
+  "the physics components keep the shape their use depends on",
+  "[world]"
+) {
+  // StaticBody must stay empty: EnTT stores no payload for an empty type, which
+  // is what makes presence-is-the-state free. A member would silently end that.
+  static_assert(std::is_empty_v<dunya::objectmodel::StaticBody>);
+
+  // UINT32_MAX rather than 0, because 0 is a valid Jolt body index and a
+  // default-constructed component must not look like it names one.
+  REQUIRE(dunya::objectmodel::RigidBody{}.id == UINT32_MAX);
 }

@@ -2,6 +2,9 @@
 
 namespace {
 
+// Five is three frames of headroom at 60 Hz and still bounds the worst case.
+constexpr uint32_t MAX_PHYSICS_SUBSTEPS = 5;
+
 const std::vector<VkVertexInputBindingDescription> MESH_BINDINGS{
   dunya::renderer::Vertex::getBindingDescription()
 };
@@ -143,11 +146,27 @@ int Application::start(const StartupOptions& options) {
     if (m_runtime) {
       physicsAccumulator += dt;
 
-      while (physicsAccumulator >= dunya::physics::PhysicsWorld::TIME_STEP) {
-        m_runtime->physics().step();
+      // A slow frame must not buy more steps than the next frame can afford,
+      // or the loop feeds itself: more steps, slower frame, more steps.
+      uint32_t substeps = 0;
+
+      while (physicsAccumulator >= dunya::physics::PhysicsWorld::TIME_STEP
+             && substeps != MAX_PHYSICS_SUBSTEPS) {
+        ++substeps;
+        m_runtime->step();
 
         physicsAccumulator -= dunya::physics::PhysicsWorld::TIME_STEP;
       }
+
+      // Whatever is left would be paid for next frame and start the spiral
+      // again, so it is dropped: simulation time lags, frame rate does not.
+      if (substeps == MAX_PHYSICS_SUBSTEPS) {
+        physicsAccumulator = 0.0;
+      }
+
+      // Once per frame, not once per step: the world only needs where things
+      // ended up, and the renderer reads it straight after.
+      m_runtime->syncPoses();
     }
 
     ++statFrames;

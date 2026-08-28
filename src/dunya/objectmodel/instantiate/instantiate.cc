@@ -17,6 +17,12 @@ void instantiateWorld(const World& source, World& destination) {
       throw std::runtime_error("Cannot instantiate a field at its authored id");
     }
 
+    // Named explicitly like everything else here: the list is what keeps
+    // BakedVolume out, and it silently drops whatever nobody adds to it.
+    if (registry.all_of<StaticBody>(entity)) {
+      destination.addStaticBody(entity);
+    }
+
     for (const dunya::field::Primitive& primitive : source.primitives(entity)) {
       if (!destination.addPrimitive(entity, primitive)) {
         throw std::runtime_error("Cannot instantiate an object's primitives");

@@ -39,6 +39,10 @@ Scene::Scene(
     m_world.createField(pose, grid);
   addInitialPrimitives(fieldEntity);
 
+  // Static for now: it is the carvable object, not a falling one. Untagged
+  // entities become dynamic bodies at Play.
+  m_world.addStaticBody(fieldEntity);
+
   pose.position = glm::vec3(0.0f, -2.0f, 0.0f);
   const dunya::objectmodel::Entity planeEntity =
     m_world.createField(pose, grid);
@@ -60,6 +64,8 @@ Scene::Scene(
 
     );
   }
+
+  m_world.addStaticBody(planeEntity);
 
   // The body M18 drops onto the ground above. A field object rather than a
   // mesh, because D1 says every physical body is a field.

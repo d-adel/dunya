@@ -27,6 +27,10 @@ public:
   JPH::BodyInterface& bodies();
   const JPH::BodyInterface& bodies() const;
 
+  // The active-body list lives on the system, not the body interface.
+  JPH::PhysicsSystem& system();
+  const JPH::PhysicsSystem& system() const;
+
 private:
   BroadPhaseLayerInterface m_broadPhaseLayerInterface;
   ObjectVsBroadPhaseLayerFilter m_objectVsBroadPhaseLayerFilter;

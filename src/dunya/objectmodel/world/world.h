@@ -8,6 +8,8 @@
 #include <dunya/objectmodel/sdfgrid/sdfgrid.h>
 #include <dunya/objectmodel/sdfprimitivestore/sdfprimitivestore.h>
 #include <dunya/objectmodel/selfcontained/selfcontained.h>
+#include <dunya/objectmodel/rigidbody/rigidbody.h>
+#include <dunya/objectmodel/staticbody/staticbody.h>
 
 #include <entt/core/hashed_string.hpp>
 #include <entt/entity/registry.hpp>
@@ -64,6 +66,11 @@ public:
   [[nodiscard]]
   bool removePrimitive(Entity entity, uint32_t index);
 
+  // A tag: added and removed, never assigned, so it takes neither a value nor
+  // the generic mutations.
+  void addStaticBody(Entity entity);
+  void removeStaticBody(Entity entity);
+
   std::span<const dunya::field::Primitive> primitives(Entity entity) const;
 
   uint32_t primitiveCount(Entity entity) const;
@@ -84,9 +91,19 @@ public:
     m_registry.replace<T>(entity, value);
   }
 
+  template<SelfContained T>
+  void replaceMany(std::span<const std::pair<Entity, T>> values) {
+    for (const auto entity : values) {
+      m_registry.replace<T>(entity.first, entity.second);
+    }
+  }
+
   // Owns a slot in the renderer's volume pool, so it is not self-contained
   // and keeps a method of its own.
   void setBakedVolume(Entity entity, uint32_t index);
+
+  // Not self-contained
+  void setRigidBody(Entity entity, uint32_t index);
 
   // Presence is the state, so giving a slot back means removing the
   // component, not writing a sentinel into it.
