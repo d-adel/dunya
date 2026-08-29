@@ -405,6 +405,44 @@ float lightReachingLocal(FieldRecordShared record,
   return clamp(result, 0.0, 1.0);
 }
 
+// Whether the segment [0, maxDistance] along the ray reaches this record's
+// grid box at all. The slab test, in the record's own local space, where the
+// box is axis aligned and no transform of the box is needed.
+//
+// This is what makes a shadow affordable with a hundred bodies in the scene.
+// Without it every shaded pixel sphere-traces every record for up to
+// maxIterations steps, whether or not the light path goes anywhere near it -
+// the cost is bodies times pixels, and it was measured at about a tenth of a
+// millisecond per body. A shadow ray crosses two or three objects; the slab
+// test costs a few instructions and removes the rest.
+bool shadowRayReaches(FieldRecordShared record,
+                      vec3 localOrigin,
+                      vec3 localDirection,
+                      float maxDistance) {
+  vec3 minCorner = record.localOrigin.xyz;
+  vec3 maxCorner = minCorner
+                   + record.voxelSize.xyz
+                       * vec3(record.resolutionVolumeIndex.xyz - 1u);
+
+  // A component of exactly zero gives an infinity here and the min/max below
+  // handle it correctly; a NaN would not, which is why the direction is never
+  // renormalised into something that could be zero length.
+  vec3 inverseDirection = 1.0 / localDirection;
+
+  vec3 firstPlane = (minCorner - localOrigin) * inverseDirection;
+  vec3 secondPlane = (maxCorner - localOrigin) * inverseDirection;
+
+  vec3 nearPlane = min(firstPlane, secondPlane);
+  vec3 farPlane = max(firstPlane, secondPlane);
+
+  float entry = max(max(nearPlane.x, nearPlane.y), nearPlane.z);
+  float exitAt = min(min(farPlane.x, farPlane.y), farPlane.z);
+
+  // Behind the origin is still a miss for a shadow, and so is beyond the
+  // distance the march would have given up at anyway.
+  return exitAt >= max(entry, 0.0) && entry <= maxDistance;
+}
+
 float lightReaching(vec3 worldOrigin, vec3 worldDirection) {
   float result = 1.0;
 
@@ -418,6 +456,13 @@ float lightReaching(vec3 worldOrigin, vec3 worldDirection) {
     vec3 localOrigin = (record.inverseModel * vec4(worldOrigin, 1.0)).xyz;
 
     vec3 localDirection = (record.inverseModel * vec4(worldDirection, 0.0)).xyz;
+
+    if (!shadowRayReaches(record,
+                          localOrigin,
+                          localDirection,
+                          params.shadowMaxDistance)) {
+      continue;
+    }
 
     float recordLight = lightReachingLocal(record, localOrigin, localDirection);
 

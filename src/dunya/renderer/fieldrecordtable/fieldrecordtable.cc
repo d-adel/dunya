@@ -11,7 +11,8 @@ constexpr VkDeviceSize BRICK_BOUNDS_BYTES =
 }  // namespace
 
 FieldRecordTable::FieldRecordTable(const dunya::gpu::Device& device)
-    : m_group(
+    : m_device(device),
+      m_group(
         device,
         dunya::core::MAX_FRAMES_IN_FLIGHT,
         {{ENTRIES,
@@ -49,7 +50,9 @@ FieldRecordTable::FieldRecordTable(const dunya::gpu::Device& device)
         device,
         BRICK_BOUNDS_BYTES,
         // TRANSFER_SRC so the bake check can copy a slot back out.
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        // TRANSFER_DST so a deformable's bounds can be written from the CPU.
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT
+          | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
       ) {
   m_records.resize(dunya::core::MAX_FIELD_RECORDS);
@@ -74,6 +77,136 @@ void FieldRecordTable::registerVolume(
     volumeIndex,
     materialView
   );
+}
+
+void FieldRecordTable::uploadBounds(
+  dunya::gpu::Uploader& uploader,
+  uint32_t volumeIndex,
+  const dunya::field::SampledField& field
+) {
+  VkDeviceSize sizeBytes = 0;
+  dunya::gpu::Buffer staging = stageBounds(field, sizeBytes);
+
+  recordBounds(uploader.begin(), staging, volumeIndex, sizeBytes);
+
+  uploader.keep(std::move(staging));
+}
+
+void FieldRecordTable::uploadBounds(
+  uint32_t volumeIndex,
+  const dunya::field::SampledField& field
+) {
+  VkDeviceSize sizeBytes = 0;
+  const dunya::gpu::Buffer staging = stageBounds(field, sizeBytes);
+
+  dunya::gpu::OneShotCommand cmd;
+  cmd.start(m_device);
+
+  recordBounds(cmd.cmdBuffer(), staging, volumeIndex, sizeBytes);
+
+  cmd.submit(m_device);
+}
+
+dunya::gpu::Buffer FieldRecordTable::stageBounds(
+  const dunya::field::SampledField& field,
+  VkDeviceSize& sizeBytes
+) const {
+  // The global bound sits first so a shader can read it from the range's own
+  // address without knowing how many bricks follow.
+  std::vector<float> table;
+  table.reserve(1u + field.brickLipschitz.size());
+  table.push_back(field.globalLipschitz);
+  table.insert(
+    table.end(),
+    field.brickLipschitz.begin(),
+    field.brickLipschitz.end()
+  );
+
+  if (table.size() > dunya::core::BRICK_TABLE_STRIDE) {
+    throw std::runtime_error("A field has more bricks than its table slot");
+  }
+
+  sizeBytes = static_cast<VkDeviceSize>(table.size()) * sizeof(float);
+
+  dunya::gpu::Buffer staging(
+    m_device,
+    sizeBytes,
+    VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+  );
+
+  void* mapped = nullptr;
+
+  if (
+    vkMapMemory(m_device.vkDevice(), staging.memory(), 0, sizeBytes, 0, &mapped)
+    != VK_SUCCESS
+  ) {
+    throw std::runtime_error("Failed to map brick bound staging memory");
+  }
+
+  memcpy(mapped, table.data(), static_cast<size_t>(sizeBytes));
+  vkUnmapMemory(m_device.vkDevice(), staging.memory());
+
+  return staging;
+}
+
+void FieldRecordTable::recordBounds(
+  VkCommandBuffer commandBuffer,
+  const dunya::gpu::Buffer& staging,
+  uint32_t volumeIndex,
+  VkDeviceSize sizeBytes
+) const {
+  // A frame is still in flight reading this very range: submission order is
+  // not a dependency, and the queue wait inside submit() happens after the
+  // copy is already queued. Without this the fragment shader can read a torn
+  // mix of the old bounds and the new, and the one value the shadow march
+  // divides by is in there.
+  VkMemoryBarrier2 boundsFree{};
+  boundsFree.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
+  boundsFree.srcStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT
+                            | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+  boundsFree.srcAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT;
+  boundsFree.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+  boundsFree.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+
+  VkDependencyInfo freeDependency{};
+  freeDependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+  freeDependency.memoryBarrierCount = 1;
+  freeDependency.pMemoryBarriers = &boundsFree;
+
+  vkCmdPipelineBarrier2(commandBuffer, &freeDependency);
+
+  VkBufferCopy region{};
+  region.srcOffset = 0;
+  region.dstOffset = static_cast<VkDeviceSize>(volumeIndex)
+                     * dunya::core::BRICK_TABLE_STRIDE * sizeof(float);
+  region.size = sizeBytes;
+
+  vkCmdCopyBuffer(
+    commandBuffer,
+    staging.buffer(),
+    m_brickBounds.buffer(),
+    1,
+    &region
+  );
+
+  // And the write has to be made visible to the shader that reads it. A queue
+  // wait is a host-domain fence, not a device-side availability operation -
+  // the same dependency the bake pass writes after its own reduction.
+  VkMemoryBarrier2 boundsVisible{};
+  boundsVisible.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
+  boundsVisible.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+  boundsVisible.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+  boundsVisible.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT
+                               | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+  boundsVisible.dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT;
+
+  VkDependencyInfo visibleDependency{};
+  visibleDependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+  visibleDependency.memoryBarrierCount = 1;
+  visibleDependency.pMemoryBarriers = &boundsVisible;
+
+  vkCmdPipelineBarrier2(commandBuffer, &visibleDependency);
 }
 
 const dunya::gpu::Buffer& FieldRecordTable::brickBounds() const noexcept {

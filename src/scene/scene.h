@@ -17,7 +17,15 @@
 
 class Scene {
 public:
-  Scene(const dunya::gpu::Context& context, dunya::objectmodel::World& world);
+  // Wall size is a parameter rather than a constant because it is the demo's
+  // main knob: every box is its own field, its own volume and its own body.
+  Scene(
+    const dunya::gpu::Context& context,
+    dunya::objectmodel::World& world,
+    uint32_t wallColumns,
+    uint32_t wallRows,
+    uint32_t wallDepth
+  );
   ~Scene() = default;
 
   Scene(const Scene&) = delete;
@@ -66,6 +74,16 @@ public:
   // Points the camera at the layout above.
   void frame(dunya::objectmodel::Camera& camera) const;
 
+  // A point on the wall's front face, from two fractions in [0, 1]. The demo
+  // spreads its shots across this rather than firing them all at one spot,
+  // which is what a wall of a hundred boxes is for.
+  glm::vec3 wallPoint(float u, float v) const;
+
+  // The object M30 dents. One per scene by design: a CPU grid is 16 MiB, and
+  // the milestone measures one object taking ten thousand of them.
+  [[nodiscard]]
+  dunya::objectmodel::Entity deformable() const noexcept;
+
 private:
   static std::vector<dunya::renderer::MaterialRecord> createMaterials();
   static std::vector<dunya::gpu::Texture> createTextures(
@@ -90,6 +108,12 @@ private:
 
   // Rebuilt every frame; a member so the span handed to Frame stays alive.
   std::vector<dunya::renderer::MeshRecord> m_meshRecords;
+
+  dunya::objectmodel::Entity m_deformable = dunya::objectmodel::INVALID_ENTITY;
+
+  // The world box the wall occupies, filled once as it is built.
+  glm::vec3 m_wallMinimum{0.0f};
+  glm::vec3 m_wallMaximum{0.0f};
 
   // The authored world, owned by Application. Scene fills it and reads it;
   // it does not own it, because Play needs a second one beside it.

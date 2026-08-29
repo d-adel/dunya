@@ -10,6 +10,18 @@
 #include <string>
 #include <vector>
 
+// Whether this build shows the debug panels at all.
+//
+// A release build is the engine, not the workbench: sliders and counters over
+// the image are for developing it, and everything a recording or a shipped
+// binary shows should be the thing itself. Gated on NDEBUG, the same flag and
+// for the same reason as the validation layers.
+#ifdef NDEBUG
+inline constexpr bool enableOverlay = false;
+#else
+inline constexpr bool enableOverlay = true;
+#endif
+
 // A tool, not part of the picture: nothing the renderer draws depends on it.
 // Building the widgets and submitting them are separate calls, so a stale
 // swapchain still closes the ImGui frame it opened.
@@ -38,6 +50,7 @@ public:
   // Opens a frame, fills it from the registered panels, and closes it. Always
   // paired, whatever the swapchain does afterwards.
   void begin();
+  // Fills the frame from the registered panels.
   void build();
   void end();
 

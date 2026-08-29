@@ -61,15 +61,6 @@ glm::vec3 ontoSurface(const SampledField& field, glm::vec3 point) {
   return point;
 }
 
-// What the solid weighs, where it is, and how it resists turning. The second
-// moment is about the field's own origin; a body turns about its centre of
-// mass, so the shift to that point happens once the centre is known.
-struct SolidIntegral {
-  double mass = 0.0;
-  glm::dvec3 firstMoment{0.0};
-  glm::dmat3 secondMoment{0.0};
-};
-
 // Summed over the voxels, which is the one thing a volume representation makes
 // trivial: no hollow-versus-solid guess, no hand tuning.
 // What a run of cell centres on one axis contributes: how many there are,
@@ -97,9 +88,23 @@ AxisSums axisSums(float origin, float voxel, uint32_t begin, uint32_t end) {
   return sums;
 }
 
-// Summed over the voxels, which is the one thing a volume representation makes
-// trivial: no hollow-versus-solid guess, no hand tuning.
-SolidIntegral integrateSolid(const SampledField& field) {
+// One brick's worth of the sum, which is the one thing a volume representation
+// makes trivial: no hollow-versus-solid guess, no hand tuning.
+//
+// Per brick rather than per field because a deformation touches a handful of
+// them, and re-walking two million cells to find that out is the cost M30
+// exists to remove. The totals are a sum over these, so a changed brick is
+// recomputed and every other one is reused.
+SolidIntegral integrateBrick(const SampledField& field, uint32_t brick) {
+  SolidIntegral solid;
+
+  // The value range answers both questions before a single sample: a brick
+  // that never goes negative holds nothing, and one that never goes positive
+  // holds nothing else. Only the boundary is worth walking.
+  if (field.brickMinimum[brick] > 0.0f) {
+    return solid;
+  }
+
   const glm::uvec3 cells = field.resolution - glm::uvec3(1u);
   const glm::uvec3 bricks = dunya::field::brickCounts(field);
 
@@ -111,103 +116,126 @@ SolidIntegral integrateSolid(const SampledField& field) {
   const uint32_t alongY = field.resolution.x;
   const uint32_t alongZ = field.resolution.x * field.resolution.y;
 
-  SolidIntegral solid;
+  const glm::uvec3 at(
+    brick % bricks.x,
+    (brick / bricks.x) % bricks.y,
+    brick / (bricks.x * bricks.y)
+  );
 
-  const uint32_t brickCount = bricks.x * bricks.y * bricks.z;
+  const glm::uvec3 base = at * glm::uvec3(dunya::field::BRICK_CELLS);
+  const glm::uvec3 last =
+    glm::min(base + glm::uvec3(dunya::field::BRICK_CELLS), cells);
 
-  for (uint32_t brick = 0u; brick != brickCount; ++brick) {
-    // The value range answers both questions before a single sample: a brick
-    // that never goes negative holds nothing, and one that never goes positive
-    // holds nothing else. Only the boundary is worth walking.
-    if (field.brickMinimum[brick] > 0.0f) {
-      continue;
-    }
+  if (field.brickMaximum[brick] < 0.0f) {
+    // Every cell in it is inside, so what the walk would sum has a closed
+    // form. The ranges are taken over a one-cell halo, which is what makes
+    // that safe out to the brick's last cell.
+    const AxisSums sx =
+      axisSums(field.origin.x, field.voxelSize.x, base.x, last.x);
+    const AxisSums sy =
+      axisSums(field.origin.y, field.voxelSize.y, base.y, last.y);
+    const AxisSums sz =
+      axisSums(field.origin.z, field.voxelSize.z, base.z, last.z);
 
-    const glm::uvec3 at(
-      brick % bricks.x,
-      (brick / bricks.x) % bricks.y,
-      brick / (bricks.x * bricks.y)
-    );
+    const double xx = sx.second * sy.count * sz.count;
+    const double yy = sx.count * sy.second * sz.count;
+    const double zz = sx.count * sy.count * sz.second;
 
-    const glm::uvec3 base = at * glm::uvec3(dunya::field::BRICK_CELLS);
-    const glm::uvec3 last =
-      glm::min(base + glm::uvec3(dunya::field::BRICK_CELLS), cells);
+    solid.mass = cellMass * sx.count * sy.count * sz.count;
 
-    if (field.brickMaximum[brick] < 0.0f) {
-      // Every cell in it is inside, so what the walk would sum has a closed
-      // form. The ranges are taken over a one-cell halo, which is what makes
-      // that safe out to the brick's last cell.
-      const AxisSums sx =
-        axisSums(field.origin.x, field.voxelSize.x, base.x, last.x);
-      const AxisSums sy =
-        axisSums(field.origin.y, field.voxelSize.y, base.y, last.y);
-      const AxisSums sz =
-        axisSums(field.origin.z, field.voxelSize.z, base.z, last.z);
+    solid.firstMoment = cellMass
+                        * glm::dvec3(
+                          sx.first * sy.count * sz.count,
+                          sx.count * sy.first * sz.count,
+                          sx.count * sy.count * sz.first
+                        );
 
-      const double xx = sx.second * sy.count * sz.count;
-      const double yy = sx.count * sy.second * sz.count;
-      const double zz = sx.count * sy.count * sz.second;
+    solid.secondMoment[0][0] = cellMass * (yy + zz);
+    solid.secondMoment[1][1] = cellMass * (xx + zz);
+    solid.secondMoment[2][2] = cellMass * (xx + yy);
+    solid.secondMoment[0][1] = -cellMass * sx.first * sy.first * sz.count;
+    solid.secondMoment[0][2] = -cellMass * sx.first * sy.count * sz.first;
+    solid.secondMoment[1][2] = -cellMass * sx.count * sy.first * sz.first;
 
-      solid.mass += cellMass * sx.count * sy.count * sz.count;
+    return solid;
+  }
 
-      solid.firstMoment += cellMass
-                           * glm::dvec3(
-                             sx.first * sy.count * sz.count,
-                             sx.count * sy.first * sz.count,
-                             sx.count * sy.count * sz.first
-                           );
+  for (uint32_t z = base.z; z < last.z; ++z) {
+    for (uint32_t y = base.y; y < last.y; ++y) {
+      for (uint32_t x = base.x; x < last.x; ++x) {
+        const uint32_t lowest = x + alongY * y + alongZ * z;
 
-      solid.secondMoment[0][0] += cellMass * (yy + zz);
-      solid.secondMoment[1][1] += cellMass * (xx + zz);
-      solid.secondMoment[2][2] += cellMass * (xx + yy);
-      solid.secondMoment[0][1] -= cellMass * sx.first * sy.first * sz.count;
-      solid.secondMoment[0][2] -= cellMass * sx.first * sy.count * sz.first;
-      solid.secondMoment[1][2] -= cellMass * sx.count * sy.first * sz.first;
+        // Trilinear interpolation at the middle of a cell is the mean of its
+        // eight corners, so the sample the walk needs is a sum of eight
+        // values and no coordinate arithmetic at all. Only its sign is read,
+        // which is why it is never divided by eight.
+        const float corners = field.distances[lowest]
+                              + field.distances[lowest + 1u]
+                              + field.distances[lowest + alongY]
+                              + field.distances[lowest + alongY + 1u]
+                              + field.distances[lowest + alongZ]
+                              + field.distances[lowest + alongZ + 1u]
+                              + field.distances[lowest + alongZ + alongY]
+                              + field.distances[lowest + alongZ + alongY + 1u];
 
-      continue;
-    }
-
-    for (uint32_t z = base.z; z < last.z; ++z) {
-      for (uint32_t y = base.y; y < last.y; ++y) {
-        for (uint32_t x = base.x; x < last.x; ++x) {
-          const uint32_t lowest = x + alongY * y + alongZ * z;
-
-          // Trilinear interpolation at the middle of a cell is the mean of its
-          // eight corners, so the sample the walk needs is a sum of eight
-          // values and no coordinate arithmetic at all. Only its sign is read,
-          // which is why it is never divided by eight.
-          const float corners =
-            field.distances[lowest] + field.distances[lowest + 1u]
-            + field.distances[lowest + alongY]
-            + field.distances[lowest + alongY + 1u]
-            + field.distances[lowest + alongZ]
-            + field.distances[lowest + alongZ + 1u]
-            + field.distances[lowest + alongZ + alongY]
-            + field.distances[lowest + alongZ + alongY + 1u];
-
-          if (corners >= 0.0f) {
-            continue;
-          }
-
-          const glm::vec3 centre =
-            field.origin
-            + field.voxelSize * (glm::vec3(x, y, z) + glm::vec3(0.5f));
-
-          solid.mass += cellMass;
-
-          const glm::dvec3 p(centre);
-
-          solid.firstMoment += cellMass * p;
-
-          solid.secondMoment[0][0] += cellMass * (p.y * p.y + p.z * p.z);
-          solid.secondMoment[1][1] += cellMass * (p.x * p.x + p.z * p.z);
-          solid.secondMoment[2][2] += cellMass * (p.x * p.x + p.y * p.y);
-          solid.secondMoment[0][1] -= cellMass * p.x * p.y;
-          solid.secondMoment[0][2] -= cellMass * p.x * p.z;
-          solid.secondMoment[1][2] -= cellMass * p.y * p.z;
+        if (corners >= 0.0f) {
+          continue;
         }
+
+        const glm::vec3 centre =
+          field.origin
+          + field.voxelSize * (glm::vec3(x, y, z) + glm::vec3(0.5f));
+
+        solid.mass += cellMass;
+
+        const glm::dvec3 p(centre);
+
+        solid.firstMoment += cellMass * p;
+
+        solid.secondMoment[0][0] += cellMass * (p.y * p.y + p.z * p.z);
+        solid.secondMoment[1][1] += cellMass * (p.x * p.x + p.z * p.z);
+        solid.secondMoment[2][2] += cellMass * (p.x * p.x + p.y * p.y);
+        solid.secondMoment[0][1] -= cellMass * p.x * p.y;
+        solid.secondMoment[0][2] -= cellMass * p.x * p.z;
+        solid.secondMoment[1][2] -= cellMass * p.y * p.z;
       }
     }
+  }
+
+  return solid;
+}
+
+// Re-summed from scratch rather than kept as a running total. Summing four
+// thousand structs is microseconds and it is exact; a total maintained by
+// subtracting the old brick and adding the new one drifts over ten thousand
+// updates, and the drift is invisible until an inertia tensor is quietly
+// wrong.
+// Whether a brick index falls in the half-open range a write reported. An
+// empty range is begin == end, so a rebuild that changed nothing reuses
+// everything without a special case.
+bool inRange(
+  uint32_t brick,
+  const glm::uvec3& counts,
+  const glm::uvec3& begin,
+  const glm::uvec3& end
+) {
+  const glm::uvec3 at(
+    brick % counts.x,
+    (brick / counts.x) % counts.y,
+    brick / (counts.x * counts.y)
+  );
+
+  return glm::all(glm::greaterThanEqual(at, begin))
+         && glm::all(glm::lessThan(at, end));
+}
+
+SolidIntegral totalOf(std::span<const SolidIntegral> bricks) {
+  SolidIntegral solid;
+
+  for (const SolidIntegral& brick : bricks) {
+    solid.mass += brick.mass;
+    solid.firstMoment += brick.firstMoment;
+    solid.secondMoment += brick.secondMoment;
   }
 
   return solid;
@@ -457,6 +485,22 @@ void castFieldVsField(
 }  // namespace
 
 FieldShape::FieldShape(const dunya::field::SampledField& field)
+    : FieldShape(field, nullptr, glm::uvec3(0u), glm::uvec3(0u)) {}
+
+FieldShape::FieldShape(
+  const dunya::field::SampledField& field,
+  const FieldShape& previous,
+  const glm::uvec3& changedBegin,
+  const glm::uvec3& changedEnd
+)
+    : FieldShape(field, &previous, changedBegin, changedEnd) {}
+
+FieldShape::FieldShape(
+  const dunya::field::SampledField& field,
+  const FieldShape* previous,
+  const glm::uvec3& changedBegin,
+  const glm::uvec3& changedEnd
+)
     : JPH::Shape(JPH::EShapeType::User1, JPH::EShapeSubType::User1),
       m_field(&field) {
   // Everything below indexes the lattice and the brick ranges. An unbaked
@@ -495,7 +539,19 @@ FieldShape::FieldShape(const dunya::field::SampledField& field)
   // walk, and all needed before any query: Jolt asks for the centre of mass
   // while creating the body and expresses every transform it later hands over
   // in that space. Eagerly for the same reason the seeds are.
-  const SolidIntegral solid = integrateSolid(field);
+  m_brickIntegral.resize(static_cast<size_t>(bricks));
+
+  for (uint32_t index = 0u; index != bricks; ++index) {
+    // Reused wherever the caller says nothing changed. That is the whole of
+    // step 5: a shape rebuild after a deformation costs the bricks it touched
+    // rather than the two million cells it did not.
+    m_brickIntegral[index] =
+      previous != nullptr && !inRange(index, counts, changedBegin, changedEnd)
+        ? previous->m_brickIntegral[index]
+        : integrateBrick(field, index);
+  }
+
+  const SolidIntegral solid = totalOf(m_brickIntegral);
 
   if (solid.mass > 0.0) {
     m_centerOfMass = glm::vec3(solid.firstMoment / double(solid.mass));
@@ -537,6 +593,13 @@ FieldShape::FieldShape(const dunya::field::SampledField& field)
   // written while Jolt's workers are reading it.
   const glm::vec3 span = field.voxelSize * float(dunya::field::BRICK_CELLS);
 
+  // UINT32_MAX marks a brick with no seed, so a reused entry can be told from
+  // a slot that has never held one.
+  m_brickSeed.assign(
+    static_cast<size_t>(bricks),
+    FieldSeed{glm::vec3(0.0f), UINT32_MAX}
+  );
+
   glm::vec3 solidLow(std::numeric_limits<float>::max());
   glm::vec3 solidHigh(std::numeric_limits<float>::lowest());
 
@@ -567,7 +630,19 @@ FieldShape::FieldShape(const dunya::field::SampledField& field)
       continue;
     }
 
-    m_seeds.push_back({ontoSurface(field, corner + span * 0.5f), index});
+    // Solved once per brick, and reused wherever nothing changed. Newton on
+    // the field is the expensive half of a rebuild, and a deformation moves a
+    // handful of these.
+    const bool reusable = previous != nullptr
+                          && !inRange(index, counts, changedBegin, changedEnd)
+                          && previous->m_brickSeed[index].brick == index;
+
+    m_seeds.push_back(
+      reusable ? previous->m_brickSeed[index]
+               : FieldSeed{ontoSurface(field, corner + span * 0.5f), index}
+    );
+
+    m_brickSeed[index] = m_seeds.back();
   }
 
   // The solid's extent, not the grid's. A grid carries whatever margin it was

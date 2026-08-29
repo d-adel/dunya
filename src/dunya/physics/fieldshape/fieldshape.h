@@ -22,6 +22,15 @@ struct FieldSeed {
   uint32_t brick;
 };
 
+// One brick's contribution to the shape's mass, centre and inertia. Kept per
+// brick so a rebuild after a deformation recomputes only what moved; the
+// totals are a sum over them.
+struct SolidIntegral {
+  double mass = 0.0;
+  glm::dvec3 firstMoment{0.0};
+  glm::dmat3 secondMoment{0.0};
+};
+
 // A Jolt collision shape over a sampled field. Contacts come from the field
 // itself - distance and normal at a point - so there is no mesh, no convex
 // decomposition, and no restriction on the geometry's shape.
@@ -32,6 +41,18 @@ struct FieldSeed {
 class FieldShape final : public JPH::Shape {
 public:
   explicit FieldShape(const dunya::field::SampledField& field);
+
+  // Rebuilt from a previous shape over the same grid, recomputing only the
+  // bricks a write reported as changed - the half-open range a WriteReport
+  // carries. Everything else is copied, which is what turns a rebuild after a
+  // deformation from a walk over two million cells into a walk over a handful
+  // of bricks. A Jolt shape stays immutable; this only makes a new one cheap.
+  FieldShape(
+    const dunya::field::SampledField& field,
+    const FieldShape& previous,
+    const glm::uvec3& changedBegin,
+    const glm::uvec3& changedEnd
+  );
 
   const dunya::field::SampledField& field() const noexcept;
 
@@ -131,7 +152,20 @@ public:
   float GetVolume() const override;
 
 private:
+  // The shared body of both constructors; null means build everything.
+  FieldShape(
+    const dunya::field::SampledField& field,
+    const FieldShape* previous,
+    const glm::uvec3& changedBegin,
+    const glm::uvec3& changedEnd
+  );
+
   const dunya::field::SampledField* m_field;
+
+  // Per brick, so a rebuild reuses what did not move. The totals are re-summed
+  // from these rather than kept as a running total: exact, and microseconds.
+  std::vector<SolidIntegral> m_brickIntegral;
+  std::vector<FieldSeed> m_brickSeed;
 
   std::vector<FieldSeed> m_seeds;
 

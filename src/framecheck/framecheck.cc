@@ -15,11 +15,37 @@ FrameCheck::FrameCheck(
 )
     : m_context(context),
       m_swapChain(swapChain),
+      m_capture(options.capture),
       m_screenshot(options.screenshot),
       m_reference(options.golden) {}
 
 bool FrameCheck::wanted() const noexcept {
   return !m_screenshot.empty() || !m_reference.empty();
+}
+
+FrameCheck::~FrameCheck() {
+  if (!m_stream.is_open()) {
+    return;
+  }
+
+  m_stream.close();
+
+  // The stream carries no header, so the size it was written at has to reach
+  // whoever encodes it. Printed rather than stored, because the next step is a
+  // person running ffmpeg.
+  std::cout << "Recorded " << m_captured << " frames of " << m_width << "x"
+            << m_height << " to " << m_capture << "/frames.raw\n"
+            << "  ffmpeg -f rawvideo -pixel_format rgba -video_size " << m_width
+            << "x" << m_height << " -framerate 60 -i " << m_capture
+            << "/frames.raw ...\n";
+}
+
+double FrameCheck::lastCaptureMs() const noexcept {
+  return m_lastCaptureMs;
+}
+
+bool FrameCheck::capturing() const noexcept {
+  return !m_capture.empty();
 }
 
 bool FrameCheck::ran() const noexcept {
@@ -107,7 +133,44 @@ bool FrameCheck::compareToReference(const dunya::image::Bitmap& frame) const {
 }
 
 void FrameCheck::run(VkImage image) {
+  const auto started = std::chrono::steady_clock::now();
+
   const dunya::image::Bitmap frame = read(image);
+
+  // A recording rather than a test: it does not set m_ran, so the loop keeps
+  // going.
+  //
+  // One raw stream rather than a PNG apiece. Compressing a 3.7 MB frame sixty
+  // times a second costs far more than drawing it - it ran the recording at
+  // twenty-odd frames a second, which looks like the engine failing and is
+  // only the encoder. Raw is a memcpy to a sequential file; ffmpeg reads it
+  // directly and does the compressing afterwards, when nothing is waiting.
+  if (!m_capture.empty()) {
+    if (!m_stream.is_open()) {
+      m_stream.open(m_capture + "/frames.raw", std::ios::binary);
+
+      if (!m_stream) {
+        throw std::runtime_error("Cannot write the recording to " + m_capture);
+      }
+
+      m_width = frame.width;
+      m_height = frame.height;
+    }
+
+    m_stream.write(
+      reinterpret_cast<const char*>(frame.pixels.data()),
+      static_cast<std::streamsize>(frame.pixels.size())
+    );
+
+    ++m_captured;
+
+    m_lastCaptureMs = std::chrono::duration<double, std::milli>(
+                        std::chrono::steady_clock::now() - started
+    )
+                        .count();
+
+    return;
+  }
 
   if (!m_screenshot.empty()) {
     dunya::image::save(frame, m_screenshot);

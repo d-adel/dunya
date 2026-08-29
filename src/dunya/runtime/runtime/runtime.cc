@@ -36,6 +36,57 @@ void Runtime::refreshBody(objectmodel::Entity entity) {
   setBodyShape(entity, JPH::ShapeRefC(new physics::FieldShape(*field)));
 }
 
+void Runtime::reshapeAfterDeform(
+  objectmodel::Entity entity,
+  const glm::uvec3& brickBegin,
+  const glm::uvec3& brickEnd
+) {
+  const entt::registry& registry = m_world.registry();
+
+  const auto* field = registry.try_get<dunya::field::SampledField>(entity);
+  const auto* body = registry.try_get<objectmodel::RigidBody>(entity);
+
+  if (field == nullptr || body == nullptr) {
+    return;
+  }
+
+  const JPH::Shape* current =
+    m_physicsWorld.bodies().GetShape(JPH::BodyID(body->id));
+
+  // Only a shape over this same grid can be patched. Anything else - a ball
+  // on the shared projectile shape, or a body that has not been built yet -
+  // falls back to the full walk rather than reusing somebody else's bricks.
+  const auto* shape = dynamic_cast<const physics::FieldShape*>(current);
+
+  if (shape == nullptr || &shape->field() != field) {
+    refreshBody(entity);
+    return;
+  }
+
+  setBodyShape(
+    entity,
+    JPH::ShapeRefC(
+      new physics::FieldShape(*field, *shape, brickBegin, brickEnd)
+    )
+  );
+}
+
+void Runtime::wake(const glm::vec3& minimum, const glm::vec3& maximum) {
+  // Jolt's SetShape invalidates the contact cache of the body it changed and
+  // nothing else, and it refuses to activate a static one at all. So a crater
+  // opening under a box that has gone to sleep leaves it resting on geometry
+  // that is no longer there - the lattice, the volume and the shape all show
+  // the hole, and the box hangs over it.
+  m_physicsWorld.bodies().ActivateBodiesInAABox(
+    JPH::AABox(
+      JPH::Vec3(minimum.x, minimum.y, minimum.z),
+      JPH::Vec3(maximum.x, maximum.y, maximum.z)
+    ),
+    {},
+    {}
+  );
+}
+
 void Runtime::setBodyShape(
   objectmodel::Entity entity,
   const JPH::ShapeRefC& shape

@@ -4,6 +4,8 @@
 #include <dunya/gpu/buffer/buffer.h>
 #include <dunya/gpu/descriptorgroup/descriptorgroup.h>
 #include <dunya/gpu/device/device.h>
+#include <dunya/gpu/uploader/uploader.h>
+#include <dunya/field/sampled/sampled.h>
 #include <dunya/renderer/fieldrecord/fieldrecord.h>
 
 #include <cstdint>
@@ -70,9 +72,47 @@ public:
 
   // Exposed for the bake check, which reads a slot back and compares it with
   // the same reduction run on the CPU.
+  // The march reads a per-brick gradient bound and one global bound per
+  // object, and the bake dispatch is what normally fills them. A deformable
+  // never joins that dispatch, so its bounds arrive from the CPU grid, which
+  // has maintained them since the write that changed it.
+  //
+  // Two forms, differing only in whether they block. The uploader one is for
+  // a caller inside a frame; the other submits and waits, which is right at
+  // load time and ruinous anywhere else.
+  void uploadBounds(
+    dunya::gpu::Uploader& uploader,
+    uint32_t volumeIndex,
+    const dunya::field::SampledField& field
+  );
+
+  void uploadBounds(
+    uint32_t volumeIndex,
+    const dunya::field::SampledField& field
+  );
+
   const dunya::gpu::Buffer& brickBounds() const noexcept;
 
 private:
+  // The table's bytes, host-visible, ready to be copied into the slot. The
+  // caller owns it because it has to outlive the copy by exactly as long as
+  // the copy takes, and only the caller knows that.
+  [[nodiscard]] dunya::gpu::Buffer stageBounds(
+    const dunya::field::SampledField& field,
+    VkDeviceSize& sizeBytes
+  ) const;
+
+  void recordBounds(
+    VkCommandBuffer commandBuffer,
+    const dunya::gpu::Buffer& staging,
+    uint32_t volumeIndex,
+    VkDeviceSize sizeBytes
+  ) const;
+
+  // Borrowed for the CPU-side bound upload above; the Context outlives every
+  // table built on it.
+  const dunya::gpu::Device& m_device;
+
   std::vector<FieldRecord> m_records;
   std::vector<uint32_t> m_bakeList;
   dunya::gpu::DescriptorGroup m_group;

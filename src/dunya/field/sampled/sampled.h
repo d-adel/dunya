@@ -48,6 +48,23 @@ struct SampleBox {
   glm::uvec3 extent{0u};
 };
 
+// The smallest box holding both. An empty box contributes nothing, so a frame
+// can fold every dent it made into one upload without a first-time special
+// case. Deliberately a bounding box rather than a list: it can carry voxels
+// that did not change, and it is one copy instead of forty.
+SampleBox merge(const SampleBox& first, const SampleBox& second);
+
+// What a write changed. The brick range is half-open, and wider than the
+// samples: a cell reads the eight points around it and a brick's bound reads
+// one cell past its own wall, so a written point reaches a brick either side.
+// Everything derived from a change - the upload, the mass integral, the
+// contact seeds - reads this instead of working the range out again.
+struct WriteReport {
+  SampleBox samples;
+  glm::uvec3 brickBegin{0u};
+  glm::uvec3 brickEnd{0u};
+};
+
 // The spacing a lattice of this resolution has across this box. The bake and
 // the pass that re-places the grid after an edit both need it, and one of them
 // writing the division itself is how the two drift apart.
@@ -105,7 +122,7 @@ float bakeError(const SampledField& field, float sourceLipschitz = 1.0f);
 
 // The only way to change the lattice. It rebuilds the bricks the written
 // samples participate in, which is why nothing else may write those arrays.
-void write(
+WriteReport write(
   SampledField& field,
   const SampleBox& box,
   std::span<const float> distances,

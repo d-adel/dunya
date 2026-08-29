@@ -24,7 +24,7 @@ Operations applied to fields do not need to produce an entirely separate
 representation for each engine system, and the modified shape can remain the
 geometry that those systems work from.
 
-![dunya carving a field object in real time](screenshots/dunya.gif)
+![192 crates being shot apart in real time, each one a signed distance field that is deformed by the impacts and collided against](screenshots/dunya.gif)
 
 ## Why I am building it
 

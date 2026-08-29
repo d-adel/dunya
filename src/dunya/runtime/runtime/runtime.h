@@ -28,6 +28,21 @@ public:
   // has replaced the field the old shape reads. Does nothing without a field.
   void refreshBody(objectmodel::Entity entity);
 
+  // Rebuilds the body over the same grid, recomputing only the bricks a write
+  // reported. The full walk is two million cells and a Newton solve per
+  // surface brick; a deformation moves a handful of them. Falls back to
+  // refreshBody when the body is not on a shape over this field.
+  void reshapeAfterDeform(
+    objectmodel::Entity entity,
+    const glm::uvec3& brickBegin,
+    const glm::uvec3& brickEnd
+  );
+
+  // Wakes whatever was resting on geometry that has just changed. Jolt only
+  // invalidates the contact cache of the body whose shape was swapped, so a
+  // box asleep on top of a fresh crater would never notice it.
+  void wake(const glm::vec3& minimum, const glm::vec3& maximum);
+
   // Creates or re-shapes this entity's body on a shape the caller owns, which
   // is how objects that are the same object share one: a shape is immutable
   // and refcounted. The field it borrows must outlive every body built on it.

@@ -15,6 +15,7 @@
 
 #include <dunya/core/config/config.h>
 #include <dunya/field/field.h>
+#include <dunya/objectmodel/deformable/deformable.h>
 #include <dunya/objectmodel/instantiate/instantiate.h>
 #include <dunya/objectmodel/staticbody/staticbody.h>
 #include <dunya/objectmodel/world/world.h>
@@ -243,5 +244,33 @@ TEST_CASE("a static body stays static across instantiation", "[instantiate]") {
   REQUIRE(runtime.registry().all_of<dunya::objectmodel::StaticBody>(ground));
   REQUIRE_FALSE(
     runtime.registry().all_of<dunya::objectmodel::StaticBody>(faller)
+  );
+}
+
+TEST_CASE(
+  "a deformable stays deformable across instantiation",
+  "[instantiate]"
+) {
+  static_assert(
+    dunya::objectmodel::selfContained<dunya::objectmodel::Deformable>,
+    "Deformable has to be SelfContained or emplaceOrReplace refuses it"
+  );
+
+  World authored;
+
+  const Entity dented = authored.createField(marked(12.0f), blank());
+  const Entity rigid = authored.createField(marked(13.0f), blank());
+
+  authored.emplaceOrReplace<dunya::objectmodel::Deformable>(
+    dented,
+    dunya::objectmodel::Deformable{}
+  );
+
+  World runtime;
+  dunya::objectmodel::instantiateWorld(authored, runtime);
+
+  REQUIRE(runtime.registry().all_of<dunya::objectmodel::Deformable>(dented));
+  REQUIRE_FALSE(
+    runtime.registry().all_of<dunya::objectmodel::Deformable>(rigid)
   );
 }

@@ -184,17 +184,14 @@ std::optional<Aabb> boundedExtent(std::span<const Primitive> primitives) {
   return extent;
 }
 
-AnalyticSample sample(
-  std::span<const Primitive> primitives,
+AnalyticSample combine(
+  const AnalyticSample& accumulated_,
+  const Primitive& primitive,
   const glm::vec3& point
 ) {
-  AnalyticSample accumulated{FAR_DISTANCE, 0};
+  AnalyticSample accumulated = accumulated_;
 
-  for (const Primitive& primitive : primitives) {
-    if (skippable(primitive, point, accumulated.distance)) {
-      continue;
-    }
-
+  {
     const AnalyticSample current{
       primitiveDistance(primitive, point),
       primitive.shapeConfig.y
@@ -240,6 +237,23 @@ AnalyticSample sample(
           accumulated.distance < current.distance ? accumulated : current;
         break;
     }
+  }
+
+  return accumulated;
+}
+
+AnalyticSample sample(
+  std::span<const Primitive> primitives,
+  const glm::vec3& point
+) {
+  AnalyticSample accumulated{FAR_DISTANCE, 0};
+
+  for (const Primitive& primitive : primitives) {
+    if (skippable(primitive, point, accumulated.distance)) {
+      continue;
+    }
+
+    accumulated = combine(accumulated, primitive, point);
   }
 
   return accumulated;

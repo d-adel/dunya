@@ -7,11 +7,11 @@ constexpr uint32_t MAX_PHYSICS_SUBSTEPS = 5;
 
 // Balls alive at once. Each one holds a pool slot and a body, so the cap is
 // what keeps a held-down key from exhausting either.
-constexpr size_t MAX_BALLS = 8;
+constexpr size_t MAX_BALLS = 24;
 
 // How far in front of the camera a ball appears, in metres. Inside the near
 // plane it would fill the screen on the frame it is fired.
-constexpr float MUZZLE_DISTANCE = 1.0f;
+constexpr float MUZZLE_DISTANCE = 2.5f;
 
 const std::vector<VkVertexInputBindingDescription> MESH_BINDINGS{
   dunya::renderer::Vertex::getBindingDescription()
@@ -22,10 +22,17 @@ const auto MESH_ATTRIBUTES =
 
 }  // namespace
 
-Application::Application()
+Application::Application(const StartupOptions& options)
     : m_input(m_context.window().handle()),
       m_swapChain(m_context),
-      m_scene(m_context, m_authoredWorld),
+      m_scene(
+        m_context,
+        m_authoredWorld,
+        options.wallColumns,
+        options.wallRows,
+        options.wallDepth
+      ),
+      m_uploader(m_context.device()),
       m_frameGlobals(m_context.device()),
       m_resourceTable(
         m_context.device(),
@@ -109,12 +116,24 @@ int Application::start(const StartupOptions& options) {
     GLFW_CURSOR_NORMAL
   );
 
-  std::cout << "Hold right mouse to look and fly (WASD/QE)\n"
-            << "Left click carves, shift + left click adds\n"
-            << "F5 plays and stops, F fires a ball, G resets the wall\n";
+  std::cout << "Click to fire at the wall, F to fire at its middle\n"
+            << "Hold right mouse to look and fly (WASD/QE)\n"
+            << "G resets the wall, F5 stops the simulation\n"
+            << "Alt + click carves by hand once stopped\n";
 
   if (options.carves > 0) {
     m_fieldEditor.stress(options.carves);
+  }
+
+  // Not applied here: the deformable has no lattice until the frame loop bakes
+  // it, so the dents wait for the frame that gives it one.
+  m_pendingDents = options.dents;
+  m_dentLogPath = options.dentLog;
+
+  m_demoFrames = options.demo;
+
+  if (options.demoRate > 0.0f) {
+    m_demoInterval = std::max(1u, uint32_t(60.0f / options.demoRate + 0.5f));
   }
 
   if (options.analytic) {
@@ -145,15 +164,23 @@ int Application::start(const StartupOptions& options) {
       ballImages.material.imageView(),
       m_ballVolume
     );
-  }
 
-  registerPanels();
+    // Once, here, for every ball there will ever be. The slot is keyed on the
+    // volume index and every ball shares this one volume, so the bounds the
+    // shading and shadow march read are as constant as the geometry is. This
+    // is what lets fire() skip the bake pass entirely.
+    m_recordTable.uploadBounds(m_ballVolume, m_scene.projectileField());
+  }
 
   bool bakeCheckPending = options.verifyBake;
   bool tableFullReported = false;
   bool volumePoolFullReported = false;
 
   FrameCheck frameCheck(m_context, m_swapChain, options);
+
+  // After the FrameCheck, because what a recording shows is not what an
+  // interactive session shows.
+  registerPanels();
 
   // Not in a capture run: the deferral would make the notice the first frame
   // presented, and that is the frame a golden compares.
@@ -163,10 +190,16 @@ int Application::start(const StartupOptions& options) {
 
   std::function<void(VkImage)> captureHook;
 
-  if (frameCheck.wanted()) {
+  if (frameCheck.wanted() || frameCheck.capturing()) {
     captureHook = [&frameCheck](VkImage image) {
       frameCheck.run(image);
     };
+  }
+
+  if (frameCheck.capturing()) {
+    std::filesystem::create_directories(options.capture);
+
+    std::cout << "Recording every frame to " << options.capture << '\n';
   }
 
   double prevTime = glfwGetTime();
@@ -175,11 +208,113 @@ int Application::start(const StartupOptions& options) {
   double physicsAccumulator = 0.0;
   uint32_t statFrames = 0;
 
+  // Seconds this stat window spent recording rather than rendering.
+  double statCaptureSeconds = 0.0;
+
   while (!glfwWindowShouldClose(m_context.window().handle())) {
     double now = glfwGetTime();
-    float dt = static_cast<float>(now - prevTime);
+
+    // What the frame actually took, kept separately from what the simulation
+    // is told, because a capture run lies to the simulation on purpose.
+    const float realDt = static_cast<float>(now - prevTime);
+
+    float dt = realDt;
 
     prevTime = now;
+
+    // Reading every frame back and writing a PNG takes far longer than
+    // drawing it, so a recording paced by the wall clock would simulate in
+    // slow motion and play back as a stutter. A fixed step makes the frames a
+    // film: sixty of them is one second of simulation, whatever the encoder
+    // was doing.
+    //
+    // It follows that a capture run measures nothing. The frame times below
+    // are the real ones, and a capture run's are dominated by the readback -
+    // the performance claim has to come from a run without --capture.
+    if (frameCheck.capturing()) {
+      dt = 1.0f / 60.0f;
+    }
+
+    ++m_frameIndex;
+
+    // Frees the staging the GPU has finished reading. Asks rather than waits,
+    // so it costs nothing on the frames - most of them - with nothing to free.
+    m_uploader.retire();
+
+    // The app is the demo, so it starts running rather than waiting for F5.
+    // The wall has no bodies until its fields have been baked, which is the
+    // frame loop's job, so this cannot happen in start().
+    //
+    // Two runs opt out. A capture compares the first presented frame, and that
+    // frame is the authored scene. And the dent harness measures deformation
+    // alone: a simulation running underneath it would put a collapsing wall in
+    // every row.
+    constexpr uint32_t DEMO_PLAY_FRAME = 4u;
+
+    const bool measuring = frameCheck.wanted() || m_pendingDents > 0;
+
+    if (m_frameIndex == DEMO_PLAY_FRAME && !measuring && !m_runtime) {
+      play();
+    }
+
+    // A run nobody is watching, so the schedule is frames rather than
+    // seconds: the same shot lands on the same frame whatever the machine
+    // does, and a ball goes every four seconds of simulated time.
+    if (m_demoFrames > 0) {
+      // Long enough for the wall to settle out of its drop, short enough that
+      // a ten-second recording is not a quarter empty.
+      constexpr uint32_t DEMO_FIRST_SHOT = 80u;
+
+      const uint32_t DEMO_SHOT_INTERVAL = m_demoInterval;
+
+      const bool fired =
+        m_frameIndex >= DEMO_FIRST_SHOT
+        && (m_frameIndex - DEMO_FIRST_SHOT) % DEMO_SHOT_INTERVAL == 0u;
+
+      if (fired) {
+        // Spread across the wall rather than all at one spot, by the same R2
+        // sequence the dents use: successive multiples of these two fractions
+        // fill a square evenly without ever repeating, so a hundred boxes all
+        // get hit and the same run does it the same way twice.
+        const glm::vec2 at = glm::fract(
+          static_cast<float>(m_shotsFired) * glm::vec2(0.7548777f, 0.5698403f)
+        );
+
+        ++m_shotsFired;
+
+        fire(aimAtPoint(m_scene.wallPoint(at.x, at.y)));
+      }
+
+      // Frame times are the acceptance, so they are collected rather than
+      // watched. The first few are excluded: they carry the bake of every
+      // object in the scene and say nothing about steady state.
+      constexpr uint32_t DEMO_WARMUP = 20u;
+
+      // dt and the two phase timers all describe the frame that just ended,
+      // so they are recorded together and against its index rather than this
+      // one's.
+      if (m_frameIndex > DEMO_WARMUP) {
+        m_demoFrameMs.push_back(
+          {m_frameIndex - 1u,
+           realDt * 1000.0f,
+           m_cratersApplied - m_cratersReported,
+           fired,
+           m_frameCarveMs,
+           m_frameUploadMs,
+           m_framePhysicsMs}
+        );
+      }
+
+      m_cratersReported = m_cratersApplied;
+      m_frameCarveMs = 0.0f;
+      m_frameUploadMs = 0.0f;
+      m_framePhysicsMs = 0.0f;
+
+      if (m_frameIndex >= m_demoFrames) {
+        reportDemo();
+        glfwSetWindowShouldClose(m_context.window().handle(), GLFW_TRUE);
+      }
+    }
 
     // E5: no runtime, no physics. The accumulator only advances while a
     // runtime exists, so Play does not begin by discharging a backlog.
@@ -190,6 +325,8 @@ int Application::start(const StartupOptions& options) {
       // or the loop feeds itself: more steps, slower frame, more steps.
       uint32_t substeps = 0;
 
+      const auto stepStart = std::chrono::steady_clock::now();
+
       while (physicsAccumulator >= dunya::physics::PhysicsWorld::TIME_STEP
              && substeps != MAX_PHYSICS_SUBSTEPS) {
         ++substeps;
@@ -198,10 +335,29 @@ int Application::start(const StartupOptions& options) {
         physicsAccumulator -= dunya::physics::PhysicsWorld::TIME_STEP;
       }
 
+      m_framePhysicsMs = std::chrono::duration<float, std::milli>(
+                           std::chrono::steady_clock::now() - stepStart
+      )
+                           .count();
+
       // Whatever is left would be paid for next frame and start the spiral
       // again, so it is dropped: simulation time lags, frame rate does not.
       if (substeps == MAX_PHYSICS_SUBSTEPS) {
         physicsAccumulator = 0.0;
+      }
+
+      // D3: after the solve, never inside it. The contacts of every substep
+      // are drained together, so a frame that stepped four times craters once
+      // per impact rather than four times.
+      {
+        const auto carveStart = std::chrono::steady_clock::now();
+
+        applyImpacts();
+
+        m_frameCarveMs = std::chrono::duration<float, std::milli>(
+                           std::chrono::steady_clock::now() - carveStart
+        )
+                           .count();
       }
 
       // Once per frame, not once per step: the world only needs where things
@@ -210,10 +366,17 @@ int Application::start(const StartupOptions& options) {
     }
 
     ++statFrames;
+    statCaptureSeconds += frameCheck.lastCaptureMs() / 1000.0;
     if (now - statWindowStart >= 1.0) {
-      const double elapsed = now - statWindowStart;
+      // The recording's own readback and PNG encode come out first. They are
+      // not what the engine costs, and the panel they end up on is the point
+      // of the recording.
+      const double elapsed = now - statWindowStart - statCaptureSeconds;
+
       const double msPerFrame = (elapsed * 1000.0) / statFrames;
       m_lastFrameMs = msPerFrame;
+
+      statCaptureSeconds = 0.0;
 
       std::cout << modeName(m_frameContext.mode) << "  "
                 << m_swapChain.extent().width << "x"
@@ -417,6 +580,18 @@ int Application::start(const StartupOptions& options) {
           world.setSampledField(entity, std::move(baked));
         }
 
+        // After the field is in place, not before: when it is not reusable
+        // the component does not exist until the line above. A deformable
+        // never joins the bake list, and that dispatch is what fills the
+        // bound table, so without this its slot holds whatever the
+        // device-local buffer came up with and the march reads noise.
+        if (registry.all_of<dunya::objectmodel::Deformable>(entity)) {
+          m_recordTable.uploadBounds(
+            index,
+            registry.get<dunya::field::SampledField>(entity)
+          );
+        }
+
         // The body reads the field, so it cannot exist before one does: this
         // is where a runtime entity gets its body, a frame after Play.
         if (m_runtime) {
@@ -442,59 +617,99 @@ int Application::start(const StartupOptions& options) {
       );
 
       if (world.needsBake(entity)) {
-        m_recordTable.appendToBakeList(recordIndex);
+        if (registry.all_of<dunya::objectmodel::Deformable>(entity)) {
+          world.markBaked(entity);
+        } else {
+          m_recordTable.appendToBakeList(recordIndex);
 
-        // Physics reads the CPU field, so it has to follow the geometry. Only
-        // where a body exists: nothing queries it while authoring, and a full
-        // rebake is far too dear to run for a reader that is not there.
-        //
-        // And only where the entity owns the field, since that is what this
-        // replaces. A body on a shared shape reads somebody else's.
-        if (
-          m_runtime && world.needsResample(entity)
-          && registry.all_of<
-             dunya::objectmodel::RigidBody,
-             dunya::field::SampledField>(entity)
-        ) {
-          const dunya::field::Aabb refit =
-            dunya::objectmodel::gridBox(world.primitives(entity));
+          if (
+            m_runtime && world.needsResample(entity)
+            && registry.all_of<
+               dunya::objectmodel::RigidBody,
+               dunya::field::SampledField>(entity)
+          ) {
+            const dunya::field::Aabb refit =
+              dunya::objectmodel::gridBox(world.primitives(entity));
 
-          world.setSampledField(
-            entity,
-            dunya::field::bake(
-              world.primitives(entity),
-              refit.minimum,
-              refit.maximum,
-              grid.resolution
-            )
-          );
+            world.setSampledField(
+              entity,
+              dunya::field::bake(
+                world.primitives(entity),
+                refit.minimum,
+                refit.maximum,
+                grid.resolution
+              )
+            );
 
-          // The old shape reads the field that call just replaced.
-          m_runtime->refreshBody(entity);
+            // The old shape reads the field that call just replaced.
+            m_runtime->refreshBody(entity);
+          }
         }
       }
 
       m_recordEntities.push_back(entity);
-
       ++recordIndex;
+    }
+
+    // One per frame. All of them in one call freezes the window for the whole
+    // run - Windows greys it out and the only way to learn whether it is alive
+    // is to close it - and a chunk of twenty-five is worse, because 25 x 34 ms
+    // is a frame every second and it looks like a hang that redraws. One dent
+    // is about 34 ms, so the window stays at roughly 30 fps and the erosion is
+    // watchable. The total is the same either way: ten thousand dents at 34 ms
+    // is six minutes of real work.
+    if (m_pendingDents > 0 && !announcing) {
+      constexpr uint32_t DENTS_PER_FRAME = 1u;
+
+      const uint32_t chunk = std::min(m_pendingDents, DENTS_PER_FRAME);
+
+      dent(chunk);
+      m_pendingDents -= chunk;
+
+      // A measurement run has nothing to do once the log is written, and
+      // leaving it up means the number is read off a window someone has to
+      // remember to close.
+      if (m_pendingDents == 0 && !m_dentLogPath.empty()) {
+        std::cout << "dents complete: " << m_dentsApplied << " logged to "
+                  << m_dentLogPath << std::endl;
+
+        glfwSetWindowShouldClose(m_context.window().handle(), GLFW_TRUE);
+      }
+    }
+
+    // Before the frame is recorded, because the copy submits and waits: a
+    // volume the fragment shader is about to sample has to already hold what
+    // the CPU grid says it does.
+    {
+      const auto uploadStart = std::chrono::steady_clock::now();
+
+      uploadDentedVolumes();
+
+      m_frameUploadMs = std::chrono::duration<float, std::milli>(
+                          std::chrono::steady_clock::now() - uploadStart
+      )
+                          .count();
     }
 
     m_frameContext.fieldRecordCount = recordIndex;
     m_scene.augmentFrameContext(m_frameContext, world);
     // -----------------------------------
 
-    // A capture run builds no overlay at all, which is what keeps it out of the
-    // golden images without the renderer needing to know it exists.
+    // Anything that reads the frame back builds no overlay at all, which is
+    // what keeps it out of both the reference images and the recordings
+    // without the renderer needing to know either exists.
     std::function<void(VkCommandBuffer)> overlayHook;
 
-    if (!captureHook) {
-      m_overlay.begin();
-      m_overlay.build();
-      m_overlay.end();
+    if constexpr (enableOverlay) {
+      if (!captureHook) {
+        m_overlay.begin();
+        m_overlay.build();
+        m_overlay.end();
 
-      overlayHook = [this](VkCommandBuffer commandBuffer) {
-        m_overlay.record(commandBuffer);
-      };
+        overlayHook = [this](VkCommandBuffer commandBuffer) {
+          m_overlay.record(commandBuffer);
+        };
+      }
     }
 
     const bool swapChainStale = m_context.window().takeResized()
@@ -591,6 +806,16 @@ void Application::handleMouseButtonEvent(
     return;
   }
 
+  // While the simulation is running the click is a shot, which is what the
+  // demo is: point at the wall and throw something at it. Carving is the
+  // authoring gesture and stays on the authoring side of Play, where it
+  // cannot be mistaken for the physics doing the damage.
+  if (m_runtime && (event.mods & GLFW_MOD_ALT) == 0) {
+    fire(aimAtCursor());
+
+    return;
+  }
+
   // Both smooth: a stamp meets the one before it at a crease, and that is what
   // shading shows, whichever direction the material moved.
   m_fieldEditor.edit(
@@ -624,7 +849,43 @@ void Application::releaseAllVolumes() {
   }
 }
 
-void Application::fire() {
+glm::vec3 Application::aimAtPoint(const glm::vec3& target) const {
+  const glm::vec3 from = glm::vec3(m_camera.position());
+
+  // At the target rather than along the view: the camera looks down at the
+  // scene, so a shot along it would go into the floor. Moving the camera
+  // changes which side the ball comes from, never whether it arrives.
+  //
+  // Gravity is not solved for, so a shot lands a little under what it is aimed
+  // at - which is the wall, and lower up a wall topples it better anyway.
+  const glm::vec3 muzzle(from.x, m_shotSettings.height, from.z);
+  const glm::vec3 toTarget = target - muzzle;
+
+  if (glm::length(toTarget) < 1.0e-3f) {
+    return glm::vec3(0.0f, 0.0f, -1.0f);
+  }
+
+  return glm::normalize(toTarget);
+}
+
+glm::vec3 Application::aimAtTarget() const {
+  return aimAtPoint(m_shotSettings.aimAt);
+}
+
+glm::vec3 Application::aimAtCursor() const {
+  const dunya::field::Ray ray = cursorRay();
+
+  // The ray is built from the projection, which is only meaningful once a
+  // frame has been assembled. Before that, and while the cursor is captured
+  // for looking, the authored target is the honest answer.
+  if (glm::length(ray.direction) < 1.0e-3f) {
+    return aimAtTarget();
+  }
+
+  return glm::normalize(ray.direction);
+}
+
+void Application::fire(const glm::vec3& aim) {
   if (!m_runtime) {
     return;
   }
@@ -632,20 +893,7 @@ void Application::fire() {
   const Scene::Projectile& shot = m_shotSettings;
   const glm::vec3 from = glm::vec3(m_camera.position());
 
-  // At the stack rather than along the view: the camera looks down at the
-  // scene, so a shot along it would go into the floor. Moving the camera
-  // changes which side the ball comes from, never whether it arrives.
-  //
-  // Gravity is not solved for, so a shot lands a little under what it is aimed
-  // at - which is the stack, and lower up a stack topples it better anyway.
   const glm::vec3 muzzle(from.x, shot.height, from.z);
-  const glm::vec3 toTarget = shot.aimAt - muzzle;
-
-  if (glm::length(toTarget) < 1.0e-3f) {
-    return;
-  }
-
-  const glm::vec3 aim = glm::normalize(toTarget);
 
   // Oldest out before newest in, so the cap is a cap and not a leak: every
   // ball holds a volume slot and a body, and both are finite.
@@ -672,12 +920,16 @@ void Application::fire() {
   }
 
   // The shared volume, which is what the 95 ms went on: two 128-cubed images
-  // created and filled per shot. Still left needing a bake - that pass also
-  // fills the per-brick bounds the shading and the shadow march read, it costs
-  // a third of a millisecond, and it writes the same geometry back into the
-  // slot it came from.
+  // created and filled per shot.
+  //
+  // And baked already, so the pass is skipped rather than repeated. It would
+  // write the same sphere back into the slot it came from, and it submits and
+  // waits on the queue to do it - ten milliseconds of stall for no change at
+  // all. The bounds it also used to fill are uploaded once in start(), for the
+  // same reason: neither the geometry nor the slot ever moves.
   if (m_ballVolume != UINT32_MAX) {
     world.setBakedVolume(ball, m_ballVolume);
+    world.markBaked(ball);
   }
 
   m_balls.push_back(ball);
@@ -716,6 +968,448 @@ void Application::play() {
   m_fieldEditor.retarget(m_runtime->world());
 
   std::cout << "Play" << std::endl;
+}
+
+void Application::dent(uint32_t count) {
+  dunya::objectmodel::World& world = activeWorld();
+  const dunya::objectmodel::Entity target = m_scene.deformable();
+
+  if (
+    !world.registry().valid(target)
+    || !world.registry().all_of<dunya::field::SampledField>(target)
+  ) {
+    std::cout << "Nothing deformable to dent yet\n";
+    return;
+  }
+
+  const std::optional<dunya::field::Aabb> extent =
+    dunya::field::boundedExtent(world.primitives(target));
+
+  if (!extent.has_value()) {
+    std::cout << "The deformable has no bounded extent\n";
+    return;
+  }
+
+  // On the surface rather than through the volume: a dent below the skin
+  // changes nothing visible and would measure the wrong thing. The span is
+  // taken across the top face, which is where a shot lands.
+  const glm::vec3 span = extent->maximum - extent->minimum;
+
+  dunya::field::SampleBox touched{};
+
+  std::ofstream log;
+
+  if (!m_dentLogPath.empty()) {
+    const bool fresh = m_dentsApplied == 0u;
+
+    log.open(m_dentLogPath, fresh ? std::ios::trunc : std::ios::app);
+
+    if (fresh) {
+      log << "dent,deform_us,reshape_us,bricks,resident_bytes,primitives,"
+             "sweep_settled\n";
+    }
+  }
+
+  // The R2 sequence: successive multiples of these two fractions fill a square
+  // evenly without ever repeating, so the dents spread over the face and land
+  // in the same places every run.
+  world.patchSampledField(target, [&](dunya::field::SampledField& field) {
+    for (uint32_t i = 0; i < count; ++i) {
+      const glm::vec2 at = glm::fract(
+        static_cast<float>(m_dentsApplied + i)
+        * glm::vec2(0.7548777f, 0.5698403f)
+      );
+
+      const glm::vec3 centre(
+        extent->minimum.x + span.x * at.x,
+        extent->maximum.y,
+        extent->minimum.z + span.z * at.y
+      );
+
+      dunya::field::Primitive cutter = dunya::field::makeSphere(
+        centre,
+        dunya::core::EDIT_RADIUS,
+        1u,
+        dunya::core::FIELD_OP_SUBTRACTION
+      );
+
+      dunya::field::updateBounds(cutter);
+
+      const auto deformStart = std::chrono::steady_clock::now();
+
+      const dunya::field::DeformReport outcome =
+        dunya::field::deformAndRepair(field, cutter);
+
+      const dunya::field::WriteReport& report = outcome.write;
+
+      const auto deformEnd = std::chrono::steady_clock::now();
+
+      touched = dunya::field::merge(touched, report.samples);
+
+      // The collision shape has to follow the craters, or a ball rolls over a
+      // hole it should fall into. Incremental: only the bricks the write
+      // named.
+      auto reshapeEnd = deformEnd;
+
+      if (m_runtime) {
+        m_runtime->reshapeAfterDeform(
+          target,
+          report.brickBegin,
+          report.brickEnd
+        );
+
+        // Grown by the cutter's own reach, because a body resting on the rim
+        // of a crater is beside the samples that moved rather than over them.
+        const glm::vec3 pad(dunya::core::EDIT_RADIUS);
+
+        m_runtime->wake(centre - pad * 2.0f, centre + pad * 2.0f);
+
+        reshapeEnd = std::chrono::steady_clock::now();
+      }
+
+      if (log.is_open()) {
+        const glm::uvec3 moved = report.brickEnd - report.brickBegin;
+
+        // The lattice, plus the per-brick caches the collision shape keeps so
+        // a rebuild is cheap. Those are the price of the saving and belong in
+        // the same number as everything else this milestone claims is flat.
+        const glm::uvec3 counts = dunya::field::brickCounts(field);
+
+        const size_t bricks =
+          static_cast<size_t>(counts.x) * counts.y * counts.z;
+
+        const size_t resident =
+          field.distances.size() * sizeof(float)
+          + field.materials.size() * sizeof(uint32_t)
+          + field.brickLipschitz.size() * sizeof(float)
+          + field.brickMinimum.size() * sizeof(float)
+          + field.brickMaximum.size() * sizeof(float)
+          + bricks
+              * (sizeof(dunya::physics::SolidIntegral) + sizeof(dunya::physics::FieldSeed));
+
+        log << (m_dentsApplied + i) << ','
+            << std::chrono::duration_cast<std::chrono::microseconds>(
+                 deformEnd - deformStart
+               )
+                 .count()
+            << ','
+            << std::chrono::duration_cast<std::chrono::microseconds>(
+                 reshapeEnd - deformEnd
+               )
+                 .count()
+            << ',' << (moved.x * moved.y * moved.z) << ',' << resident << ','
+            << world.primitiveCount(target) << ',' << outcome.converged << '\n';
+      }
+    }
+  });
+
+  m_dentsApplied += count;
+
+  const auto found = std::find_if(
+    m_pendingUploads.begin(),
+    m_pendingUploads.end(),
+    [target](const auto& entry) { return entry.first == target; }
+  );
+
+  if (found == m_pendingUploads.end()) {
+    m_pendingUploads.emplace_back(target, touched);
+  } else {
+    found->second = dunya::field::merge(found->second, touched);
+  }
+}
+
+void Application::carve(
+  dunya::objectmodel::Entity entity,
+  const dunya::field::Primitive& cutter
+) {
+  dunya::objectmodel::World& world = activeWorld();
+
+  dunya::field::WriteReport report{};
+
+  world.patchSampledField(entity, [&](dunya::field::SampledField& field) {
+    report = dunya::field::deformAndRepair(field, cutter).write;
+  });
+
+  if (m_runtime) {
+    // The collision shape has to follow the crater, or the next ball rolls
+    // over a hole it should fall into.
+    m_runtime->reshapeAfterDeform(entity, report.brickBegin, report.brickEnd);
+
+    // And whatever was asleep on top of it has to be told, because Jolt only
+    // invalidates the contact cache of the body whose shape it just swapped.
+    // In world space, so the pose the cutter was expressed against is undone.
+    const glm::mat4 model = dunya::objectmodel::model(
+      world.registry().get<dunya::objectmodel::Pose>(entity)
+    );
+
+    const glm::vec3 centre(cutter.bounds);
+    const glm::vec3 reach(cutter.bounds.w * 2.0f);
+
+    const glm::vec3 at = model * glm::vec4(centre, 1.0f);
+
+    m_runtime->wake(at - reach, at + reach);
+  }
+
+  const auto found = std::find_if(
+    m_pendingUploads.begin(),
+    m_pendingUploads.end(),
+    [entity](const auto& entry) { return entry.first == entity; }
+  );
+
+  if (found == m_pendingUploads.end()) {
+    m_pendingUploads.emplace_back(entity, report.samples);
+  } else {
+    found->second = dunya::field::merge(found->second, report.samples);
+  }
+}
+
+void Application::applyImpacts() {
+  if (!m_runtime) {
+    return;
+  }
+
+  m_runtime->physics().impacts().drain(m_impacts);
+
+  const entt::registry& registry = m_runtime->world().registry();
+
+  for (const dunya::physics::Impact& impact : m_impacts) {
+    const dunya::objectmodel::Entity entity{impact.entity};
+
+    // Both sides of every manifold arrive, and most of them are not
+    // deformable: the ball that threw the punch, and the ground before it is
+    // tagged. Nothing to do for those.
+    if (
+      !registry.valid(entity)
+      || !registry.all_of<
+          dunya::objectmodel::Deformable,
+          dunya::field::SampledField>(entity)
+    ) {
+      continue;
+    }
+
+    // Into the field's own frame here rather than at the carve, which is the
+    // point of deferring at all: the body keeps moving, and a world-space
+    // contact recorded this frame describes nowhere in particular by the time
+    // a later frame gets to it. The same crossing FieldEditor::edit makes for
+    // a click.
+    const glm::mat4 inverseModel = glm::inverse(
+      dunya::objectmodel::model(registry.get<dunya::objectmodel::Pose>(entity))
+    );
+
+    m_pendingCraters.push_back(
+      {entity,
+       glm::vec3(inverseModel * glm::vec4(impact.point, 1.0f)),
+
+       // A direction, so the translation is dropped. The pose is rigid, so
+       // this stays unit length and the normalize is belt and braces.
+       glm::normalize(
+         glm::vec3(inverseModel * glm::vec4(impact.outward, 0.0f))
+       ),
+       impact.impulse}
+    );
+  }
+
+  if (m_pendingCraters.empty()) {
+    return;
+  }
+
+  // Hardest first, so a frame that cannot afford all of them spends what it
+  // has on the ones that show. Ties break on the entity, which costs nothing
+  // and makes the order total: std::sort is not stable, and a demo that has
+  // to reproduce should not depend on which of two equal hits it picked.
+  std::sort(
+    m_pendingCraters.begin(),
+    m_pendingCraters.end(),
+    [](const PendingCrater& a, const PendingCrater& b) {
+      if (a.impulse != b.impulse) {
+        return a.impulse > b.impulse;
+      }
+
+      return static_cast<uint32_t>(a.entity) < static_cast<uint32_t>(b.entity);
+    }
+  );
+
+  const size_t budget =
+    std::min<size_t>(m_damage.perFrame, m_pendingCraters.size());
+
+  for (size_t i = 0; i != budget; ++i) {
+    const PendingCrater& pending = m_pendingCraters[i];
+    const dunya::objectmodel::Entity entity = pending.entity;
+
+    // A frame or more may have passed, and the wall has been falling over in
+    // the meantime. An entity that has gone takes its craters with it.
+    if (
+      !registry.valid(entity)
+      || !registry.all_of<
+          dunya::objectmodel::Deformable,
+          dunya::field::SampledField>(entity)
+    ) {
+      continue;
+    }
+
+    // What the object can afford to lose. The primitives rather than the
+    // grid, because the grid carries a margin that has nothing to do with how
+    // big the object is - and the shortest side is the one that runs out
+    // first: a floor is thin and wide, and it is the thickness a crater has to
+    // respect. D5 leaves the primitive list describing the object as authored,
+    // which is the right thing to measure damage against.
+    const std::optional<dunya::field::Aabb> extent =
+      dunya::field::boundedExtent(m_runtime->world().primitives(entity));
+
+    const glm::vec3 span =
+      extent.has_value() ? extent->maximum - extent->minimum : glm::vec3(1.0f);
+
+    const float widest =
+      m_damage.widestFraction * std::min({span.x, span.y, span.z});
+
+    const float radius = std::min(
+      m_damage.radiusPerDepth
+        * std::clamp(
+          m_damage.depthPerImpulse * pending.impulse,
+          m_damage.minimumDepth,
+          m_damage.maximumDepth
+        ),
+      widest
+    );
+
+    // Recovered from the radius rather than kept, so a crater the object's
+    // size capped stays a cap of the right shape instead of a deep puncture
+    // in a narrow sphere.
+    const float depth = radius / m_damage.radiusPerDepth;
+
+    // Sunk along the inward normal so the sphere's near cap sits at the
+    // surface and exactly `depth` of it is inside: the centre goes back by
+    // the rest of the radius.
+    const glm::vec3 centre = pending.point - pending.outward * (radius - depth);
+
+    dunya::field::Primitive cutter = dunya::field::makeSphere(
+      centre,
+      radius,
+      1u,
+      dunya::core::FIELD_OP_SUBTRACTION
+    );
+
+    dunya::field::updateBounds(cutter);
+
+    const auto started = std::chrono::steady_clock::now();
+
+    carve(entity, cutter);
+    ++m_cratersApplied;
+
+    if (m_demoFrames > 0) {
+      const auto micros = std::chrono::duration_cast<std::chrono::microseconds>(
+                            std::chrono::steady_clock::now() - started
+      )
+                            .count();
+
+      std::cout << "  crater on " << static_cast<uint32_t>(entity)
+                << "  impulse " << pending.impulse << "  depth " << depth
+                << "  radius " << radius << "  " << (micros / 1000.0) << " ms"
+                << std::endl;
+    }
+  }
+
+  // Everything the budget could not reach is dropped rather than carried: a
+  // ball that has already punched through has moved on, and a crater that
+  // arrives a second later reads as a glitch rather than as damage. The sort
+  // above means what goes is always the weakest.
+  m_pendingCraters.clear();
+}
+
+void Application::reportDemo() const {
+  if (m_demoFrameMs.empty()) {
+    return;
+  }
+
+  std::vector<DemoFrame> sorted = m_demoFrameMs;
+
+  std::sort(
+    sorted.begin(),
+    sorted.end(),
+    [](const DemoFrame& a, const DemoFrame& b) { return a.ms < b.ms; }
+  );
+
+  const auto at = [&sorted](double fraction) {
+    const size_t index = static_cast<size_t>(fraction * (sorted.size() - 1));
+    return sorted[index].ms;
+  };
+
+  double total = 0.0;
+  size_t overBudget = 0;
+
+  for (const DemoFrame& frame : m_demoFrameMs) {
+    total += frame.ms;
+
+    if (frame.ms > 16.6f) {
+      ++overBudget;
+    }
+  }
+
+  std::cout << "\ndemo: " << m_demoFrameMs.size() << " frames, "
+            << m_cratersApplied << " craters\n"
+            << "  mean " << (total / double(m_demoFrameMs.size()))
+            << " ms  median " << at(0.5) << "  p99 " << at(0.99) << "  worst "
+            << sorted.back().ms << "\n"
+            << "  over 16.6 ms: " << overBudget << " ("
+            << (100.0 * double(overBudget) / double(m_demoFrameMs.size()))
+            << "%)\n";
+
+  // Named rather than summarised: a spike on a spawn frame and a spike on a
+  // crater frame are different bugs, and the mean cannot tell them apart.
+  std::cout << "  worst frames:\n";
+
+  const size_t show = std::min<size_t>(6u, sorted.size());
+
+  for (size_t i = 0; i != show; ++i) {
+    const DemoFrame& frame = sorted[sorted.size() - 1u - i];
+
+    std::cout << "    frame " << frame.index << "  " << frame.ms
+              << " ms   craters " << frame.craters << "  carve "
+              << frame.carveMs << "  upload " << frame.uploadMs << "  physics "
+              << frame.physicsMs << "  rest "
+              << (frame.ms - frame.carveMs - frame.uploadMs - frame.physicsMs)
+              << (frame.fired ? "  (spawned a ball)" : "") << "\n";
+  }
+
+  std::cout << std::flush;
+}
+
+void Application::uploadDentedVolumes() {
+  if (m_pendingUploads.empty()) {
+    return;
+  }
+
+  const entt::registry& registry = activeWorld().registry();
+
+  for (const auto& [entity, box] : m_pendingUploads) {
+    if (
+      !registry.valid(entity)
+      || !registry.all_of<
+          dunya::objectmodel::BakedVolume,
+          dunya::field::SampledField>(entity)
+    ) {
+      continue;
+    }
+
+    const uint32_t slot =
+      registry.get<dunya::objectmodel::BakedVolume>(entity).index;
+
+    const dunya::field::SampledField& field =
+      registry.get<dunya::field::SampledField>(entity);
+
+    m_volumePool.upload(m_uploader, slot, field, box);
+
+    // The write that made this box also moved the bricks' gradient bounds,
+    // and the march reads those rather than the samples.
+    m_recordTable.uploadBounds(m_uploader, slot, field);
+  }
+
+  m_pendingUploads.clear();
+
+  // One submission for every copy this frame, and no wait: the frame's own
+  // rendering follows on the same queue, and the barriers above order against
+  // it. What this replaces was six queue drains per changed object.
+  m_uploader.submit();
 }
 
 void Application::stop() {
@@ -759,6 +1453,109 @@ void Application::setLookMode(bool looking) {
 // Every panel this process shows, declared where the data it reads lives. They
 // capture this, which outlives them.
 void Application::registerPanels() {
+  // A release build has no panels at all, so there is nothing to register.
+  if constexpr (!enableOverlay) {
+    return;
+  }
+
+  // First, so it is the panel at the top of the stack. What the demo is for:
+  // the wall coming apart on the left of the screen, and on the right the two
+  // numbers that are the whole claim - the primitive count and the resident
+  // bytes, neither of which moves however much of the wall is gone.
+  m_overlay.panel("Dunya", [this] {
+    ImGui::Text("%.1f fps   %.2f ms", 1000.0 / m_lastFrameMs, m_lastFrameMs);
+    ImGui::Separator();
+
+    const dunya::objectmodel::World& world = activeWorld();
+    const entt::registry& registry = world.registry();
+
+    size_t resident = 0;
+    size_t deformable = 0;
+
+    for (const dunya::objectmodel::Entity entity : world.fields()) {
+      if (!registry.all_of<dunya::objectmodel::Deformable>(entity)) {
+        continue;
+      }
+
+      ++deformable;
+
+      if (
+        const auto* field = registry.try_get<dunya::field::SampledField>(entity)
+      ) {
+        resident += field->distances.size() * sizeof(float)
+                    + field->materials.size() * sizeof(uint32_t);
+      }
+    }
+
+    ImGui::Text("craters carved   %u", m_cratersApplied);
+    ImGui::Text("deformable       %zu", deformable);
+    ImGui::Separator();
+
+    // The point. A representation that stored edits would have one primitive
+    // per crater and a lattice that grew with them; these two lines are what
+    // it costs instead, and they do not move.
+    ImGui::Text("primitives       %zu", world.pool().size());
+    ImGui::Text(
+      "lattice          %.1f MiB",
+      double(resident) / (1024.0 * 1024.0)
+    );
+
+    ImGui::Separator();
+
+    ImGui::TextUnformatted(
+      m_runtime ? "click to fire   F5 stops   G resets"
+                : "F5 plays   alt+click carves"
+    );
+    ImGui::TextUnformatted("hold right mouse to look, WASD/QE to fly");
+  });
+
+  m_overlay.panel("Damage", [this] {
+    if (
+      ImGui::SliderFloat(
+        "Threshold",
+        &m_damage.threshold,
+        0.1f,
+        20.0f,
+        "%.1f m/s"
+      )
+      && m_runtime
+    ) {
+      m_runtime->physics().impacts().setThreshold(m_damage.threshold);
+    }
+
+    ImGui::SliderFloat(
+      "Depth per impulse",
+      &m_damage.depthPerImpulse,
+      0.0f,
+      0.002f,
+      "%.5f m"
+    );
+
+    ImGui::SliderFloat(
+      "Min depth",
+      &m_damage.minimumDepth,
+      0.0f,
+      0.2f,
+      "%.3f m"
+    );
+    ImGui::SliderFloat(
+      "Max depth",
+      &m_damage.maximumDepth,
+      0.0f,
+      1.0f,
+      "%.3f m"
+    );
+    ImGui::SliderFloat("Width", &m_damage.radiusPerDepth, 1.0f, 6.0f, "%.2f x");
+    ImGui::SliderFloat("Widest", &m_damage.widestFraction, 0.02f, 0.5f, "%.2f");
+
+    int perFrame = int(m_damage.perFrame);
+    if (ImGui::SliderInt("Craters per frame", &perFrame, 1, 16)) {
+      m_damage.perFrame = uint32_t(perFrame);
+    }
+
+    ImGui::Text("Craters  %u", m_cratersApplied);
+  });
+
   m_overlay.panel("Shot", [this] {
     ImGui::SliderFloat("Speed", &m_shotSettings.speed, 1.0f, 80.0f, "%.1f m/s");
     ImGui::SliderFloat("Mass", &m_shotSettings.mass, 1.0f, 3000.0f, "%.0f kg");
@@ -766,7 +1563,7 @@ void Application::registerPanels() {
     ImGui::Text("Balls  %zu / %zu", m_balls.size(), MAX_BALLS);
 
     if (ImGui::Button("Fire")) {
-      fire();
+      fire(aimAtTarget());
     }
 
     ImGui::SameLine();
@@ -905,6 +1702,14 @@ void Application::handleKeyEvent(const dunya::platform::KeyEvent& event) {
   }
 
   if (
+    event.key == GLFW_KEY_N
+    && event.type == dunya::platform::KeyEventType::SinglePressed
+  ) {
+    dent(m_input.isDown(GLFW_KEY_LEFT_SHIFT) ? 100u : 1u);
+    return;
+  }
+
+  if (
     event.key == GLFW_KEY_F5
     && event.type == dunya::platform::KeyEventType::SinglePressed
   ) {
@@ -935,7 +1740,7 @@ void Application::handleKeyEvent(const dunya::platform::KeyEvent& event) {
     event.key == GLFW_KEY_F
     && event.type == dunya::platform::KeyEventType::SinglePressed
   ) {
-    fire();
+    fire(aimAtCursor());
 
     return;
   }

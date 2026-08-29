@@ -39,8 +39,8 @@ set(DUNYA_MAX_MATERIALS 64)
 # VOLUMES: how many baked distance/material volume pairs the pool owns, and the
 # size of the descriptor arrays and the brick-bound table that are indexed by a
 # volume slot. A resource, owned for as long as the entity holds it.
-set(DUNYA_MAX_FIELD_RECORDS 64)
-set(DUNYA_MAX_FIELD_VOLUMES 64)
+set(DUNYA_MAX_FIELD_RECORDS 640)
+set(DUNYA_MAX_FIELD_VOLUMES 640)
 
 # The primitive arena, in primitives. It used to be MAX_FIELD_OBJECTS times
 # MAX_FIELD_PRIMITIVES, which implied a per-entity ceiling the World does not

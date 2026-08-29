@@ -1,3 +1,5 @@
 #include <dunya/renderer/volumepool/volumepool.h>
 
+#include <cstring>
 #include <stdexcept>
+#include <vector>

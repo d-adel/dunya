@@ -181,9 +181,18 @@ void Overlay::record(VkCommandBuffer commandBuffer) const {
 }
 
 bool Overlay::wantsMouse() const {
-  return ImGui::GetIO().WantCaptureMouse;
+  // Nothing is drawn in a release build, so nothing can be over the cursor.
+  if constexpr (!enableOverlay) {
+    return false;
+  } else {
+    return ImGui::GetIO().WantCaptureMouse;
+  }
 }
 
 bool Overlay::wantsKeyboard() const {
-  return ImGui::GetIO().WantCaptureKeyboard;
+  if constexpr (!enableOverlay) {
+    return false;
+  } else {
+    return ImGui::GetIO().WantCaptureKeyboard;
+  }
 }

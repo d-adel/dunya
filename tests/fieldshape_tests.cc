@@ -5,6 +5,7 @@
 
 #include <dunya/core/config/config.h>
 #include <dunya/field/analytic/analytic.h>
+#include <dunya/field/deform/deform.h>
 #include <dunya/field/field.h>
 #include <dunya/field/sampled/sampled.h>
 #include <dunya/physics/fieldshape/fieldshape.h>
@@ -603,4 +604,106 @@ TEST_CASE("a degenerate gradient still names a direction", "[fieldshape]") {
   );
 
   REQUIRE_THAT(normal.Length(), WithinAbs(1.0f, 1e-6f));
+}
+
+TEST_CASE(
+  "a shape rebuilt from a deformation matches one built from scratch",
+  "[fieldshape]"
+) {
+  JoltLibrary library;
+
+  const std::vector<Primitive> primitives{
+    fixture::sphere(glm::vec3(0.0f), 1.0f)
+  };
+
+  SampledField field = dunya::field::bake(
+    primitives,
+    glm::vec3(-1.6f),
+    glm::vec3(1.6f),
+    glm::uvec3(65u)
+  );
+
+  const JPH::Ref<FieldShape> before = new FieldShape(field);
+
+  Primitive cutter = dunya::field::makeSphere(
+    glm::vec3(0.9f, 0.0f, 0.0f),
+    0.4f,
+    0u,
+    dunya::core::FIELD_OP_SUBTRACTION
+  );
+
+  dunya::field::updateBounds(cutter);
+
+  const dunya::field::WriteReport report =
+    dunya::field::deformAndRepair(field, cutter).write;
+
+  REQUIRE(report.brickEnd.x > report.brickBegin.x);
+
+  const JPH::Ref<FieldShape> patched =
+    new FieldShape(field, *before, report.brickBegin, report.brickEnd);
+
+  const JPH::Ref<FieldShape> scratch = new FieldShape(field);
+
+  const JPH::MassProperties wanted = scratch->GetMassProperties();
+  const JPH::MassProperties got = patched->GetMassProperties();
+
+  // The deformation has to have moved something, or this compares a shape
+  // against itself and cannot tell a reuse bug from a correct rebuild.
+  REQUIRE(wanted.mMass < before->GetMassProperties().mMass * 0.999f);
+
+  REQUIRE_THAT(got.mMass, WithinRel(wanted.mMass, 1.0e-6f));
+
+  REQUIRE_THAT(
+    patched->centerOfMass().x,
+    WithinAbs(scratch->centerOfMass().x, 1.0e-6f)
+  );
+  REQUIRE_THAT(
+    patched->centerOfMass().y,
+    WithinAbs(scratch->centerOfMass().y, 1.0e-6f)
+  );
+  REQUIRE_THAT(
+    patched->centerOfMass().z,
+    WithinAbs(scratch->centerOfMass().z, 1.0e-6f)
+  );
+
+  for (int column = 0; column != 3; ++column) {
+    for (int row = 0; row != 3; ++row) {
+      REQUIRE_THAT(
+        got.mInertia(row, column),
+        WithinAbs(wanted.mInertia(row, column), 1.0e-3f)
+      );
+    }
+  }
+
+  REQUIRE(patched->seeds().size() == scratch->seeds().size());
+
+  for (size_t i = 0; i < patched->seeds().size(); ++i) {
+    REQUIRE(patched->seeds()[i].brick == scratch->seeds()[i].brick);
+
+    REQUIRE_THAT(
+      patched->seeds()[i].point.x,
+      WithinAbs(scratch->seeds()[i].point.x, 1.0e-5f)
+    );
+    REQUIRE_THAT(
+      patched->seeds()[i].point.y,
+      WithinAbs(scratch->seeds()[i].point.y, 1.0e-5f)
+    );
+    REQUIRE_THAT(
+      patched->seeds()[i].point.z,
+      WithinAbs(scratch->seeds()[i].point.z, 1.0e-5f)
+    );
+  }
+
+  // And that anything is reused at all. Everything above passes with reuse
+  // switched off, because recomputing every brick just is the from-scratch
+  // answer - so none of it can tell a working cache from an absent one. An
+  // empty range reuses every brick from the pre-deform shape, and that has to
+  // disagree with a field material has been taken out of.
+  const JPH::Ref<FieldShape> allReused =
+    new FieldShape(field, *before, glm::uvec3(0u), glm::uvec3(0u));
+
+  REQUIRE(
+    allReused->GetMassProperties().mMass == before->GetMassProperties().mMass
+  );
+  REQUIRE(allReused->GetMassProperties().mMass > wanted.mMass);
 }

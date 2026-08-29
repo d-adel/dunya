@@ -5,6 +5,7 @@
 #include <dunya/objectmodel/material/material.h>
 #include <dunya/objectmodel/mesh/mesh.h>
 #include <dunya/objectmodel/bakedvolume/bakedvolume.h>
+#include <dunya/objectmodel/deformable/deformable.h>
 #include <dunya/objectmodel/entity/entity.h>
 #include <dunya/objectmodel/pose/pose.h>
 #include <dunya/objectmodel/sdfgrid/sdfgrid.h>
@@ -17,6 +18,7 @@
 #include <entt/entity/registry.hpp>
 
 #include <cstddef>
+#include <stdexcept>
 #include <cstdint>
 #include <span>
 #include <utility>
@@ -99,6 +101,24 @@ public:
   template<SelfContained T, typename Fn>
   void patch(Entity entity, Fn&& fn) {
     m_registry.patch<T>(entity, std::forward<Fn>(fn));
+  }
+
+  // The one way a lattice changes in place after its bake. Deliberately not
+  // patch<T>: SampledField is derived from the primitives, which is why it
+  // refuses SelfContained, and a dent is the operation that ends that
+  // derivation. Only a Deformable may do it, so the tag is the permission
+  // rather than a comment - and this stays a reference because a dent touches
+  // a few dozen voxels of a 16 MiB grid, so copying it out is the cost the
+  // whole milestone exists to avoid.
+  template<typename Fn>
+  void patchSampledField(Entity entity, Fn&& fn) {
+    if (!m_registry.all_of<Deformable>(entity)) {
+      throw std::runtime_error(
+        "Only a deformable's lattice may be written in place"
+      );
+    }
+
+    fn(m_registry.get<dunya::field::SampledField>(entity));
   }
 
   // Write it whether or not it is there. EnTT's verb and EnTT's

@@ -5,6 +5,7 @@
 #include <Jolt/Core/TempAllocator.h>
 #include <Jolt/Core/JobSystemThreadPool.h>
 
+#include <dunya/physics/impact/impact.h>
 #include <dunya/physics/layers/layers.h>
 
 namespace dunya::physics {
@@ -31,6 +32,12 @@ public:
   JPH::PhysicsSystem& system();
   const JPH::PhysicsSystem& system() const;
 
+  // Jolt holds one contact listener and it has to outlive every Update, so it
+  // is a member rather than something a caller registers and has to keep
+  // alive. What it records is not deformation-specific - an impact is also
+  // what a sound or a particle burst would key off.
+  ImpactListener& impacts() noexcept;
+
 private:
   BroadPhaseLayerInterface m_broadPhaseLayerInterface;
   ObjectVsBroadPhaseLayerFilter m_objectVsBroadPhaseLayerFilter;
@@ -38,6 +45,10 @@ private:
 
   JPH::TempAllocatorImpl m_tempAllocator;
   JPH::JobSystemThreadPool m_jobSystem;
+
+  // Declared before the system, because the system holds a pointer to it and
+  // members are destroyed in reverse declaration order.
+  ImpactListener m_impacts;
 
   JPH::PhysicsSystem m_system;
 };

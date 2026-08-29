@@ -159,8 +159,16 @@ void Renderer::recordCommandBuffer(
   depthBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
   depthBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   depthBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
-  depthBarrier.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
-  depthBarrier.srcAccessMask = 0;
+  // There is one depth image and two frames in flight, so the frame that is
+  // about to claim it may still be being written by the one before. Discarding
+  // the contents - the layout is UNDEFINED and the loadOp clears - says
+  // nothing about *when*, and TOP_OF_PIPE with no access declared no
+  // dependency at all: synchronisation validation reports a WRITE_AFTER_WRITE
+  // against the previous frame's depth store, twenty times in a hundred
+  // frames.
+  depthBarrier.srcStageMask = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT
+                              | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+  depthBarrier.srcAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
   depthBarrier.dstStageMask = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT
                               | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
   depthBarrier.dstAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT

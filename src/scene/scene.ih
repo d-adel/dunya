@@ -8,8 +8,11 @@
 #include <dunya/objectmodel/material/material.h>
 #include <dunya/objectmodel/mesh/mesh.h>
 #include <dunya/objectmodel/pose/pose.h>
+#include <dunya/objectmodel/deformable/deformable.h>
 #include <dunya/editor/command/command.h>
 
+#include <algorithm>
+#include <iostream>
 #include <stdexcept>
 #include <array>
 #include <cstdint>

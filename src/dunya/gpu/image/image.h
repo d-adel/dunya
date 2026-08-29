@@ -57,12 +57,34 @@ public:
     VkImageLayout oldLayout,
     VkImageLayout newLayout
   );
+  // The offset makes this a sub-region copy: a dent rewrites a few dozen
+  // voxels of a 128-cubed volume, and staging the whole grid for that is
+  // 10 MiB of traffic for 30 KB of change.
   void copyFrom(
     const Device& device,
     Buffer& buffer,
     uint32_t width,
     uint32_t height,
-    uint32_t depth = 1
+    uint32_t depth = 1,
+    VkOffset3D offset = {0, 0, 0}
+  );
+
+  // The same two, recorded rather than submitted. Load-time callers want the
+  // pair above, which submit and wait; a caller inside a frame wants these,
+  // so a dozen copies become one submission and no stall. See Uploader.
+  void recordTransition(
+    VkCommandBuffer commandBuffer,
+    VkImageLayout oldLayout,
+    VkImageLayout newLayout
+  );
+
+  void recordCopyFrom(
+    VkCommandBuffer commandBuffer,
+    const Buffer& buffer,
+    uint32_t width,
+    uint32_t height,
+    uint32_t depth = 1,
+    VkOffset3D offset = {0, 0, 0}
   );
 
 private:

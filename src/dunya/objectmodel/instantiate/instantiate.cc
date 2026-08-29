@@ -27,6 +27,10 @@ void instantiateWorld(const World& source, World& destination) {
       destination.emplaceOrReplace<MassScale>(entity, *scale);
     }
 
+    if (registry.all_of<Deformable>(entity)) {
+      destination.emplaceOrReplace<Deformable>(entity, Deformable{});
+    }
+
     for (const dunya::field::Primitive& primitive : source.primitives(entity)) {
       if (!destination.addPrimitive(entity, primitive)) {
         throw std::runtime_error("Cannot instantiate an object's primitives");

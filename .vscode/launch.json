@@ -1,0 +1,64 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Dunya (Debug)",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build-ninja/DunyaRenderer.exe",
+      "args": [],
+      "cwd": "${workspaceFolder}/build-ninja",
+      "console": "integratedTerminal",
+      "preLaunchTask": "build debug"
+    },
+    {
+      "name": "Dunya (Release)",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build-release/DunyaRenderer.exe",
+      "args": [],
+      "cwd": "${workspaceFolder}/build-release",
+      "console": "integratedTerminal",
+      "preLaunchTask": "build release"
+    },
+    {
+      "name": "Dunya (Release, big wall)",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build-release/DunyaRenderer.exe",
+      "args": ["--wall", "12x8x2", "--demo", "100000", "--demo-rate", "6"],
+      "cwd": "${workspaceFolder}/build-release",
+      "console": "integratedTerminal",
+      "preLaunchTask": "build release"
+    },
+    {
+      "name": "Dunya (Release, record)",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build-release/DunyaRenderer.exe",
+      "args": [
+        "--wall",
+        "12x8x2",
+        "--demo",
+        "620",
+        "--demo-rate",
+        "6",
+        "--capture",
+        "reel"
+      ],
+      "cwd": "${workspaceFolder}/build-release",
+      "console": "integratedTerminal",
+      "preLaunchTask": "build release"
+    },
+    {
+      "name": "Unit tests (Debug)",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build-ninja/tests/unit_tests.exe",
+      "args": [],
+      "cwd": "${workspaceFolder}/build-ninja",
+      "console": "integratedTerminal",
+      "preLaunchTask": "build debug"
+    }
+  ]
+}

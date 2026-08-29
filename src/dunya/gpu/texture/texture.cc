@@ -78,6 +78,10 @@ const Image& Texture::image() const noexcept {
   return m_textureImage;
 }
 
+Image& Texture::image() noexcept {
+  return m_textureImage;
+}
+
 void Texture::createTextureImage(
   const Device& device,
   uint32_t width,

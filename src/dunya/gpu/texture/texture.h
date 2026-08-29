@@ -39,6 +39,10 @@ public:
 
   const Image& image() const noexcept;
 
+  // Non-const because a layout transition and a sub-region copy are writes to
+  // the image, and an owner that can rewrite its contents needs both.
+  Image& image() noexcept;
+
 private:
   void createTextureImage(
     const Device& device,

@@ -7,10 +7,8 @@ namespace {
 // Half the side of a stacked box, and the gap it is dropped from. The gap is
 // there so the stack settles into contact rather than starting in it: a stack
 // that has to find its own rest is the one M18 is about.
-constexpr float BOX_HALF = 0.3f;
+constexpr float BOX_HALF = 0.45f;
 constexpr float BOX_GAP = 0.01f;
-constexpr uint32_t BOX_COLUMNS = 4u;
-constexpr uint32_t BOX_ROWS = 5u;
 
 // Coarser than the ball, and it can be: a box meets the ground face to face,
 // so a whole plane of bricks is in contact however few there are. A ball meets
@@ -38,7 +36,10 @@ constexpr uint32_t PROJECTILE_RESOLUTION = dunya::core::FIELD_GRID_RESOLUTION;
 
 Scene::Scene(
   const dunya::gpu::Context& context,
-  dunya::objectmodel::World& world
+  dunya::objectmodel::World& world,
+  uint32_t wallColumns,
+  uint32_t wallRows,
+  uint32_t wallDepth
 )
     : m_materials(createMaterials()),
       m_samplers(createSamplers(context.device())),
@@ -52,27 +53,88 @@ Scene::Scene(
   dunya::objectmodel::SdfGrid boxGrid{};
   boxGrid.resolution = glm::uvec3(BOX_RESOLUTION);
 
+  // The wall is asked for on the command line and the pool is finite, so a
+  // wall too big for it has to be refused here rather than discovered by the
+  // frame loop. It was discovered by the frame loop once: the ground plane is
+  // built after the boxes, so an overrun dropped *the floor* and everything
+  // fell through a scene that otherwise looked fine.
+  //
+  // What is held back is one slot for the ground, one for the shared ball
+  // volume, and a record apiece for the balls in flight.
+  constexpr uint32_t RESERVED_SLOTS = 2u + 24u;
+
+  const uint32_t affordable =
+    std::min(dunya::core::MAX_FIELD_VOLUMES, dunya::core::MAX_FIELD_RECORDS)
+    - RESERVED_SLOTS;
+
+  while (wallColumns * wallRows * wallDepth > affordable && wallDepth > 1u) {
+    --wallDepth;
+  }
+
+  while (wallColumns * wallRows * wallDepth > affordable && wallRows > 1u) {
+    --wallRows;
+  }
+
+  while (wallColumns * wallRows * wallDepth > affordable && wallColumns > 1u) {
+    --wallColumns;
+  }
+
+  std::cout << "Wall " << wallColumns << "x" << wallRows << "x" << wallDepth
+            << " (" << (wallColumns * wallRows * wallDepth) << " boxes, "
+            << affordable << " affordable)\n";
+
   const float pitch = 2.0f * BOX_HALF + BOX_GAP;
-  const float firstColumn = -0.5f * float(BOX_COLUMNS - 1u) * pitch;
+  const float firstColumn = -0.5f * float(wallColumns - 1u) * pitch;
+
+  // The front face sits at +z, towards the camera, and the wall runs away
+  // from it. A shot therefore meets the near layer first and has to get
+  // through it before the next one is in reach.
+  const float frontZ = BOX_HALF;
+
+  // The box the wall occupies, kept because two things need it and neither
+  // should re-derive it: where to put the camera, and where to aim.
+  m_wallMinimum = glm::vec3(
+    firstColumn - BOX_HALF,
+    GROUND_Y,
+    frontZ - float(wallDepth) * pitch
+  );
+
+  m_wallMaximum = glm::vec3(
+    firstColumn + float(wallColumns - 1u) * pitch + BOX_HALF,
+    GROUND_Y + 2.0f * BOX_HALF + float(wallRows - 1u) * pitch,
+    frontZ
+  );
 
   dunya::objectmodel::Pose pose{};
 
-  for (uint32_t row = 0u; row != BOX_ROWS; ++row) {
-    for (uint32_t column = 0u; column != BOX_COLUMNS; ++column) {
-      pose.position = glm::vec3(
-        firstColumn + float(column) * pitch,
-        GROUND_Y + BOX_HALF + float(row) * pitch,
-        0.0f
-      );
+  for (uint32_t layer = 0u; layer != wallDepth; ++layer) {
+    for (uint32_t row = 0u; row != wallRows; ++row) {
+      for (uint32_t column = 0u; column != wallColumns; ++column) {
+        pose.position = glm::vec3(
+          firstColumn + float(column) * pitch,
+          GROUND_Y + BOX_HALF + float(row) * pitch,
+          -float(layer) * pitch
+        );
 
-      const dunya::objectmodel::Entity boxEntity =
-        m_world.createField(pose, boxGrid);
+        const dunya::objectmodel::Entity boxEntity =
+          m_world.createField(pose, boxGrid);
 
-      addPrimitive(
-        boxEntity,
-        dunya::field::makeBox(glm::vec3(0.0f), glm::vec3(BOX_HALF)),
-        "a stacked box"
-      );
+        addPrimitive(
+          boxEntity,
+          dunya::field::makeBox(glm::vec3(0.0f), glm::vec3(BOX_HALF)),
+          "a stacked box"
+        );
+
+        // Every box takes damage. It costs nothing new: a box already carries
+        // a CPU lattice, because that is what its collision shape reads. The
+        // tag only says the lattice is the authority and the GPU volume
+        // follows it, rather than the GPU re-baking from primitives that no
+        // longer describe a box with a hole in it.
+        m_world.emplaceOrReplace<dunya::objectmodel::Deformable>(
+          boxEntity,
+          dunya::objectmodel::Deformable{}
+        );
+      }
     }
   }
 
@@ -98,6 +160,15 @@ Scene::Scene(
   );
 
   m_world.addStaticBody(planeEntity);
+
+  // The ground takes damage too, so a shot that misses the wall still leaves
+  // a crater and a box that lands hard leaves a print.
+  m_world.emplaceOrReplace<dunya::objectmodel::Deformable>(
+    planeEntity,
+    dunya::objectmodel::Deformable{}
+  );
+
+  m_deformable = planeEntity;
 
   // Baked once, here, so pressing the key does not. A full-resolution bake is
   // better than a second of stall per shot, and every ball is this same sphere.
@@ -127,16 +198,21 @@ Scene::Projectile Scene::projectile() const {
   );
 
   // Fast enough that a step carries the ball further than its own radius,
-  // which is the case the swept path exists for.
-  shot.speed = 22.0f;
-  shot.height = 2.5f;
+  // which is the case the swept path exists for - and fast enough to go
+  // through a wall rather than bounce off it. A 0.9 m crate is about 730 kg,
+  // and a wall of them braces against itself; a shot that merely nudges one
+  // makes a demo where nothing happens.
+  shot.speed = 42.0f;
 
-  shot.mass = 150.0f;
+  // Level with the middle of the wall, so the spread of targets is reachable
+  // on a flat-ish trajectory. Fired from 2.5 m at a wall seven metres tall,
+  // every shot at the top row is a lob that lands short.
+  shot.height = 0.5f * (m_wallMinimum.y + m_wallMaximum.y);
 
-  // The middle of the stack, so a hit topples it rather than sliding the
-  // bottom box out from under it.
-  shot.aimAt =
-    glm::vec3(0.0f, GROUND_Y + BOX_HALF + (2.0f * BOX_HALF + BOX_GAP), 0.0f);
+  shot.mass = 600.0f;
+
+  // The middle of the wall, for the one shot that is not aimed by a person.
+  shot.aimAt = 0.5f * (m_wallMinimum + m_wallMaximum);
 
   return shot;
 }
@@ -291,7 +367,49 @@ const dunya::field::SampledField& Scene::projectileField() const noexcept {
 }
 
 void Scene::frame(dunya::objectmodel::Camera& camera) const {
+  const glm::vec3 span = m_wallMaximum - m_wallMinimum;
+  const glm::vec3 centre = 0.5f * (m_wallMinimum + m_wallMaximum);
+
+  // Far enough back that the wall fits, derived rather than tuned, because the
+  // wall is a command-line size now and a distance that framed twenty boxes
+  // puts a hundred off both edges.
+  //
+  // The vertical field of view is 70 degrees and the window is wider than it
+  // is tall, so height is what runs out first at 4:3 and width at anything
+  // wider. Both are checked against the same half-angle and the larger wins,
+  // which is conservative for the wide case rather than wrong.
+  constexpr float HALF_FOV = glm::radians(35.0f);
+
+  const float reach = 0.5f * std::max(span.x, span.y) / std::tan(HALF_FOV);
+
+  // A margin for the ground in front of it and the debris that ends up there.
+  const float distance = reach + 3.0f;
+
   // Looking down on the stack rather than at it: the shot comes from the
   // camera, so the view has to show the plane the balls travel across.
-  camera.place(glm::vec3(0.0f, 3.4f, 7.5f), 0.0f, glm::radians(-27.0f));
+  constexpr float PITCH = glm::radians(-20.0f);
+
+  camera.place(
+    glm::vec3(0.0f, centre.y + distance * -std::sin(PITCH), distance),
+    0.0f,
+    PITCH
+  );
+}
+
+glm::vec3 Scene::wallPoint(float u, float v) const {
+  // Inset, so a shot aimed at the very edge still hits a box rather than the
+  // gap beside it.
+  constexpr float INSET = 0.15f;
+
+  const glm::vec3 span = m_wallMaximum - m_wallMinimum;
+
+  return glm::vec3(
+    m_wallMinimum.x + span.x * glm::mix(INSET, 1.0f - INSET, u),
+    m_wallMinimum.y + span.y * glm::mix(INSET, 1.0f - INSET, v),
+    0.0f
+  );
+}
+
+dunya::objectmodel::Entity Scene::deformable() const noexcept {
+  return m_deformable;
 }

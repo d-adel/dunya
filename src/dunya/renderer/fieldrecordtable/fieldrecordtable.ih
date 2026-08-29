@@ -1,5 +1,8 @@
 #include "fieldrecordtable.h"
 #include <dunya/core/config/config.h>
+#include <dunya/gpu/oneshot/oneshotcommand.h>
+
+#include <cstring>
 
 #include <array>
 #include <stdexcept>

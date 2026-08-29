@@ -4,6 +4,7 @@
 
 add_library(dunya_physics STATIC
    fieldshape/fieldshape.cc
+   impact/impact.cc
    joltlibrary/joltlibrary.cc
    layers/layers.cc
    physicsworld/physicsworld.cc

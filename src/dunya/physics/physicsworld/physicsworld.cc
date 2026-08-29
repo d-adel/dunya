@@ -9,6 +9,11 @@ constexpr uint MAX_CONTACT_CONSTRAINTS = 10240;
 
 constexpr uint TEMP_ALLOCATOR_SIZE = 10 * 1024 * 1024;
 
+// Closing speed below which a new contact is not an impact, in m / s. A stack
+// finding its own rest closes at a few centimetres a second; anything thrown
+// arrives an order of magnitude above this.
+constexpr float IMPACT_THRESHOLD = 3.0f;
+
 uint workerCount() {
   const unsigned int count = std::thread::hardware_concurrency();
   return count > 1 ? count - 1 : 1;
@@ -20,7 +25,8 @@ namespace dunya::physics {
 
 PhysicsWorld::PhysicsWorld()
     : m_tempAllocator(TEMP_ALLOCATOR_SIZE),
-      m_jobSystem(cMaxPhysicsJobs, cMaxPhysicsBarriers, workerCount()) {
+      m_jobSystem(cMaxPhysicsJobs, cMaxPhysicsBarriers, workerCount()),
+      m_impacts(IMPACT_THRESHOLD) {
   m_system.Init(
     MAX_BODIES,
     NUM_BODY_MUTEXES,
@@ -30,6 +36,8 @@ PhysicsWorld::PhysicsWorld()
     m_objectVsBroadPhaseLayerFilter,
     m_objectLayerPairFilter
   );
+
+  m_system.SetContactListener(&m_impacts);
 }
 
 PhysicsWorld::~PhysicsWorld() = default;
@@ -56,6 +64,10 @@ PhysicsSystem& PhysicsWorld::system() {
 
 const PhysicsSystem& PhysicsWorld::system() const {
   return m_system;
+}
+
+ImpactListener& PhysicsWorld::impacts() noexcept {
+  return m_impacts;
 }
 
 }  // namespace dunya::physics

@@ -169,6 +169,16 @@ void Image::transition(
   OneShotCommand cmd;
   cmd.start(device);
 
+  recordTransition(cmd.cmdBuffer(), oldLayout, newLayout);
+
+  cmd.submit(device);
+}
+
+void Image::recordTransition(
+  VkCommandBuffer commandBuffer,
+  VkImageLayout oldLayout,
+  VkImageLayout newLayout
+) {
   VkImageMemoryBarrier2 barrier{};
   barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
   barrier.oldLayout = oldLayout;
@@ -191,12 +201,25 @@ void Image::transition(
     barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
     barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
   } else if (
+    oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+    && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+  ) {
+    // A volume going back to the CPU for a sub-region rewrite. The wait is on
+    // every stage that samples it, because a frame in flight may still be
+    // reading the region about to be overwritten.
+    barrier.srcStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT
+                           | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+    barrier.srcAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
+    barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+    barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+  } else if (
     oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
     && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
   ) {
     barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
     barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
-    barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+    barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT
+                           | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
     barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
   } else {
     throw std::invalid_argument("Unsupported layout transition!");
@@ -207,9 +230,7 @@ void Image::transition(
   depInfo.pImageMemoryBarriers = &barrier;
   depInfo.imageMemoryBarrierCount = 1;
 
-  vkCmdPipelineBarrier2(cmd.cmdBuffer(), &depInfo);
-
-  cmd.submit(device);
+  vkCmdPipelineBarrier2(commandBuffer, &depInfo);
 }
 
 void Image::copyFrom(
@@ -217,11 +238,25 @@ void Image::copyFrom(
   Buffer& buffer,
   uint32_t width,
   uint32_t height,
-  uint32_t depth
+  uint32_t depth,
+  VkOffset3D offset
 ) {
   OneShotCommand cmd;
   cmd.start(device);
 
+  recordCopyFrom(cmd.cmdBuffer(), buffer, width, height, depth, offset);
+
+  cmd.submit(device);
+}
+
+void Image::recordCopyFrom(
+  VkCommandBuffer commandBuffer,
+  const Buffer& buffer,
+  uint32_t width,
+  uint32_t height,
+  uint32_t depth,
+  VkOffset3D offset
+) {
   VkBufferImageCopy region{};
   region.bufferOffset = 0;
   region.bufferRowLength = 0;
@@ -232,19 +267,17 @@ void Image::copyFrom(
   region.imageSubresource.baseArrayLayer = 0;
   region.imageSubresource.layerCount = 1;
 
-  region.imageOffset = {0, 0, 0};
+  region.imageOffset = offset;
   region.imageExtent = {width, height, depth};
 
   vkCmdCopyBufferToImage(
-    cmd.cmdBuffer(),
+    commandBuffer,
     buffer.buffer(),
     m_image,
     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
     1,
     &region
   );
-
-  cmd.submit(device);
 }
 
 }  // namespace dunya::gpu

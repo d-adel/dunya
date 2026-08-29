@@ -679,3 +679,116 @@ TEST_CASE("a probe always names a direction", "[sampled][probe]") {
     REQUIRE_THAT(glm::length(hit.normal), WithinAbs(1.0f, 1e-5f));
   }
 }
+
+namespace {
+
+// The value range a brick's samples actually hold, worked out from the lattice
+// rather than read back from what the rebuild stored. Same one-cell halo the
+// bake uses: a step may cross a wall by half a voxel, so the bound has to
+// describe the ground just past it.
+void trueBrickRange(
+  const SampledField& field,
+  const glm::uvec3& brick,
+  float& lowest,
+  float& highest
+) {
+  const glm::uvec3 cells = field.resolution - glm::uvec3(1u);
+  const glm::uvec3 base = brick * glm::uvec3(dunya::field::BRICK_CELLS);
+
+  const glm::uvec3 start = glm::max(base, glm::uvec3(1u)) - glm::uvec3(1u);
+  const glm::uvec3 end =
+    glm::min(base + glm::uvec3(dunya::field::BRICK_CELLS + 1u), cells);
+
+  lowest = std::numeric_limits<float>::max();
+  highest = std::numeric_limits<float>::lowest();
+
+  for (uint32_t z = start.z; z <= end.z; ++z) {
+    for (uint32_t y = start.y; y <= end.y; ++y) {
+      for (uint32_t x = start.x; x <= end.x; ++x) {
+        const uint32_t at =
+          x + field.resolution.x * (y + field.resolution.y * z);
+
+        lowest = std::min(lowest, field.distances[at]);
+        highest = std::max(highest, field.distances[at]);
+      }
+    }
+  }
+}
+
+}  // namespace
+
+TEST_CASE("a write reports exactly the bricks it moved", "[sampled][write]") {
+  const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
+
+  SampledField field = dunya::field::bake(
+    primitives,
+    glm::vec3(-2.0f),
+    glm::vec3(2.0f),
+    glm::uvec3(33u)
+  );
+
+  const std::vector<float> lowBefore = field.brickMinimum;
+  const std::vector<float> highBefore = field.brickMaximum;
+
+  // Exactly on a brick wall, which is the placement that reaches furthest: the
+  // brick before it reads one cell past its own side, so it moves too.
+  const uint32_t wall = dunya::field::BRICK_CELLS;
+
+  const dunya::field::SampleBox carve{glm::uvec3(wall), glm::uvec3(1u)};
+  const std::vector<float> inside{-5.0f};
+  const std::vector<uint32_t> material{3u};
+
+  const dunya::field::WriteReport report =
+    dunya::field::write(field, carve, inside, material);
+
+  const glm::uvec3 counts = dunya::field::brickCounts(field);
+
+  glm::uvec3 movedLow(counts);
+  glm::uvec3 movedHigh(0u);
+  uint32_t moved = 0;
+
+  for (uint32_t bz = 0; bz < counts.z; ++bz) {
+    for (uint32_t by = 0; by < counts.y; ++by) {
+      for (uint32_t bx = 0; bx < counts.x; ++bx) {
+        const uint32_t index = bx + counts.x * (by + counts.y * bz);
+
+        // Every brick still describes its own samples. Without this the
+        // report could be checked against a rebuild that was itself too
+        // narrow, and the two would shrink together.
+        float lowest = 0.0f;
+        float highest = 0.0f;
+        trueBrickRange(field, glm::uvec3(bx, by, bz), lowest, highest);
+
+        REQUIRE(field.brickMinimum[index] == lowest);
+        REQUIRE(field.brickMaximum[index] == highest);
+
+        if (
+          field.brickMinimum[index] == lowBefore[index]
+          && field.brickMaximum[index] == highBefore[index]
+        ) {
+          continue;
+        }
+
+        ++moved;
+        movedLow = glm::min(movedLow, glm::uvec3(bx, by, bz));
+        movedHigh = glm::max(movedHigh, glm::uvec3(bx, by, bz));
+      }
+    }
+  }
+
+  REQUIRE(moved > 0u);
+
+  REQUIRE(report.brickBegin.x == movedLow.x);
+  REQUIRE(report.brickBegin.y == movedLow.y);
+  REQUIRE(report.brickBegin.z == movedLow.z);
+
+  REQUIRE(report.brickEnd.x == movedHigh.x + 1u);
+  REQUIRE(report.brickEnd.y == movedHigh.y + 1u);
+  REQUIRE(report.brickEnd.z == movedHigh.z + 1u);
+
+  // The write sits in brick 1 on every axis, so a range taken from the box
+  // alone would start there. It has to start at 0.
+  REQUIRE(report.brickBegin.x == 0u);
+  REQUIRE(report.samples.minimum.x == wall);
+  REQUIRE(report.samples.extent.x == 1u);
+}

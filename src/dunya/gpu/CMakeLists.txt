@@ -19,6 +19,7 @@ add_library(dunya_gpu STATIC
     surface/surface.cc
     swapchain/swapchain.cc
     texture/texture.cc
+    uploader/uploader.cc
 )
 
 add_library(dunya::gpu ALIAS dunya_gpu)

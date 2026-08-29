@@ -3,7 +3,9 @@
 
 add_library(dunya_field STATIC
     analytic/analytic.cc
+    deform/deform.cc
     raycast/raycast.cc
+    redistance/redistance.cc
     sampled/sampled.cc
     primitive.cc
 )

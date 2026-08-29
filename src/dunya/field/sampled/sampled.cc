@@ -72,8 +72,16 @@ float cellLipschitz(const SampledField& field, const glm::uvec3& cell) {
   return glm::length(slope / field.voxelSize);
 }
 
-// Inclusive in cells; the caller decides which cells a change reached.
-void rebuildBricks(
+// Half-open, so an empty range is begin == end and needs no sentinel.
+struct BrickRange {
+  glm::uvec3 begin{0u};
+  glm::uvec3 end{0u};
+};
+
+// Inclusive in cells; the caller decides which cells a change reached. Returns
+// the bricks it visited, because a caller that changed the lattice has to tell
+// everything else derived per brick which ones moved.
+BrickRange rebuildBricks(
   SampledField& field,
   const glm::uvec3& cellMinimum,
   const glm::uvec3& cellMaximum
@@ -141,6 +149,8 @@ void rebuildBricks(
   for (float bound : field.brickLipschitz) {
     field.globalLipschitz = std::max(field.globalLipschitz, bound);
   }
+
+  return {first, last + glm::uvec3(1u)};
 }
 
 // The world box one brick covers, clamped to the grid's own last cell.
@@ -172,6 +182,23 @@ Cell locate(const SampledField& field, const glm::vec3& point) {
 }
 
 }  // namespace
+
+SampleBox merge(const SampleBox& first, const SampleBox& second) {
+  if (glm::any(glm::equal(first.extent, glm::uvec3(0u)))) {
+    return second;
+  }
+
+  if (glm::any(glm::equal(second.extent, glm::uvec3(0u)))) {
+    return first;
+  }
+
+  const glm::uvec3 minimum = glm::min(first.minimum, second.minimum);
+
+  const glm::uvec3 beyond =
+    glm::max(first.minimum + first.extent, second.minimum + second.extent);
+
+  return {minimum, beyond - minimum};
+}
 
 glm::vec3 voxelSize(
   const glm::vec3& minimum,
@@ -418,7 +445,7 @@ float bakeError(const SampledField& field, float sourceLipschitz) {
   return 0.5f * sourceLipschitz * glm::length(field.voxelSize);
 }
 
-void write(
+WriteReport write(
   SampledField& field,
   const SampleBox& box,
   std::span<const float> distances,
@@ -443,7 +470,7 @@ void write(
   }
 
   if (count == 0u) {
-    return;
+    return {box, glm::uvec3(0u), glm::uvec3(0u)};
   }
 
   size_t source = 0;
@@ -478,7 +505,9 @@ void write(
   const glm::uvec3 reachMaximum =
     glm::min(cellMaximum + glm::uvec3(1u), cells - glm::uvec3(1u));
 
-  rebuildBricks(field, reachMinimum, reachMaximum);
+  const BrickRange bricks = rebuildBricks(field, reachMinimum, reachMaximum);
+
+  return {box, bricks.begin, bricks.end};
 }
 
 }  // namespace dunya::field

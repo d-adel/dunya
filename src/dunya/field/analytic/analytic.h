@@ -41,6 +41,17 @@ struct AnalyticSample {
   uint32_t material = 0;
 };
 
+// One step of the fold sample() runs: an accumulated value meeting one more
+// primitive, under that primitive's own operation. Exposed because writing a
+// primitive into a stored lattice is the same operation applied to a grid
+// rather than to a walk, and two spellings of a CSG operator is the drift
+// idiom 27 is about.
+AnalyticSample combine(
+  const AnalyticSample& accumulated,
+  const Primitive& primitive,
+  const glm::vec3& point
+);
+
 AnalyticSample sample(
   std::span<const Primitive> primitives,
   const glm::vec3& point
