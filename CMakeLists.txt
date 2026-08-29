@@ -6,6 +6,18 @@ project(DunyaRenderer VERSION 0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 20)
 
+# The Debug build is where work happens, because it is the one with the
+# validation layers and the panels - and at 96 objects it ran at three times the
+# Release frame time and fourteen times its worst frame, all of it in the field
+# and physics inner loops rather than in the tools. Optimising it costs nothing
+# Debug is for: NDEBUG stays undefined, so the layers, the overlay and every
+# assert survive, and /Zi and /MDd arrive through
+# CMAKE_MSVC_DEBUG_INFORMATION_FORMAT and CMAKE_MSVC_RUNTIME_LIBRARY rather than
+# through this variable. /RTC1 goes because MSVC refuses it beside /O2.
+if (MSVC)
+    set(CMAKE_CXX_FLAGS_DEBUG "/O2 /Ob2")
+endif()
+
 
 # Fetch glfw
 include(FetchContent)
@@ -154,6 +166,11 @@ set(USE_STATIC_MSVC_RUNTIME_LIBRARY OFF)
 # bare segfault instead of a message. Debug builds want them.
 set(USE_ASSERTS ON)
 
+# Jolt overrides CMAKE_CXX_FLAGS_DEBUG for its own scope with /Od /Ob0 /RTC1,
+# which would leave the solver unoptimised whatever this project sets above -
+# and the solver is where most of the Debug cost was. Off, so it inherits.
+set(OVERRIDE_CXX_FLAGS OFF)
+
 FetchContent_Declare(
     JoltPhysics
     GIT_REPOSITORY  https://github.com/jrouwe/JoltPhysics
@@ -221,6 +238,9 @@ add_executable(${PROJECT_NAME}
     src/overlay/overlay.cc
     src/startupoptions/startupoptions.cc
     src/framecheck/framecheck.cc
+    src/demodriver/demodriver.cc
+    src/panels/panels.cc
+    src/cameracontroller/cameracontroller.cc
     src/application/application.cc
     src/scene/scene.cc
 )
@@ -308,6 +328,12 @@ if (MSVC)
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
+
+# This target is the editor: the workbench, with the panels and the tools. The
+# game executable M29 adds is a second target that does not carry this and does
+# not link dunya::editor, so the two facts cannot drift apart - the link line
+# and the flag say the same thing, and the linker is what checks it.
+target_compile_definitions(${PROJECT_NAME} PRIVATE DUNYA_EDITOR=1)
 target_link_libraries(${PROJECT_NAME} PRIVATE
     glfw
     Vulkan::Vulkan

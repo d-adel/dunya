@@ -6,6 +6,7 @@
 #include <dunya/physics/impact/impact.h>
 #include <dunya/physics/joltlibrary/joltlibrary.h>
 #include <dunya/physics/physicsworld/physicsworld.h>
+#include <dunya/runtime/deformation/deformation.h>
 #include <dunya/runtime/runtime/runtime.h>
 #include <dunya/gpu/context/context.h>
 #include <dunya/gpu/swapchain/swapchain.h>
@@ -19,17 +20,19 @@
 #include <dunya/renderer/frameglobals/frameglobals.h>
 #include <dunya/field/field.h>
 #include <dunya/editor/fieldeditor/fieldeditor.h>
+#include <cameracontroller/cameracontroller.h>
+#include <demodriver/demodriver.h>
 #include <framecheck/framecheck.h>
 #include <overlay/overlay.h>
 #include <startupoptions/startupoptions.h>
 #include <dunya/renderer/fieldrecordtable/fieldrecordtable.h>
+#include <dunya/renderer/fieldresidency/fieldresidency.h>
 #include <dunya/renderer/volumepool/volumepool.h>
 #include <dunya/renderer/fieldbaker/fieldbaker.h>
 #include <dunya/editor/commandhistory/commandhistory.h>
 
 #include <array>
 #include <deque>
-#include <unordered_map>
 #include <optional>
 #include <utility>
 #include <vector>
@@ -47,8 +50,6 @@ public:
   Application(Application&&) = delete;
   Application& operator=(Application&&) = delete;
 
-  void clearCameraInput() noexcept;
-
   // Returns the process exit status, because --golden makes this a test as well
   // as a renderer and a failing comparison has to reach the shell.
   int start(const StartupOptions& options = {});
@@ -56,7 +57,6 @@ public:
 private:
   void handleKeyEvent(const dunya::platform::KeyEvent& event);
   void handleMouseButtonEvent(const dunya::platform::MouseButtonEvent& event);
-  void setLookMode(bool looking);
 
   // Play instantiates a runtime from the authored world and Stop destroys it.
   // Physics lives inside Runtime, so it cannot touch authored state at all.
@@ -103,64 +103,33 @@ private:
   // they spread evenly through the object and land the same way every run.
   void dent(uint32_t count);
 
-  // Turns the impacts the last step recorded into craters on whatever they
-  // struck that is Deformable. This is the milestone: a dent that a collision
-  // caused, in the frame the collision happened.
-  void applyImpacts();
-
-  // What a demo run measured: how many craters, and the frame times around
-  // them. Percentiles rather than a mean, because a deformation that blew the
-  // budget once is exactly what a mean would bury.
-  void reportDemo() const;
-
-  // Compares every simulated body's pose against the previous frame's, so a
-  // frame can say whether its awake bodies moved. Awake and moving are not the
-  // same claim, and the frame cost is the same either way.
-  void measureMotion();
-
-  // Carves one cutter into one entity's lattice, re-shapes its body, wakes
-  // whatever was resting on the region, and queues the change for the GPU.
-  // The four have to happen together: a lattice the collision shape does not
-  // follow is a hole things roll over.
-  void carve(
-    dunya::objectmodel::Entity entity,
-    const dunya::field::Primitive& cutter
-  );
+  // What the scene holds, for the scripted run's report. Gathered here because
+  // the world, the pool and the runtime are all the loop's.
+  [[nodiscard]] DemoDriver::SceneSummary sceneSummary() const;
 
   // One copy per changed entity, at the end of the frame. A dent is a few
   // dozen voxels of a 128-cubed volume and copyFrom submits and waits, so a
   // copy per dent would be the milestone rather than a detail of it.
   void uploadDentedVolumes();
 
-  // An object already holding a lattice on this volume slot, or INVALID_ENTITY
-  // if none does. What lets an object take a shared volume without baking a
-  // second identical copy of what filled it - and then share that lattice
-  // rather than copy it.
-  [[nodiscard]] dunya::objectmodel::Entity fieldOnSlot(uint32_t slot);
-
   // Whichever world the frame draws and the volume pool serves.
   dunya::objectmodel::World& activeWorld() noexcept;
 
   const dunya::objectmodel::World& activeWorld() const noexcept;
 
-  // Every pool slot goes back on a world switch: the sampled field is
-  // rebuilt for the new world rather than carried across.
-  void releaseAllVolumes();
   // A recording shows the numbers and nothing else: sliders in the corner of
   // a demo reel are clutter, and the two counters that do not move are the
   // whole point of the reel.
   void registerPanels();
   bool acceptsInput() const noexcept;
 
-  // The cursor as a world ray, which needs the window and the camera and so
-  // cannot live with the editing it feeds.
-  dunya::field::Ray cursorRay() const;
-
   dunya::gpu::Context m_context;
 
   dunya::physics::JoltLibrary m_joltLibrary;
   dunya::platform::Input m_input;
-  dunya::objectmodel::Camera m_camera;
+  // Flying the camera and the look mode that gates it. After the input, which
+  // it holds a reference to.
+  CameraController m_cameraController;
   dunya::gpu::SwapChain m_swapChain;
   // The authored world. Play instantiates a runtime beside it; this one is
   // never simulated, so an undo stack can be trusted after a Play session.
@@ -184,6 +153,16 @@ private:
   dunya::renderer::FieldRecordTable m_recordTable;
   dunya::renderer::FieldBaker m_fieldBaker;
   dunya::renderer::VolumePool m_volumePool;
+
+  // After the pool, the record table and the uploader, all of which it holds a
+  // reference to. Which entity holds which volume slot, and the rules that
+  // keep the two agreeing.
+  dunya::renderer::FieldResidency m_residency;
+
+  // A pool that is full stays full, so the dropped dent is reported once for
+  // the run rather than once a frame.
+  bool m_splitFailureReported = false;
+
   dunya::gpu::Pipeline m_meshPipeline;
   dunya::gpu::Pipeline m_fieldPipeline;
   dunya::renderer::Renderer m_renderer;
@@ -193,12 +172,6 @@ private:
   Overlay m_overlay;
 
   dunya::editor::FieldEditor m_fieldEditor;
-
-  dunya::objectmodel::CameraInput m_cameraInput;
-  bool m_prevAcceptsInput;
-  // Unity scene-view model: the cursor is visible and clickable by default, and
-  // only becomes a look control while the right button is held.
-  bool m_looking = false;
 
   Stall m_stall = Stall::None;
   Transition m_transition = Transition::None;
@@ -231,126 +204,21 @@ private:
   // Not a position in fields(): a skip consumes no slot, so the two diverge.
   std::vector<dunya::objectmodel::Entity> m_recordEntities;
 
-  // One entry per reference an entity holds on a pool slot, so a slot can be
-  // reclaimed when its entity goes. Nothing else observes a destroyed field
-  // object. A pair rather than a slot-indexed array because a slot is shared:
-  // a thousand identical crates hold one volume between them.
-  std::vector<std::pair<dunya::objectmodel::Entity, uint32_t>> m_volumeHolders;
+  // Contacts become craters, the shape follows the geometry, and the changed
+  // regions come back out on a queue. It holds no Vulkan, so the copies stay
+  // this side of the seam.
+  dunya::runtime::Deformation m_deformation;
 
-  // Which entity has an unsent region and how much of its lattice moved,
-  // folded into one box per entity as the dents arrive.
-  std::vector<std::pair<dunya::objectmodel::Entity, dunya::field::SampleBox>>
-    m_pendingUploads;
+  // The scripted run: its schedule, its measurements and its report. Zero
+  // frames means nobody scripted this one and it answers every question in the
+  // negative.
+  DemoDriver m_demo;
 
-  // How a contact impulse becomes a crater. Tunable live, because how much
-  // damage a hit should do is a judgement about the demo rather than
-  // something the physics derives.
-  struct Damage {
-    // Closing speed in m / s below which a contact leaves no mark at all.
-    // A gate on speed rather than impulse, because a stack of heavy boxes
-    // standing still pushes impulse past any fixed number.
-    float threshold = 3.0f;
-
-    // Metres of depth per kg m / s, then clamped. Linear because a crater
-    // that grows without bound eats the object on the first hard shot.
-    float depthPerImpulse = 0.0002f;
-    float minimumDepth = 0.03f;
-    float maximumDepth = 0.25f;
-
-    // A crater is a spherical cap, so the cutter is wider than it is deep.
-    // At one it would be a puncture.
-    float radiusPerDepth = 2.5f;
-
-    // Craters carved per frame. A ball entering a wall produces sixteen
-    // impacts in one physics update, and sixteen at two and a half
-    // milliseconds is three frames of work inside one. The rest wait, which
-    // costs nothing visible at sixty hertz and is the difference between a
-    // steady demo and a stutter.
-    uint32_t perFrame = 3u;
-
-    // And no wider than this much of the struck object's shortest side, so
-    // the same shot leaves a dent in a wall and a crater in a floor instead
-    // of removing a small object outright. Absolute metres cannot do this:
-    // 0.25 m is a scratch on the ground and most of a box.
-    float widestFraction = 0.25f;
-  } m_damage;
-
-  // Drained once per frame from the physics world. A member rather than a
-  // local so the frame loop is not allocating a vector sixty times a second
-  // for the frames - most of them - that record nothing.
-  std::vector<dunya::physics::Impact> m_impacts;
-
-  // An impact that has been accepted but not yet carved.
-  //
-  // Local space, and that is the whole reason this type exists rather than
-  // deferring the Impact itself: a contact point is world space at the moment
-  // of contact, and the body it belongs to has moved by the time a deferred
-  // crater is carved. In the field's own frame it cannot go stale.
-  struct PendingCrater {
-    dunya::objectmodel::Entity entity{};
-    glm::vec3 point{0.0f};
-    glm::vec3 outward{0.0f};
-    float impulse = 0.0f;
-  };
-
-  std::vector<PendingCrater> m_pendingCraters;
-
-  // Craters a collision caused, as opposed to m_dentsApplied, which is the
-  // harness's sequence index and has to stay tied to it.
-  uint32_t m_cratersApplied = 0;
-
-  // Frames the demo run has left, and how many have gone. Zero means the
-  // window is being driven by a person rather than by the clock.
-  uint32_t m_demoFrames = 0;
-
-  // Frames between scripted shots. Sixty hertz is the reference, so a rate of
-  // two shots a second is thirty frames.
-  uint32_t m_demoInterval = 240;
-
-  // Shots the scripted run has taken, which is the R2 sequence index that
-  // spreads them across the wall.
-  uint32_t m_shotsFired = 0;
   uint32_t m_frameIndex = 0;
-
-  // Every frame the demo run measured, so the run can report a distribution
-  // rather than the last second's mean. A spike is the thing that matters and
-  // an average is exactly what hides it - and the index comes with it, because
-  // "the worst frame was 50 ms" and "the worst frame was the one that spawned
-  // a ball" are different findings.
-  struct DemoFrame {
-    uint32_t index = 0;
-    float ms = 0.0f;
-    uint32_t craters = 0;
-    bool fired = false;
-
-    // The two halves of a deformation, separately: carving the lattice and
-    // re-shaping the body, then sending the changed region to the GPU. They
-    // fail differently, so a frame that spiked has to say which one did it.
-    float carveMs = 0.0f;
-    float uploadMs = 0.0f;
-    float physicsMs = 0.0f;
-
-    // How much of the world was awake, and how many fixed steps the frame
-    // bought. A physics cost is one or the other and the mean cannot say
-    // which without them.
-    uint32_t activeBodies = 0;
-    uint32_t substeps = 0;
-
-    // Whether the awake bodies are going anywhere. Jolt's "awake" is a
-    // velocity threshold held over half a second, so a body whose contact set
-    // flickers stays awake while its geometry sits still. The two cost the
-    // same and mean opposite things, and only the pose can tell them apart.
-    uint32_t movedBodies = 0;
-    float maxMoveMm = 0.0f;
-    float maxTurnDeg = 0.0f;
-  };
-
-  std::vector<DemoFrame> m_demoFrameMs;
 
   // This frame's two halves, filled where they happen and read where the
   // frame is recorded, which is earlier in the loop than either.
   float m_frameCarveMs = 0.0f;
-  uint32_t m_cratersReported = 0;
   float m_frameUploadMs = 0.0f;
   float m_framePhysicsMs = 0.0f;
 
@@ -358,15 +226,6 @@ private:
   // fixed steps it bought.
   uint32_t m_frameActiveBodies = 0;
   uint32_t m_frameSubsteps = 0;
-
-  // How many of them actually changed pose, and by how far. Compared against
-  // the previous frame's poses, which is why that map outlives a frame while
-  // the two numbers above do not.
-  uint32_t m_frameMovedBodies = 0;
-  float m_frameMaxMoveMm = 0.0f;
-  float m_frameMaxTurnDeg = 0.0f;
-
-  std::unordered_map<uint32_t, dunya::objectmodel::Pose> m_posePrevious;
 
   // How many dents have been applied, which is the R3 sequence's index and so
   // the thing that makes a run repeatable.

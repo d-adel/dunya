@@ -1,0 +1,9 @@
+#include "panels.h"
+
+#include <dunya/core/config/config.h>
+#include <dunya/field/sampled/sampled.h>
+#include <dunya/objectmodel/deformable/deformable.h>
+
+#include <imgui.h>
+
+#include <unordered_set>

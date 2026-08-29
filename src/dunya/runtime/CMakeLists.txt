@@ -4,6 +4,7 @@
 # to know what it indexes.
 
 add_library(dunya_runtime STATIC
+    deformation/deformation.cc
     runtime/runtime.cc
 )
 

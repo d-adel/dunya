@@ -13,6 +13,7 @@ add_library(dunya_renderer STATIC
     resourcetable/resourcetable.cc
     vertex/vertex.cc
     shadowgrid/shadowgrid.cc
+    fieldresidency/fieldresidency.cc
     volumepool/volumepool.cc
 )
 

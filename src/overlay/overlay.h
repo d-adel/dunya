@@ -12,14 +12,18 @@
 
 // Whether this build shows the debug panels at all.
 //
-// A release build is the engine, not the workbench: sliders and counters over
-// the image are for developing it, and everything a recording or a shipped
-// binary shows should be the thing itself. Gated on NDEBUG, the same flag and
-// for the same reason as the validation layers.
-#ifdef NDEBUG
-inline constexpr bool enableOverlay = false;
-#else
+// The workbench, not the engine: sliders and counters over the image are for
+// developing it, and everything a shipped binary shows should be the thing
+// itself. Gated on the build *target* rather than the build type, which is a
+// different question from the validation layers': a debug game build still
+// wants the layers and still wants no overlay, and an optimised editor build
+// wants both the speed and the panels. DUNYA_EDITOR is set by the editor
+// executable's target and by nothing else, so the game target's link line and
+// this flag say the same thing.
+#ifdef DUNYA_EDITOR
 inline constexpr bool enableOverlay = true;
+#else
+inline constexpr bool enableOverlay = false;
 #endif
 
 // A tool, not part of the picture: nothing the renderer draws depends on it.

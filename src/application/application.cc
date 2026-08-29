@@ -24,6 +24,7 @@ const auto MESH_ATTRIBUTES =
 
 Application::Application(const StartupOptions& options)
     : m_input(m_context.window().handle()),
+      m_cameraController(m_input, m_context.window()),
       m_swapChain(m_context),
       m_scene(
         m_context,
@@ -43,6 +44,7 @@ Application::Application(const StartupOptions& options)
       m_recordTable(m_context.device()),
       m_fieldBaker(m_context.device(), m_recordTable),
       m_volumePool(m_context.device()),
+      m_residency(m_volumePool, m_recordTable, m_uploader),
       m_meshPipeline(
         dunya::gpu::PipelineType::Mesh,
         m_context.device().vkDevice(),
@@ -79,8 +81,6 @@ Application::Application(const StartupOptions& options)
       ),
       m_overlay(m_context, m_swapChain),
       m_fieldEditor(m_authoredWorld),
-      m_cameraInput({}),
-      m_prevAcceptsInput(false),
       m_reloadRequested(false)
 
 {
@@ -128,18 +128,14 @@ int Application::start(const StartupOptions& options) {
   m_pendingDents = options.dents;
   m_dentLogPath = options.dentLog;
 
-  m_demoFrames = options.demo;
-
-  if (options.demoRate > 0.0f) {
-    m_demoInterval = std::max(1u, uint32_t(60.0f / options.demoRate + 0.5f));
-  }
+  m_demo = DemoDriver(options.demo, options.demoRate);
 
   if (options.analytic) {
     m_frameContext.fieldRepresentation = dunya::core::FIELD_ANALYTIC;
     std::cout << "Field representation: analytic\n";
   }
 
-  m_scene.frame(m_camera);
+  m_scene.frame(m_cameraController.camera());
 
   m_shotSettings = m_scene.projectile();
 
@@ -258,63 +254,33 @@ int Application::start(const StartupOptions& options) {
     // A run nobody is watching, so the schedule is frames rather than
     // seconds: the same shot lands on the same frame whatever the machine
     // does, and a ball goes every four seconds of simulated time.
-    if (m_demoFrames > 0) {
-      // Long enough for the wall to settle out of its drop, short enough that
-      // a ten-second recording is not a quarter empty.
-      constexpr uint32_t DEMO_FIRST_SHOT = 80u;
-
-      const uint32_t DEMO_SHOT_INTERVAL = m_demoInterval;
-
-      const bool fired =
-        m_frameIndex >= DEMO_FIRST_SHOT
-        && (m_frameIndex - DEMO_FIRST_SHOT) % DEMO_SHOT_INTERVAL == 0u;
-
-      if (fired) {
-        // Spread across the wall rather than all at one spot, by the same R2
-        // sequence the dents use: successive multiples of these two fractions
-        // fill a square evenly without ever repeating, so a hundred boxes all
-        // get hit and the same run does it the same way twice.
-        const glm::vec2 at = glm::fract(
-          static_cast<float>(m_shotsFired) * glm::vec2(0.7548777f, 0.5698403f)
-        );
-
-        ++m_shotsFired;
+    if (m_demo.active()) {
+      if (m_demo.fires(m_frameIndex)) {
+        const glm::vec2 at = m_demo.target();
 
         fire(aimAtPoint(m_scene.wallPoint(at.x, at.y)));
       }
 
-      // Frame times are the acceptance, so they are collected rather than
-      // watched. The first few are excluded: they carry the bake of every
-      // object in the scene and say nothing about steady state.
-      constexpr uint32_t DEMO_WARMUP = 20u;
-
-      // dt and the two phase timers all describe the frame that just ended,
-      // so they are recorded together and against its index rather than this
+      // dt and the phase timers all describe the frame that just ended, so
+      // they are recorded together and against its index rather than this
       // one's.
-      if (m_frameIndex > DEMO_WARMUP) {
-        m_demoFrameMs.push_back(
-          {m_frameIndex - 1u,
-           realDt * 1000.0f,
-           m_cratersApplied - m_cratersReported,
-           fired,
-           m_frameCarveMs,
-           m_frameUploadMs,
-           m_framePhysicsMs,
-           m_frameActiveBodies,
-           m_frameSubsteps,
-           m_frameMovedBodies,
-           m_frameMaxMoveMm,
-           m_frameMaxTurnDeg}
-        );
-      }
+      m_demo.record(
+        m_frameIndex,
+        realDt,
+        m_deformation.cratersApplied(),
+        {m_frameCarveMs,
+         m_frameUploadMs,
+         m_framePhysicsMs,
+         m_frameActiveBodies,
+         m_frameSubsteps}
+      );
 
-      m_cratersReported = m_cratersApplied;
       m_frameCarveMs = 0.0f;
       m_frameUploadMs = 0.0f;
       m_framePhysicsMs = 0.0f;
 
-      if (m_frameIndex >= m_demoFrames) {
-        reportDemo();
+      if (m_demo.finished(m_frameIndex)) {
+        m_demo.report(sceneSummary());
         glfwSetWindowShouldClose(m_context.window().handle(), GLFW_TRUE);
       }
     }
@@ -364,7 +330,18 @@ int Application::start(const StartupOptions& options) {
       {
         const auto carveStart = std::chrono::steady_clock::now();
 
-        applyImpacts();
+        m_deformation.applyImpacts(*m_runtime);
+
+        // Reported here rather than inside the deformation, which records what
+        // it carved and leaves who reads it to whoever asked for the run.
+        if (m_demo.active()) {
+          for (const auto& crater : m_deformation.cratersThisFrame()) {
+            std::cout << "  crater on " << static_cast<uint32_t>(crater.entity)
+                      << "  impulse " << crater.impulse << "  depth "
+                      << crater.depth << "  radius " << crater.radius << "  "
+                      << crater.milliseconds << " ms" << std::endl;
+          }
+        }
 
         m_frameCarveMs = std::chrono::duration<float, std::milli>(
                            std::chrono::steady_clock::now() - carveStart
@@ -378,8 +355,8 @@ int Application::start(const StartupOptions& options) {
 
       // After the sync, because it reads what the sync wrote. Only under a
       // scripted run: it walks every body and nothing watches it otherwise.
-      if (m_demoFrames > 0) {
-        measureMotion();
+      if (m_demo.active()) {
+        m_demo.measureMotion(activeWorld().registry());
       }
     }
 
@@ -437,29 +414,16 @@ int Application::start(const StartupOptions& options) {
       }
     }
 
-    bool curAcceptsInput = acceptsInput() && m_looking;
-
-    if (curAcceptsInput != m_prevAcceptsInput) {
-      m_input.cursorDeltaInvalid();
-      m_prevAcceptsInput = curAcceptsInput;
-    }
-
-    m_input.update();
-
-    if (curAcceptsInput) {
-      m_cameraInput.lookDx = static_cast<float>(m_input.cursor().dx);
-      m_cameraInput.lookDy = static_cast<float>(m_input.cursor().dy);
-      m_camera.update(dt, m_cameraInput);
-    }
+    m_cameraController.update(dt, acceptsInput());
 
     float aspect = static_cast<float>(m_swapChain.extent().width)
                    / static_cast<float>(m_swapChain.extent().height);
 
     m_recordTable.newFrame();
     // ---------- Frame context ----------
-    m_frameContext.proj = m_camera.projectionMatrix(aspect);
-    m_frameContext.view = m_camera.viewMatrix();
-    m_frameContext.cameraPos = m_camera.position();
+    m_frameContext.proj = m_cameraController.camera().projectionMatrix(aspect);
+    m_frameContext.view = m_cameraController.camera().viewMatrix();
+    m_frameContext.cameraPos = m_cameraController.camera().position();
 
     // One frame of notice before a stall, and the work on the frame after: the
     // image left on screen while the loop blocks is then the message rather
@@ -493,23 +457,7 @@ int Application::start(const StartupOptions& options) {
     // Done here rather than by a listener inside VolumePool, because the pool
     // is a renderer resource and the registry is world state: the frame is
     // where the two meet.
-    for (size_t held = 0; held != m_volumeHolders.size();) {
-      const auto [owner, slot] = m_volumeHolders[held];
-
-      if (
-        registry.valid(owner)
-        && registry.all_of<dunya::objectmodel::BakedVolume>(owner)
-      ) {
-        ++held;
-
-        continue;
-      }
-
-      m_volumePool.release(slot);
-
-      m_volumeHolders[held] = m_volumeHolders.back();
-      m_volumeHolders.pop_back();
-    }
+    m_residency.reclaim(world);
 
     uint32_t recordIndex = 0;
 
@@ -567,7 +515,7 @@ int Application::start(const StartupOptions& options) {
 
         const dunya::objectmodel::Entity donor =
           index == UINT32_MAX ? dunya::objectmodel::INVALID_ENTITY
-                              : fieldOnSlot(index);
+                              : m_residency.fieldOnSlot(world, index);
 
         if (
           index != UINT32_MAX && donor == dunya::objectmodel::INVALID_ENTITY
@@ -616,7 +564,7 @@ int Application::start(const StartupOptions& options) {
           index
         );
 
-        m_volumeHolders.emplace_back(entity, index);
+        m_residency.hold(entity, index);
 
         world.setBakedVolume(entity, index);
 
@@ -815,10 +763,6 @@ int Application::start(const StartupOptions& options) {
   return frameCheck.failed() ? 1 : 0;
 }
 
-void Application::clearCameraInput() noexcept {
-  m_cameraInput = {};
-}
-
 bool Application::acceptsInput() const noexcept {
   return m_input.enabled() && m_context.window().focused();
 }
@@ -833,12 +777,14 @@ void Application::handleMouseButtonEvent(
   // The overlay gets first refusal on the cursor, or a click on a slider also
   // carves behind it. Not while looking: the cursor is captured and its
   // reported position is virtual.
-  if (!m_looking && m_overlay.wantsMouse()) {
+  if (!m_cameraController.looking() && m_overlay.wantsMouse()) {
     return;
   }
 
   if (event.button == GLFW_MOUSE_BUTTON_RIGHT) {
-    setLookMode(event.type == dunya::platform::MouseButtonEventType::Pressed);
+    m_cameraController.setLookMode(
+      event.type == dunya::platform::MouseButtonEventType::Pressed
+    );
     return;
   }
 
@@ -851,7 +797,7 @@ void Application::handleMouseButtonEvent(
 
   // Clicking is for the visible cursor; while looking, the reported position
   // is a virtual one that has nothing to do with the screen.
-  if (m_looking) {
+  if (m_cameraController.looking()) {
     return;
   }
 
@@ -871,7 +817,10 @@ void Application::handleMouseButtonEvent(
     (event.mods & GLFW_MOD_SHIFT) != 0
       ? dunya::core::FIELD_OP_SMOOTH_UNION
       : dunya::core::FIELD_OP_SMOOTH_SUBTRACTION,
-    cursorRay()
+    m_cameraController.cursorRay(
+      m_swapChain.extent(),
+      m_frameContext.proj * m_frameContext.view
+    )
   );
 }
 
@@ -883,24 +832,8 @@ const dunya::objectmodel::World& Application::activeWorld() const noexcept {
   return m_runtime ? m_runtime->world() : m_authoredWorld;
 }
 
-void Application::releaseAllVolumes() {
-  dunya::objectmodel::World& world = activeWorld();
-
-  for (const auto& [owner, slot] : m_volumeHolders) {
-    // The component must go with the slot, or the world this belonged to
-    // renders through a freed volume the next time it is active.
-    if (world.registry().valid(owner)) {
-      world.clearBakedVolume(owner);
-    }
-
-    m_volumePool.release(slot);
-  }
-
-  m_volumeHolders.clear();
-}
-
 glm::vec3 Application::aimAtPoint(const glm::vec3& target) const {
-  const glm::vec3 from = glm::vec3(m_camera.position());
+  const glm::vec3 from = glm::vec3(m_cameraController.camera().position());
 
   // At the target rather than along the view: the camera looks down at the
   // scene, so a shot along it would go into the floor. Moving the camera
@@ -923,7 +856,10 @@ glm::vec3 Application::aimAtTarget() const {
 }
 
 glm::vec3 Application::aimAtCursor() const {
-  const dunya::field::Ray ray = cursorRay();
+  const dunya::field::Ray ray = m_cameraController.cursorRay(
+    m_swapChain.extent(),
+    m_frameContext.proj * m_frameContext.view
+  );
 
   // The ray is built from the projection, which is only meaningful once a
   // frame has been assembled. Before that, and while the cursor is captured
@@ -941,7 +877,7 @@ void Application::fire(const glm::vec3& aim) {
   }
 
   const Scene::Projectile& shot = m_shotSettings;
-  const glm::vec3 from = glm::vec3(m_camera.position());
+  const glm::vec3 from = glm::vec3(m_cameraController.camera().position());
 
   const glm::vec3 muzzle(from.x, shot.height, from.z);
 
@@ -982,7 +918,7 @@ void Application::fire(const glm::vec3& aim) {
     // balls are on it. Without that a split would see one user and overwrite
     // the volume every other ball is reading.
     m_volumePool.retain(m_ballVolume);
-    m_volumeHolders.emplace_back(ball, m_ballVolume);
+    m_residency.hold(ball, m_ballVolume);
 
     world.setBakedVolume(ball, m_ballVolume);
     world.markBaked(ball);
@@ -1015,7 +951,7 @@ void Application::play() {
   // Identity is preserved across instantiation, so an authored entity id is
   // also valid in the runtime world. The owner table cannot tell them apart,
   // so every slot goes back and the new world bakes its own.
-  releaseAllVolumes();
+  m_residency.releaseAll(activeWorld());
 
   m_runtime.emplace(m_authoredWorld, m_joltLibrary);
 
@@ -1158,490 +1094,49 @@ void Application::dent(uint32_t count) {
 
   m_dentsApplied += count;
 
-  const auto found = std::find_if(
-    m_pendingUploads.begin(),
-    m_pendingUploads.end(),
-    [target](const auto& entry) { return entry.first == target; }
-  );
-
-  if (found == m_pendingUploads.end()) {
-    m_pendingUploads.emplace_back(target, touched);
-  } else {
-    found->second = dunya::field::merge(found->second, touched);
-  }
+  m_deformation.markDirty(target, touched);
 }
 
-void Application::carve(
-  dunya::objectmodel::Entity entity,
-  const dunya::field::Primitive& cutter
-) {
-  dunya::objectmodel::World& world = activeWorld();
-
-  dunya::field::WriteReport report{};
-
-  world.patchSampledField(entity, [&](dunya::field::SampledField& field) {
-    report = dunya::field::deformAndRepair(field, cutter).write;
-  });
-
-  if (m_runtime) {
-    // The collision shape has to follow the crater, or the next ball rolls
-    // over a hole it should fall into.
-    m_runtime->reshapeAfterDeform(entity, report.brickBegin, report.brickEnd);
-
-    // And whatever was asleep on top of it has to be told, because Jolt only
-    // invalidates the contact cache of the body whose shape it just swapped.
-    // In world space, so the pose the cutter was expressed against is undone.
-    const glm::mat4 model = dunya::objectmodel::model(
-      world.registry().get<dunya::objectmodel::Pose>(entity)
-    );
-
-    const glm::vec3 centre(cutter.bounds);
-    const glm::vec3 reach(cutter.bounds.w * 2.0f);
-
-    const glm::vec3 at = model * glm::vec4(centre, 1.0f);
-
-    m_runtime->wake(at - reach, at + reach);
-  }
-
-  const auto found = std::find_if(
-    m_pendingUploads.begin(),
-    m_pendingUploads.end(),
-    [entity](const auto& entry) { return entry.first == entity; }
-  );
-
-  if (found == m_pendingUploads.end()) {
-    m_pendingUploads.emplace_back(entity, report.samples);
-  } else {
-    found->second = dunya::field::merge(found->second, report.samples);
-  }
-}
-
-void Application::applyImpacts() {
-  if (!m_runtime) {
-    return;
-  }
-
-  m_runtime->physics().impacts().drain(m_impacts);
-
-  const entt::registry& registry = m_runtime->world().registry();
-
-  for (const dunya::physics::Impact& impact : m_impacts) {
-    const dunya::objectmodel::Entity entity{impact.entity};
-
-    // Both sides of every manifold arrive, and most of them are not
-    // deformable: the ball that threw the punch, and the ground before it is
-    // tagged. Nothing to do for those.
-    if (
-      !registry.valid(entity)
-      || !registry.all_of<
-          dunya::objectmodel::Deformable,
-          dunya::objectmodel::SharedField>(entity)
-    ) {
-      continue;
-    }
-
-    // Into the field's own frame here rather than at the carve, which is the
-    // point of deferring at all: the body keeps moving, and a world-space
-    // contact recorded this frame describes nowhere in particular by the time
-    // a later frame gets to it. The same crossing FieldEditor::edit makes for
-    // a click.
-    const glm::mat4 inverseModel = glm::inverse(
-      dunya::objectmodel::model(registry.get<dunya::objectmodel::Pose>(entity))
-    );
-
-    m_pendingCraters.push_back(
-      {entity,
-       glm::vec3(inverseModel * glm::vec4(impact.point, 1.0f)),
-
-       // A direction, so the translation is dropped. The pose is rigid, so
-       // this stays unit length and the normalize is belt and braces.
-       glm::normalize(
-         glm::vec3(inverseModel * glm::vec4(impact.outward, 0.0f))
-       ),
-       impact.impulse}
-    );
-  }
-
-  if (m_pendingCraters.empty()) {
-    return;
-  }
-
-  // Hardest first, so a frame that cannot afford all of them spends what it
-  // has on the ones that show. Ties break on the entity, which costs nothing
-  // and makes the order total: std::sort is not stable, and a demo that has
-  // to reproduce should not depend on which of two equal hits it picked.
-  std::sort(
-    m_pendingCraters.begin(),
-    m_pendingCraters.end(),
-    [](const PendingCrater& a, const PendingCrater& b) {
-      if (a.impulse != b.impulse) {
-        return a.impulse > b.impulse;
-      }
-
-      return static_cast<uint32_t>(a.entity) < static_cast<uint32_t>(b.entity);
-    }
-  );
-
-  const size_t budget =
-    std::min<size_t>(m_damage.perFrame, m_pendingCraters.size());
-
-  for (size_t i = 0; i != budget; ++i) {
-    const PendingCrater& pending = m_pendingCraters[i];
-    const dunya::objectmodel::Entity entity = pending.entity;
-
-    // A frame or more may have passed, and the wall has been falling over in
-    // the meantime. An entity that has gone takes its craters with it.
-    if (
-      !registry.valid(entity)
-      || !registry.all_of<
-          dunya::objectmodel::Deformable,
-          dunya::objectmodel::SharedField>(entity)
-    ) {
-      continue;
-    }
-
-    // What the object can afford to lose. The primitives rather than the
-    // grid, because the grid carries a margin that has nothing to do with how
-    // big the object is - and the shortest side is the one that runs out
-    // first: a floor is thin and wide, and it is the thickness a crater has to
-    // respect. D5 leaves the primitive list describing the object as authored,
-    // which is the right thing to measure damage against.
-    const std::optional<dunya::field::Aabb> extent =
-      dunya::field::boundedExtent(m_runtime->world().primitives(entity));
-
-    const glm::vec3 span =
-      extent.has_value() ? extent->maximum - extent->minimum : glm::vec3(1.0f);
-
-    const float widest =
-      m_damage.widestFraction * std::min({span.x, span.y, span.z});
-
-    const float radius = std::min(
-      m_damage.radiusPerDepth
-        * std::clamp(
-          m_damage.depthPerImpulse * pending.impulse,
-          m_damage.minimumDepth,
-          m_damage.maximumDepth
-        ),
-      widest
-    );
-
-    // Recovered from the radius rather than kept, so a crater the object's
-    // size capped stays a cap of the right shape instead of a deep puncture
-    // in a narrow sphere.
-    const float depth = radius / m_damage.radiusPerDepth;
-
-    // Sunk along the inward normal so the sphere's near cap sits at the
-    // surface and exactly `depth` of it is inside: the centre goes back by
-    // the rest of the radius.
-    const glm::vec3 centre = pending.point - pending.outward * (radius - depth);
-
-    dunya::field::Primitive cutter = dunya::field::makeSphere(
-      centre,
-      radius,
-      1u,
-      dunya::core::FIELD_OP_SUBTRACTION
-    );
-
-    dunya::field::updateBounds(cutter);
-
-    const auto started = std::chrono::steady_clock::now();
-
-    carve(entity, cutter);
-    ++m_cratersApplied;
-
-    if (m_demoFrames > 0) {
-      const auto micros = std::chrono::duration_cast<std::chrono::microseconds>(
-                            std::chrono::steady_clock::now() - started
-      )
-                            .count();
-
-      std::cout << "  crater on " << static_cast<uint32_t>(entity)
-                << "  impulse " << pending.impulse << "  depth " << depth
-                << "  radius " << radius << "  " << (micros / 1000.0) << " ms"
-                << std::endl;
-    }
-  }
-
-  // Everything the budget could not reach is dropped rather than carried: a
-  // ball that has already punched through has moved on, and a crater that
-  // arrives a second later reads as a glitch rather than as damage. The sort
-  // above means what goes is always the weakest.
-  m_pendingCraters.clear();
-}
-
-void Application::measureMotion() {
-  // A body that moved less than this in a frame has not moved: a metre of
-  // float carries about a micron of noise in its last bits, and a solver that
-  // holds a stack still still writes the same pose through the same maths.
-  constexpr float MOVED_METRES = 1.0e-5f;
-  constexpr float TURNED_RADIANS = 1.0e-5f;
-
-  m_frameMovedBodies = 0;
-  m_frameMaxMoveMm = 0.0f;
-  m_frameMaxTurnDeg = 0.0f;
-
-  const entt::registry& registry = activeWorld().registry();
-
-  const auto simulated =
-    registry.view<dunya::objectmodel::RigidBody, dunya::objectmodel::Pose>();
-
-  for (const dunya::objectmodel::Entity entity : simulated) {
-    const dunya::objectmodel::Pose& pose =
-      simulated.get<dunya::objectmodel::Pose>(entity);
-
-    const uint32_t key = static_cast<uint32_t>(entity);
-
-    const auto found = m_posePrevious.find(key);
-
-    if (found == m_posePrevious.end()) {
-      m_posePrevious.emplace(key, pose);
-
-      continue;
-    }
-
-    const float moved = glm::length(pose.position - found->second.position);
-
-    // Quaternions double-cover: q and -q are the same orientation, so the
-    // absolute value is what makes this an angle rather than a coin flip.
-    const float aligned =
-      std::min(1.0f, std::abs(glm::dot(pose.rotation, found->second.rotation)));
-
-    const float turned = 2.0f * std::acos(aligned);
-
-    if (moved > MOVED_METRES || turned > TURNED_RADIANS) {
-      ++m_frameMovedBodies;
-    }
-
-    m_frameMaxMoveMm = std::max(m_frameMaxMoveMm, moved * 1000.0f);
-    m_frameMaxTurnDeg = std::max(m_frameMaxTurnDeg, glm::degrees(turned));
-
-    found->second = pose;
-  }
-}
-
-void Application::reportDemo() const {
-  if (m_demoFrameMs.empty()) {
-    return;
-  }
-
-  std::vector<DemoFrame> sorted = m_demoFrameMs;
-
-  std::sort(
-    sorted.begin(),
-    sorted.end(),
-    [](const DemoFrame& a, const DemoFrame& b) { return a.ms < b.ms; }
-  );
-
-  const auto at = [&sorted](double fraction) {
-    const size_t index = static_cast<size_t>(fraction * (sorted.size() - 1));
-    return sorted[index].ms;
-  };
-
-  double total = 0.0;
-  size_t overBudget = 0;
-
-  for (const DemoFrame& frame : m_demoFrameMs) {
-    total += frame.ms;
-
-    if (frame.ms > 16.6f) {
-      ++overBudget;
-    }
-  }
-
+DemoDriver::SceneSummary Application::sceneSummary() const {
   // Distinct lattices, not one per object: identical crates hold one between
   // them, and a per-object sum would report memory that is not there.
   const dunya::objectmodel::World& world = activeWorld();
 
   std::unordered_set<const dunya::field::SampledField*> lattices;
-  size_t resident = 0;
+
+  DemoDriver::SceneSummary summary{};
 
   for (const dunya::objectmodel::Entity entity : world.fields()) {
     if (const auto* field = world.sampledField(entity)) {
       if (lattices.insert(field).second) {
-        resident += field->distances.size() * sizeof(float)
-                    + field->materials.size() * sizeof(uint8_t);
+        summary.residentBytes += field->distances.size() * sizeof(float)
+                                 + field->materials.size() * sizeof(uint8_t);
       }
     }
   }
 
-  std::cout << "\ndemo: " << m_demoFrameMs.size() << " frames, "
-            << m_cratersApplied << " craters, " << m_volumePool.allocated()
-            << " of " << dunya::core::MAX_FIELD_VOLUMES << " volumes, "
-            << lattices.size() << " lattices over " << world.fields().size()
-            << " objects (" << (resident / (1024 * 1024)) << " MB), "
-            << (m_runtime ? m_runtime->shapeCount() : 0u) << " shapes\n"
-            << "  mean " << (total / double(m_demoFrameMs.size()))
-            << " ms  median " << at(0.5) << "  p99 " << at(0.99) << "  worst "
-            << sorted.back().ms << "\n"
-            << "  over 16.6 ms: " << overBudget << " ("
-            << (100.0 * double(overBudget) / double(m_demoFrameMs.size()))
-            << "%)\n";
+  summary.volumes = m_volumePool.allocated();
+  summary.volumeCapacity = dunya::core::MAX_FIELD_VOLUMES;
+  summary.lattices = lattices.size();
+  summary.objects = world.fields().size();
+  summary.shapes = m_runtime ? m_runtime->shapeCount() : 0u;
 
-  // Named rather than summarised: a spike on a spawn frame and a spike on a
-  // crater frame are different bugs, and the mean cannot tell them apart.
-  // Means per phase, not just the worst frames: a phase that costs two
-  // milliseconds every frame never appears in a worst-six list and is still
-  // the largest thing in the budget.
-  double carveTotal = 0.0;
-  double uploadTotal = 0.0;
-  double physicsTotal = 0.0;
-  double activeTotal = 0.0;
-  double substepTotal = 0.0;
-  uint32_t activeWorst = 0u;
-  uint32_t activeQuietest = UINT32_MAX;
-  double movedTotal = 0.0;
-  double moveTotal = 0.0;
-  uint32_t movedWorst = 0u;
-  uint32_t movedQuietest = UINT32_MAX;
-  float moveWorst = 0.0f;
-  float turnWorst = 0.0f;
-
-  for (const DemoFrame& frame : m_demoFrameMs) {
-    carveTotal += frame.carveMs;
-    uploadTotal += frame.uploadMs;
-    physicsTotal += frame.physicsMs;
-    activeTotal += frame.activeBodies;
-    substepTotal += frame.substeps;
-    activeWorst = std::max(activeWorst, frame.activeBodies);
-    activeQuietest = std::min(activeQuietest, frame.activeBodies);
-    movedTotal += frame.movedBodies;
-    moveTotal += frame.maxMoveMm;
-    movedWorst = std::max(movedWorst, frame.movedBodies);
-    movedQuietest = std::min(movedQuietest, frame.movedBodies);
-    moveWorst = std::max(moveWorst, frame.maxMoveMm);
-    turnWorst = std::max(turnWorst, frame.maxTurnDeg);
-  }
-
-  const double frames = double(m_demoFrameMs.size());
-
-  std::cout << "  mean carve " << (carveTotal / frames) << "  upload "
-            << (uploadTotal / frames) << "  physics " << (physicsTotal / frames)
-            << "  rest "
-            << ((total - carveTotal - uploadTotal - physicsTotal) / frames)
-            << "\n";
-
-  std::cout << "  awake: mean " << (activeTotal / frames) << "  worst "
-            << activeWorst << "  quietest " << activeQuietest
-            << ",  mean substeps " << (substepTotal / frames) << "\n";
-
-  std::cout << "  moved: mean " << (movedTotal / frames) << "  worst "
-            << movedWorst << "  quietest " << movedQuietest
-            << ",  mean furthest " << (moveTotal / frames)
-            << " mm,  worst furthest " << moveWorst << " mm,  worst turn "
-            << turnWorst << " deg\n";
-
-  std::cout << "  worst frames:\n";
-
-  const size_t show = std::min<size_t>(6u, sorted.size());
-
-  for (size_t i = 0; i != show; ++i) {
-    const DemoFrame& frame = sorted[sorted.size() - 1u - i];
-
-    std::cout << "    frame " << frame.index << "  " << frame.ms
-              << " ms   craters " << frame.craters << "  carve "
-              << frame.carveMs << "  upload " << frame.uploadMs << "  physics "
-              << frame.physicsMs << "  rest "
-              << (frame.ms - frame.carveMs - frame.uploadMs - frame.physicsMs)
-              << (frame.fired ? "  (spawned a ball)" : "") << "\n";
-  }
-
-  std::cout << std::flush;
-}
-
-dunya::objectmodel::Entity Application::fieldOnSlot(uint32_t slot) {
-  const dunya::objectmodel::World& world = activeWorld();
-
-  for (const auto& [owner, held] : m_volumeHolders) {
-    if (held != slot || !world.registry().valid(owner)) {
-      continue;
-    }
-
-    if (world.hasSampledField(owner)) {
-      return owner;
-    }
-  }
-
-  return dunya::objectmodel::INVALID_ENTITY;
+  return summary;
 }
 
 void Application::uploadDentedVolumes() {
-  if (m_pendingUploads.empty()) {
-    return;
+  const uint32_t dropped =
+    m_residency.upload(activeWorld(), m_deformation.dirty());
+
+  m_deformation.clearDirty();
+
+  // Once per run rather than once per frame: a pool that is full stays full,
+  // and a line a frame would bury the run's own output.
+  if (dropped > 0 && !m_splitFailureReported) {
+    m_splitFailureReported = true;
+
+    std::cout << "Volume pool full, a dent is not drawn\n";
   }
-
-  dunya::objectmodel::World& world = activeWorld();
-  const entt::registry& registry = world.registry();
-
-  bool splitFailureReported = false;
-
-  for (const auto& [entity, box] : m_pendingUploads) {
-    if (
-      !registry.valid(entity)
-      || !registry.all_of<
-          dunya::objectmodel::BakedVolume,
-          dunya::objectmodel::SharedField>(entity)
-    ) {
-      continue;
-    }
-
-    const uint32_t shared =
-      registry.get<dunya::objectmodel::BakedVolume>(entity).index;
-
-    const dunya::field::SampledField& field = *world.sampledField(entity);
-
-    // Copy on write, and this is the write. Until its first dent an object
-    // reads the volume every object with the same primitives shares; the dent
-    // is what earns it one of its own.
-    const uint32_t slot = m_volumePool.makeUnique(m_uploader, shared, field);
-
-    if (slot == UINT32_MAX) {
-      // Writing into the shared slot instead would dent every object holding
-      // it, so the dent stays on the CPU field and off the screen.
-      if (!splitFailureReported) {
-        splitFailureReported = true;
-        std::cout << "Volume pool full, a dent is not drawn\n";
-      }
-
-      continue;
-    }
-
-    if (slot != shared) {
-      m_volumePool.release(shared);
-
-      const auto held = std::find(
-        m_volumeHolders.begin(),
-        m_volumeHolders.end(),
-        std::pair<dunya::objectmodel::Entity, uint32_t>{entity, shared}
-      );
-
-      if (held != m_volumeHolders.end()) {
-        held->second = slot;
-      }
-
-      const auto images = m_volumePool.images(slot);
-
-      m_recordTable.registerVolume(
-        images.distance.imageView(),
-        images.material.imageView(),
-        slot
-      );
-
-      world.setBakedVolume(entity, slot);
-    }
-
-    m_volumePool.upload(m_uploader, slot, field, box);
-
-    // The write that made this box also moved the bricks' gradient bounds,
-    // and the march reads those rather than the samples.
-    m_recordTable.uploadBounds(m_uploader, slot, field);
-  }
-
-  m_pendingUploads.clear();
-
-  // One submission for every copy this frame, and no wait: the frame's own
-  // rendering follows on the same queue, and the barriers above order against
-  // it. What this replaces was six queue drains per changed object.
-  m_uploader.submit();
 }
 
 void Application::stop() {
@@ -1649,7 +1144,7 @@ void Application::stop() {
     return;
   }
 
-  releaseAllVolumes();
+  m_residency.releaseAll(activeWorld());
 
   m_balls.clear();
 
@@ -1660,28 +1155,6 @@ void Application::stop() {
   std::cout << "Stop" << std::endl;
 }
 
-void Application::setLookMode(bool looking) {
-  if (m_looking == looking) {
-    return;
-  }
-
-  m_looking = looking;
-
-  if (!m_looking) {
-    clearCameraInput();
-  }
-
-  // Entering or leaving capture teleports the cursor, and a delta across that
-  // jump would spin the camera (idiom 17).
-  m_input.cursorDeltaInvalid();
-
-  glfwSetInputMode(
-    m_context.window().handle(),
-    GLFW_CURSOR,
-    m_looking ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL
-  );
-}
-
 // Every panel this process shows, declared where the data it reads lives. They
 // capture this, which outlives them.
 void Application::registerPanels() {
@@ -1690,214 +1163,51 @@ void Application::registerPanels() {
     return;
   }
 
+  // Built once rather than per frame: the callbacks outlive the panel body and
+  // rebuilding two std::functions sixty times a second to click one is waste.
+  const panels::ShotActions shotActions{
+    [this] { fire(aimAtTarget()); },
+    [this] {
+      if (m_stall == Stall::None && m_runtime) {
+        announce("Resetting", Transition::Restart);
+      }
+    }
+  };
+
   // First, so it is the panel at the top of the stack. What the demo is for:
   // the wall coming apart on the left of the screen, and on the right the two
   // numbers that are the whole claim - the primitive count and the resident
   // bytes, neither of which moves however much of the wall is gone.
   m_overlay.panel("Dunya", [this] {
-    ImGui::Text("%.1f fps   %.2f ms", 1000.0 / m_lastFrameMs, m_lastFrameMs);
-    ImGui::Separator();
-
-    const dunya::objectmodel::World& world = activeWorld();
-    const entt::registry& registry = world.registry();
-
-    size_t resident = 0;
-    size_t deformable = 0;
-
-    std::unordered_set<const dunya::field::SampledField*> counted;
-
-    for (const dunya::objectmodel::Entity entity : world.fields()) {
-      if (!registry.all_of<dunya::objectmodel::Deformable>(entity)) {
-        continue;
-      }
-
-      ++deformable;
-
-      // Once per lattice, not once per object. Identical crates hold one
-      // between them, and counting it per holder would report memory that is
-      // not there - which is the whole thing this number is watching.
-      if (const auto* field = world.sampledField(entity)) {
-        if (counted.insert(field).second) {
-          resident += field->distances.size() * sizeof(float)
-                      + field->materials.size() * sizeof(uint8_t);
-        }
-      }
-    }
-
-    ImGui::Text("craters carved   %u", m_cratersApplied);
-    ImGui::Text("deformable       %zu", deformable);
-    ImGui::Separator();
-
-    // The point. A representation that stored edits would have one primitive
-    // per crater and a lattice that grew with them; these two lines are what
-    // it costs instead, and they do not move.
-    ImGui::Text("primitives       %zu", world.pool().size());
-    ImGui::Text(
-      "lattice          %.1f MiB",
-      double(resident) / (1024.0 * 1024.0)
+    panels::dunya(
+      activeWorld(),
+      m_deformation,
+      m_runtime.has_value(),
+      m_lastFrameMs
     );
-
-    ImGui::Separator();
-
-    ImGui::TextUnformatted(
-      m_runtime ? "click to fire   F5 stops   G resets"
-                : "F5 plays   alt+click carves"
-    );
-    ImGui::TextUnformatted("hold right mouse to look, WASD/QE to fly");
   });
 
   m_overlay.panel("Damage", [this] {
-    if (
-      ImGui::SliderFloat(
-        "Threshold",
-        &m_damage.threshold,
-        0.1f,
-        20.0f,
-        "%.1f m/s"
-      )
-      && m_runtime
-    ) {
-      m_runtime->physics().impacts().setThreshold(m_damage.threshold);
-    }
-
-    ImGui::SliderFloat(
-      "Depth per impulse",
-      &m_damage.depthPerImpulse,
-      0.0f,
-      0.002f,
-      "%.5f m"
+    panels::damage(
+      m_deformation,
+      m_runtime ? &m_runtime->physics().impacts() : nullptr
     );
-
-    ImGui::SliderFloat(
-      "Min depth",
-      &m_damage.minimumDepth,
-      0.0f,
-      0.2f,
-      "%.3f m"
-    );
-    ImGui::SliderFloat(
-      "Max depth",
-      &m_damage.maximumDepth,
-      0.0f,
-      1.0f,
-      "%.3f m"
-    );
-    ImGui::SliderFloat("Width", &m_damage.radiusPerDepth, 1.0f, 6.0f, "%.2f x");
-    ImGui::SliderFloat("Widest", &m_damage.widestFraction, 0.02f, 0.5f, "%.2f");
-
-    int perFrame = int(m_damage.perFrame);
-    if (ImGui::SliderInt("Craters per frame", &perFrame, 1, 16)) {
-      m_damage.perFrame = uint32_t(perFrame);
-    }
-
-    ImGui::Text("Craters  %u", m_cratersApplied);
   });
 
-  m_overlay.panel("Shot", [this] {
-    ImGui::SliderFloat("Speed", &m_shotSettings.speed, 1.0f, 80.0f, "%.1f m/s");
-    ImGui::SliderFloat("Mass", &m_shotSettings.mass, 1.0f, 3000.0f, "%.0f kg");
-    ImGui::SliderFloat3("Target", &m_shotSettings.aimAt.x, -6.0f, 6.0f);
-    ImGui::Text("Balls  %zu / %zu", m_balls.size(), MAX_BALLS);
-
-    if (ImGui::Button("Fire")) {
-      fire(aimAtTarget());
-    }
-
-    ImGui::SameLine();
-
-    if (ImGui::Button("Reset wall") && m_stall == Stall::None && m_runtime) {
-      announce("Resetting", Transition::Restart);
-    }
+  m_overlay.panel("Shot", [this, shotActions] {
+    panels::shot(m_shotSettings, m_balls.size(), MAX_BALLS, shotActions);
   });
 
   m_overlay.panel("Frame", [this] {
-    ImGui::Text(
-      "%.2f ms  %.0f fps",
+    panels::frame(
       m_lastFrameMs,
-      m_lastFrameMs > 0.0 ? 1000.0 / m_lastFrameMs : 0.0
-    );
-    ImGui::Text(
-      "%ux%u",
-      m_swapChain.extent().width,
-      m_swapChain.extent().height
-    );
-
-    size_t primitiveCount = m_authoredWorld.pool().size();
-
-    ImGui::Text("%zu primitives", primitiveCount);
-    ImGui::Text(
-      "%s",
+      m_swapChain.extent(),
+      activeWorld().pool().size(),
       m_frameContext.fieldRepresentation == dunya::core::FIELD_ANALYTIC
-        ? "analytic"
-        : "sampled"
     );
   });
 
-  m_overlay.panel("March", [this] {
-    dunya::renderer::MarchParams& march = m_frameContext.march;
-
-    // Logarithmic where the useful range spans orders of magnitude: a linear
-    // slider from 0.0001 to 0.01 spends nearly all of its travel in values
-    // that make the march crawl.
-    ImGui::SliderFloat(
-      "epsilon",
-      &march.epsilon,
-      0.0001f,
-      0.01f,
-      "%.5f",
-      ImGuiSliderFlags_Logarithmic
-    );
-    ImGui::SliderFloat(
-      "gradient",
-      &march.gradientEpsilon,
-      0.001f,
-      0.1f,
-      "%.4f"
-    );
-
-    // Below 1 is plain sphere tracing and above 2 is unstable even when the
-    // estimator is conservative.
-    ImGui::SliderFloat("omega", &march.omega, 1.0f, 2.0f);
-
-    // Above 1 would trust a value trilinear interpolation is known to
-    // overestimate, which is how a march steps through a surface.
-
-    ImGui::SliderFloat("max distance", &march.maxDistance, 10.0f, 500.0f);
-    ImGui::SliderFloat(
-      "shadow distance",
-      &march.shadowMaxDistance,
-      1.0f,
-      100.0f
-    );
-    ImGui::SliderFloat("shadow sharpness", &march.shadowSharpness, 1.0f, 64.0f);
-
-    int iterations = static_cast<int>(march.maxIterations);
-    if (ImGui::SliderInt("max iterations", &iterations, 32, 2000)) {
-      march.maxIterations = static_cast<uint32_t>(iterations);
-    }
-  });
-}
-
-dunya::field::Ray Application::cursorRay() const {
-  const dunya::platform::Cursor cursor = m_input.cursor();
-  const VkExtent2D extent = m_swapChain.extent();
-
-  // Vulkan's NDC y runs downward because the projection flips it, and GLFW
-  // reports the cursor from the top left, so both axes map without a flip.
-  const glm::vec2 ndc(
-    2.0f * static_cast<float>(cursor.x) / static_cast<float>(extent.width)
-      - 1.0f,
-    2.0f * static_cast<float>(cursor.y) / static_cast<float>(extent.height)
-      - 1.0f
-  );
-
-  const glm::mat4 viewProj = m_frameContext.proj * m_frameContext.view;
-
-  return dunya::field::screenPointToRay(
-    glm::inverse(viewProj),
-    glm::vec3(m_frameContext.cameraPos),
-    ndc
-  );
+  m_overlay.panel("March", [this] { panels::march(m_frameContext.march); });
 }
 
 void Application::handleKeyEvent(const dunya::platform::KeyEvent& event) {
@@ -1914,11 +1224,11 @@ void Application::handleKeyEvent(const dunya::platform::KeyEvent& event) {
   ) {
     m_input.toggleEnabled();
 
-    clearCameraInput();
+    m_cameraController.clear();
 
     // The cursor now belongs to look mode, so escape leaves it rather than
     // setting the mode itself.
-    setLookMode(false);
+    m_cameraController.setLookMode(false);
   }
 
   if (
@@ -2019,48 +1329,5 @@ void Application::handleKeyEvent(const dunya::platform::KeyEvent& event) {
       m_fieldEditor.redo();
     }
   }
-
-  bool* state = nullptr;
-
-  switch (event.key) {
-    case GLFW_KEY_W:
-      state = &m_cameraInput.forward;
-      break;
-
-    case GLFW_KEY_S:
-      state = &m_cameraInput.back;
-      break;
-
-    case GLFW_KEY_A:
-      state = &m_cameraInput.left;
-      break;
-
-    case GLFW_KEY_D:
-      state = &m_cameraInput.right;
-      break;
-
-    case GLFW_KEY_E:
-      state = &m_cameraInput.up;
-      break;
-
-    case GLFW_KEY_Q:
-      state = &m_cameraInput.down;
-      break;
-    default:
-      return;
-  }
-
-  switch (event.type) {
-    case dunya::platform::KeyEventType::Pressed:
-      // Movement belongs to look mode, the same way it does in a scene view.
-      *state = acceptsInput() && m_looking;
-      break;
-
-    case dunya::platform::KeyEventType::Released:
-      *state = false;
-      break;
-
-    default:
-      break;
-  }
+  static_cast<void>(m_cameraController.handleKey(event, acceptsInput()));
 }
