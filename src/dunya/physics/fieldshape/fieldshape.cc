@@ -61,56 +61,59 @@ glm::vec3 ontoSurface(const SampledField& field, glm::vec3 point) {
   return point;
 }
 
-// One candidate per surface brick inside the overlap, walked in a fixed order
-// so the identifiers a manifold is keyed on do not move between frames.
+// The cached candidates that fall inside the overlap, in brick order, so the
+// identifiers a manifold is keyed on do not move between frames.
 template<typename Visitor>
 void forEachSeed(
-  const SampledField& field,
+  const FieldShape& shape,
   const glm::vec3& overlapMinimum,
   const glm::vec3& overlapMaximum,
   Visitor&& visit
 ) {
+  const SampledField& field = shape.field();
+
   const glm::uvec3 counts = dunya::field::brickCounts(field);
   const glm::vec3 span = field.voxelSize * float(dunya::field::BRICK_CELLS);
 
-  for (uint32_t bz = 0; bz != counts.z; ++bz) {
-    for (uint32_t by = 0; by != counts.y; ++by) {
-      for (uint32_t bx = 0; bx != counts.x; ++bx) {
-        const glm::uvec3 brick(bx, by, bz);
-        const uint32_t index =
-          brick.x + counts.x * (brick.y + counts.y * brick.z);
+  for (const FieldSeed& seed : shape.seeds()) {
+    const glm::uvec3 brick(
+      seed.brick % counts.x,
+      (seed.brick / counts.x) % counts.y,
+      seed.brick / (counts.x * counts.y)
+    );
 
-        if (!dunya::field::brickHoldsSurface(field, index)) {
-          continue;
-        }
+    const glm::vec3 low = brickOrigin(field, brick);
+    const glm::vec3 high = low + span;
 
-        const glm::vec3 low = brickOrigin(field, brick);
-        const glm::vec3 high = low + span;
-
-        if (
-          glm::any(glm::lessThan(high, overlapMinimum))
-          || glm::any(glm::greaterThan(low, overlapMaximum))
-        ) {
-          continue;
-        }
-
-        visit(index, ontoSurface(field, low + span * 0.5f));
-      }
+    if (
+      glm::any(glm::lessThan(high, overlapMinimum))
+      || glm::any(glm::greaterThan(low, overlapMaximum))
+    ) {
+      continue;
     }
+
+    visit(seed.brick, seed.point);
   }
 }
 
 // The far shape's box, brought into the near shape's space and clipped to it.
 // Everything outside is a brick that cannot reach the other body this step.
+//
+// Grown by the separation first, because both boxes bound their solid rather
+// than their grid: a speculative contact is asked for across a gap, and two
+// boxes that stop at the surface do not overlap while one is still open.
 JPH::AABox overlapIn(
   const FieldShape& near,
   const FieldShape& far,
   JPH::Mat44Arg centerOfMassNear,
-  JPH::Mat44Arg centerOfMassFar
+  JPH::Mat44Arg centerOfMassFar,
+  float separation
 ) {
-  const JPH::AABox brought = far.GetLocalBounds().Transformed(
+  JPH::AABox brought = far.GetLocalBounds().Transformed(
     centerOfMassNear.Inversed() * centerOfMassFar
   );
+
+  brought.ExpandBy(JPH::Vec3::sReplicate(separation));
 
   JPH::AABox clipped = near.GetLocalBounds();
 
@@ -150,7 +153,10 @@ void collideFieldVsField(
   const JPH::Mat44 seedAt = flip ? centerOfMass2 : centerOfMass1;
   const JPH::Mat44 probeAt = flip ? centerOfMass1 : centerOfMass2;
 
-  const JPH::AABox overlap = overlapIn(seedShape, probeShape, seedAt, probeAt);
+  const float separation = std::max(settings.mMaxSeparationDistance, 0.0f);
+
+  const JPH::AABox overlap =
+    overlapIn(seedShape, probeShape, seedAt, probeAt, separation);
 
   if (!overlap.IsValid()) {
     return;
@@ -159,10 +165,8 @@ void collideFieldVsField(
   const JPH::Mat44 intoProbe = probeAt.Inversed() * seedAt;
   const JPH::Mat44 outOfProbe = probeAt.GetRotation();
 
-  const float separation = std::max(settings.mMaxSeparationDistance, 0.0f);
-
   forEachSeed(
-    seedShape.field(),
+    seedShape,
     toGlm(overlap.mMin),
     toGlm(overlap.mMax),
     [&](uint32_t brick, const glm::vec3& seed) {
@@ -250,7 +254,7 @@ void castFieldVsField(
     uint32_t closestBrick = 0u;
 
     forEachSeed(
-      moving.field(),
+      moving,
       everywhereLow,
       everywhereHigh,
       [&](uint32_t brick, const glm::vec3& seed) {
@@ -301,18 +305,6 @@ void castFieldVsField(
 FieldShape::FieldShape(const dunya::field::SampledField& field)
     : JPH::Shape(JPH::EShapeType::User1, JPH::EShapeSubType::User1),
       m_field(&field) {
-  m_bounds = JPH::AABox(toJph(field.origin), toJph(gridMaximum(field)));
-
-  // The inscribed sphere: the deepest the field goes is how far the shape can
-  // move without risking passing through something. Jolt asserts on a zero.
-  float deepest = 0.0f;
-
-  for (float low : field.brickMinimum) {
-    deepest = std::min(deepest, low);
-  }
-
-  m_innerRadius = std::max(-deepest, 1.0e-3f);
-
   const glm::uvec3 counts = dunya::field::brickCounts(field);
   const uint64_t bricks = static_cast<uint64_t>(counts.x) * counts.y * counts.z;
 
@@ -325,10 +317,82 @@ FieldShape::FieldShape(const dunya::field::SampledField& field)
       "FieldShape: the grid needs more sub shape bits than Jolt has"
     );
   }
+
+  // The inscribed sphere: the deepest the field goes is how far the shape can
+  // move without risking passing through something. Jolt asserts on a zero.
+  float deepest = 0.0f;
+
+  for (float low : field.brickMinimum) {
+    deepest = std::min(deepest, low);
+  }
+
+  m_innerRadius = std::max(-deepest, 1.0e-3f);
+
+  // One pass for both derived things. The contact candidates are solved here,
+  // once, rather than inside the collide and sweep paths: the answer depends
+  // on the field alone, and a shape is immutable. Eagerly, so nothing is
+  // written while Jolt's workers are reading it.
+  const glm::vec3 span = field.voxelSize * float(dunya::field::BRICK_CELLS);
+
+  glm::vec3 solidLow(std::numeric_limits<float>::max());
+  glm::vec3 solidHigh(std::numeric_limits<float>::lowest());
+
+  bool anySolid = false;
+
+  for (uint32_t index = 0u; index != bricks; ++index) {
+    // A brick whose range never goes negative holds nothing. The ranges are
+    // taken over a one-cell halo, so a brick positive throughout has a
+    // positive interpolant throughout and the solid cannot reach into it.
+    if (field.brickMinimum[index] > 0.0f) {
+      continue;
+    }
+
+    const glm::uvec3 brick(
+      index % counts.x,
+      (index / counts.x) % counts.y,
+      index / (counts.x * counts.y)
+    );
+
+    const glm::vec3 corner = brickOrigin(field, brick);
+
+    solidLow = glm::min(solidLow, corner);
+    solidHigh = glm::max(solidHigh, corner + span);
+
+    anySolid = true;
+
+    if (!dunya::field::brickHoldsSurface(field, index)) {
+      continue;
+    }
+
+    m_seeds.push_back({ontoSurface(field, corner + span * 0.5f), index});
+  }
+
+  // The solid's extent, not the grid's. A grid carries whatever margin it was
+  // baked with - half a metre around a ball the size of a fist - and every
+  // broad phase pair that margin wins is a seed walk that cannot touch.
+  //
+  // Clamped to the grid, because the last brick on an axis runs past the far
+  // lattice point whenever the cell count is not a multiple of the brick size.
+  if (anySolid) {
+    m_bounds = JPH::AABox(
+      toJph(glm::max(solidLow, field.origin)),
+      toJph(glm::min(solidHigh, gridMaximum(field)))
+    );
+
+    return;
+  }
+
+  // Nothing solid anywhere, so there is no extent to be tighter than and the
+  // grid is all this shape can answer for.
+  m_bounds = JPH::AABox(toJph(field.origin), toJph(gridMaximum(field)));
 }
 
 const dunya::field::SampledField& FieldShape::field() const noexcept {
   return *m_field;
+}
+
+std::span<const FieldSeed> FieldShape::seeds() const noexcept {
+  return m_seeds;
 }
 
 JPH::AABox FieldShape::GetLocalBounds() const {
@@ -344,6 +408,10 @@ float FieldShape::GetInnerRadius() const {
 }
 
 JPH::MassProperties FieldShape::GetMassProperties() const {
+  if (m_massKnown) {
+    return m_massProperties;
+  }
+
   // Summed over the voxels, which is the one thing a volume representation
   // makes trivial: no hollow-versus-solid guess, no hand tuning.
   const glm::uvec3 cells = m_field->resolution - glm::uvec3(1u);
@@ -408,7 +476,10 @@ JPH::MassProperties FieldShape::GetMassProperties() const {
 
   if (mass <= 0.0f) {
     // Nothing solid in the grid. A body on this must supply its own mass.
-    return properties;
+    m_massProperties = properties;
+    m_massKnown = true;
+
+    return m_massProperties;
   }
 
   secondMoment[1][0] = secondMoment[0][1];
@@ -425,7 +496,10 @@ JPH::MassProperties FieldShape::GetMassProperties() const {
     }
   }
 
-  return properties;
+  m_massProperties = properties;
+  m_massKnown = true;
+
+  return m_massProperties;
 }
 
 const JPH::PhysicsMaterial* FieldShape::GetMaterial(

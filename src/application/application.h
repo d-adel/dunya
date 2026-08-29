@@ -1,5 +1,8 @@
 #pragma once
 
+#include <Jolt/Jolt.h>
+#include <Jolt/Physics/Collision/Shape/Shape.h>
+
 #include <dunya/physics/joltlibrary/joltlibrary.h>
 #include <dunya/physics/physicsworld/physicsworld.h>
 #include <dunya/runtime/runtime/runtime.h>
@@ -103,11 +106,13 @@ private:
   // never simulated, so an undo stack can be trusted after a Play session.
   dunya::objectmodel::World m_authoredWorld;
 
+  // Before the runtime, and that is load-bearing: bodies borrow the fields the
+  // scene owns, and members are destroyed in reverse declaration order.
+  Scene m_scene;
+
   // Absent while editing. Owns the runtime world and the only PhysicsWorld
   // there is, so E5 holds by construction rather than by a gate.
   std::optional<dunya::runtime::Runtime> m_runtime;
-
-  Scene m_scene;
 
   dunya::renderer::FrameGlobals m_frameGlobals;
   dunya::renderer::ResourceTable m_resourceTable;
@@ -144,6 +149,12 @@ private:
   // over again - measured at 95 ms a shot. Owned by no entity, so the frame
   // loop's sweep never reclaims it.
   uint32_t m_ballVolume = UINT32_MAX;
+
+  // And one shape, for the same reason. Deriving mass and inertia from the
+  // grid walks two million cells, and Jolt asks once per body created, so a
+  // shape each cost 34 ms a shot - the whole of the spawn.
+  JPH::ShapeRefC m_ballShape;
+
   dunya::renderer::Frame m_frameContext{};
   bool m_reloadRequested;
 

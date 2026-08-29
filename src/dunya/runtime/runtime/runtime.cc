@@ -31,11 +31,18 @@ void Runtime::refreshBody(objectmodel::Entity entity) {
     return;
   }
 
-  const bool isStatic = registry.all_of<objectmodel::StaticBody>(entity);
-
   // Borrowed, not owned. The component is the owner, and it is what a rebake
   // replaces, which is why this function has to run again afterwards.
-  JPH::ShapeRefC shape(new physics::FieldShape(*field));
+  setBodyShape(entity, JPH::ShapeRefC(new physics::FieldShape(*field)));
+}
+
+void Runtime::setBodyShape(
+  objectmodel::Entity entity,
+  const JPH::ShapeRefC& shape
+) {
+  const entt::registry& registry = m_world.registry();
+
+  const bool isStatic = registry.all_of<objectmodel::StaticBody>(entity);
 
   JPH::BodyInterface& bodies = m_physicsWorld.bodies();
 

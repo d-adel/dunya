@@ -126,6 +126,15 @@ int Application::start(const StartupOptions& options) {
 
   m_shotSettings = m_scene.projectile();
 
+  // Built here rather than per shot, on the field the scene owns rather than
+  // on a copy: every ball is the same ball, and a Jolt shape is immutable and
+  // refcounted, so one is what they all want.
+  m_ballShape = new dunya::physics::FieldShape(m_scene.projectileField());
+
+  // Asked for now, while a loading notice is up, because the answer is kept:
+  // the first shot would otherwise pay the walk that every later one skips.
+  static_cast<void>(m_ballShape->GetMassProperties());
+
   m_ballVolume = m_volumePool.allocate(m_scene.projectileField());
 
   if (m_ballVolume != UINT32_MAX) {
@@ -438,9 +447,14 @@ int Application::start(const StartupOptions& options) {
         // Physics reads the CPU field, so it has to follow the geometry. Only
         // where a body exists: nothing queries it while authoring, and a full
         // rebake is far too dear to run for a reader that is not there.
+        //
+        // And only where the entity owns the field, since that is what this
+        // replaces. A body on a shared shape reads somebody else's.
         if (
           m_runtime && world.needsResample(entity)
-          && registry.all_of<dunya::objectmodel::RigidBody>(entity)
+          && registry.all_of<
+             dunya::objectmodel::RigidBody,
+             dunya::field::SampledField>(entity)
         ) {
           const dunya::field::Aabb refit =
             dunya::objectmodel::gridBox(world.primitives(entity));
@@ -657,11 +671,6 @@ void Application::fire() {
     return;
   }
 
-  // Handed the field the scene baked at startup rather than left to bake its
-  // own: this is after addPrimitive, which is what marks it stale, so the
-  // frame loop finds it current and only uploads a volume.
-  world.setSampledField(ball, m_scene.projectileField());
-
   // The shared volume, which is what the 95 ms went on: two 128-cubed images
   // created and filled per shot. Still left needing a bake - that pass also
   // fills the per-brick bounds the shading and the shadow march read, it costs
@@ -676,7 +685,10 @@ void Application::fire() {
   // The body is made here rather than left to the bake pass: that branch only
   // runs for an entity without a volume, and this one was handed the shared
   // one. Everything it needs already exists, so it can fly this frame.
-  m_runtime->refreshBody(ball);
+  //
+  // It carries no field of its own. The shape reads the scene's, which is the
+  // same geometry, so a copy per ball would be 16 MiB nothing ever reads.
+  m_runtime->setBodyShape(ball, m_ballShape);
   m_runtime->setMass(ball, shot.mass);
   m_runtime->launch(ball, aim * shot.speed);
 }

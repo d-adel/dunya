@@ -1,5 +1,8 @@
 #pragma once
 
+#include <Jolt/Jolt.h>
+#include <Jolt/Physics/Collision/Shape/Shape.h>
+
 #include <dunya/objectmodel/world/world.h>
 #include <dunya/physics/physicsworld/physicsworld.h>
 #include <dunya/physics/joltlibrary/joltlibrary.h>
@@ -24,6 +27,11 @@ public:
   // first time a SampledField appears, and rebuilds the shape when a rebake
   // has replaced the field the old shape reads. Does nothing without a field.
   void refreshBody(objectmodel::Entity entity);
+
+  // Creates or re-shapes this entity's body on a shape the caller owns, which
+  // is how objects that are the same object share one: a shape is immutable
+  // and refcounted. The field it borrows must outlive every body built on it.
+  void setBodyShape(objectmodel::Entity entity, const JPH::ShapeRefC& shape);
 
   // Gives a body a velocity and wakes it. Velocity is Jolt's once a body
   // exists, so this is the only way in and there is no component mirroring it.

@@ -5,6 +5,7 @@
 #include <dunya/field/raycast/raycast.h>
 #include <dunya/objectmodel/sdfgrid/sdfgrid.h>
 #include <dunya/objectmodel/world/world.h>
+#include <dunya/physics/fieldshape/fieldshape.h>
 
 #include <imgui.h>
 

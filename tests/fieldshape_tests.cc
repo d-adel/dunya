@@ -68,27 +68,94 @@ float sphereMass(float radius) {
 
 }  // namespace
 
-TEST_CASE("the local bounds are the grid, not the solid", "[fieldshape]") {
-  // Jolt culls on this box, so it has to be the extent the field can answer
-  // for. One voxel too large is a phantom contact at the far faces; one too
-  // small drops contacts near them.
+TEST_CASE("the local bounds are the solid, not the grid", "[fieldshape]") {
+  // Jolt culls on this box. A grid carries whatever margin it was baked with,
+  // and every broad phase pair that margin wins is a seed walk that cannot
+  // reach - but one voxel too small drops contacts, so it has to contain the
+  // solid. This grid reaches 1.5 around a sphere of radius 1.
   JoltLibrary library;
 
-  const SampledField field = bakeSphere(1.0f, 17u);
+  const SampledField field = bakeSphere(1.0f, 65u);
   const FieldShape shape(field);
 
   const JPH::AABox bounds = shape.GetLocalBounds();
 
-  const glm::vec3 far =
-    field.origin
-    + field.voxelSize * glm::vec3(field.resolution - glm::uvec3(1u));
+  for (int axis = 0; axis != 3; ++axis) {
+    REQUIRE(bounds.mMin[axis] <= -1.0f);
+    REQUIRE(bounds.mMax[axis] >= 1.0f);
 
-  REQUIRE_THAT(bounds.mMin.GetX(), WithinAbs(field.origin.x, 1e-6f));
-  REQUIRE_THAT(bounds.mMin.GetY(), WithinAbs(field.origin.y, 1e-6f));
-  REQUIRE_THAT(bounds.mMin.GetZ(), WithinAbs(field.origin.z, 1e-6f));
-  REQUIRE_THAT(bounds.mMax.GetX(), WithinAbs(far.x, 1e-6f));
-  REQUIRE_THAT(bounds.mMax.GetY(), WithinAbs(far.y, 1e-6f));
-  REQUIRE_THAT(bounds.mMax.GetZ(), WithinAbs(far.z, 1e-6f));
+    REQUIRE(bounds.mMin[axis] > -1.5f);
+    REQUIRE(bounds.mMax[axis] < 1.5f);
+  }
+}
+
+TEST_CASE("an empty grid answers for its whole box", "[fieldshape]") {
+  // There is no solid to be tighter than, and a degenerate box is a body Jolt
+  // can never find. The grid is what the field can answer for, so it is that.
+  JoltLibrary library;
+
+  const SampledField field = dunya::field::bake(
+    std::vector<Primitive>{makeSphere(glm::vec3(10.0f), 0.5f)},
+    glm::vec3(-1.0f),
+    glm::vec3(1.0f),
+    glm::uvec3(17u)
+  );
+
+  const FieldShape shape(field);
+  const JPH::AABox bounds = shape.GetLocalBounds();
+
+  for (int axis = 0; axis != 3; ++axis) {
+    REQUIRE_THAT(bounds.mMin[axis], WithinAbs(field.origin[axis], 1e-6f));
+    REQUIRE_THAT(
+      bounds.mMax[axis],
+      WithinAbs(
+        field.origin[axis]
+          + field.voxelSize[axis] * float(field.resolution[axis] - 1u),
+        1e-6f
+      )
+    );
+  }
+}
+
+TEST_CASE(
+  "the seeds are on the surface, one per surface brick",
+  "[fieldshape]"
+) {
+  // Solved with the shape and read from there by every collide and every
+  // iteration of every sweep, so what they are has to hold before any query is
+  // made. One per brick that holds surface, in brick order, on the zero set.
+  JoltLibrary library;
+
+  const SampledField field = bakeSphere(1.0f, 65u);
+  const FieldShape shape(field);
+
+  const glm::uvec3 counts = dunya::field::brickCounts(field);
+  const uint32_t bricks = counts.x * counts.y * counts.z;
+
+  uint32_t holding = 0u;
+
+  for (uint32_t brick = 0u; brick != bricks; ++brick) {
+    if (dunya::field::brickHoldsSurface(field, brick)) {
+      ++holding;
+    }
+  }
+
+  REQUIRE(holding > 0u);
+  REQUIRE(shape.seeds().size() == holding);
+
+  float previous = -1.0f;
+
+  for (const dunya::physics::FieldSeed& seed : shape.seeds()) {
+    REQUIRE(dunya::field::brickHoldsSurface(field, seed.brick));
+    REQUIRE(float(seed.brick) > previous);
+
+    previous = float(seed.brick);
+
+    REQUIRE_THAT(
+      dunya::field::distance(field, seed.point),
+      WithinAbs(0.0f, 1.0e-4f)
+    );
+  }
 }
 
 TEST_CASE("the inner radius is the deepest point inside", "[fieldshape]") {
@@ -151,6 +218,32 @@ TEST_CASE("the inertia is the solid's, about its own axes", "[fieldshape]") {
   REQUIRE_THAT(properties.mInertia(0, 1), WithinAbs(0.0f, expected * 0.01f));
   REQUIRE_THAT(properties.mInertia(0, 2), WithinAbs(0.0f, expected * 0.01f));
   REQUIRE_THAT(properties.mInertia(1, 2), WithinAbs(0.0f, expected * 0.01f));
+}
+
+TEST_CASE(
+  "each shape keeps its own mass, not the last one asked",
+  "[fieldshape]"
+) {
+  // The walk is kept after the first ask, since every body built on a shape
+  // asks again. Kept on the shape: a cache that outlived one would hand every
+  // later shape the first shape's answer, and a ball would weigh a ground.
+  JoltLibrary library;
+
+  const SampledField small = bakeSphere(0.5f, 65u);
+  const SampledField large = bakeSphere(1.0f, 65u);
+
+  const FieldShape smallShape(small);
+  const FieldShape largeShape(large);
+
+  const float smallMass = smallShape.GetMassProperties().mMass;
+  const float largeMass = largeShape.GetMassProperties().mMass;
+
+  REQUIRE_THAT(smallMass, WithinRel(sphereMass(0.5f), 0.05f));
+  REQUIRE_THAT(largeMass, WithinRel(sphereMass(1.0f), 0.05f));
+
+  // Asked again, in the other order, which is where a shared cache shows.
+  REQUIRE(largeShape.GetMassProperties().mMass == largeMass);
+  REQUIRE(smallShape.GetMassProperties().mMass == smallMass);
 }
 
 TEST_CASE("carving the solid takes mass with it", "[fieldshape]") {

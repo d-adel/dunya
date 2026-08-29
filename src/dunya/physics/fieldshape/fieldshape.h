@@ -6,7 +6,21 @@
 
 #include <dunya/field/sampled/sampled.h>
 
+#include <glm/glm.hpp>
+
+#include <cstdint>
+#include <span>
+#include <vector>
+
 namespace dunya::physics {
+
+// A contact candidate: one per brick that holds surface, pulled onto the zero
+// set. Where the brick is decides which contact this is, so a manifold keyed
+// on it stays keyed on the same thing between frames.
+struct FieldSeed {
+  glm::vec3 point;
+  uint32_t brick;
+};
 
 // A Jolt collision shape over a sampled field. Contacts come from the field
 // itself - distance and normal at a point - so there is no mesh, no convex
@@ -20,6 +34,11 @@ public:
   explicit FieldShape(const dunya::field::SampledField& field);
 
   const dunya::field::SampledField& field() const noexcept;
+
+  // The candidates, in brick order. Pulling a brick centre onto the surface is
+  // a pure function of the field, and the alternative is solving it again per
+  // pair, per substep, and once per iteration of every sweep.
+  std::span<const FieldSeed> seeds() const noexcept;
 
   JPH::AABox GetLocalBounds() const override;
   JPH::uint GetSubShapeIDBitsRecursive() const override;
@@ -108,6 +127,14 @@ public:
 
 private:
   const dunya::field::SampledField* m_field;
+
+  std::vector<FieldSeed> m_seeds;
+
+  // A shape is immutable, so the walk over two million cells is a pure
+  // function of the field it borrows: done once, on the first body built on
+  // it, and kept. Jolt asks at body creation and at SetShape, never per step.
+  mutable JPH::MassProperties m_massProperties;
+  mutable bool m_massKnown = false;
 
   JPH::AABox m_bounds;
   float m_innerRadius = 0.0f;

@@ -121,7 +121,7 @@ Scene::Projectile Scene::projectile() const {
   shot.grid.resolution = glm::uvec3(PROJECTILE_RESOLUTION);
 
   shot.shape = dunya::field::makeSphere(
-    glm::vec3(0.0f),
+    glm::vec3(0.0f, 3.0f, 0.0f),
     PROJECTILE_RADIUS,
     PROJECTILE_MATERIAL
   );
