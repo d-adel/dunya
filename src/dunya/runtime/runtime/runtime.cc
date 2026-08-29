@@ -44,20 +44,37 @@ void Runtime::setBodyShape(
 
   const bool isStatic = registry.all_of<objectmodel::StaticBody>(entity);
 
+  // Jolt asserts on a zero mass, and a field is allowed to hold nothing: carve
+  // an object away and this is what is left of it. Only a moving body needs
+  // one, so a static body on an empty field is no trouble at all.
+  const bool hasMass = shape->GetMassProperties().mMass > 0.0f;
+
   JPH::BodyInterface& bodies = m_physicsWorld.bodies();
 
   if (const auto* body = registry.try_get<objectmodel::RigidBody>(entity)) {
     // Mass properties come from the field too, so they are recomputed with it.
+    // Recomputed from the new geometry only when there is any: a rebake that
+    // empties an object leaves the body its last mass rather than a zero one,
+    // and nothing is left to collide with either way.
     bodies.SetShape(
       JPH::BodyID(body->id),
       shape,
-      !isStatic,
+      !isStatic && hasMass,
       isStatic ? JPH::EActivation::DontActivate : JPH::EActivation::Activate
     );
 
     // That call recomputed mass from the new geometry, which is wanted — a
     // carved body is lighter — and discarded any override, which is not.
     applyMassScale(entity);
+
+    return;
+  }
+
+  if (!isStatic && !hasMass) {
+    if (!m_masslessReported) {
+      m_masslessReported = true;
+      std::cout << "A field with nothing solid in it gets no body" << std::endl;
+    }
 
     return;
   }

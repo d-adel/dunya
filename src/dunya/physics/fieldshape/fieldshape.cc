@@ -215,6 +215,13 @@ SolidIntegral integrateSolid(const SampledField& field) {
 
 // The cached candidates that fall inside the overlap, in brick order, so the
 // identifiers a manifold is keyed on do not move between frames.
+//
+// Tested by the candidate itself rather than by the brick it is named after:
+// pulling a brick centre onto the surface is under no obligation to stay
+// inside that brick, and measured over the suite one seed in seven does not -
+// by up to a sixth of a brick. Testing the point is also exactly the
+// condition that matters, since a candidate outside the far body's box grown
+// by the separation is further away than a contact is allowed to be.
 template<typename Visitor>
 void forEachSeed(
   const FieldShape& shape,
@@ -222,24 +229,10 @@ void forEachSeed(
   const glm::vec3& overlapMaximum,
   Visitor&& visit
 ) {
-  const SampledField& field = shape.field();
-
-  const glm::uvec3 counts = dunya::field::brickCounts(field);
-  const glm::vec3 span = field.voxelSize * float(dunya::field::BRICK_CELLS);
-
   for (const FieldSeed& seed : shape.seeds()) {
-    const glm::uvec3 brick(
-      seed.brick % counts.x,
-      (seed.brick / counts.x) % counts.y,
-      seed.brick / (counts.x * counts.y)
-    );
-
-    const glm::vec3 low = brickOrigin(field, brick);
-    const glm::vec3 high = low + span;
-
     if (
-      glm::any(glm::lessThan(high, overlapMinimum))
-      || glm::any(glm::greaterThan(low, overlapMaximum))
+      glm::any(glm::lessThan(seed.point, overlapMinimum))
+      || glm::any(glm::greaterThan(seed.point, overlapMaximum))
     ) {
       continue;
     }
@@ -466,6 +459,15 @@ void castFieldVsField(
 FieldShape::FieldShape(const dunya::field::SampledField& field)
     : JPH::Shape(JPH::EShapeType::User1, JPH::EShapeSubType::User1),
       m_field(&field) {
+  // Everything below indexes the lattice and the brick ranges. An unbaked
+  // field has neither, and resolution zero would run the cell count backwards
+  // past four billion before anyone noticed.
+  if (glm::any(glm::lessThan(field.resolution, glm::uvec3(2u)))) {
+    throw std::runtime_error(
+      "FieldShape: the field has no cells to collide with"
+    );
+  }
+
   const glm::uvec3 counts = dunya::field::brickCounts(field);
   const uint64_t bricks = static_cast<uint64_t>(counts.x) * counts.y * counts.z;
 
@@ -585,8 +587,12 @@ FieldShape::FieldShape(const dunya::field::SampledField& field)
   }
 
   // Nothing solid anywhere, so there is no extent to be tighter than and the
-  // grid is all this shape can answer for.
-  m_bounds = JPH::AABox(toJph(field.origin), toJph(gridMaximum(field)));
+  // grid is all this shape can answer for. Still about the centre of mass,
+  // which is the origin here - written out so the two branches cannot drift.
+  m_bounds = JPH::AABox(
+    toJph(field.origin - m_centerOfMass),
+    toJph(gridMaximum(field) - m_centerOfMass)
+  );
 }
 
 const dunya::field::SampledField& FieldShape::field() const noexcept {
@@ -737,7 +743,9 @@ int FieldShape::GetTrianglesNext(
 }
 
 JPH::Shape::Stats FieldShape::GetStats() const {
-  return Stats(sizeof(*this) + m_field->distances.size() * sizeof(float), 0u);
+  // The candidates and the shape itself. Not the field, which is borrowed and
+  // shared - counting it here bills every body built on it for the same 16 MiB.
+  return Stats(sizeof(*this) + m_seeds.size() * sizeof(FieldSeed), 0u);
 }
 
 float FieldShape::GetVolume() const {

@@ -1,6 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
+#include "fieldprimitives.h"
+
 #include <dunya/core/config/config.h>
 #include <dunya/field/analytic/analytic.h>
 #include <dunya/field/field.h>
@@ -30,24 +32,7 @@ using dunya::physics::JoltLibrary;
 
 namespace {
 
-constexpr uint32_t SPHERE = 0;
-
 constexpr float DENSITY = 1000.0f;
-
-Primitive makeSphere(
-  const glm::vec3& centre,
-  float radius,
-  uint32_t operation = dunya::core::FIELD_OP_UNION
-) {
-  Primitive primitive{};
-  primitive.inverseModel =
-    glm::inverse(glm::translate(glm::mat4(1.0f), centre));
-  primitive.shape = glm::vec4(radius, 0.0f, 0.0f, 0.0f);
-  primitive.shapeConfig = glm::uvec4(SPHERE, 1u, operation, 0u);
-  dunya::field::updateBounds(primitive);
-
-  return primitive;
-}
 
 // One sphere in a box that clears it by half a radius, so the grid holds
 // outside as well as inside.
@@ -59,7 +44,7 @@ SampledField bakeSphere(
   const float reach = radius * 1.5f;
 
   return dunya::field::bake(
-    std::vector<Primitive>{makeSphere(centre, radius)},
+    std::vector<Primitive>{fixture::sphere(centre, radius)},
     centre - glm::vec3(reach),
     centre + glm::vec3(reach),
     glm::uvec3(resolution)
@@ -191,7 +176,7 @@ TEST_CASE("an empty grid answers for its whole box", "[fieldshape]") {
   JoltLibrary library;
 
   const SampledField field = dunya::field::bake(
-    std::vector<Primitive>{makeSphere(glm::vec3(10.0f), 0.5f)},
+    std::vector<Primitive>{fixture::sphere(glm::vec3(10.0f), 0.5f)},
     glm::vec3(-1.0f),
     glm::vec3(1.0f),
     glm::uvec3(17u)
@@ -271,7 +256,7 @@ TEST_CASE("an empty grid still reports a usable inner radius", "[fieldshape]") {
   JoltLibrary library;
 
   const SampledField field = dunya::field::bake(
-    std::vector<Primitive>{makeSphere(glm::vec3(10.0f), 0.5f)},
+    std::vector<Primitive>{fixture::sphere(glm::vec3(10.0f), 0.5f)},
     glm::vec3(-1.0f),
     glm::vec3(1.0f),
     glm::uvec3(17u)
@@ -411,8 +396,8 @@ TEST_CASE("carving the solid takes mass with it", "[fieldshape]") {
 
   const SampledField carved = dunya::field::bake(
     std::vector<Primitive>{
-      makeSphere(glm::vec3(0.0f), 1.0f),
-      makeSphere(
+      fixture::sphere(glm::vec3(0.0f), 1.0f),
+      fixture::sphere(
         glm::vec3(0.9f, 0.0f, 0.0f),
         0.5f,
         dunya::core::FIELD_OP_SUBTRACTION

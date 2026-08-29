@@ -1,6 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
+#include "fieldprimitives.h"
+
 #include <dunya/core/config/config.h>
 #include <dunya/field/field.h>
 #include <dunya/field/sampled/sampled.h>
@@ -31,18 +33,6 @@ namespace {
 
 constexpr uint32_t RESOLUTION = 33u;
 
-dunya::field::Primitive sphereOf(float radius) {
-  dunya::field::Primitive sphere{};
-
-  sphere.inverseModel = glm::mat4(1.0f);
-  sphere.shape = glm::vec4(radius, 0.0f, 0.0f, 0.0f);
-  sphere.shapeConfig = glm::uvec4(0u, 1u, dunya::core::FIELD_OP_UNION, 0u);
-
-  dunya::field::updateBounds(sphere);
-
-  return sphere;
-}
-
 // Bakes what the entity's primitives currently say, at a box that fits them,
 // which is what the frame loop does after an edit.
 void rebake(World& world, Entity entity) {
@@ -69,7 +59,7 @@ Entity sphereEntity(World& world, float radius) {
 
   const Entity entity = world.createField(dunya::objectmodel::Pose{}, grid);
 
-  REQUIRE(world.addPrimitive(entity, sphereOf(radius)));
+  REQUIRE(world.addPrimitive(entity, fixture::sphere(glm::vec3(0.0f), radius)));
   rebake(world, entity);
 
   return entity;
@@ -117,7 +107,9 @@ TEST_CASE("a mass override survives a rebake as a density", "[runtime]") {
 
   // Half the radius is an eighth of the volume, through the edit path: the
   // primitive shrinks, the field is rebaked from it, the shape is rebuilt.
-  REQUIRE(live.setPrimitive(entity, 0u, sphereOf(0.5f)));
+  REQUIRE(
+    live.setPrimitive(entity, 0u, fixture::sphere(glm::vec3(0.0f), 0.5f))
+  );
   rebake(live, entity);
   runtime.refreshBody(entity);
 
@@ -141,7 +133,9 @@ TEST_CASE("a body nobody weighed follows its geometry", "[runtime]") {
 
   REQUIRE_FALSE(live.registry().all_of<dunya::objectmodel::MassScale>(entity));
 
-  REQUIRE(live.setPrimitive(entity, 0u, sphereOf(0.5f)));
+  REQUIRE(
+    live.setPrimitive(entity, 0u, fixture::sphere(glm::vec3(0.0f), 0.5f))
+  );
   rebake(live, entity);
   runtime.refreshBody(entity);
 
@@ -162,13 +156,10 @@ void fillFieldWorld(dunya::objectmodel::World& world) {
 
   const dunya::objectmodel::Entity floor = world.createField(floorPose, grid);
 
-  dunya::field::Primitive slab{};
-  slab.inverseModel = glm::mat4(1.0f);
-  slab.shape = glm::vec4(4.0f, 0.5f, 4.0f, 0.0f);
-  slab.shapeConfig = glm::uvec4(1u, 1u, dunya::core::FIELD_OP_UNION, 0u);
-  dunya::field::updateBounds(slab);
-
-  REQUIRE(world.addPrimitive(floor, slab));
+  REQUIRE(world.addPrimitive(
+    floor,
+    fixture::box(glm::vec3(0.0f), glm::vec3(4.0f, 0.5f, 4.0f))
+  ));
   world.addStaticBody(floor);
 
   dunya::objectmodel::Pose ballPose{};
@@ -176,13 +167,7 @@ void fillFieldWorld(dunya::objectmodel::World& world) {
 
   const dunya::objectmodel::Entity ball = world.createField(ballPose, grid);
 
-  dunya::field::Primitive sphere{};
-  sphere.inverseModel = glm::mat4(1.0f);
-  sphere.shape = glm::vec4(0.4f, 0.0f, 0.0f, 0.0f);
-  sphere.shapeConfig = glm::uvec4(0u, 1u, dunya::core::FIELD_OP_UNION, 0u);
-  dunya::field::updateBounds(sphere);
-
-  REQUIRE(world.addPrimitive(ball, sphere));
+  REQUIRE(world.addPrimitive(ball, fixture::sphere(glm::vec3(0.0f), 0.4f)));
 
   for (const dunya::objectmodel::Entity entity : world.fields()) {
     const dunya::objectmodel::SdfGrid& fitted =
@@ -262,4 +247,40 @@ TEST_CASE(
   // between two rows of the same starting number.
   REQUIRE(first.back() < 1.0f);
   REQUIRE(first.back() > -1.0f);
+}
+
+TEST_CASE("a field with nothing solid in it gets no body", "[runtime]") {
+  // Jolt asserts on a zero mass, so this used to take the process with it.
+  // Carving an object away is a legitimate thing to do to a volume, and a
+  // milestone away from being the normal thing, so it cannot.
+  JoltLibrary library;
+
+  World source;
+
+  dunya::objectmodel::SdfGrid grid{};
+  grid.resolution = glm::uvec3(17u);
+
+  const Entity entity = source.createField(dunya::objectmodel::Pose{}, grid);
+
+  // Baked around a box the sphere is nowhere near, which is the state a carve
+  // that removes everything leaves behind.
+  source.setSampledField(
+    entity,
+    dunya::field::bake(
+      std::vector<dunya::field::Primitive>{
+        fixture::sphere(glm::vec3(10.0f), 0.5f)
+      },
+      glm::vec3(-1.0f),
+      glm::vec3(1.0f),
+      grid.resolution
+    )
+  );
+
+  Runtime runtime(source, library);
+
+  runtime.refreshBody(entity);
+
+  REQUIRE_FALSE(
+    runtime.world().registry().all_of<dunya::objectmodel::RigidBody>(entity)
+  );
 }

@@ -67,6 +67,10 @@ private:
 
   std::vector<std::pair<objectmodel::Entity, objectmodel::Pose>> m_poseScratch;
 
+  // Once per run, not once per frame: an object with nothing solid in it stays
+  // that way, and the frame loop would otherwise say so sixty times a second.
+  bool m_masslessReported = false;
+
   // Bodies arrive a frame after the world does, so the broad phase is rebuilt
   // on the next step rather than once at construction.
   bool m_broadPhaseStale = false;

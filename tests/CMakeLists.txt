@@ -14,11 +14,11 @@ add_executable(unit_tests
     field_tests.cc
     fieldshape_tests.cc
     instantiateworld_tests.cc
-    massscale_tests.cc
     pose_tests.cc
     physics_tests.cc
     rangestore_tests.cc
     raycast_tests.cc
+    runtime_tests.cc
     sdfprimitivestore_tests.cc
     sampled_tests.cc
     world_tests.cc

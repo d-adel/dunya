@@ -17,3 +17,4 @@
 #include <dunya/physics/fieldshape/fieldshape.h>
 
 #include <stdexcept>
+#include <iostream>
