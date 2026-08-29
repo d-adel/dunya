@@ -5,6 +5,14 @@ namespace {
 // Five is three frames of headroom at 60 Hz and still bounds the worst case.
 constexpr uint32_t MAX_PHYSICS_SUBSTEPS = 5;
 
+// Balls alive at once. Each one holds a pool slot and a body, so the cap is
+// what keeps a held-down key from exhausting either.
+constexpr size_t MAX_BALLS = 8;
+
+// How far in front of the camera a ball appears, in metres. Inside the near
+// plane it would fill the screen on the frame it is fired.
+constexpr float MUZZLE_DISTANCE = 1.0f;
+
 const std::vector<VkVertexInputBindingDescription> MESH_BINDINGS{
   dunya::renderer::Vertex::getBindingDescription()
 };
@@ -102,7 +110,8 @@ int Application::start(const StartupOptions& options) {
   );
 
   std::cout << "Hold right mouse to look and fly (WASD/QE)\n"
-            << "Left click carves, shift + left click adds\n";
+            << "Left click carves, shift + left click adds\n"
+            << "F5 plays and stops, F fires a ball, G resets the wall\n";
 
   if (options.carves > 0) {
     m_fieldEditor.stress(options.carves);
@@ -111,6 +120,22 @@ int Application::start(const StartupOptions& options) {
   if (options.analytic) {
     m_frameContext.fieldRepresentation = dunya::core::FIELD_ANALYTIC;
     std::cout << "Field representation: analytic\n";
+  }
+
+  m_scene.frame(m_camera);
+
+  m_shotSettings = m_scene.projectile();
+
+  m_ballVolume = m_volumePool.allocate(m_scene.projectileField());
+
+  if (m_ballVolume != UINT32_MAX) {
+    const auto ballImages = m_volumePool.images(m_ballVolume);
+
+    m_recordTable.registerVolume(
+      ballImages.distance.imageView(),
+      ballImages.material.imageView(),
+      m_ballVolume
+    );
   }
 
   registerPanels();
@@ -124,7 +149,7 @@ int Application::start(const StartupOptions& options) {
   // Not in a capture run: the deferral would make the notice the first frame
   // presented, and that is the frame a golden compares.
   if (!frameCheck.wanted()) {
-    announce("Baking... 🍞", Transition::None);
+    announce("Baking fields", Transition::None);
   }
 
   std::function<void(VkImage)> captureHook;
@@ -186,7 +211,8 @@ int Application::start(const StartupOptions& options) {
                 << m_swapChain.extent().height << "  " << std::fixed
                 << std::setprecision(2) << msPerFrame << " ms  "
                 << std::setprecision(0) << (statFrames / elapsed)
-                << " fps\n"
+                << " fps  balls " << m_balls.size()
+                << "\n"
                 // Both stick, so every float printed after the first second
                 // would otherwise come out rounded to a whole number.
                 << std::defaultfloat << std::setprecision(6);
@@ -257,6 +283,12 @@ int Application::start(const StartupOptions& options) {
         play();
       } else if (m_transition == Transition::ToAuthoring) {
         stop();
+      } else if (m_transition == Transition::Restart) {
+        // Through Stop and Play rather than by putting every body back: the
+        // runtime world is built from the authored one, so rebuilding it is
+        // the reset, and both halves are already proven.
+        stop();
+        play();
       }
 
       m_transition = Transition::None;
@@ -314,10 +346,6 @@ int Application::start(const StartupOptions& options) {
       const dunya::objectmodel::SdfGrid& grid =
         registry.get<dunya::objectmodel::SdfGrid>(entity);
 
-      // Set by the branch below, read by the rebake after it: on the frame an
-      // object first appears both fire, and the second bake would be of the
-      // primitives the first one just read.
-      bool cpuFieldFresh = false;
       // No BakedVolume means no pool slot yet. Absence is the state; there is
       // no sentinel to get wrong.
 
@@ -380,8 +408,6 @@ int Application::start(const StartupOptions& options) {
           world.setSampledField(entity, std::move(baked));
         }
 
-        cpuFieldFresh = true;
-
         // The body reads the field, so it cannot exist before one does: this
         // is where a runtime entity gets its body, a frame after Play.
         if (m_runtime) {
@@ -413,7 +439,7 @@ int Application::start(const StartupOptions& options) {
         // where a body exists: nothing queries it while authoring, and a full
         // rebake is far too dear to run for a reader that is not there.
         if (
-          m_runtime && !cpuFieldFresh
+          m_runtime && world.needsResample(entity)
           && registry.all_of<dunya::objectmodel::RigidBody>(entity)
         ) {
           const dunya::field::Aabb refit =
@@ -440,7 +466,6 @@ int Application::start(const StartupOptions& options) {
     }
 
     m_frameContext.fieldRecordCount = recordIndex;
-
     m_scene.augmentFrameContext(m_frameContext, world);
     // -----------------------------------
 
@@ -585,6 +610,77 @@ void Application::releaseAllVolumes() {
   }
 }
 
+void Application::fire() {
+  if (!m_runtime) {
+    return;
+  }
+
+  const Scene::Projectile& shot = m_shotSettings;
+  const glm::vec3 from = glm::vec3(m_camera.position());
+
+  // Flat, and aimed at the stack rather than along the view: the camera looks
+  // down at the scene, so a shot along it would go into the floor. Moving the
+  // camera changes which side the ball comes from, never whether it arrives.
+  const glm::vec3 alongGround(
+    shot.aimAt.x - from.x,
+    0.0f,
+    shot.aimAt.z - from.z
+  );
+
+  if (glm::length(alongGround) < 1.0e-3f) {
+    return;
+  }
+
+  const glm::vec3 aim = glm::normalize(alongGround);
+
+  // Oldest out before newest in, so the cap is a cap and not a leak: every
+  // ball holds a volume slot and a body, and both are finite.
+  if (m_balls.size() == MAX_BALLS) {
+    m_runtime->despawn(m_balls.front());
+    m_balls.pop_front();
+  }
+
+  dunya::objectmodel::World& world = m_runtime->world();
+
+  // Under the camera at rolling height, then clear of it: spawned any nearer
+  // and the ball fills the screen on the frame it is fired.
+  dunya::objectmodel::Pose pose{};
+  pose.position =
+    glm::vec3(from.x, shot.height, from.z) + aim * MUZZLE_DISTANCE;
+
+  const dunya::objectmodel::Entity ball = world.createField(pose, shot.grid);
+
+  if (!world.addPrimitive(ball, shot.shape)) {
+    static_cast<void>(world.destroyField(ball));
+    std::cout << "Primitive arena full, no ball fired\n";
+
+    return;
+  }
+
+  // Handed the field the scene baked at startup rather than left to bake its
+  // own: this is after addPrimitive, which is what marks it stale, so the
+  // frame loop finds it current and only uploads a volume.
+  world.setSampledField(ball, m_scene.projectileField());
+
+  // The shared volume, which is what the 95 ms went on: two 128-cubed images
+  // created and filled per shot. Still left needing a bake - that pass also
+  // fills the per-brick bounds the shading and the shadow march read, it costs
+  // a third of a millisecond, and it writes the same geometry back into the
+  // slot it came from.
+  if (m_ballVolume != UINT32_MAX) {
+    world.setBakedVolume(ball, m_ballVolume);
+  }
+
+  m_balls.push_back(ball);
+
+  // The body is made here rather than left to the bake pass: that branch only
+  // runs for an entity without a volume, and this one was handed the shared
+  // one. Everything it needs already exists, so it can fly this frame.
+  m_runtime->refreshBody(ball);
+  m_runtime->setMass(ball, shot.mass);
+  m_runtime->launch(ball, aim * shot.speed);
+}
+
 void Application::announce(std::string text, Transition transition) {
   m_overlay.notice(std::move(text));
   m_transition = transition;
@@ -616,6 +712,8 @@ void Application::stop() {
   }
 
   releaseAllVolumes();
+
+  m_balls.clear();
 
   m_runtime.reset();
 
@@ -649,6 +747,23 @@ void Application::setLookMode(bool looking) {
 // Every panel this process shows, declared where the data it reads lives. They
 // capture this, which outlives them.
 void Application::registerPanels() {
+  m_overlay.panel("Shot", [this] {
+    ImGui::SliderFloat("Speed", &m_shotSettings.speed, 1.0f, 80.0f, "%.1f m/s");
+    ImGui::SliderFloat("Mass", &m_shotSettings.mass, 1.0f, 3000.0f, "%.0f kg");
+    ImGui::SliderFloat3("Target", &m_shotSettings.aimAt.x, -6.0f, 6.0f);
+    ImGui::Text("Balls  %zu / %zu", m_balls.size(), MAX_BALLS);
+
+    if (ImGui::Button("Fire")) {
+      fire();
+    }
+
+    ImGui::SameLine();
+
+    if (ImGui::Button("Reset wall") && m_stall == Stall::None && m_runtime) {
+      announce("Resetting", Transition::Restart);
+    }
+  });
+
   m_overlay.panel("Frame", [this] {
     ImGui::Text(
       "%.2f ms  %.0f fps",
@@ -789,6 +904,26 @@ void Application::handleKeyEvent(const dunya::platform::KeyEvent& event) {
         m_runtime ? Transition::ToAuthoring : Transition::ToRuntime
       );
     }
+
+    return;
+  }
+
+  if (
+    event.key == GLFW_KEY_G
+    && event.type == dunya::platform::KeyEventType::SinglePressed
+  ) {
+    if (m_stall == Stall::None && m_runtime) {
+      announce("Resetting", Transition::Restart);
+    }
+
+    return;
+  }
+
+  if (
+    event.key == GLFW_KEY_F
+    && event.type == dunya::platform::KeyEventType::SinglePressed
+  ) {
+    fire();
 
     return;
   }

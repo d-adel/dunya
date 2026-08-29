@@ -25,6 +25,19 @@ public:
   // has replaced the field the old shape reads. Does nothing without a field.
   void refreshBody(objectmodel::Entity entity);
 
+  // Gives a body a velocity and wakes it. Velocity is Jolt's once a body
+  // exists, so this is the only way in and there is no component mirroring it.
+  void launch(objectmodel::Entity entity, const glm::vec3& velocity);
+
+  // Destroys a body and the entity that named it. The volume slot it held is
+  // reclaimed by the frame loop, which already sweeps slots whose entity is
+  // gone.
+  bool despawn(objectmodel::Entity entity);
+
+  // Scales a body to a mass, inertia with it. A demo knob: the shape derives
+  // mass from the volume it describes, and this overrides that.
+  void setMass(objectmodel::Entity entity, float mass);
+
   // One fixed step of the simulation.
   void step();
 

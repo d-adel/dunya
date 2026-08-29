@@ -13,6 +13,11 @@ constexpr float DENSITY = 1000.0f;
 // point exceptions unmasked, so a normalize by zero traps rather than warns.
 constexpr float DIRECTION_FLOOR = 1.0e-6f;
 
+// Newton on a distance field converges in a step or two, so this is a ceiling
+// rather than a budget.
+constexpr uint32_t SURFACE_STEPS = 8u;
+constexpr float SURFACE_TOLERANCE = 1.0e-5f;
+
 glm::vec3 toGlm(JPH::Vec3Arg v) {
   return glm::vec3(v.GetX(), v.GetY(), v.GetZ());
 }
@@ -32,13 +37,21 @@ glm::vec3 brickOrigin(const SampledField& field, const glm::uvec3& brick) {
          + field.voxelSize * glm::vec3(brick * dunya::field::BRICK_CELLS);
 }
 
+// The coarsest axis of a grid, which is the one that bounds a contact patch it
+// takes part in. Not the finest: a ground slab is thin enough to resolve
+// millimetres vertically and still be a metre per brick across the plane a
+// body rests on, and seeding from that puts nothing where anything touches.
+float coarsestVoxel(const SampledField& field) {
+  return std::max({field.voxelSize.x, field.voxelSize.y, field.voxelSize.z});
+}
+
 // Pull a point onto the field's zero set. The surface is where a contact
 // lives, and a brick centre is only near it.
 glm::vec3 ontoSurface(const SampledField& field, glm::vec3 point) {
-  for (uint32_t step = 0; step != 8u; ++step) {
+  for (uint32_t step = 0; step != SURFACE_STEPS; ++step) {
     const dunya::field::FieldProbe hit = dunya::field::probe(field, point);
 
-    if (std::fabs(hit.distance) < 1.0e-5f) {
+    if (std::fabs(hit.distance) < SURFACE_TOLERANCE) {
       break;
     }
 
@@ -87,22 +100,22 @@ void forEachSeed(
   }
 }
 
-// Shape 2's box, brought into shape 1's space and clipped to it. Everything
-// outside is a brick that cannot reach the other body this step.
-JPH::AABox overlapIn1(
-  const FieldShape& shape1,
-  const FieldShape& shape2,
-  JPH::Mat44Arg centerOfMass1,
-  JPH::Mat44Arg centerOfMass2
+// The far shape's box, brought into the near shape's space and clipped to it.
+// Everything outside is a brick that cannot reach the other body this step.
+JPH::AABox overlapIn(
+  const FieldShape& near,
+  const FieldShape& far,
+  JPH::Mat44Arg centerOfMassNear,
+  JPH::Mat44Arg centerOfMassFar
 ) {
-  const JPH::AABox in1 = shape2.GetLocalBounds().Transformed(
-    centerOfMass1.Inversed() * centerOfMass2
+  const JPH::AABox brought = far.GetLocalBounds().Transformed(
+    centerOfMassNear.Inversed() * centerOfMassFar
   );
 
-  JPH::AABox clipped = shape1.GetLocalBounds();
+  JPH::AABox clipped = near.GetLocalBounds();
 
-  clipped.mMin = JPH::Vec3::sMax(clipped.mMin, in1.mMin);
-  clipped.mMax = JPH::Vec3::sMin(clipped.mMax, in1.mMax);
+  clipped.mMin = JPH::Vec3::sMax(clipped.mMin, brought.mMin);
+  clipped.mMax = JPH::Vec3::sMin(clipped.mMax, brought.mMax);
 
   return clipped;
 }
@@ -123,20 +136,33 @@ void collideFieldVsField(
   const FieldShape& shape1 = *static_cast<const FieldShape*>(inShape1);
   const FieldShape& shape2 = *static_cast<const FieldShape*>(inShape2);
 
-  const JPH::AABox overlap =
-    overlapIn1(shape1, shape2, centerOfMass1, centerOfMass2);
+  // Seeds come from the finer body whichever slot it arrived in. A brick of a
+  // coarse one is more than a metre wide, so its centres land nowhere near
+  // where a small object touches it - measured as zero contacts that way round
+  // against four the other. Jolt orders a pair by body, not by resolution, so
+  // both ways round have to work.
+  const bool flip =
+    coarsestVoxel(shape2.field()) < coarsestVoxel(shape1.field());
+
+  const FieldShape& seedShape = flip ? shape2 : shape1;
+  const FieldShape& probeShape = flip ? shape1 : shape2;
+
+  const JPH::Mat44 seedAt = flip ? centerOfMass2 : centerOfMass1;
+  const JPH::Mat44 probeAt = flip ? centerOfMass1 : centerOfMass2;
+
+  const JPH::AABox overlap = overlapIn(seedShape, probeShape, seedAt, probeAt);
 
   if (!overlap.IsValid()) {
     return;
   }
 
-  const JPH::Mat44 into2 = centerOfMass2.Inversed() * centerOfMass1;
-  const JPH::Mat44 outOf2 = centerOfMass2.GetRotation();
+  const JPH::Mat44 intoProbe = probeAt.Inversed() * seedAt;
+  const JPH::Mat44 outOfProbe = probeAt.GetRotation();
 
   const float separation = std::max(settings.mMaxSeparationDistance, 0.0f);
 
   forEachSeed(
-    shape1.field(),
+    seedShape.field(),
     toGlm(overlap.mMin),
     toGlm(overlap.mMax),
     [&](uint32_t brick, const glm::vec3& seed) {
@@ -144,27 +170,39 @@ void collideFieldVsField(
         return;
       }
 
-      const JPH::Vec3 in2 = into2 * toJph(seed);
+      const JPH::Vec3 probed = intoProbe * toJph(seed);
       const dunya::field::FieldProbe hit =
-        dunya::field::probe(shape2.field(), toGlm(in2));
+        dunya::field::probe(probeShape.field(), toGlm(probed));
 
       if (hit.distance >= separation) {
         return;
       }
 
-      // Shape 2's outward normal, in the space both transforms share.
-      const JPH::Vec3 normal = (outOf2 * toJph(hit.normal)).Normalized();
-      const JPH::Vec3 on1 = centerOfMass1 * toJph(seed);
+      // The probed body's outward normal, in the space both transforms share.
+      const JPH::Vec3 normal = (outOfProbe * toJph(hit.normal)).Normalized();
+      const JPH::Vec3 onSeed = seedAt * toJph(seed);
+      const JPH::Vec3 onProbe = onSeed - hit.distance * normal;
 
       JPH::CollideShapeResult result;
 
-      result.mContactPointOn1 = on1;
-      result.mContactPointOn2 = on1 - hit.distance * normal;
-      result.mPenetrationAxis = -normal;
+      // mPenetrationAxis is the direction shape 2 has to move, so it follows
+      // the normal when the seed is on shape 2 and opposes it when the seed is
+      // on shape 1 and the normal therefore belongs to shape 2.
+      result.mContactPointOn1 = flip ? onProbe : onSeed;
+      result.mContactPointOn2 = flip ? onSeed : onProbe;
+      result.mPenetrationAxis = flip ? normal : -normal;
       result.mPenetrationDepth = -hit.distance;
+
+      // The brick goes in the slot the finer body occupies. A manifold is
+      // keyed on both ids, so one of the two carrying the seed is enough to
+      // separate contacts, and the coarse body has too few bricks to do it.
+      const uint32_t bits = seedShape.GetSubShapeIDBitsRecursive();
+
       result.mSubShapeID1 =
-        creator1.PushID(brick, shape1.GetSubShapeIDBitsRecursive()).GetID();
-      result.mSubShapeID2 = creator2.GetID();
+        flip ? creator1.GetID() : creator1.PushID(brick, bits).GetID();
+      result.mSubShapeID2 =
+        flip ? creator2.PushID(brick, bits).GetID() : creator2.GetID();
+
       result.mBodyID2 =
         JPH::TransformedShape::sGetBodyID(collector.GetContext());
 

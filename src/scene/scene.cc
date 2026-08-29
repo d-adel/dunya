@@ -2,6 +2,40 @@
 
 using dunya::field::Primitive;
 
+namespace {
+
+// Half the side of a stacked box, and the gap it is dropped from. The gap is
+// there so the stack settles into contact rather than starting in it: a stack
+// that has to find its own rest is the one M18 is about.
+constexpr float BOX_HALF = 0.3f;
+constexpr float BOX_GAP = 0.01f;
+constexpr uint32_t BOX_COLUMNS = 4u;
+constexpr uint32_t BOX_ROWS = 5u;
+
+// Coarser than the ball, and it can be: a box meets the ground face to face,
+// so a whole plane of bricks is in contact however few there are. A ball meets
+// it at a point, and there the seed spacing has to beat the contact patch.
+constexpr uint32_t BOX_RESOLUTION = 65u;
+
+// The plane the stack sits on: its top face lands on the entity origin, so a
+// box resting on it sits at exactly BOX_HALF above the plane entity.
+constexpr float GROUND_Y = -2.0f;
+constexpr float GROUND_HALF_THICKNESS = 0.5f;
+
+constexpr float PROJECTILE_RADIUS = 0.35f;
+
+// Its own entry in the material list, so the ball is not the colour of the
+// plane it rolls across.
+constexpr uint32_t PROJECTILE_MATERIAL = 4u;
+
+// The full grid, unlike the boxes. A sphere resting on a plane touches it over
+// a patch of about sqrt(2 r d) - a few centimetres - and a contact seed sits at
+// a brick centre, so a grid whose bricks are wider than that patch has no seed
+// where the ball actually touches, and the ball falls through the floor.
+constexpr uint32_t PROJECTILE_RESOLUTION = dunya::core::FIELD_GRID_RESOLUTION;
+
+}  // namespace
+
 Scene::Scene(
   const dunya::gpu::Context& context,
   dunya::objectmodel::World& world
@@ -10,74 +44,111 @@ Scene::Scene(
       m_samplers(createSamplers(context.device())),
       m_textures(createTextures(context.device())),
       m_world(world) {
-  // Both meshes are the same room at the same orientation; only the placement
-  // and the material differ. The rotation is what DrawItem's matrix carried.
-  const glm::quat rotation =
-    glm::angleAxis(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-
-  m_meshes.emplace_back(
-    dunya::renderer::MeshBuffers(context.device(), "models/viking_room.obj")
-  );
-
-  m_world.createMesh(
-    dunya::objectmodel::Pose{glm::vec3(0.0f), rotation},
-    dunya::objectmodel::Mesh{0},
-    dunya::objectmodel::Material{2}
-  );
-  m_world.createMesh(
-    dunya::objectmodel::Pose{glm::vec3(0.0f, 0.0f, -2.0f), rotation},
-    dunya::objectmodel::Mesh{0},
-    dunya::objectmodel::Material{3}
-  );
-
   dunya::objectmodel::SdfGrid grid{};
   grid.resolution = glm::uvec3(dunya::core::FIELD_GRID_RESOLUTION);
 
+  // The wall. Untagged, so each box becomes a dynamic body at Play, and on its
+  // own coarser grid: twenty full ones would be twenty seconds of baking.
+  dunya::objectmodel::SdfGrid boxGrid{};
+  boxGrid.resolution = glm::uvec3(BOX_RESOLUTION);
+
+  const float pitch = 2.0f * BOX_HALF + BOX_GAP;
+  const float firstColumn = -0.5f * float(BOX_COLUMNS - 1u) * pitch;
+
   dunya::objectmodel::Pose pose{};
-  pose.position = glm::vec3(1.0f, 0.45f, 0.0f);
-  const dunya::objectmodel::Entity fieldEntity =
-    m_world.createField(pose, grid);
-  addInitialPrimitives(fieldEntity);
 
-  // Static for now: it is the carvable object, not a falling one. Untagged
-  // entities become dynamic bodies at Play.
-  m_world.addStaticBody(fieldEntity);
+  for (uint32_t row = 0u; row != BOX_ROWS; ++row) {
+    for (uint32_t column = 0u; column != BOX_COLUMNS; ++column) {
+      pose.position = glm::vec3(
+        firstColumn + float(column) * pitch,
+        GROUND_Y + BOX_HALF + float(row) * pitch,
+        0.0f
+      );
 
-  pose.position = glm::vec3(0.0f, -2.0f, 0.0f);
+      const dunya::objectmodel::Entity boxEntity =
+        m_world.createField(pose, boxGrid);
+
+      addPrimitive(
+        boxEntity,
+        dunya::field::makeBox(glm::vec3(0.0f), glm::vec3(BOX_HALF)),
+        "a stacked box"
+      );
+    }
+  }
+
+  // The plane. Its box sits half a thickness below the entity origin, which
+  // puts the surface everything rests on at GROUND_Y exactly. Created after
+  // the wall so that a stress carve, which takes the first field there is,
+  // lands on a box rather than on twenty square metres of floor.
+  pose.position = glm::vec3(0.0f, GROUND_Y, 0.0f);
+
   const dunya::objectmodel::Entity planeEntity =
     m_world.createField(pose, grid);
-  if (!m_world.addPrimitive(
-        planeEntity,
-        dunya::field::makeBox(
-          glm::vec3(0.0f, -0.5f, 0.0f),
-          glm::vec3(10.0f, 0.5f, 10.0f),
-          glm::radians(0.0f),
-          glm::vec3(0.0f, 1.0f, 0.0f),
-          1,
-          0,
-          0.0f
-        )
-      )) {
-    throw std::runtime_error(
 
-      "Scene: the ground plane box did not fit the primitive arena"
-
-    );
-  }
+  addPrimitive(
+    planeEntity,
+    dunya::field::makeBox(
+      glm::vec3(0.0f, -GROUND_HALF_THICKNESS, 0.0f),
+      glm::vec3(10.0f, GROUND_HALF_THICKNESS, 10.0f),
+      0.0f,
+      glm::vec3(0.0f, 1.0f, 0.0f),
+      1
+    ),
+    "the ground plane"
+  );
 
   m_world.addStaticBody(planeEntity);
 
-  // The body M18 drops onto the ground above. A field object rather than a
-  // mesh, because D1 says every physical body is a field.
-  pose.position = glm::vec3(-1.5f, 0.4f, 0.0f);
-  const dunya::objectmodel::Entity bodyEntity = m_world.createField(pose, grid);
+  // Baked once, here, so pressing the key does not. A full-resolution bake is
+  // better than a second of stall per shot, and every ball is this same sphere.
+  const Projectile shot = projectile();
+  const dunya::field::Aabb box = dunya::objectmodel::gridBox({&shot.shape, 1});
 
-  if (!m_world.addPrimitive(
-        bodyEntity,
-        dunya::field::makeSphere(glm::vec3(0.0f), 0.5f)
-      )) {
+  m_projectileField = dunya::field::bake(
+    std::span<const dunya::field::Primitive>(&shot.shape, 1),
+    box.minimum,
+    box.maximum,
+    shot.grid.resolution
+  );
+}
+
+Scene::Projectile Scene::projectile() const {
+  Projectile shot;
+
+  // Its own grid, and a small one. Every field entity bakes its whole grid on
+  // the frame it appears, so a shot on a full-resolution one would stall the
+  // loop for a second - and a sphere has nothing a finer grid would resolve.
+  shot.grid.resolution = glm::uvec3(PROJECTILE_RESOLUTION);
+
+  shot.shape = dunya::field::makeSphere(
+    glm::vec3(0.0f),
+    PROJECTILE_RADIUS,
+    PROJECTILE_MATERIAL
+  );
+
+  // Fast enough that a step carries the ball further than its own radius,
+  // which is the case the swept path exists for.
+  shot.speed = 22.0f;
+  shot.height = GROUND_Y + PROJECTILE_RADIUS;
+
+  shot.mass = 150.0f;
+
+  // The middle of the stack, so a hit topples it rather than sliding the
+  // bottom box out from under it.
+  shot.aimAt =
+    glm::vec3(0.0f, GROUND_Y + BOX_HALF + (2.0f * BOX_HALF + BOX_GAP), 0.0f);
+
+  return shot;
+}
+
+void Scene::addPrimitive(
+  dunya::objectmodel::Entity entity,
+  const dunya::field::Primitive& primitive,
+  const char* what
+) {
+  if (!m_world.addPrimitive(entity, primitive)) {
     throw std::runtime_error(
-      "Scene: the drop sphere did not fit the primitive arena"
+      std::string("Scene: ") + what + " did not fit the primitive arena"
     );
   }
 }
@@ -209,37 +280,18 @@ std::vector<dunya::renderer::MaterialRecord> Scene::createMaterials() {
   dunya::renderer::MaterialRecord checker = neutral;
   checker.baseColorTexture = dunya::core::RESERVED_TEXTURES + 1;
 
-  return {fieldSphere, fieldPlane, vikingRoom, checker};
+  dunya::renderer::MaterialRecord projectile = neutral;
+  projectile.baseColor = glm::vec4(0.15f, 0.65f, 0.75f, 1.0f);
+
+  return {fieldSphere, fieldPlane, vikingRoom, checker, projectile};
 }
 
-void Scene::addInitialPrimitives(dunya::objectmodel::Entity entity) {
-  if (!m_world.addPrimitive(
-        entity,
-        dunya::field::makeSphere(glm::vec3(0.0f, 0.0f, 0.0f), 1.0f)
-      )) {
-    throw std::runtime_error(
+const dunya::field::SampledField& Scene::projectileField() const noexcept {
+  return m_projectileField;
+}
 
-      "Scene: the field sphere did not fit the primitive arena"
-
-    );
-  }
-
-  if (!m_world.addPrimitive(
-        entity,
-        dunya::field::makeBox(
-          glm::vec3(0.8f, -0.45f, 0.0f),
-          glm::vec3(0.5f),
-          glm::radians(30.0f),
-          glm::vec3(0.0f, 1.0f, 0.0f),
-          0,
-          1,
-          0.4f
-        )
-      )) {
-    throw std::runtime_error(
-
-      "Scene: the initial carve box did not fit the primitive arena"
-
-    );
-  }
+void Scene::frame(dunya::objectmodel::Camera& camera) const {
+  // Looking down on the stack rather than at it: the shot comes from the
+  // camera, so the view has to show the plane the balls travel across.
+  camera.place(glm::vec3(0.0f, 3.4f, 7.5f), 0.0f, glm::radians(-27.0f));
 }

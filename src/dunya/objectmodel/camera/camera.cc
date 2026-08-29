@@ -4,6 +4,13 @@ namespace dunya::objectmodel {
 
 Camera::Camera() : m_position(glm::vec3(0, 0, 2)), m_velocity(glm::vec3(0.f)) {}
 
+void Camera::place(const glm::vec3& position, float yaw, float pitch) {
+  m_position = position;
+  m_yaw = yaw;
+  m_pitch = pitch;
+  m_velocity = glm::vec3(0.0f);
+}
+
 void Camera::update(float dt, CameraInput input) {
   m_velocity.z = (float)(input.back - input.forward);
   m_velocity.x = (float)(input.right - input.left);

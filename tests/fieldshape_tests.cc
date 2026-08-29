@@ -10,12 +10,15 @@
 
 #include <Jolt/Jolt.h>
 #include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
+#include <Jolt/Physics/Collision/CollideShape.h>
+#include <Jolt/Physics/Collision/CollisionDispatch.h>
 #include <Jolt/Physics/Collision/CollidePointResult.h>
 #include <Jolt/Physics/Collision/TransformedShape.h>
 
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <algorithm>
 #include <vector>
 
 using Catch::Matchers::WithinAbs;
@@ -255,4 +258,115 @@ TEST_CASE(
   const FieldShape shape(field);
 
   REQUIRE(&shape.field() == &field);
+}
+
+namespace {
+
+// A wide slab and a small ball resolve at very different scales in grids of
+// the same size, which is the pairing contact generation used to fail on.
+SampledField bakeSlab(uint32_t resolution) {
+  Primitive slab{};
+  slab.inverseModel =
+    glm::inverse(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f)));
+  slab.shape = glm::vec4(10.0f, 0.5f, 10.0f, 0.0f);
+  slab.shapeConfig = glm::uvec4(1u, 1u, dunya::core::FIELD_OP_UNION, 0u);
+  dunya::field::updateBounds(slab);
+
+  return dunya::field::bake(
+    std::vector<Primitive>{slab},
+    glm::vec3(-10.5f, -1.0f, -10.5f),
+    glm::vec3(10.5f, 1.0f, 10.5f),
+    glm::uvec3(resolution)
+  );
+}
+
+uint32_t contactsBetween(
+  const FieldShape& one,
+  const FieldShape& two,
+  const glm::vec3& atOne,
+  const glm::vec3& atTwo
+) {
+  const JPH::TransformedShape context{};
+
+  JPH::AllHitCollisionCollector<JPH::CollideShapeCollector> collector;
+  collector.SetContext(&context);
+
+  JPH::CollideShapeSettings settings;
+  settings.mMaxSeparationDistance = 0.02f;
+
+  JPH::CollisionDispatch::sCollideShapeVsShape(
+    &one,
+    &two,
+    JPH::Vec3::sReplicate(1.0f),
+    JPH::Vec3::sReplicate(1.0f),
+    JPH::Mat44::sTranslation(JPH::Vec3(atOne.x, atOne.y, atOne.z)),
+    JPH::Mat44::sTranslation(JPH::Vec3(atTwo.x, atTwo.y, atTwo.z)),
+    JPH::SubShapeIDCreator(),
+    JPH::SubShapeIDCreator(),
+    settings,
+    collector
+  );
+
+  return static_cast<uint32_t>(collector.mHits.size());
+}
+
+}  // namespace
+
+TEST_CASE(
+  "a coarse body against a fine one collides either way round",
+  "[fieldshape]"
+) {
+  // Jolt orders a body pair by id, not by resolution, so the slot a body lands
+  // in is not ours to choose. Seeding from the coarse one put nothing where the
+  // fine one touches: a brick of the slab spans metres, the contact patch does
+  // not, and that direction produced no contacts at all.
+  JoltLibrary library;
+
+  const SampledField slab = bakeSlab(33u);
+  const SampledField ball = bakeSphere(0.5f, 65u);
+
+  REQUIRE(slab.voxelSize.x > ball.voxelSize.x * 4.0f);
+
+  const FieldShape slabShape(slab);
+  const FieldShape ballShape(ball);
+
+  // Pressed into the slab top face by a twentieth of the ball radius.
+  const glm::vec3 slabAt(0.0f);
+  const glm::vec3 ballAt(0.0f, 0.95f, 0.0f);
+
+  const uint32_t fineFirst =
+    contactsBetween(ballShape, slabShape, ballAt, slabAt);
+  const uint32_t coarseFirst =
+    contactsBetween(slabShape, ballShape, slabAt, ballAt);
+
+  REQUIRE(fineFirst > 0u);
+  REQUIRE(coarseFirst == fineFirst);
+}
+
+TEST_CASE("a degenerate gradient still names a direction", "[fieldshape]") {
+  // With floating point exceptions unmasked on Jolt's workers, normalising a
+  // zero gradient is a trap rather than a NaN, and the contact path normalises
+  // whatever probe returns. A scan of 859,564 interior cells across a slab and
+  // a ball found none below the floor - the weakest was 7.2e-06, at the ball's
+  // own centre - so the case is reached by contract rather than by geometry,
+  // and a flat field is the only honest way to ask for it.
+  JoltLibrary library;
+
+  SampledField flat = bakeSphere(1.0f, 17u);
+
+  std::fill(flat.distances.begin(), flat.distances.end(), -1.0f);
+
+  const dunya::field::FieldProbe probed =
+    dunya::field::probe(flat, glm::vec3(0.0f, 0.0f, 0.0f));
+
+  REQUIRE(glm::length(dunya::field::gradient(flat, glm::vec3(0.0f))) == 0.0f);
+  REQUIRE_THAT(glm::length(probed.normal), WithinAbs(1.0f, 1e-6f));
+
+  // And the shape's own accessor, which is what Jolt asks for at a contact.
+  const JPH::Vec3 normal = FieldShape(flat).GetSurfaceNormal(
+    JPH::SubShapeID(),
+    JPH::Vec3(0.0f, 0.0f, 0.0f)
+  );
+
+  REQUIRE_THAT(normal.Length(), WithinAbs(1.0f, 1e-6f));
 }

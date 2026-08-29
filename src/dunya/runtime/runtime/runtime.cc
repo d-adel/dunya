@@ -89,6 +89,62 @@ void Runtime::refreshBody(objectmodel::Entity entity) {
   m_broadPhaseStale = true;
 }
 
+void Runtime::launch(objectmodel::Entity entity, const glm::vec3& velocity) {
+  const auto* body = m_world.registry().try_get<objectmodel::RigidBody>(entity);
+
+  // Not an error: a body arrives a frame after the world does, so a key can
+  // reach this before one exists.
+  if (body == nullptr) {
+    return;
+  }
+
+  const JPH::BodyID id(body->id);
+
+  m_physicsWorld.bodies().SetLinearVelocity(
+    id,
+    JPH::Vec3(velocity.x, velocity.y, velocity.z)
+  );
+  m_physicsWorld.bodies().ActivateBody(id);
+}
+
+void Runtime::setMass(objectmodel::Entity entity, float mass) {
+  const auto* body = m_world.registry().try_get<objectmodel::RigidBody>(entity);
+
+  if (body == nullptr || mass <= 0.0f) {
+    return;
+  }
+
+  JPH::BodyLockWrite lock(
+    m_physicsWorld.system().GetBodyLockInterface(),
+    JPH::BodyID(body->id)
+  );
+
+  if (!lock.Succeeded()) {
+    return;
+  }
+
+  // Null on a static body, which has no mass to scale.
+  JPH::MotionProperties* motion = lock.GetBody().GetMotionPropertiesUnchecked();
+
+  if (motion != nullptr) {
+    motion->ScaleToMass(mass);
+  }
+}
+
+bool Runtime::despawn(objectmodel::Entity entity) {
+  if (
+    const auto* body =
+      m_world.registry().try_get<objectmodel::RigidBody>(entity)
+  ) {
+    const JPH::BodyID id(body->id);
+
+    m_physicsWorld.bodies().RemoveBody(id);
+    m_physicsWorld.bodies().DestroyBody(id);
+  }
+
+  return m_world.destroyField(entity);
+}
+
 void Runtime::step() {
   if (m_broadPhaseStale) {
     // Once per batch rather than per body: it rebuilds the whole tree.

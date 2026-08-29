@@ -23,7 +23,9 @@
 #include <dunya/editor/commandhistory/commandhistory.h>
 
 #include <array>
+#include <deque>
 #include <optional>
+#include <utility>
 #include <vector>
 
 // Wiring, and the loop. Owns the subsystems and hands them each other, but does
@@ -67,10 +69,15 @@ private:
   enum class Transition : uint8_t {
     None,
     ToRuntime,
-    ToAuthoring
+    ToAuthoring,
+    Restart
   };
 
   void announce(std::string text, Transition transition);
+
+  // Spawns a ball at the cursor and fires it along the ray. The oldest goes
+  // when the cap is reached: each ball holds a volume slot and a body.
+  void fire();
   void stop();
 
   // Whichever world the frame draws and the volume pool serves.
@@ -125,6 +132,18 @@ private:
 
   Stall m_stall = Stall::None;
   Transition m_transition = Transition::None;
+
+  // The balls in flight, oldest first. Runtime state, so it empties at Stop.
+  std::deque<dunya::objectmodel::Entity> m_balls;
+
+  // The knobs, seeded from the scene and then owned by the panel.
+  Scene::Projectile m_shotSettings;
+
+  // One volume for every ball there will ever be. They are the same sphere in
+  // their own local space, so a slot each would be the same 16 MiB uploaded
+  // over again - measured at 95 ms a shot. Owned by no entity, so the frame
+  // loop's sweep never reclaims it.
+  uint32_t m_ballVolume = UINT32_MAX;
   dunya::renderer::Frame m_frameContext{};
   bool m_reloadRequested;
 

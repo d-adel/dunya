@@ -45,6 +45,10 @@ public:
 
   void update(float dt, CameraInput input);
 
+  // Where a scene starts the view. A camera with no way to be placed is one
+  // every scene has to be built around.
+  void place(const glm::vec3& position, float yaw, float pitch);
+
 private:
   glm::vec3 m_position;
   glm::vec3 m_velocity;
