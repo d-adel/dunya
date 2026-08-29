@@ -74,6 +74,52 @@ bool skippable(
   }
 }
 
+// Only a union can put material somewhere new: subtraction and intersection
+// both raise the field, so their solid is a subset of what came before.
+bool addsMaterial(uint32_t operation) {
+  return operation != 2u && operation != 3u && operation != 4u;
+}
+
+// The world-space half extent of one primitive about its own centre. Kept
+// apart from bounds.w, which stays a sphere because skippable() culls on it.
+glm::vec3 halfExtent(const Primitive& primitive) {
+  glm::vec3 extent(0.0f);
+  bool bounded = true;
+
+  switch (primitive.shapeConfig.x) {
+    case 0u:
+      extent = glm::vec3(primitive.shape.x);
+      break;
+
+    case 1u: {
+      // The box of an oriented box: each world axis reaches the sum of the
+      // half extents projected onto it, which is the absolute rotation.
+      const glm::mat3 model = glm::mat3(glm::inverse(primitive.inverseModel));
+
+      glm::mat3 absolute;
+      absolute[0] = glm::abs(model[0]);
+      absolute[1] = glm::abs(model[1]);
+      absolute[2] = glm::abs(model[2]);
+
+      extent = absolute * glm::vec3(primitive.shape);
+      break;
+    }
+
+    // A plane is unbounded, and an unknown shape has no bound we can trust.
+    default:
+      bounded = false;
+      break;
+  }
+
+  if (
+    bounded && (primitive.shapeConfig.z == 1u || primitive.shapeConfig.z == 4u)
+  ) {
+    extent += glm::vec3(primitive.shape.w);
+  }
+
+  return extent;
+}
+
 }  // namespace
 
 void updateBounds(Primitive& primitive) {
@@ -114,21 +160,21 @@ std::optional<Aabb> boundedExtent(std::span<const Primitive> primitives) {
   Aabb extent{glm::vec3(0.0f), glm::vec3(0.0f)};
 
   for (const Primitive& primitive : primitives) {
-    if (primitive.bounds.w <= 0.0f) {
+    if (primitive.bounds.w <= 0.0f || !addsMaterial(primitive.shapeConfig.z)) {
       continue;
     }
 
     const glm::vec3 centre = glm::vec3(primitive.bounds);
-    const glm::vec3 radius = glm::vec3(primitive.bounds.w);
+    const glm::vec3 reach = halfExtent(primitive);
 
     if (!any) {
-      extent = {centre - radius, centre + radius};
+      extent = {centre - reach, centre + reach};
       any = true;
       continue;
     }
 
-    extent.minimum = glm::min(extent.minimum, centre - radius);
-    extent.maximum = glm::max(extent.maximum, centre + radius);
+    extent.minimum = glm::min(extent.minimum, centre - reach);
+    extent.maximum = glm::max(extent.maximum, centre + reach);
   }
 
   if (!any) {

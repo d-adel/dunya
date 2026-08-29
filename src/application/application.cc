@@ -121,6 +121,12 @@ int Application::start(const StartupOptions& options) {
 
   FrameCheck frameCheck(m_context, m_swapChain, options);
 
+  // Not in a capture run: the deferral would make the notice the first frame
+  // presented, and that is the frame a golden compares.
+  if (!frameCheck.wanted()) {
+    announce("Baking... 🍞", Transition::None);
+  }
+
   std::function<void(VkImage)> captureHook;
 
   if (frameCheck.wanted()) {
@@ -179,7 +185,11 @@ int Application::start(const StartupOptions& options) {
                 << m_swapChain.extent().width << "x"
                 << m_swapChain.extent().height << "  " << std::fixed
                 << std::setprecision(2) << msPerFrame << " ms  "
-                << std::setprecision(0) << (statFrames / elapsed) << " fps\n";
+                << std::setprecision(0) << (statFrames / elapsed)
+                << " fps\n"
+                // Both stick, so every float printed after the first second
+                // would otherwise come out rounded to a whole number.
+                << std::defaultfloat << std::setprecision(6);
 
       statWindowStart = now;
       statFrames = 0;
@@ -235,6 +245,25 @@ int Application::start(const StartupOptions& options) {
     m_frameContext.view = m_camera.viewMatrix();
     m_frameContext.cameraPos = m_camera.position();
 
+    // One frame of notice before a stall, and the work on the frame after: the
+    // image left on screen while the loop blocks is then the message rather
+    // than the picture from before the key was pressed.
+    const bool announcing = m_stall == Stall::Announced;
+
+    if (announcing) {
+      m_stall = Stall::Working;
+    } else if (m_stall == Stall::Working) {
+      if (m_transition == Transition::ToRuntime) {
+        play();
+      } else if (m_transition == Transition::ToAuthoring) {
+        stop();
+      }
+
+      m_transition = Transition::None;
+      m_stall = Stall::None;
+      m_overlay.notice("");
+    }
+
     dunya::objectmodel::World& world = activeWorld();
     const entt::registry& registry = world.registry();
 
@@ -264,7 +293,13 @@ int Application::start(const StartupOptions& options) {
 
     m_recordEntities.clear();
 
-    for (dunya::objectmodel::Entity entity : world.fields()) {
+    // The notice frame presents before the work rather than with it, so it
+    // visits nothing and the records it leaves are last frame's.
+    const std::span<const dunya::objectmodel::Entity> visiting =
+      announcing ? std::span<const dunya::objectmodel::Entity>()
+                 : world.fields();
+
+    for (const dunya::objectmodel::Entity entity : visiting) {
       // The GPU record table holds MAX_FIELD_RECORDS.
       // The world has no such limit, so the frame is where the two meet.
       if (recordIndex == dunya::core::MAX_FIELD_RECORDS) {
@@ -279,21 +314,42 @@ int Application::start(const StartupOptions& options) {
       const dunya::objectmodel::SdfGrid& grid =
         registry.get<dunya::objectmodel::SdfGrid>(entity);
 
+      // Set by the branch below, read by the rebake after it: on the frame an
+      // object first appears both fire, and the second bake would be of the
+      // primitives the first one just read.
+      bool cpuFieldFresh = false;
       // No BakedVolume means no pool slot yet. Absence is the state; there is
       // no sentinel to get wrong.
+
       if (!registry.all_of<dunya::objectmodel::BakedVolume>(entity)) {
         std::span<const dunya::field::Primitive> primitives =
           world.primitives(entity);
 
-        dunya::field::Aabb box = dunya::objectmodel::gridBox(primitives);
-        const dunya::field::SampledField& baked = dunya::field::bake(
-          primitives,
-          box.minimum,
-          box.maximum,
-          grid.resolution
-        );
+        const auto* carried =
+          registry.try_get<dunya::field::SampledField>(entity);
 
-        const uint32_t index = m_volumePool.allocate(baked);
+        // A bake is seconds and a copy is milliseconds. The field the entity
+        // already carries was made from these same primitives, so a volume can
+        // be filled from it rather than from a second identical bake.
+        const bool reusable =
+          carried != nullptr && !world.needsResample(entity);
+
+        dunya::field::SampledField baked;
+
+        if (!reusable) {
+          const dunya::field::Aabb box =
+            dunya::objectmodel::gridBox(primitives);
+
+          baked = dunya::field::bake(
+            primitives,
+            box.minimum,
+            box.maximum,
+            grid.resolution
+          );
+        }
+
+        const uint32_t index =
+          m_volumePool.allocate(reusable ? *carried : baked);
 
         // No volume means nothing to sample, and UINT32_MAX would index
         // the volume array out of bounds on the GPU. Skip it entirely.
@@ -317,6 +373,20 @@ int Application::start(const StartupOptions& options) {
         m_volumeOwners[index] = entity;
 
         world.setBakedVolume(entity, index);
+
+        // Physics queries this, so a fresh bake is kept rather than dropped
+        // once the volume is uploaded. A reused one is already in place.
+        if (!reusable) {
+          world.setSampledField(entity, std::move(baked));
+        }
+
+        cpuFieldFresh = true;
+
+        // The body reads the field, so it cannot exist before one does: this
+        // is where a runtime entity gets its body, a frame after Play.
+        if (m_runtime) {
+          m_runtime->refreshBody(entity);
+        }
       }
 
       const auto* range =
@@ -338,6 +408,30 @@ int Application::start(const StartupOptions& options) {
 
       if (world.needsBake(entity)) {
         m_recordTable.appendToBakeList(recordIndex);
+
+        // Physics reads the CPU field, so it has to follow the geometry. Only
+        // where a body exists: nothing queries it while authoring, and a full
+        // rebake is far too dear to run for a reader that is not there.
+        if (
+          m_runtime && !cpuFieldFresh
+          && registry.all_of<dunya::objectmodel::RigidBody>(entity)
+        ) {
+          const dunya::field::Aabb refit =
+            dunya::objectmodel::gridBox(world.primitives(entity));
+
+          world.setSampledField(
+            entity,
+            dunya::field::bake(
+              world.primitives(entity),
+              refit.minimum,
+              refit.maximum,
+              grid.resolution
+            )
+          );
+
+          // The old shape reads the field that call just replaced.
+          m_runtime->refreshBody(entity);
+        }
       }
 
       m_recordEntities.push_back(entity);
@@ -491,6 +585,12 @@ void Application::releaseAllVolumes() {
   }
 }
 
+void Application::announce(std::string text, Transition transition) {
+  m_overlay.notice(std::move(text));
+  m_transition = transition;
+  m_stall = Stall::Announced;
+}
+
 void Application::play() {
   if (m_runtime) {
     return;
@@ -503,6 +603,10 @@ void Application::play() {
 
   m_runtime.emplace(m_authoredWorld, m_joltLibrary);
 
+  // An edit has to land in the world that is on screen, and the runtime one
+  // is from here on.
+  m_fieldEditor.retarget(m_runtime->world());
+
   std::cout << "Play" << std::endl;
 }
 
@@ -514,6 +618,8 @@ void Application::stop() {
   releaseAllVolumes();
 
   m_runtime.reset();
+
+  m_fieldEditor.retarget(m_authoredWorld);
 
   std::cout << "Stop" << std::endl;
 }
@@ -675,10 +781,13 @@ void Application::handleKeyEvent(const dunya::platform::KeyEvent& event) {
     event.key == GLFW_KEY_F5
     && event.type == dunya::platform::KeyEventType::SinglePressed
   ) {
-    if (m_runtime) {
-      stop();
-    } else {
-      play();
+    // Announced rather than done here: both directions stall the loop, and a
+    // frame has to be presented before the stall for the message to be seen.
+    if (m_stall == Stall::None) {
+      announce(
+        m_runtime ? "Leaving play mode" : "Entering play mode",
+        m_runtime ? Transition::ToAuthoring : Transition::ToRuntime
+      );
     }
 
     return;

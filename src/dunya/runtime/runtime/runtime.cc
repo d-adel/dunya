@@ -2,19 +2,10 @@
 
 namespace dunya::runtime {
 
-namespace {
-
-// Below this the grid box counts as centred on the entity origin and the
-// offset wrapper is skipped.
-constexpr float CENTRE_EPSILON = 1e-6f;
-
-}  // namespace
-
 // The JoltLibrary reference is a lifetime requirement rather than data:
 // PhysicsWorld allocates through the pointer RegisterDefaultAllocator installs.
 Runtime::Runtime(const objectmodel::World& source, physics::JoltLibrary&) {
   objectmodel::instantiateWorld(source, m_world);
-  createBodies();
 }
 
 objectmodel::World& Runtime::world() noexcept {
@@ -29,7 +20,82 @@ physics::PhysicsWorld& Runtime::physics() noexcept {
   return m_physicsWorld;
 }
 
+void Runtime::refreshBody(objectmodel::Entity entity) {
+  const entt::registry& registry = m_world.registry();
+
+  const auto* field = registry.try_get<dunya::field::SampledField>(entity);
+
+  // Not an error: bodies follow the field, and the field arrives on the first
+  // frame after Play rather than at construction.
+  if (field == nullptr) {
+    return;
+  }
+
+  const bool isStatic = registry.all_of<objectmodel::StaticBody>(entity);
+
+  // Borrowed, not owned. The component is the owner, and it is what a rebake
+  // replaces, which is why this function has to run again afterwards.
+  JPH::ShapeRefC shape(new physics::FieldShape(*field));
+
+  JPH::BodyInterface& bodies = m_physicsWorld.bodies();
+
+  if (const auto* body = registry.try_get<objectmodel::RigidBody>(entity)) {
+    // Mass properties come from the field too, so they are recomputed with it.
+    bodies.SetShape(
+      JPH::BodyID(body->id),
+      shape,
+      !isStatic,
+      isStatic ? JPH::EActivation::DontActivate : JPH::EActivation::Activate
+    );
+
+    return;
+  }
+
+  const objectmodel::Pose& pose = registry.get<objectmodel::Pose>(entity);
+
+  // Jolt's Quat takes w last, glm's constructor takes it first.
+  JPH::BodyCreationSettings settings(
+    shape,
+    JPH::RVec3(pose.position.x, pose.position.y, pose.position.z),
+    JPH::Quat(
+      pose.rotation.x,
+      pose.rotation.y,
+      pose.rotation.z,
+      pose.rotation.w
+    ),
+    isStatic ? JPH::EMotionType::Static : JPH::EMotionType::Dynamic,
+    isStatic ? physics::ObjectLayers::NON_MOVING : physics::ObjectLayers::MOVING
+  );
+
+  // Not optional: the sweeps measured a body embedding itself in the ground
+  // from one metre of travel per step upward under the discrete solver.
+  settings.mMotionQuality = JPH::EMotionQuality::LinearCast;
+
+  // The whole handle, version included: the index alone would let a recycled
+  // entity inherit a stale body's transform.
+  settings.mUserData = static_cast<JPH::uint64>(static_cast<uint32_t>(entity));
+
+  const JPH::BodyID id = bodies.CreateAndAddBody(
+    settings,
+    isStatic ? JPH::EActivation::DontActivate : JPH::EActivation::Activate
+  );
+
+  if (id.IsInvalid()) {
+    throw std::runtime_error("Runtime: a field entity got no body");
+  }
+
+  m_world.setRigidBody(entity, id.GetIndexAndSequenceNumber());
+
+  m_broadPhaseStale = true;
+}
+
 void Runtime::step() {
+  if (m_broadPhaseStale) {
+    // Once per batch rather than per body: it rebuilds the whole tree.
+    m_physicsWorld.optimizeBroadPhase();
+    m_broadPhaseStale = false;
+  }
+
   m_physicsWorld.step();
 }
 
@@ -76,88 +142,6 @@ void Runtime::syncPoses() {
   }
 
   m_world.replaceMany<objectmodel::Pose>(m_poseScratch);
-}
-
-void Runtime::createBodies() {
-  JPH::BodyInterface& bodies = m_physicsWorld.bodies();
-  const entt::registry& registry = m_world.registry();
-
-  for (const objectmodel::Entity entity : m_world.fields()) {
-    const bool isStatic = registry.all_of<objectmodel::StaticBody>(entity);
-
-    const dunya::field::Aabb box =
-      objectmodel::gridBox(m_world.primitives(entity));
-
-    const glm::vec3 half = (box.maximum - box.minimum) * 0.5f;
-    const glm::vec3 centre = (box.maximum + box.minimum) * 0.5f;
-
-    JPH::BoxShapeSettings boxSettings(JPH::Vec3(half.x, half.y, half.z));
-    boxSettings.SetEmbedded();
-
-    const JPH::ShapeSettings::ShapeResult boxShape = boxSettings.Create();
-
-    if (boxShape.HasError()) {
-      throw std::runtime_error(boxShape.GetError().c_str());
-    }
-
-    // A BoxShape is centred on the body origin, but the grid box need not be:
-    // the ground's primitive sits half a unit below it. Carry the offset.
-    JPH::ShapeRefC shape = boxShape.Get();
-
-    if (glm::length(centre) > CENTRE_EPSILON) {
-      JPH::RotatedTranslatedShapeSettings offsetSettings(
-        JPH::Vec3(centre.x, centre.y, centre.z),
-        JPH::Quat::sIdentity(),
-        shape
-      );
-      offsetSettings.SetEmbedded();
-
-      const JPH::ShapeSettings::ShapeResult offsetShape =
-        offsetSettings.Create();
-
-      if (offsetShape.HasError()) {
-        throw std::runtime_error(offsetShape.GetError().c_str());
-      }
-
-      shape = offsetShape.Get();
-    }
-
-    const objectmodel::Pose& pose = registry.get<objectmodel::Pose>(entity);
-
-    // Jolt's Quat takes w last, glm's constructor takes it first.
-    JPH::BodyCreationSettings settings(
-      shape,
-      JPH::RVec3(pose.position.x, pose.position.y, pose.position.z),
-      JPH::Quat(
-        pose.rotation.x,
-        pose.rotation.y,
-        pose.rotation.z,
-        pose.rotation.w
-      ),
-      isStatic ? JPH::EMotionType::Static : JPH::EMotionType::Dynamic,
-      isStatic ? physics::ObjectLayers::NON_MOVING
-               : physics::ObjectLayers::MOVING
-    );
-
-    // The whole handle, version included: the index alone would let a recycled
-    // entity inherit a stale body's transform.
-    settings.mUserData =
-      static_cast<JPH::uint64>(static_cast<uint32_t>(entity));
-
-    const JPH::BodyID id = bodies.CreateAndAddBody(
-      settings,
-      isStatic ? JPH::EActivation::DontActivate : JPH::EActivation::Activate
-    );
-
-    if (id.IsInvalid()) {
-      throw std::runtime_error("Runtime: a field entity got no body");
-    }
-
-    m_world.setRigidBody(entity, id.GetIndexAndSequenceNumber());
-  }
-
-  // Once, after every body is in: it rebuilds the broad phase tree.
-  m_physicsWorld.optimizeBroadPhase();
 }
 
 }  // namespace dunya::runtime

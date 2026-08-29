@@ -1,5 +1,7 @@
 #pragma once
 
+#include <dunya/field/sampled/sampled.h>
+
 #include <dunya/objectmodel/material/material.h>
 #include <dunya/objectmodel/mesh/mesh.h>
 #include <dunya/objectmodel/bakedvolume/bakedvolume.h>
@@ -14,10 +16,25 @@
 #include <entt/core/hashed_string.hpp>
 #include <entt/entity/registry.hpp>
 
+#include <cstddef>
 #include <cstdint>
 #include <span>
 #include <utility>
 #include <vector>
+
+// EnTT swaps its last element into a removed slot, which would move one
+// entity's field out from under a collision shape holding another's. Leave a
+// tombstone instead: the pool is walked by entity, never packed, so nothing
+// pays for the hole. Declared here rather than on SampledField itself, which
+// sits in a library that must not know EnTT exists.
+template<>
+struct entt::component_traits<dunya::field::SampledField, entt::entity> {
+  using element_type = dunya::field::SampledField;
+  using entity_type = entt::entity;
+
+  static constexpr bool in_place_delete = true;
+  static constexpr std::size_t page_size = ENTT_PACKED_PAGE;
+};
 
 namespace dunya::objectmodel {
 
@@ -105,6 +122,10 @@ public:
   // Not self-contained
   void setRigidBody(Entity entity, uint32_t index);
 
+  // The CPU-resident field, which physics queries for contacts. Baked from the
+  // primitives, so it is not self-contained and only the bake may write it.
+  void setSampledField(Entity entity, dunya::field::SampledField field);
+
   // Presence is the state, so giving a slot back means removing the
   // component, not writing a sentinel into it.
   void clearBakedVolume(Entity entity);
@@ -114,6 +135,10 @@ public:
   // anyone remembering to mark it.
   bool needsBake(Entity entity) const noexcept;
   void markBaked(Entity entity);
+
+  // Whether the CPU field is stale. Its own queue rather than the one above,
+  // because that is answered by a GPU bake and this one by setSampledField.
+  bool needsResample(Entity entity) const noexcept;
 
   // Mesh lifetime, the same shape as the field one above.
   Entity createMesh(

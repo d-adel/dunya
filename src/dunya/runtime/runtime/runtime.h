@@ -20,6 +20,11 @@ public:
 
   physics::PhysicsWorld& physics() noexcept;
 
+  // Brings one entity's body in line with its field: creates the body the
+  // first time a SampledField appears, and rebuilds the shape when a rebake
+  // has replaced the field the old shape reads. Does nothing without a field.
+  void refreshBody(objectmodel::Entity entity);
+
   // One fixed step of the simulation.
   void step();
 
@@ -28,7 +33,6 @@ public:
   void syncPoses();
 
 private:
-  void createBodies();
   // Declaration order is load-bearing: m_physicsWorld holds bodies that refer
   // to entities in m_world, and members are destroyed in reverse declaration
   // order, so the world must outlive the simulation that points into it.
@@ -36,6 +40,10 @@ private:
   physics::PhysicsWorld m_physicsWorld;
 
   std::vector<std::pair<objectmodel::Entity, objectmodel::Pose>> m_poseScratch;
+
+  // Bodies arrive a frame after the world does, so the broad phase is rebuilt
+  // on the next step rather than once at construction.
+  bool m_broadPhaseStale = false;
 };
 
 }  // namespace dunya::runtime

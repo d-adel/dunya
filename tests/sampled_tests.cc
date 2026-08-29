@@ -495,3 +495,187 @@ TEST_CASE(
     )
   );
 }
+
+namespace {
+
+uint32_t bricksPerAxis(const SampledField& field) {
+  const uint32_t cells = field.resolution.x - 1u;
+
+  return (cells + dunya::field::BRICK_CELLS - 1u) / dunya::field::BRICK_CELLS;
+}
+
+uint32_t brickAt(const SampledField& field, const glm::vec3& point) {
+  const glm::vec3 cell = (point - field.origin) / field.voxelSize;
+  const glm::uvec3 brick =
+    glm::uvec3(glm::floor(cell)) / glm::uvec3(dunya::field::BRICK_CELLS);
+  const uint32_t counts = bricksPerAxis(field);
+
+  return brick.x + counts * (brick.y + counts * brick.z);
+}
+
+}  // namespace
+
+TEST_CASE("every brick the surface crosses reports it", "[sampled][bound]") {
+  // The property contact generation rests on, and the one that must never have
+  // a false negative: a missed brick is a missed contact.
+  const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
+
+  const SampledField field = dunya::field::bake(
+    primitives,
+    glm::vec3(-2.0f),
+    glm::vec3(2.0f),
+    glm::uvec3(33u)
+  );
+
+  for (uint32_t i = 0; i < 400u; ++i) {
+    // A Fibonacci sphere, so the samples cover the surface without clustering.
+    const float k = (static_cast<float>(i) + 0.5f) / 400.0f;
+    const float phi = std::acos(1.0f - 2.0f * k);
+    const float theta = 6.28318531f * 0.618034f * static_cast<float>(i);
+
+    const glm::vec3 on(
+      std::sin(phi) * std::cos(theta),
+      std::sin(phi) * std::sin(theta),
+      std::cos(phi)
+    );
+
+    REQUIRE(dunya::field::brickHoldsSurface(field, brickAt(field, on)));
+  }
+
+  // And it is not trivially true everywhere, or the check above proves nothing.
+  uint32_t holding = 0;
+
+  for (uint32_t brick = 0; brick < field.brickMinimum.size(); ++brick) {
+    if (dunya::field::brickHoldsSurface(field, brick)) {
+      ++holding;
+    }
+  }
+
+  REQUIRE(holding < field.brickMinimum.size());
+}
+
+TEST_CASE("a brick clear of the surface holds none", "[sampled][bound]") {
+  const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
+
+  const SampledField field = dunya::field::bake(
+    primitives,
+    glm::vec3(-2.0f),
+    glm::vec3(2.0f),
+    glm::uvec3(33u)
+  );
+
+  // The far corner brick reaches no nearer the unit sphere than 1.5, halo
+  // included, so every value in it is positive.
+  REQUIRE_FALSE(dunya::field::brickHoldsSurface(field, 0u));
+  REQUIRE(field.brickMinimum[0] > 0.0f);
+}
+
+TEST_CASE("an edit refreshes the value range", "[sampled][bound]") {
+  const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
+
+  SampledField field = dunya::field::bake(
+    primitives,
+    glm::vec3(-2.0f),
+    glm::vec3(2.0f),
+    glm::uvec3(33u)
+  );
+
+  REQUIRE_FALSE(dunya::field::brickHoldsSurface(field, 0u));
+
+  // Put a sign change inside that corner brick and it must start holding one.
+  const dunya::field::SampleBox box{glm::uvec3(2u), glm::uvec3(2u)};
+  const std::vector<float>
+    values{-1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
+  const std::vector<uint32_t> materials(8u, 3u);
+
+  dunya::field::write(field, box, values, materials);
+
+  REQUIRE(dunya::field::brickHoldsSurface(field, 0u));
+  REQUIRE(field.brickMinimum[0] <= -1.0f);
+}
+
+TEST_CASE("a probe agrees with the field inside the grid", "[sampled][probe]") {
+  const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
+
+  const SampledField field = dunya::field::bake(
+    primitives,
+    glm::vec3(-2.0f),
+    glm::vec3(2.0f),
+    glm::uvec3(33u)
+  );
+
+  const glm::vec3 points[] = {
+    glm::vec3(0.0f),
+    glm::vec3(1.5f, 0.13f, -0.07f),
+    glm::vec3(-0.11f, 1.42f, 0.23f),
+    glm::vec3(0.83f, 0.79f, 0.71f)
+  };
+
+  for (const glm::vec3& point : points) {
+    const dunya::field::FieldProbe hit = dunya::field::probe(field, point);
+    const glm::vec3 g = dunya::field::gradient(field, point);
+
+    REQUIRE_THAT(
+      hit.distance,
+      WithinAbs(dunya::field::distance(field, point), ANALYTIC_TOLERANCE)
+    );
+    REQUIRE_THAT(glm::length(hit.normal), WithinAbs(1.0f, ANALYTIC_TOLERANCE));
+    REQUIRE(glm::dot(hit.normal, glm::normalize(g)) > 0.9999f);
+  }
+}
+
+TEST_CASE(
+  "outside the grid a probe is accurate where the distance is not",
+  "[sampled][probe]"
+) {
+  // The bug this exists for: distance() reports the way to the grid box, so
+  // the box reads as a surface and behaves as a collider that is not there.
+  const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
+
+  const SampledField field = dunya::field::bake(
+    primitives,
+    glm::vec3(-2.0f),
+    glm::vec3(2.0f),
+    glm::uvec3(33u)
+  );
+
+  const glm::vec3 far(5.0f, 0.0f, 0.0f);
+
+  // The sphere's surface is 4 away; the grid box's is 3.
+  REQUIRE_THAT(dunya::field::distance(field, far), WithinAbs(3.0f, 1e-4f));
+
+  const dunya::field::FieldProbe hit = dunya::field::probe(field, far);
+
+  REQUIRE_THAT(
+    hit.distance,
+    WithinAbs(dunya::field::sample(primitives, far).distance, 1e-3f)
+  );
+  REQUIRE(hit.distance > dunya::field::distance(field, far));
+  REQUIRE_THAT(hit.normal.x, WithinAbs(1.0f, 1e-4f));
+}
+
+TEST_CASE("a probe always names a direction", "[sampled][probe]") {
+  // Jolt's workers run with floating point exceptions unmasked, so a normalize
+  // by zero is a trap rather than a NaN. There is no point with no normal.
+  const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
+
+  const SampledField field = dunya::field::bake(
+    primitives,
+    glm::vec3(-2.0f),
+    glm::vec3(2.0f),
+    glm::uvec3(33u)
+  );
+
+  const glm::vec3 points[] = {
+    glm::vec3(0.0f),              // the centre, where the gradient vanishes
+    glm::vec3(2.0f, 2.0f, 2.0f),  // exactly on the grid's far corner
+    glm::vec3(-9.0f, 4.0f, 7.0f),
+    glm::vec3(0.0f, 40.0f, 0.0f)
+  };
+
+  for (const glm::vec3& point : points) {
+    const dunya::field::FieldProbe hit = dunya::field::probe(field, point);
+
+    REQUIRE_THAT(glm::length(hit.normal), WithinAbs(1.0f, 1e-5f));
+  }
+}

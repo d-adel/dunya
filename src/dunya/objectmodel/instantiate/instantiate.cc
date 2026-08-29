@@ -28,6 +28,16 @@ void instantiateWorld(const World& source, World& destination) {
         throw std::runtime_error("Cannot instantiate an object's primitives");
       }
     }
+
+    // After the primitives, not before: adding one marks the field stale, and
+    // the point of copying it is that it is not. Copied rather than left to be
+    // rebaked because a bake costs a second and a copy costs milliseconds.
+    if (registry.all_of<dunya::field::SampledField>(entity)) {
+      destination.setSampledField(
+        entity,
+        registry.get<dunya::field::SampledField>(entity)
+      );
+    }
   }
 
   for (const Entity entity : source.meshes()) {

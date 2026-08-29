@@ -3,6 +3,7 @@
 # Vulkan-free by construction: contacts read the CPU grid, never the GPU one.
 
 add_library(dunya_physics STATIC
+   fieldshape/fieldshape.cc
    joltlibrary/joltlibrary.cc
    layers/layers.cc
    physicsworld/physicsworld.cc

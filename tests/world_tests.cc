@@ -379,3 +379,65 @@ TEST_CASE(
   // default-constructed component must not look like it names one.
   REQUIRE(dunya::objectmodel::RigidBody{}.id == UINT32_MAX);
 }
+
+TEST_CASE("the CPU field is stored and read back", "[world]") {
+  // Physics queries this rather than the GPU volume, so it has to survive
+  // being handed over rather than being consumed by the upload.
+  World world;
+
+  const Entity entity = world.createField(Pose{}, blank());
+
+  dunya::field::SampledField field;
+  field.origin = glm::vec3(-1.0f, -2.0f, -3.0f);
+  field.voxelSize = glm::vec3(0.25f);
+  field.resolution = glm::uvec3(3u);
+  field.distances.assign(27u, 0.5f);
+  field.distances[13] = -0.75f;
+
+  world.setSampledField(entity, std::move(field));
+
+  REQUIRE(world.registry().all_of<dunya::field::SampledField>(entity));
+
+  const auto& stored = world.registry().get<dunya::field::SampledField>(entity);
+
+  REQUIRE(stored.resolution == glm::uvec3(3u));
+  REQUIRE(stored.distances.size() == 27u);
+  REQUIRE_THAT(stored.distances[13], WithinAbs(-0.75f, ANALYTIC_TOLERANCE));
+  REQUIRE_THAT(stored.origin.y, WithinAbs(-2.0f, ANALYTIC_TOLERANCE));
+
+  // Baked from the primitives, so it must never be writable as a plain value.
+  static_assert(
+    !dunya::objectmodel::selfContained<dunya::field::SampledField>,
+    "a sampled field is derived, so only the bake may write it"
+  );
+}
+
+TEST_CASE("a stored field keeps its address when another goes", "[world]") {
+  // A collision shape holds a pointer to this. EnTT's default storage swaps
+  // its last element into a removed slot, which would hand that shape a
+  // different entity's geometry; the in-place-delete trait forbids it.
+  World world;
+
+  const Entity first = world.createField(Pose{}, blank());
+  const Entity second = world.createField(Pose{}, blank());
+
+  dunya::field::SampledField a;
+  a.resolution = glm::uvec3(2u);
+  a.distances.assign(8u, 1.0f);
+
+  dunya::field::SampledField b;
+  b.resolution = glm::uvec3(2u);
+  b.distances.assign(8u, -2.0f);
+
+  world.setSampledField(first, std::move(a));
+  world.setSampledField(second, std::move(b));
+
+  const dunya::field::SampledField* held =
+    &world.registry().get<dunya::field::SampledField>(second);
+
+  REQUIRE(world.destroyField(first));
+
+  REQUIRE(held == &world.registry().get<dunya::field::SampledField>(second));
+  REQUIRE(held->distances.size() == 8u);
+  REQUIRE_THAT(held->distances[0], WithinAbs(-2.0f, ANALYTIC_TOLERANCE));
+}

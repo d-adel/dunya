@@ -31,6 +31,10 @@ public:
   // it shows and the overlay depends on no subsystem.
   void panel(std::string name, std::function<void()> draw);
 
+  // A message drawn centred over everything, for work that blocks the loop
+  // long enough to look like a hang. Empty shows nothing.
+  void notice(std::string text);
+
   // Opens a frame, fills it from the registered panels, and closes it. Always
   // paired, whatever the swapchain does afterwards.
   void begin();
@@ -46,6 +50,10 @@ public:
   bool wantsKeyboard() const;
 
 private:
+  // Separate from build so the panel loop keeps one job and the notice is
+  // drawn last, over everything.
+  void drawNotice();
+
   struct Panel {
     std::string name;
     std::function<void()> draw;
@@ -59,5 +67,7 @@ private:
   // ImGui manages its own descriptors and wants a pool handle rather than this
   // project's DescriptorGroup. Forcing the abstraction on it would bend
   // DescriptorGroup toward a case it was never for.
+  std::string m_notice;
+
   VkDescriptorPool m_pool = VK_NULL_HANDLE;
 };

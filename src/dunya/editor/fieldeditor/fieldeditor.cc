@@ -2,18 +2,18 @@
 
 namespace dunya::editor {
 
-FieldEditor::FieldEditor(dunya::objectmodel::World& world) : m_world(world) {}
+FieldEditor::FieldEditor(dunya::objectmodel::World& world) : m_world(&world) {}
 
 void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
   dunya::objectmodel::Entity hitEntity = dunya::objectmodel::INVALID_ENTITY;
 
   dunya::field::RayHit minHit;
   dunya::field::Ray localRay;
-  const entt::registry& registry = m_world.registry();
+  const entt::registry& registry = m_world->registry();
 
-  for (dunya::objectmodel::Entity entity : m_world.fields()) {
+  for (dunya::objectmodel::Entity entity : m_world->fields()) {
     std::span<const dunya::field::Primitive> primitives =
-      m_world.primitives(entity);
+      m_world->primitives(entity);
 
     glm::mat4 inverseModel = glm::inverse(
       dunya::objectmodel::model(registry.get<dunya::objectmodel::Pose>(entity))
@@ -77,15 +77,15 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
 // Low-discrepancy rather than random: the carves spread through the volume, and
 // land in the same places every run so both representations see one scene.
 void FieldEditor::stress(uint32_t count) {
-  if (m_world.fields().empty()) {
+  if (m_world->fields().empty()) {
     std::cout << "No field to carve into\n";
     return;
   }
 
-  const dunya::objectmodel::Entity target = m_world.fields()[0];
+  const dunya::objectmodel::Entity target = m_world->fields()[0];
 
   std::span<const dunya::field::Primitive> primitives =
-    m_world.primitives(target);
+    m_world->primitives(target);
 
   const std::optional<dunya::field::Aabb> extent =
     dunya::field::boundedExtent(primitives);
@@ -122,7 +122,7 @@ void FieldEditor::stress(uint32_t count) {
     }
   }
 
-  primitives = m_world.primitives(target);
+  primitives = m_world->primitives(target);
   std::cout << "stress  primitives " << before << " -> " << primitives.size()
             << '\n';
 }
@@ -136,8 +136,8 @@ bool FieldEditor::addPrimitive(
   uint32_t operation
 ) {
   if (
-    !m_world.registry().valid(entity)
-    || !m_world.registry().all_of<dunya::objectmodel::SdfGrid>(entity)
+    !m_world->registry().valid(entity)
+    || !m_world->registry().all_of<dunya::objectmodel::SdfGrid>(entity)
   ) {
     return false;
   }
@@ -147,19 +147,24 @@ bool FieldEditor::addPrimitive(
 
   AddPrimitiveCommand command(
     entity,
-    m_world.primitiveCount(entity),
+    m_world->primitiveCount(entity),
     primitive
   );
 
-  return m_commandHistory.execute(command, m_world);
+  return m_commandHistory.execute(command, *m_world);
 }
 
 void FieldEditor::undo() {
-  m_commandHistory.undo(m_world);
+  m_commandHistory.undo(*m_world);
 }
 
 void FieldEditor::redo() {
-  m_commandHistory.redo(m_world);
+  m_commandHistory.redo(*m_world);
+}
+
+void FieldEditor::retarget(dunya::objectmodel::World& world) {
+  m_world = &world;
+  m_commandHistory.clear();
 }
 
 }  // namespace dunya::editor

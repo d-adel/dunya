@@ -4,6 +4,10 @@ namespace dunya::field {
 
 namespace {
 
+// Below this a gradient names no direction, so a caller gets a substitute
+// rather than a normalize by zero - which traps, on Jolt's worker threads.
+constexpr float GRADIENT_FLOOR = 1e-6f;
+
 uint32_t latticeIndex(const SampledField& field, const glm::uvec3& at) {
   return at.x + field.resolution.x * (at.y + field.resolution.y * at.z);
 }
@@ -28,11 +32,6 @@ struct Cell {
 
 glm::uvec3 cellCounts(const SampledField& field) {
   return field.resolution - glm::uvec3(1u);
-}
-
-glm::uvec3 brickCounts(const SampledField& field) {
-  return (cellCounts(field) + glm::uvec3(BRICK_CELLS - 1u))
-         / glm::uvec3(BRICK_CELLS);
 }
 
 uint32_t brickIndex(const glm::uvec3& counts, const glm::uvec3& at) {
@@ -110,6 +109,27 @@ void rebuildBricks(
           }
         }
 
+        // The cells in [start, end) touch the lattice points in [start, end],
+        // so the value walk is inclusive where the cell walk above is not.
+        float lowest = std::numeric_limits<float>::max();
+        float highest = std::numeric_limits<float>::lowest();
+
+        for (uint32_t z = start.z; z <= end.z; ++z) {
+          for (uint32_t y = start.y; y <= end.y; ++y) {
+            for (uint32_t x = start.x; x <= end.x; ++x) {
+              const float value =
+                field.distances[latticeIndex(field, glm::uvec3(x, y, z))];
+
+              lowest = std::min(lowest, value);
+              highest = std::max(highest, value);
+            }
+          }
+        }
+
+        const uint32_t brick = brickIndex(bricks, glm::uvec3(bx, by, bz));
+
+        field.brickMinimum[brick] = lowest;
+        field.brickMaximum[brick] = highest;
         field.brickLipschitz[brickIndex(bricks, glm::uvec3(bx, by, bz))] =
           worst;
       }
@@ -206,6 +226,14 @@ SampledField bake(
     static_cast<size_t>(bricks.x) * bricks.y * bricks.z
   );
 
+  field.brickMinimum.resize(
+    static_cast<size_t>(bricks.x) * bricks.y * bricks.z
+  );
+
+  field.brickMaximum.resize(
+    static_cast<size_t>(bricks.x) * bricks.y * bricks.z
+  );
+
   rebuildBricks(field, glm::uvec3(0u), cellCounts(field) - glm::uvec3(1u));
 
   return field;
@@ -291,6 +319,40 @@ glm::vec3 gradient(const SampledField& field, const glm::vec3& point) {
   return derivative / field.voxelSize;
 }
 
+FieldProbe probe(const SampledField& field, const glm::vec3& point) {
+  const glm::vec3 clamped =
+    glm::clamp(point, field.origin, maximumCorner(field));
+
+  const glm::vec3 gap = point - clamped;
+  const float outside = glm::length(gap);
+
+  const float inner = distance(field, clamped);
+  const glm::vec3 derivative = gradient(field, clamped);
+  const float steepness = glm::length(derivative);
+
+  const bool usable = steepness > GRADIENT_FLOOR;
+
+  if (outside <= 0.0f) {
+    return {
+      inner,
+      usable ? derivative / steepness : glm::vec3(0.0f, 1.0f, 0.0f)
+    };
+  }
+
+  // Past the grid the field carries on: the gap adds to the distance, and the
+  // direction turns from the surface's own normal towards the way out.
+  const glm::vec3 blended =
+    (usable ? derivative / steepness * std::fabs(inner) : glm::vec3(0.0f))
+    + gap;
+
+  const float reach = glm::length(blended);
+
+  return {
+    inner + outside,
+    reach > GRADIENT_FLOOR ? blended / reach : gap / outside
+  };
+}
+
 float stepBound(
   const SampledField& field,
   const glm::vec3& point,
@@ -341,6 +403,15 @@ float stepBound(
   }
 
   return std::min(std::abs(distance(field, point)) / bound, exit);
+}
+
+glm::uvec3 brickCounts(const SampledField& field) {
+  return (cellCounts(field) + glm::uvec3(BRICK_CELLS - 1u))
+         / glm::uvec3(BRICK_CELLS);
+}
+
+bool brickHoldsSurface(const SampledField& field, uint32_t brick) {
+  return field.brickMinimum[brick] <= 0.0f && field.brickMaximum[brick] >= 0.0f;
 }
 
 float bakeError(const SampledField& field, float sourceLipschitz) {

@@ -53,6 +53,24 @@ private:
   // Play instantiates a runtime from the authored world and Stop destroys it.
   // Physics lives inside Runtime, so it cannot touch authored state at all.
   void play();
+
+  // A stall the loop is about to take, announced one frame early. The frame
+  // that presents the message bakes nothing, and the frame after does the
+  // work — so what stays on screen while the loop blocks is the message.
+  enum class Stall : uint8_t {
+    None,
+    Announced,
+    Working
+  };
+
+  // What the stall is for. None means the work is the frame's own baking.
+  enum class Transition : uint8_t {
+    None,
+    ToRuntime,
+    ToAuthoring
+  };
+
+  void announce(std::string text, Transition transition);
   void stop();
 
   // Whichever world the frame draws and the volume pool serves.
@@ -104,6 +122,9 @@ private:
   // Unity scene-view model: the cursor is visible and clickable by default, and
   // only becomes a look control while the right button is held.
   bool m_looking = false;
+
+  Stall m_stall = Stall::None;
+  Transition m_transition = Transition::None;
   dunya::renderer::Frame m_frameContext{};
   bool m_reloadRequested;
 

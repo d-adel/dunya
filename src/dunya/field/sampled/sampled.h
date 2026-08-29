@@ -35,6 +35,11 @@ struct SampledField {
   // Derived from the stored values, so it survives edits with no source field.
   std::vector<float> brickLipschitz;
   float globalLipschitz = 0.0f;
+
+  // The value range per brick, over the same haloed cells. The bound above
+  // describes the gradient, so it cannot say whether a brick holds the surface.
+  std::vector<float> brickMinimum;
+  std::vector<float> brickMaximum;
 };
 
 // A block of lattice points, counted in samples rather than cells.
@@ -69,6 +74,15 @@ uint32_t material(const SampledField& field, const glm::vec3& point);
 // the brick bounds cover, so a step and a normal cannot disagree.
 glm::vec3 gradient(const SampledField& field, const glm::vec3& point);
 
+// Distance and a unit normal from one walk, meaningful outside the grid as
+// well as inside it. Deliberately not distance(): that one under-reports
+// outside so a march cannot overshoot, and a contact needs the opposite.
+struct FieldProbe {
+  float distance = 0.0f;
+  glm::vec3 normal{0.0f, 1.0f, 0.0f};
+};
+
+FieldProbe probe(const SampledField& field, const glm::vec3& point);
 // How far a ray at point may travel along a normalised direction without
 // crossing the zero surface. Inside the grid the brick's bound gives the step
 // and the brick's exit caps it, since the next brick may be steeper.
@@ -77,6 +91,13 @@ float stepBound(
   const glm::vec3& point,
   const glm::vec3& direction
 );
+
+// How many bricks the grid holds on each axis. A contact query walks these,
+// so the count cannot stay private to the bake.
+glm::uvec3 brickCounts(const SampledField& field);
+// Whether a brick's value range straddles zero, which is the only cheap way to
+// ask if it holds any surface. Contact generation starts from this.
+bool brickHoldsSurface(const SampledField& field, uint32_t brick);
 
 // How far the baked values may sit from the field they came from, for a source
 // with the given Lipschitz constant. Fidelity, not traversal safety.

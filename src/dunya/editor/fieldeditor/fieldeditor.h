@@ -35,6 +35,10 @@ public:
   void undo();
   void redo();
 
+  // Points the editor at another world. The history goes with it: an undo
+  // cannot cross into a world that never saw the command.
+  void retarget(dunya::objectmodel::World& world);
+
 private:
   [[nodiscard]]
   bool addPrimitive(
@@ -46,7 +50,7 @@ private:
     uint32_t operation
   );
 
-  dunya::objectmodel::World& m_world;
+  dunya::objectmodel::World* m_world;
   CommandHistory m_commandHistory;
 };
 

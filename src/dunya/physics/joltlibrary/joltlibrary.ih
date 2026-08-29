@@ -3,5 +3,7 @@
 #include <Jolt/RegisterTypes.h>
 #include <Jolt/Core/Factory.h>
 
+#include <dunya/physics/fieldshape/fieldshape.h>
+
 #include <cstdarg>
 #include <cstdio>

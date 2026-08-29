@@ -127,6 +127,46 @@ void Overlay::build() {
 
     ImGui::End();
   }
+
+  drawNotice();
+}
+
+void Overlay::notice(std::string text) {
+  m_notice = std::move(text);
+}
+
+void Overlay::drawNotice() {
+  if (m_notice.empty()) {
+    return;
+  }
+
+  const ImVec2 size(340.0f, 58.0f);
+  const ImVec2 centre = ImGui::GetMainViewport()->GetCenter();
+
+  // Position and size are both explicit because an auto-fit window draws
+  // nothing on the frame ImGui first meets it, and that frame is the entire
+  // point of this one.
+  ImGui::SetNextWindowPos(
+    ImVec2(centre.x - size.x * 0.5f, centre.y - size.y * 0.5f)
+  );
+  ImGui::SetNextWindowSize(size);
+
+  const ImGuiWindowFlags flags =
+    ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove
+    | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNav
+    | ImGuiWindowFlags_NoInputs;
+
+  if (ImGui::Begin("##notice", nullptr, flags)) {
+    const float width = ImGui::CalcTextSize(m_notice.c_str()).x;
+
+    ImGui::SetCursorPos(ImVec2(
+      (size.x - width) * 0.5f,
+      (size.y - ImGui::GetTextLineHeight()) * 0.5f
+    ));
+    ImGui::TextUnformatted(m_notice.c_str());
+  }
+
+  ImGui::End();
 }
 
 void Overlay::end() {

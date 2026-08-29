@@ -8,6 +8,10 @@ namespace {
 // consumer opens its own pool rather than sharing this one.
 constexpr entt::id_type BAKE_QUEUE = entt::hashed_string{"bake"};
 
+// Its own queue, and the reason is that it answers a different question: the
+// one above says the GPU volume is stale, this one says the CPU field is.
+constexpr entt::id_type RESAMPLE_QUEUE = entt::hashed_string{"resample"};
+
 }  // namespace
 
 World::World() {
@@ -17,6 +21,10 @@ World::World() {
   // to true, so a field entity has always needed its first bake on creation.
   // on_update fires from registry.patch, which is why the store patches.
   m_registry.storage<entt::reactive>(BAKE_QUEUE)
+    .on_construct<SdfGrid>()
+    .on_update<SdfGrid>();
+
+  m_registry.storage<entt::reactive>(RESAMPLE_QUEUE)
     .on_construct<SdfGrid>()
     .on_update<SdfGrid>();
 }
@@ -130,12 +138,29 @@ void World::setRigidBody(Entity entity, uint32_t index) {
   m_registry.emplace_or_replace<RigidBody>(entity, index);
 }
 
+void World::setSampledField(Entity entity, dunya::field::SampledField field) {
+  m_registry.emplace_or_replace<dunya::field::SampledField>(
+    entity,
+    std::move(field)
+  );
+
+  // Setting the field is what makes it current, so this is where the queue
+  // that tracks staleness is answered.
+  m_registry.storage<entt::reactive>(RESAMPLE_QUEUE).remove(entity);
+}
+
 void World::clearBakedVolume(Entity entity) {
   m_registry.remove<BakedVolume>(entity);
 }
 
 bool World::needsBake(Entity entity) const noexcept {
   const auto* queue = m_registry.storage<entt::reactive>(BAKE_QUEUE);
+
+  return queue != nullptr && queue->contains(entity);
+}
+
+bool World::needsResample(Entity entity) const noexcept {
+  const auto* queue = m_registry.storage<entt::reactive>(RESAMPLE_QUEUE);
 
   return queue != nullptr && queue->contains(entity);
 }
