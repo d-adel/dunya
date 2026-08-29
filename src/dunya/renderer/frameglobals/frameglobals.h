@@ -46,6 +46,22 @@ static_assert(
   "SceneCounts must match its std140 block in field-shader.frag"
 );
 
+// The scene's light, as both shaders read it. It was a literal in each of them
+// and the CPU now needs the same value, which is three copies of one number and
+// exactly the drift a uniform exists to stop.
+//
+// xyz is the unit direction toward the light and w is the ambient term: std140
+// pads a vec3 to sixteen bytes, so the second value is free where a second
+// vector would not be.
+struct LightUniform {
+  glm::vec4 direction;
+};
+
+static_assert(
+  sizeof(LightUniform) == 16,
+  "LightUniform must match its std140 block in the shaders"
+);
+
 class FrameGlobals {
 public:
   explicit FrameGlobals(const dunya::gpu::Device& device);
@@ -61,7 +77,8 @@ public:
     uint32_t frame,
     const CameraUniform& camera,
     const MarchParams& march,
-    const SceneCounts& counts
+    const SceneCounts& counts,
+    const LightUniform& light
   );
 
   const VkDescriptorSet& descriptorSet(uint32_t frame) const noexcept;

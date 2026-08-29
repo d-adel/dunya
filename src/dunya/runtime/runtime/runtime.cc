@@ -20,20 +20,55 @@ physics::PhysicsWorld& Runtime::physics() noexcept {
   return m_physicsWorld;
 }
 
-void Runtime::refreshBody(objectmodel::Entity entity) {
-  const entt::registry& registry = m_world.registry();
+JPH::ShapeRefC Runtime::shapeFor(const objectmodel::SharedField& held) {
+  const dunya::field::SampledField* key = held.field.get();
 
-  const auto* field = registry.try_get<dunya::field::SampledField>(entity);
+  const auto found = m_shapes.find(key);
+
+  if (found != m_shapes.end()) {
+    if (!found->second.lattice.expired()) {
+      return found->second.shape;
+    }
+
+    // The lattice this described is gone and something else is living at its
+    // address. Whatever the entry says about it is about the wrong geometry.
+    m_shapes.erase(found);
+  }
+
+  JPH::ShapeRefC shape(new physics::FieldShape(*held.field));
+
+  rememberShape(held, shape);
+
+  return shape;
+}
+
+void Runtime::rememberShape(
+  const objectmodel::SharedField& held,
+  const JPH::ShapeRefC& shape
+) {
+  // Entries whose lattice has gone hold a shape nothing can use, and a shape
+  // is the larger half of what describing a lattice costs. Swept here rather
+  // than on a timer: this is the only place the map grows.
+  std::erase_if(m_shapes, [](const auto& entry) {
+    return entry.second.lattice.expired();
+  });
+
+  m_shapes.insert_or_assign(held.field.get(), SharedShape{held.field, shape});
+}
+
+void Runtime::refreshBody(objectmodel::Entity entity) {
+  const auto* held =
+    m_world.registry().try_get<objectmodel::SharedField>(entity);
 
   // Not an error: bodies follow the field, and the field arrives on the first
   // frame after Play rather than at construction.
-  if (field == nullptr) {
+  if (held == nullptr) {
     return;
   }
 
   // Borrowed, not owned. The component is the owner, and it is what a rebake
   // replaces, which is why this function has to run again afterwards.
-  setBodyShape(entity, JPH::ShapeRefC(new physics::FieldShape(*field)));
+  setBodyShape(entity, shapeFor(*held));
 }
 
 void Runtime::reshapeAfterDeform(
@@ -43,12 +78,14 @@ void Runtime::reshapeAfterDeform(
 ) {
   const entt::registry& registry = m_world.registry();
 
-  const auto* field = registry.try_get<dunya::field::SampledField>(entity);
+  const auto* held = registry.try_get<objectmodel::SharedField>(entity);
   const auto* body = registry.try_get<objectmodel::RigidBody>(entity);
 
-  if (field == nullptr || body == nullptr) {
+  if (held == nullptr || body == nullptr) {
     return;
   }
+
+  const dunya::field::SampledField* field = held->field.get();
 
   const JPH::Shape* current =
     m_physicsWorld.bodies().GetShape(JPH::BodyID(body->id));
@@ -56,6 +93,10 @@ void Runtime::reshapeAfterDeform(
   // Only a shape over this same grid can be patched. Anything else - a ball
   // on the shared projectile shape, or a body that has not been built yet -
   // falls back to the full walk rather than reusing somebody else's bricks.
+  //
+  // A copy-on-write split lands here too: the dent gave this object its own
+  // lattice at a new address, so the shape it shared with every other crate
+  // describes the wrong geometry now and it needs one of its own.
   const auto* shape = dynamic_cast<const physics::FieldShape*>(current);
 
   if (shape == nullptr || &shape->field() != field) {
@@ -63,12 +104,20 @@ void Runtime::reshapeAfterDeform(
     return;
   }
 
-  setBodyShape(
-    entity,
-    JPH::ShapeRefC(
-      new physics::FieldShape(*field, *shape, brickBegin, brickEnd)
-    )
+  const JPH::ShapeRefC reshaped(
+    new physics::FieldShape(*field, *shape, brickBegin, brickEnd)
   );
+
+  // The lattice is this object's own - a shared one is copied before it is
+  // written - so the cache entry for it describes only this object, and it
+  // has to name the shape that matches the dent rather than the one before.
+  rememberShape(*held, reshaped);
+
+  setBodyShape(entity, reshaped);
+}
+
+size_t Runtime::shapeCount() const noexcept {
+  return m_shapes.size();
 }
 
 void Runtime::wake(const glm::vec3& minimum, const glm::vec3& maximum) {

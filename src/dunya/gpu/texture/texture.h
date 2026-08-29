@@ -37,6 +37,15 @@ public:
     VkImageUsageFlags extraUsage = 0
   );
 
+  Texture(
+    const Device& device,
+    uint32_t width,
+    uint32_t height,
+    uint32_t depth,
+    VkFormat format,
+    VkImageUsageFlags extraUsage
+  );
+
   const Image& image() const noexcept;
 
   // Non-const because a layout transition and a sub-region copy are writes to

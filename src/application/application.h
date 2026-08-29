@@ -29,6 +29,7 @@
 
 #include <array>
 #include <deque>
+#include <unordered_map>
 #include <optional>
 #include <utility>
 #include <vector>
@@ -112,6 +113,11 @@ private:
   // budget once is exactly what a mean would bury.
   void reportDemo() const;
 
+  // Compares every simulated body's pose against the previous frame's, so a
+  // frame can say whether its awake bodies moved. Awake and moving are not the
+  // same claim, and the frame cost is the same either way.
+  void measureMotion();
+
   // Carves one cutter into one entity's lattice, re-shapes its body, wakes
   // whatever was resting on the region, and queues the change for the GPU.
   // The four have to happen together: a lattice the collision shape does not
@@ -126,8 +132,16 @@ private:
   // copy per dent would be the milestone rather than a detail of it.
   void uploadDentedVolumes();
 
+  // An object already holding a lattice on this volume slot, or INVALID_ENTITY
+  // if none does. What lets an object take a shared volume without baking a
+  // second identical copy of what filled it - and then share that lattice
+  // rather than copy it.
+  [[nodiscard]] dunya::objectmodel::Entity fieldOnSlot(uint32_t slot);
+
   // Whichever world the frame draws and the volume pool serves.
   dunya::objectmodel::World& activeWorld() noexcept;
+
+  const dunya::objectmodel::World& activeWorld() const noexcept;
 
   // Every pool slot goes back on a world switch: the sampled field is
   // rebuilt for the new world rather than carried across.
@@ -217,10 +231,11 @@ private:
   // Not a position in fields(): a skip consumes no slot, so the two diverge.
   std::vector<dunya::objectmodel::Entity> m_recordEntities;
 
-  // Which entity owns each volume pool slot, so a slot can be reclaimed when
-  // its entity goes. Nothing else observes a destroyed field object.
-  std::array<dunya::objectmodel::Entity, dunya::core::MAX_FIELD_VOLUMES>
-    m_volumeOwners;
+  // One entry per reference an entity holds on a pool slot, so a slot can be
+  // reclaimed when its entity goes. Nothing else observes a destroyed field
+  // object. A pair rather than a slot-indexed array because a slot is shared:
+  // a thousand identical crates hold one volume between them.
+  std::vector<std::pair<dunya::objectmodel::Entity, uint32_t>> m_volumeHolders;
 
   // Which entity has an unsent region and how much of its lattice moved,
   // folded into one box per entity as the dents arrive.
@@ -314,6 +329,20 @@ private:
     float carveMs = 0.0f;
     float uploadMs = 0.0f;
     float physicsMs = 0.0f;
+
+    // How much of the world was awake, and how many fixed steps the frame
+    // bought. A physics cost is one or the other and the mean cannot say
+    // which without them.
+    uint32_t activeBodies = 0;
+    uint32_t substeps = 0;
+
+    // Whether the awake bodies are going anywhere. Jolt's "awake" is a
+    // velocity threshold held over half a second, so a body whose contact set
+    // flickers stays awake while its geometry sits still. The two cost the
+    // same and mean opposite things, and only the pose can tell them apart.
+    uint32_t movedBodies = 0;
+    float maxMoveMm = 0.0f;
+    float maxTurnDeg = 0.0f;
   };
 
   std::vector<DemoFrame> m_demoFrameMs;
@@ -324,6 +353,20 @@ private:
   uint32_t m_cratersReported = 0;
   float m_frameUploadMs = 0.0f;
   float m_framePhysicsMs = 0.0f;
+
+  // What the last frame simulated: how many bodies were awake and how many
+  // fixed steps it bought.
+  uint32_t m_frameActiveBodies = 0;
+  uint32_t m_frameSubsteps = 0;
+
+  // How many of them actually changed pose, and by how far. Compared against
+  // the previous frame's poses, which is why that map outlives a frame while
+  // the two numbers above do not.
+  uint32_t m_frameMovedBodies = 0;
+  float m_frameMaxMoveMm = 0.0f;
+  float m_frameMaxTurnDeg = 0.0f;
+
+  std::unordered_map<uint32_t, dunya::objectmodel::Pose> m_posePrevious;
 
   // How many dents have been applied, which is the R3 sequence's index and so
   // the thing that makes a run repeatable.

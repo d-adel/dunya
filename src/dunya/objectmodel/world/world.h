@@ -6,11 +6,13 @@
 #include <dunya/objectmodel/mesh/mesh.h>
 #include <dunya/objectmodel/bakedvolume/bakedvolume.h>
 #include <dunya/objectmodel/deformable/deformable.h>
+#include <dunya/objectmodel/deformed/deformed.h>
 #include <dunya/objectmodel/entity/entity.h>
 #include <dunya/objectmodel/pose/pose.h>
 #include <dunya/objectmodel/sdfgrid/sdfgrid.h>
 #include <dunya/objectmodel/sdfprimitivestore/sdfprimitivestore.h>
 #include <dunya/objectmodel/selfcontained/selfcontained.h>
+#include <dunya/objectmodel/sharedfield/sharedfield.h>
 #include <dunya/objectmodel/rigidbody/rigidbody.h>
 #include <dunya/objectmodel/staticbody/staticbody.h>
 
@@ -23,20 +25,6 @@
 #include <span>
 #include <utility>
 #include <vector>
-
-// EnTT swaps its last element into a removed slot, which would move one
-// entity's field out from under a collision shape holding another's. Leave a
-// tombstone instead: the pool is walked by entity, never packed, so nothing
-// pays for the hole. Declared here rather than on SampledField itself, which
-// sits in a library that must not know EnTT exists.
-template<>
-struct entt::component_traits<dunya::field::SampledField, entt::entity> {
-  using element_type = dunya::field::SampledField;
-  using entity_type = entt::entity;
-
-  static constexpr bool in_place_delete = true;
-  static constexpr std::size_t page_size = ENTT_PACKED_PAGE;
-};
 
 namespace dunya::objectmodel {
 
@@ -104,12 +92,17 @@ public:
   }
 
   // The one way a lattice changes in place after its bake. Deliberately not
-  // patch<T>: SampledField is derived from the primitives, which is why it
+  // patch<T>: a lattice is derived from the primitives, which is why it
   // refuses SelfContained, and a dent is the operation that ends that
   // derivation. Only a Deformable may do it, so the tag is the permission
   // rather than a comment - and this stays a reference because a dent touches
   // a few dozen voxels of a 16 MiB grid, so copying it out is the cost the
   // whole milestone exists to avoid.
+  //
+  // Copy on write, and this is the write: a lattice several objects hold is
+  // copied first, so a dent in one crate does not appear in every crate cut
+  // from the same primitives. use_count answers it exactly, because a
+  // collision shape borrows the address rather than holding a reference.
   template<typename Fn>
   void patchSampledField(Entity entity, Fn&& fn) {
     if (!m_registry.all_of<Deformable>(entity)) {
@@ -118,7 +111,18 @@ public:
       );
     }
 
-    fn(m_registry.get<dunya::field::SampledField>(entity));
+    SharedField& held = m_registry.get<SharedField>(entity);
+
+    if (held.field.use_count() > 1) {
+      held.field = std::make_shared<dunya::field::SampledField>(*held.field);
+    }
+
+    fn(*held.field);
+
+    // Recorded here rather than by the caller, for the reason the bake queue
+    // gives: a mutation path that has to be remembered is one that will be
+    // forgotten. This is the only way a lattice diverges from its primitives.
+    m_registry.emplace_or_replace<Deformed>(entity);
   }
 
   // Write it whether or not it is there. EnTT's verb and EnTT's
@@ -153,6 +157,29 @@ public:
   // The CPU-resident field, which physics queries for contacts. Baked from the
   // primitives, so it is not self-contained and only the bake may write it.
   void setSampledField(Entity entity, dunya::field::SampledField field);
+
+  // Hands one object's lattice to another instead of a copy of it. What makes
+  // a thousand identical crates cost one lattice; the first dent on any of
+  // them takes its own through patchSampledField.
+  void shareSampledField(Entity donor, Entity taker);
+
+  // The same, across worlds: instantiation hands the runtime the authored
+  // lattice rather than 720 MB of copies, and the runtime's first dent takes
+  // its own. The handle is the parameter because the donor is in another
+  // registry and there is no entity here to name it by.
+  void adoptSampledField(Entity entity, const SharedField& held);
+
+  // Null when the object has none, which is the state before the first bake.
+  [[nodiscard]]
+  const dunya::field::SampledField* sampledField(Entity entity) const;
+
+  [[nodiscard]]
+  bool hasSampledField(Entity entity) const noexcept;
+
+  // How many objects hold this one's lattice, counting itself. One means a
+  // write needs no copy.
+  [[nodiscard]]
+  long sampledFieldUsers(Entity entity) const noexcept;
 
   // Presence is the state, so giving a slot back means removing the
   // component, not writing a sentinel into it.

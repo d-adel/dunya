@@ -6,6 +6,7 @@
 #include <dunya/gpu/pipeline/pipeline.h>
 #include <dunya/field/field.h>
 #include <dunya/renderer/meshrecord/meshrecord.h>
+#include <dunya/objectmodel/directionallight/directionallight.h>
 #include <dunya/objectmodel/sdfgrid/sdfgrid.h>
 
 #include <glm/glm.hpp>
@@ -26,6 +27,10 @@ struct Frame {
   dunya::gpu::PipelineType mode = dunya::gpu::PipelineType::Both;
 
   uint32_t fieldRepresentation = dunya::core::FIELD_SAMPLED;
+
+  // Scene state the renderer only reads. Its default is what both shaders
+  // used to hold as a literal each.
+  dunya::objectmodel::DirectionalLight light{};
 
   // Authoritative here rather than in the shader, so a slider and the CPU's own
   // marching read the same numbers. Defaults come from CMake.

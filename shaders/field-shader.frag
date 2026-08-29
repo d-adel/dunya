@@ -6,7 +6,6 @@ const int MAX_FIELD_RECORDS = DUNYA_MAX_FIELD_RECORDS;
 const int MAX_FIELD_VOLUMES = DUNYA_MAX_FIELD_VOLUMES;
 const uint BRICK_CELLS = DUNYA_BRICK_CELLS;
 const float bias = 0.01;
-const float ambient = 0.06;
 
 layout(std140, set = 0, binding = 1) uniform MarchParams {
   float epsilon;
@@ -18,6 +17,12 @@ layout(std140, set = 0, binding = 1) uniform MarchParams {
   float shadowSharpness;
   uint maxIterations;
 } params;
+
+// The scene light: xyz toward it, w the ambient term. One block rather than a
+// literal in each shader, and the CPU bins records against the same bytes.
+layout(std140, set = 0, binding = 3) uniform SceneLight {
+  vec4 direction;
+} light;
 
 // How many record slots this frame actually filled. The table is a fixed 64;
 // the count is what says where the real ones stop.
@@ -87,6 +92,38 @@ layout(set = 2, binding = 2)
 layout(std430, set = 2, binding = 6) readonly buffer BrickBounds {
   float values[];
 } brickBounds;
+
+// Each record's grid box in world space, one entry per record. Its own buffer
+// rather than a field of the record: the shadow loop reads this for every
+// record and the record itself only for the few a ray reaches, and 600 of
+// these is 19 KB against 118 KB of records.
+struct RecordBoundsShared {
+  vec4 minimum;
+  vec4 maximum;
+};
+
+layout(std430, set = 2, binding = 7) readonly buffer RecordBoundsTable {
+  RecordBoundsShared bounds[];
+} recordBoundsTable;
+
+// A shadow ray travels along one fixed direction, so where it sits across the
+// light never changes along its length. Records are binned by their own
+// footprint on that plane, and a shading point only has to ask the cell it
+// falls in. cell.zw of zero means the grid was not built and every record has
+// to be walked, which is what this replaced.
+layout(std430, set = 2, binding = 8) readonly buffer ShadowCells {
+  uvec2 cells[];
+} shadowCells;
+
+layout(std430, set = 2, binding = 9) readonly buffer ShadowIndices {
+  uint values[];
+} shadowIndices;
+
+layout(std140, set = 2, binding = 10) uniform ShadowGrid {
+  vec4 axisU;
+  vec4 axisV;
+  vec4 cell;
+} shadowGrid;
 
 layout(location = 0) in vec4 clipPosition;
 layout(location = 1) flat in uint recordIndex;
@@ -443,12 +480,74 @@ bool shadowRayReaches(FieldRecordShared record,
   return exitAt >= max(entry, 0.0) && entry <= maxDistance;
 }
 
+// The same slab test in world space, against a box the CPU already fitted
+// around the record. Cheap enough to run for every record on every shaded
+// pixel: no matrix, no per-record reciprocal, and 32 bytes read instead of
+// 192. Everything below it runs only for the two or three a ray really meets.
+bool worldBoundsReach(uint recordIndex,
+                      vec3 worldOrigin,
+                      vec3 inverseDirection,
+                      float maxDistance) {
+  RecordBoundsShared box = recordBoundsTable.bounds[recordIndex];
+
+  vec3 firstPlane = (box.minimum.xyz - worldOrigin) * inverseDirection;
+  vec3 secondPlane = (box.maximum.xyz - worldOrigin) * inverseDirection;
+
+  vec3 nearPlane = min(firstPlane, secondPlane);
+  vec3 farPlane = max(firstPlane, secondPlane);
+
+  float entry = max(max(nearPlane.x, nearPlane.y), nearPlane.z);
+  float exitAt = min(min(farPlane.x, farPlane.y), farPlane.z);
+
+  return exitAt >= max(entry, 0.0) && entry <= maxDistance;
+}
+
 float lightReaching(vec3 worldOrigin, vec3 worldDirection) {
   float result = 1.0;
 
+  // Once, not once a record. A component of exactly zero gives an infinity
+  // that the min and max below handle; the light direction is a constant and
+  // has none, and the reciprocal is never taken of anything renormalised.
+  vec3 inverseWorldDirection = 1.0 / worldDirection;
+
   // Bounded by the count, not the table's capacity. Nothing clears a slot, so
   // one left from a busier frame would still claim to be live.
-  for (uint i = 0u; i < counts.fieldRecords; ++i) {
+  uint first = 0u;
+  uint last = counts.fieldRecords;
+
+  bool binned = shadowGrid.cell.z > 0.0;
+
+  if (binned) {
+    float acrossU = dot(worldOrigin, shadowGrid.axisU.xyz) - shadowGrid.axisU.w;
+    float acrossV = dot(worldOrigin, shadowGrid.axisV.xyz) - shadowGrid.axisV.w;
+
+    float columnf = floor(acrossU * shadowGrid.cell.x);
+    float rowf = floor(acrossV * shadowGrid.cell.y);
+
+    // Outside the grid is outside every record's footprint, so nothing can be
+    // overhead and the light arrives unblocked.
+    if (columnf < 0.0 || rowf < 0.0 || columnf >= shadowGrid.cell.z
+        || rowf >= shadowGrid.cell.w) {
+      return 1.0;
+    }
+
+    uvec2 cell =
+      shadowCells.cells[uint(rowf) * uint(shadowGrid.cell.z) + uint(columnf)];
+
+    first = cell.x;
+    last = cell.x + cell.y;
+  }
+
+  for (uint slot = first; slot < last; ++slot) {
+    uint i = binned ? shadowIndices.values[slot] : slot;
+
+    if (!worldBoundsReach(i,
+                          worldOrigin,
+                          inverseWorldDirection,
+                          params.shadowMaxDistance)) {
+      continue;
+    }
+
     FieldRecordShared record = fieldRecordTable.records[i];
 
     // Same world -> local crossing as the primary ray: point w = 1, direction
@@ -534,7 +633,7 @@ void main() {
   vec3 worldNormal =
     normalize((record.model * vec4(localNormal, 0.0)).xyz);
 
-  vec3 worldLightDir = normalize(vec3(0.4, 1.0, 0.6));
+  vec3 worldLightDir = light.direction.xyz;
 
   float diffuse = max(0.0, dot(worldNormal, worldLightDir));
 
@@ -542,10 +641,10 @@ void main() {
 
   vec3 shadowOrigin = worldHitPos.xyz + worldNormal * departureBias;
 
-  float light =
+  float shadowed =
     diffuse > 0.0 ? lightReaching(shadowOrigin, worldLightDir) : 1.0;
 
-  vec3 color = surfaceAlbedo * (ambient + diffuse * light);
+  vec3 color = surfaceAlbedo * (light.direction.w + diffuse * shadowed);
 
   outColor = vec4(color, 1.0);
 }

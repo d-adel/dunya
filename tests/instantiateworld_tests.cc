@@ -274,3 +274,71 @@ TEST_CASE(
     runtime.registry().all_of<dunya::objectmodel::Deformable>(rigid)
   );
 }
+
+TEST_CASE(
+  "a dented lattice stays dented across instantiation",
+  "[instantiate]"
+) {
+  // The copy carries the dents, so it must carry the fact that it has them.
+  // Without this the runtime object looks like a pristine bake of its
+  // primitives, and anything sharing on that basis hands it somebody else's
+  // geometry. Ordering matters as much as presence: setSampledField clears
+  // the mark, so a copy made before the field would be undone by it.
+  static_assert(
+    dunya::objectmodel::selfContained<dunya::objectmodel::Deformed>,
+    "Deformed has to be SelfContained or emplaceOrReplace refuses it"
+  );
+
+  World authored;
+
+  const Entity dented = authored.createField(marked(14.0f), blank());
+  const Entity pristine = authored.createField(marked(15.0f), blank());
+
+  for (const Entity entity : {dented, pristine}) {
+    authored.emplaceOrReplace<dunya::objectmodel::Deformable>(
+      entity,
+      dunya::objectmodel::Deformable{}
+    );
+
+    dunya::field::SampledField field;
+    field.resolution = glm::uvec3(2u);
+    field.distances.assign(8u, 1.0f);
+    field.materials.assign(8u, 0u);
+
+    authored.setSampledField(entity, std::move(field));
+  }
+
+  authored.patchSampledField(dented, [](dunya::field::SampledField& lattice) {
+    lattice.distances[0] = -1.0f;
+  });
+
+  World runtime;
+  dunya::objectmodel::instantiateWorld(authored, runtime);
+
+  REQUIRE(runtime.registry().all_of<dunya::objectmodel::Deformed>(dented));
+  REQUIRE_FALSE(
+    runtime.registry().all_of<dunya::objectmodel::Deformed>(pristine)
+  );
+}
+
+TEST_CASE("the runtime shares the authored lattice", "[instantiate]") {
+  // Play used to copy every lattice into the runtime world: 1.2 MB an object,
+  // and 720 MB for a level of them. It hands over the handle now, and the
+  // runtime's first dent takes a private copy through patchSampledField.
+  World authored;
+
+  const Entity entity = authored.createField(marked(16.0f), blank());
+
+  dunya::field::SampledField field;
+  field.resolution = glm::uvec3(2u);
+  field.distances.assign(8u, 1.0f);
+  field.materials.assign(8u, 0u);
+
+  authored.setSampledField(entity, std::move(field));
+
+  World runtime;
+  dunya::objectmodel::instantiateWorld(authored, runtime);
+
+  REQUIRE(runtime.sampledField(entity) == authored.sampledField(entity));
+  REQUIRE(authored.sampledFieldUsers(entity) == 2);
+}

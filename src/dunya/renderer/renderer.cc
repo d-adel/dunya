@@ -305,7 +305,11 @@ void Renderer::recordCommandBuffer(
   }
 
   if (drawField) {
-    m_recordTable.update(m_currentFrame);
+    m_recordTable.update(
+      m_currentFrame,
+      frameContext.fieldRecordCount,
+      dunya::objectmodel::toLight(frameContext.light)
+    );
     m_recordTable.updatePrimitives(m_currentFrame, frameContext.primitives);
 
     // After the pool write, because the dispatch reads this frame's copy.
@@ -450,7 +454,18 @@ bool Renderer::drawFrame(
 
   const SceneCounts counts{frameContext.fieldRecordCount};
 
-  m_frameGlobals.update(m_currentFrame, camera, frameContext.march, counts);
+  const LightUniform light{glm::vec4(
+    dunya::objectmodel::toLight(frameContext.light),
+    frameContext.light.ambient
+  )};
+
+  m_frameGlobals.update(
+    m_currentFrame,
+    camera,
+    frameContext.march,
+    counts,
+    light
+  );
 
   recordCommandBuffer(swapChain, frameContext, onOverlay);
 

@@ -38,13 +38,21 @@ void instantiateWorld(const World& source, World& destination) {
     }
 
     // After the primitives, not before: adding one marks the field stale, and
-    // the point of copying it is that it is not. Copied rather than left to be
-    // rebaked because a bake costs a second and a copy costs milliseconds.
-    if (registry.all_of<dunya::field::SampledField>(entity)) {
-      destination.setSampledField(
-        entity,
-        registry.get<dunya::field::SampledField>(entity)
-      );
+    // the point of handing it over is that it is not.
+    //
+    // Shared rather than copied. The runtime reads the authored lattice until
+    // it writes one, and a write goes through patchSampledField, which takes a
+    // private copy first - so Play costs a handle per object rather than
+    // 1.2 MB of it.
+    if (const auto* held = registry.try_get<SharedField>(entity)) {
+      destination.adoptSampledField(entity, *held);
+    }
+
+    // After the field, because setting one clears this: the copy carries
+    // whatever the source lattice had been through, so the fact that it is no
+    // longer the bake of its primitives has to travel with it.
+    if (registry.all_of<Deformed>(entity)) {
+      destination.emplaceOrReplace<Deformed>(entity, Deformed{});
     }
   }
 

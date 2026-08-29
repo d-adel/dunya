@@ -242,7 +242,7 @@ SampledField bake(
         const uint32_t index = latticeIndex(field, glm::uvec3(x, y, z));
 
         field.distances[index] = baked.distance;
-        field.materials[index] = baked.material;
+        field.materials[index] = static_cast<uint8_t>(baked.material);
       }
     }
   }
@@ -449,7 +449,7 @@ WriteReport write(
   SampledField& field,
   const SampleBox& box,
   std::span<const float> distances,
-  std::span<const uint32_t> materials
+  std::span<const uint8_t> materials
 ) {
   const glm::uvec3 end = box.minimum + box.extent;
 

@@ -34,6 +34,12 @@ FrameGlobals::FrameGlobals(const dunya::gpu::Device& device)
          {2,
           SCENE_COUNTS_BLOCK_BYTES,
           VK_SHADER_STAGE_FRAGMENT_BIT,
+          dunya::gpu::DescriptorGroup::BufferUpdate::PerFrame},
+         // Both fragment shaders, because both were lighting from their own
+         // copy of the same literal.
+         {3,
+          sizeof(LightUniform),
+          VK_SHADER_STAGE_FRAGMENT_BIT,
           dunya::gpu::DescriptorGroup::BufferUpdate::PerFrame}}
       ) {}
 
@@ -41,11 +47,13 @@ void FrameGlobals::update(
   uint32_t frame,
   const CameraUniform& camera,
   const MarchParams& march,
-  const SceneCounts& counts
+  const SceneCounts& counts,
+  const LightUniform& light
 ) {
   m_group.write(0, frame, &camera, sizeof(camera));
   m_group.write(1, frame, &march, sizeof(march));
   m_group.write(2, frame, &counts, sizeof(counts));
+  m_group.write(3, frame, &light, sizeof(light));
 }
 
 const VkDescriptorSet& FrameGlobals::descriptorSet(

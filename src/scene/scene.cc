@@ -20,6 +20,10 @@ constexpr uint32_t BOX_RESOLUTION = 65u;
 constexpr float GROUND_Y = -2.0f;
 constexpr float GROUND_HALF_THICKNESS = 0.5f;
 
+// How far the floor reaches past the wall, so a box knocked off the end still
+// lands on something.
+constexpr float GROUND_MARGIN = 4.0f;
+
 constexpr float PROJECTILE_RADIUS = 0.35f;
 
 // Its own entry in the material list, so the ball is not the colour of the
@@ -141,17 +145,27 @@ Scene::Scene(
   // The plane. Its box sits half a thickness below the entity origin, which
   // puts the surface everything rests on at GROUND_Y exactly. Created after
   // the wall so that a stress carve, which takes the first field there is,
-  // lands on a box rather than on twenty square metres of floor.
+  // lands on a box rather than on the floor.
   pose.position = glm::vec3(0.0f, GROUND_Y, 0.0f);
 
   const dunya::objectmodel::Entity planeEntity =
     m_world.createField(pose, grid);
 
+  // Sized to the wall rather than fixed. A 25-column wall is 22.75 m across
+  // and the floor used to be 20, so the outer columns stood on nothing: they
+  // toppled off the edge, and a wall that is falling never settles. Measured
+  // before it was found - with nothing fired at all, a wall that overhangs
+  // carves itself twenty times as often as one that fits.
+  const glm::vec3 wallSpan = m_wallMaximum - m_wallMinimum;
+
+  const float groundHalfWidth =
+    std::max(10.0f, 0.5f * std::max(wallSpan.x, wallSpan.z) + GROUND_MARGIN);
+
   addPrimitive(
     planeEntity,
     dunya::field::makeBox(
       glm::vec3(0.0f, -GROUND_HALF_THICKNESS, 0.0f),
-      glm::vec3(10.0f, GROUND_HALF_THICKNESS, 10.0f),
+      glm::vec3(groundHalfWidth, GROUND_HALF_THICKNESS, groundHalfWidth),
       0.0f,
       glm::vec3(0.0f, 1.0f, 0.0f),
       1

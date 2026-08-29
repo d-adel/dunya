@@ -3,5 +3,6 @@
 #include <dunya/objectmodel/staticbody/staticbody.h>
 #include <dunya/objectmodel/massscale/massscale.h>
 #include <dunya/objectmodel/deformable/deformable.h>
+#include <dunya/objectmodel/deformed/deformed.h>
 
 #include <stdexcept>

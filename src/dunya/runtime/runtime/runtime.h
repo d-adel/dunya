@@ -7,6 +7,9 @@
 #include <dunya/physics/physicsworld/physicsworld.h>
 #include <dunya/physics/joltlibrary/joltlibrary.h>
 
+#include <memory>
+#include <unordered_map>
+
 namespace dunya::runtime {
 
 class Runtime {
@@ -62,6 +65,11 @@ public:
   // lighter — the shape deriving mass from its volume is the point.
   void setMass(objectmodel::Entity entity, float mass);
 
+  // How many distinct collision shapes the bodies are built on. The lattice
+  // count beside it says how much of the sharing is the lattice and how much
+  // is the shape derived from it.
+  [[nodiscard]] size_t shapeCount() const noexcept;
+
   // One fixed step of the simulation.
   void step();
 
@@ -74,6 +82,28 @@ private:
   // happens without a MassScale, which is most bodies.
   void applyMassScale(objectmodel::Entity entity);
 
+  // One shape per lattice rather than one per object. A FieldShape is a pure
+  // function of the lattice it reads - the same mass walk, the same contact
+  // seeds - and a Jolt shape is immutable and refcounted, so six hundred
+  // crates cut from the same primitives want one between them.
+  //
+  // The weak reference is what makes the address safe as a key: a lattice
+  // freed and another allocated where it was reads as a miss rather than as
+  // somebody else's geometry.
+  struct SharedShape {
+    std::weak_ptr<dunya::field::SampledField> lattice;
+    JPH::ShapeRefC shape;
+  };
+
+  [[nodiscard]] JPH::ShapeRefC shapeFor(const objectmodel::SharedField& held);
+
+  // The current shape for a lattice, which a deformation changes. Without
+  // this the cache would keep handing out the shape from before the dent.
+  void rememberShape(
+    const objectmodel::SharedField& held,
+    const JPH::ShapeRefC& shape
+  );
+
   // Declaration order is load-bearing: m_physicsWorld holds bodies that refer
   // to entities in m_world, and members are destroyed in reverse declaration
   // order, so the world must outlive the simulation that points into it.
@@ -81,6 +111,8 @@ private:
   physics::PhysicsWorld m_physicsWorld;
 
   std::vector<std::pair<objectmodel::Entity, objectmodel::Pose>> m_poseScratch;
+
+  std::unordered_map<const dunya::field::SampledField*, SharedShape> m_shapes;
 
   // Once per run, not once per frame: an object with nothing solid in it stays
   // that way, and the frame loop would otherwise say so sixty times a second.

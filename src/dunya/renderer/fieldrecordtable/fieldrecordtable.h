@@ -7,6 +7,7 @@
 #include <dunya/gpu/uploader/uploader.h>
 #include <dunya/field/sampled/sampled.h>
 #include <dunya/renderer/fieldrecord/fieldrecord.h>
+#include <dunya/renderer/shadowgrid/shadowgrid.h>
 
 #include <cstdint>
 #include <span>
@@ -24,6 +25,10 @@ public:
   static constexpr uint32_t DISTANCE_VOLUMES_STORAGE = 4;
   static constexpr uint32_t MATERIAL_VOLUMES_STORAGE = 5;
   static constexpr uint32_t BRICK_BOUNDS = 6;
+  static constexpr uint32_t RECORD_BOUNDS = 7;
+  static constexpr uint32_t SHADOW_CELLS = 8;
+  static constexpr uint32_t SHADOW_INDICES = 9;
+  static constexpr uint32_t SHADOW_GRID = 10;
 
   explicit FieldRecordTable(const dunya::gpu::Device& device);
 
@@ -54,7 +59,10 @@ public:
     uint32_t fieldRepresentation
   );
 
-  void update(uint32_t frame);
+  // Also rebuilds the light-space grid, from the same boxes the shadow loop
+  // reads, so the two cannot describe different frames. The count is the live
+  // one, not the table capacity.
+  void update(uint32_t frame, uint32_t liveRecords, const glm::vec3& toLight);
 
   void updatePrimitives(
     uint32_t frame,
@@ -114,6 +122,12 @@ private:
   const dunya::gpu::Device& m_device;
 
   std::vector<FieldRecord> m_records;
+
+  // One per record, filled beside it. Its own array so the shadow loop reads
+  // 32 bytes to reject a record instead of 192.
+  std::vector<RecordBounds> m_recordBounds;
+
+  ShadowGrid m_shadowGrid;
   std::vector<uint32_t> m_bakeList;
   dunya::gpu::DescriptorGroup m_group;
 

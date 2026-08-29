@@ -74,7 +74,7 @@ WriteReport deform(SampledField& field, const Primitive& primitive) {
   }
 
   std::vector<float> distances(count);
-  std::vector<uint32_t> materials(count);
+  std::vector<uint8_t> materials(count);
 
   size_t at = 0;
 
@@ -95,7 +95,7 @@ WriteReport deform(SampledField& field, const Primitive& primitive) {
         const AnalyticSample now = combine(was, primitive, point);
 
         distances[at] = now.distance;
-        materials[at] = now.material;
+        materials[at] = static_cast<uint8_t>(now.material);
 
         ++at;
       }
@@ -120,7 +120,7 @@ DeformReport deformAndRepair(
   }
 
   std::vector<float> distances(count);
-  std::vector<uint32_t> materials(count);
+  std::vector<uint8_t> materials(count);
   std::vector<uint8_t> damaged(count, 0u);
 
   size_t at = 0;
@@ -142,7 +142,7 @@ DeformReport deformAndRepair(
         const AnalyticSample now = combine(was, primitive, point);
 
         distances[at] = now.distance;
-        materials[at] = now.material;
+        materials[at] = static_cast<uint8_t>(now.material);
         damaged[at] = now.distance == was.distance ? 0u : 1u;
 
         ++at;

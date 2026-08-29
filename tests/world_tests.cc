@@ -396,9 +396,9 @@ TEST_CASE("the CPU field is stored and read back", "[world]") {
 
   world.setSampledField(entity, std::move(field));
 
-  REQUIRE(world.registry().all_of<dunya::field::SampledField>(entity));
+  REQUIRE(world.hasSampledField(entity));
 
-  const auto& stored = world.registry().get<dunya::field::SampledField>(entity);
+  const dunya::field::SampledField& stored = *world.sampledField(entity);
 
   REQUIRE(stored.resolution == glm::uvec3(3u));
   REQUIRE(stored.distances.size() == 27u);
@@ -413,9 +413,10 @@ TEST_CASE("the CPU field is stored and read back", "[world]") {
 }
 
 TEST_CASE("a stored field keeps its address when another goes", "[world]") {
-  // A collision shape holds a pointer to this. EnTT's default storage swaps
-  // its last element into a removed slot, which would hand that shape a
-  // different entity's geometry; the in-place-delete trait forbids it.
+  // A collision shape holds a pointer to this. The component is a handle and
+  // the lattice is on the heap, so nothing the registry does to the pool can
+  // move it - which is what replaced the in-place-delete trait that used to
+  // carry this guarantee.
   World world;
 
   const Entity first = world.createField(Pose{}, blank());
@@ -432,12 +433,173 @@ TEST_CASE("a stored field keeps its address when another goes", "[world]") {
   world.setSampledField(first, std::move(a));
   world.setSampledField(second, std::move(b));
 
-  const dunya::field::SampledField* held =
-    &world.registry().get<dunya::field::SampledField>(second);
+  const dunya::field::SampledField* held = world.sampledField(second);
 
   REQUIRE(world.destroyField(first));
 
-  REQUIRE(held == &world.registry().get<dunya::field::SampledField>(second));
+  REQUIRE(held == world.sampledField(second));
   REQUIRE(held->distances.size() == 8u);
   REQUIRE_THAT(held->distances[0], WithinAbs(-2.0f, ANALYTIC_TOLERANCE));
+}
+
+TEST_CASE("a shared lattice is one lattice, not two", "[world]") {
+  // The whole of step 2b: a thousand crates cut from the same primitives hold
+  // one lattice between them. Address equality is the assertion, because equal
+  // contents would pass just as well on two copies.
+  World world;
+
+  const Entity donor = world.createField(Pose{}, blank());
+  const Entity taker = world.createField(Pose{}, blank());
+
+  dunya::field::SampledField field;
+  field.resolution = glm::uvec3(2u);
+  field.distances.assign(8u, 1.0f);
+  field.materials.assign(8u, 0u);
+
+  world.setSampledField(donor, std::move(field));
+
+  REQUIRE(world.sampledFieldUsers(donor) == 1);
+
+  world.shareSampledField(donor, taker);
+
+  REQUIRE(world.sampledField(taker) == world.sampledField(donor));
+  REQUIRE(world.sampledFieldUsers(donor) == 2);
+  REQUIRE(world.sampledFieldUsers(taker) == 2);
+
+  // A lattice handed over is current and needs no rebake.
+  REQUIRE_FALSE(world.needsResample(taker));
+}
+
+TEST_CASE("a dent on a shared lattice takes a private copy", "[world]") {
+  // Copy on write, and the failure it exists to stop is visible rather than
+  // theoretical: without the copy, denting one crate dents every crate.
+  World world;
+
+  const Entity donor = world.createField(Pose{}, blank());
+  const Entity taker = world.createField(Pose{}, blank());
+
+  for (const Entity entity : {donor, taker}) {
+    world.emplaceOrReplace<dunya::objectmodel::Deformable>(
+      entity,
+      dunya::objectmodel::Deformable{}
+    );
+  }
+
+  dunya::field::SampledField field;
+  field.resolution = glm::uvec3(2u);
+  field.distances.assign(8u, 1.0f);
+  field.materials.assign(8u, 0u);
+
+  world.setSampledField(donor, std::move(field));
+  world.shareSampledField(donor, taker);
+
+  const dunya::field::SampledField* before = world.sampledField(donor);
+
+  world.patchSampledField(taker, [](dunya::field::SampledField& lattice) {
+    lattice.distances[0] = -5.0f;
+  });
+
+  REQUIRE(world.sampledField(taker) != before);
+  REQUIRE(world.sampledField(donor) == before);
+
+  REQUIRE_THAT(
+    world.sampledField(taker)->distances[0],
+    WithinAbs(-5.0f, ANALYTIC_TOLERANCE)
+  );
+
+  // The one that was not dented is untouched, which is the point.
+  REQUIRE_THAT(
+    world.sampledField(donor)->distances[0],
+    WithinAbs(1.0f, ANALYTIC_TOLERANCE)
+  );
+
+  REQUIRE(world.sampledFieldUsers(donor) == 1);
+  REQUIRE(world.sampledFieldUsers(taker) == 1);
+}
+
+TEST_CASE("a dent on an unshared lattice copies nothing", "[world]") {
+  // The other half of the same rule. A crate takes its own lattice on the
+  // first dent and never again, so the hundredth dent is not a 1.2 MB copy.
+  World world;
+
+  const Entity entity = world.createField(Pose{}, blank());
+
+  world.emplaceOrReplace<dunya::objectmodel::Deformable>(
+    entity,
+    dunya::objectmodel::Deformable{}
+  );
+
+  dunya::field::SampledField field;
+  field.resolution = glm::uvec3(2u);
+  field.distances.assign(8u, 1.0f);
+  field.materials.assign(8u, 0u);
+
+  world.setSampledField(entity, std::move(field));
+
+  const dunya::field::SampledField* before = world.sampledField(entity);
+
+  world.patchSampledField(entity, [](dunya::field::SampledField& lattice) {
+    lattice.distances[0] = -5.0f;
+  });
+
+  REQUIRE(world.sampledField(entity) == before);
+}
+
+TEST_CASE("a dent records that the lattice left its primitives", "[world]") {
+  // What makes two objects with equal primitives interchangeable is that
+  // neither has been written in place. Nothing else records that: the resample
+  // queue answers "the primitives moved", which is the opposite direction.
+  World world;
+
+  const Entity entity = world.createField(Pose{}, blank());
+
+  world.emplaceOrReplace<dunya::objectmodel::Deformable>(
+    entity,
+    dunya::objectmodel::Deformable{}
+  );
+
+  dunya::field::SampledField field;
+  field.resolution = glm::uvec3(2u);
+  field.distances.assign(8u, 1.0f);
+  field.materials.assign(8u, 0u);
+
+  world.setSampledField(entity, std::move(field));
+
+  REQUIRE_FALSE(world.registry().all_of<dunya::objectmodel::Deformed>(entity));
+
+  world.patchSampledField(entity, [](dunya::field::SampledField& lattice) {
+    lattice.distances[0] = -1.0f;
+  });
+
+  REQUIRE(world.registry().all_of<dunya::objectmodel::Deformed>(entity));
+}
+
+TEST_CASE("a fresh bake puts the lattice back on its primitives", "[world]") {
+  // A rebake is derived from the primitives again, whatever the lattice it
+  // replaced had been through, so the mark has to come off with it.
+  World world;
+
+  const Entity entity = world.createField(Pose{}, blank());
+
+  world.emplaceOrReplace<dunya::objectmodel::Deformable>(
+    entity,
+    dunya::objectmodel::Deformable{}
+  );
+
+  dunya::field::SampledField field;
+  field.resolution = glm::uvec3(2u);
+  field.distances.assign(8u, 1.0f);
+  field.materials.assign(8u, 0u);
+
+  world.setSampledField(entity, field);
+
+  world.patchSampledField(entity, [](dunya::field::SampledField& lattice) {
+    lattice.distances[0] = -1.0f;
+  });
+
+  REQUIRE(world.registry().all_of<dunya::objectmodel::Deformed>(entity));
+
+  world.setSampledField(entity, field);
+
+  REQUIRE_FALSE(world.registry().all_of<dunya::objectmodel::Deformed>(entity));
 }

@@ -12,6 +12,7 @@ add_library(dunya_renderer STATIC
     meshbuffers/tiny_obj_loader_impl.cc
     resourcetable/resourcetable.cc
     vertex/vertex.cc
+    shadowgrid/shadowgrid.cc
     volumepool/volumepool.cc
 )
 

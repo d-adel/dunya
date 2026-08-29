@@ -16,6 +16,11 @@ constexpr uint32_t MAX_FIELD_VOLUMES = DUNYA_MAX_FIELD_VOLUMES;
 constexpr uint32_t MAX_FIELD_PRIMITIVES = DUNYA_MAX_FIELD_PRIMITIVES;
 constexpr size_t MAX_PRIMITIVE_POOL = DUNYA_MAX_PRIMITIVE_POOL;
 
+static_assert(
+  MAX_MATERIALS <= 256,
+  "A material id is stored as a byte in the lattice and read as R8_UINT"
+);
+
 constexpr uint32_t TEXTURE_WHITE = 0;
 constexpr uint32_t TEXTURE_FLAT_NORMAL = 1;
 constexpr uint32_t TEXTURE_BLACK = 2;

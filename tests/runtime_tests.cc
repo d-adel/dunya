@@ -6,6 +6,7 @@
 #include <dunya/core/config/config.h>
 #include <dunya/field/field.h>
 #include <dunya/field/sampled/sampled.h>
+#include <dunya/objectmodel/deformable/deformable.h>
 #include <dunya/objectmodel/massscale/massscale.h>
 #include <dunya/objectmodel/pose/pose.h>
 #include <dunya/objectmodel/rigidbody/rigidbody.h>
@@ -283,4 +284,135 @@ TEST_CASE("a field with nothing solid in it gets no body", "[runtime]") {
   REQUIRE_FALSE(
     runtime.world().registry().all_of<dunya::objectmodel::RigidBody>(entity)
   );
+}
+
+namespace {
+
+// The shape a body is actually built on, which is the only thing that can tell
+// a reused shape from a rebuilt one. A count cannot: rebuilding under the same
+// key leaves it unchanged (idiom 54).
+const JPH::Shape* bodyShape(Runtime& runtime, Entity entity) {
+  const auto& body =
+    runtime.world().registry().get<dunya::objectmodel::RigidBody>(entity);
+
+  return runtime.physics().bodies().GetShape(JPH::BodyID(body.id));
+}
+
+}  // namespace
+
+TEST_CASE("objects on one lattice get one collision shape", "[runtime]") {
+  // A FieldShape is a pure function of the lattice it reads, so six hundred
+  // crates cut from the same primitives want one between them - and a Jolt
+  // shape is immutable and refcounted, which is what makes that legal.
+  JoltLibrary library;
+
+  World source;
+
+  const Entity first = sphereEntity(source, 1.0f);
+  const Entity second = sphereEntity(source, 1.0f);
+
+  source.shareSampledField(first, second);
+
+  Runtime runtime(source, library);
+  World& live = runtime.world();
+
+  REQUIRE(live.sampledField(first) == live.sampledField(second));
+
+  runtime.refreshBody(first);
+  runtime.refreshBody(second);
+
+  REQUIRE(bodyShape(runtime, first) == bodyShape(runtime, second));
+  REQUIRE(runtime.shapeCount() == 1u);
+}
+
+TEST_CASE("a dent takes the object off the shared shape", "[runtime]") {
+  // The other half. Copy on write gives the dented object its own lattice, and
+  // the shape has to follow or every crate wears the same crater.
+  JoltLibrary library;
+
+  World source;
+
+  const Entity first = sphereEntity(source, 1.0f);
+  const Entity second = sphereEntity(source, 1.0f);
+
+  source.shareSampledField(first, second);
+
+  for (const Entity entity : {first, second}) {
+    source.emplaceOrReplace<dunya::objectmodel::Deformable>(
+      entity,
+      dunya::objectmodel::Deformable{}
+    );
+  }
+
+  Runtime runtime(source, library);
+  World& live = runtime.world();
+
+  runtime.refreshBody(first);
+  runtime.refreshBody(second);
+
+  REQUIRE(bodyShape(runtime, first) == bodyShape(runtime, second));
+
+  live.patchSampledField(second, [](dunya::field::SampledField& lattice) {
+    lattice.distances[0] = -1.0f;
+  });
+
+  REQUIRE(live.sampledField(first) != live.sampledField(second));
+
+  runtime.refreshBody(second);
+
+  REQUIRE(bodyShape(runtime, first) != bodyShape(runtime, second));
+  REQUIRE(runtime.shapeCount() == 2u);
+}
+
+TEST_CASE("a rebuilt shape replaces the one the cache hands out", "[runtime]") {
+  // One shape per lattice means the cache has to follow a dent that does not
+  // move the lattice. An object that already owns its lattice is dented in
+  // place, so the address is unchanged and the entry under it would otherwise
+  // still name the shape from before the crater - and the next refresh would
+  // hand that back, quietly undoing the dent as far as physics is concerned.
+  JoltLibrary library;
+
+  World source;
+  const Entity entity = sphereEntity(source, 1.0f);
+
+  source.emplaceOrReplace<dunya::objectmodel::Deformable>(
+    entity,
+    dunya::objectmodel::Deformable{}
+  );
+
+  Runtime runtime(source, library);
+  World& live = runtime.world();
+
+  runtime.refreshBody(entity);
+
+  // The runtime holds the authored lattice, so the first dent is the one that
+  // copies. The second is the one this test is about.
+  REQUIRE(live.sampledFieldUsers(entity) == 2);
+
+  live.patchSampledField(entity, [](dunya::field::SampledField& grid) {
+    grid.distances[0] = -1.0f;
+  });
+
+  runtime.refreshBody(entity);
+
+  const dunya::field::SampledField* lattice = live.sampledField(entity);
+
+  REQUIRE(live.sampledFieldUsers(entity) == 1);
+
+  live.patchSampledField(entity, [](dunya::field::SampledField& grid) {
+    grid.distances[1] = -1.0f;
+  });
+
+  // Unshared now, so the dent landed in place and the address did not move.
+  REQUIRE(live.sampledField(entity) == lattice);
+
+  const glm::uvec3 bricks = dunya::field::brickCounts(*lattice);
+
+  runtime.reshapeAfterDeform(entity, glm::uvec3(0u), bricks);
+
+  const JPH::Shape* dented = bodyShape(runtime, entity);
+
+  runtime.refreshBody(entity);
+
+  REQUIRE(bodyShape(runtime, entity) == dented);
 }

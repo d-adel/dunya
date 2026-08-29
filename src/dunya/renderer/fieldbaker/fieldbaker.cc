@@ -423,7 +423,7 @@ void FieldBaker::verifyBake(
     worstDistance =
       std::max(worstDistance, std::abs(baked[i] - reference.distances[i]));
 
-    if (materialBytes[i] != static_cast<uint8_t>(reference.materials[i])) {
+    if (materialBytes[i] != reference.materials[i]) {
       ++materialMismatches;
     }
   }

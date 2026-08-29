@@ -350,7 +350,7 @@ TEST_CASE(
     glm::uvec3(1u)
   };
   const std::vector<float> inside{-5.0f};
-  const std::vector<uint32_t> material{3u};
+  const std::vector<uint8_t> material{3u};
 
   dunya::field::write(field, carve, inside, material);
 
@@ -433,7 +433,7 @@ TEST_CASE(
     glm::uvec3(1u)
   };
   const std::vector<float> inside{-5.0f};
-  const std::vector<uint32_t> material{3u};
+  const std::vector<uint8_t> material{3u};
 
   dunya::field::write(field, carve, inside, material);
 
@@ -472,7 +472,7 @@ TEST_CASE(
   // brick, and to cell eight, in the second.
   const dunya::field::SampleBox box{glm::uvec3(8u, 4u, 4u), glm::uvec3(1u)};
   const std::vector<float> spike{5.0f};
-  const std::vector<uint32_t> material{3u};
+  const std::vector<uint8_t> material{3u};
 
   dunya::field::write(field, box, spike, material);
 
@@ -586,7 +586,7 @@ TEST_CASE("an edit refreshes the value range", "[sampled][bound]") {
   const dunya::field::SampleBox box{glm::uvec3(2u), glm::uvec3(2u)};
   const std::vector<float>
     values{-1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
-  const std::vector<uint32_t> materials(8u, 3u);
+  const std::vector<uint8_t> materials(8u, 3u);
 
   dunya::field::write(field, box, values, materials);
 
@@ -736,7 +736,7 @@ TEST_CASE("a write reports exactly the bricks it moved", "[sampled][write]") {
 
   const dunya::field::SampleBox carve{glm::uvec3(wall), glm::uvec3(1u)};
   const std::vector<float> inside{-5.0f};
-  const std::vector<uint32_t> material{3u};
+  const std::vector<uint8_t> material{3u};
 
   const dunya::field::WriteReport report =
     dunya::field::write(field, carve, inside, material);

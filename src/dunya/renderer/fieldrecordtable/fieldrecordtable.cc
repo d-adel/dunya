@@ -25,7 +25,28 @@ FieldRecordTable::FieldRecordTable(const dunya::gpu::Device& device)
           dunya::core::MAX_PRIMITIVE_POOL * sizeof(dunya::field::Primitive),
           VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
           dunya::gpu::DescriptorGroup::BufferUpdate::PerFrame,
-          VK_DESCRIPTOR_TYPE_STORAGE_BUFFER}},
+          VK_DESCRIPTOR_TYPE_STORAGE_BUFFER},
+         {RECORD_BOUNDS,
+          dunya::core::MAX_FIELD_RECORDS * sizeof(RecordBounds),
+          VK_SHADER_STAGE_FRAGMENT_BIT,
+          dunya::gpu::DescriptorGroup::BufferUpdate::PerFrame,
+          VK_DESCRIPTOR_TYPE_STORAGE_BUFFER},
+         {SHADOW_CELLS,
+          SHADOW_GRID_CELLS * SHADOW_GRID_CELLS * sizeof(ShadowCell),
+          VK_SHADER_STAGE_FRAGMENT_BIT,
+          dunya::gpu::DescriptorGroup::BufferUpdate::PerFrame,
+          VK_DESCRIPTOR_TYPE_STORAGE_BUFFER},
+         {SHADOW_INDICES,
+          SHADOW_GRID_MAX_INDICES * sizeof(uint32_t),
+          VK_SHADER_STAGE_FRAGMENT_BIT,
+          dunya::gpu::DescriptorGroup::BufferUpdate::PerFrame,
+          VK_DESCRIPTOR_TYPE_STORAGE_BUFFER},
+         // In this set rather than the frame globals, because it is derived
+         // from the records and set 0 is written before they are packed.
+         {SHADOW_GRID,
+          sizeof(ShadowGridUniform),
+          VK_SHADER_STAGE_FRAGMENT_BIT,
+          dunya::gpu::DescriptorGroup::BufferUpdate::PerFrame}},
         {{DISTANCE_VOLUMES,
           VK_SHADER_STAGE_FRAGMENT_BIT,
           {},
@@ -56,6 +77,7 @@ FieldRecordTable::FieldRecordTable(const dunya::gpu::Device& device)
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
       ) {
   m_records.resize(dunya::core::MAX_FIELD_RECORDS);
+  m_recordBounds.resize(dunya::core::MAX_FIELD_RECORDS);
 
   m_group.writeBuffer(BRICK_BOUNDS, m_brickBounds.buffer(), BRICK_BOUNDS_BYTES);
 }
@@ -238,12 +260,43 @@ void FieldRecordTable::setRecord(
     primitiveCount,
     fieldRepresentation
   );
+
+  // Here rather than in update(), so the box and the record it describes can
+  // never be a frame apart.
+  m_recordBounds[recordIndex] = makeRecordBounds(m_records[recordIndex]);
 }
 
-void FieldRecordTable::update(uint32_t frame) {
+void FieldRecordTable::update(
+  uint32_t frame,
+  uint32_t liveRecords,
+  const glm::vec3& toLight
+) {
   std::span<const FieldRecord> objects(m_records);
 
   m_group.write(ENTRIES, frame, objects.data(), objects.size_bytes());
+
+  std::span<const RecordBounds> bounds(m_recordBounds);
+
+  m_group.write(RECORD_BOUNDS, frame, bounds.data(), bounds.size_bytes());
+
+  m_shadowGrid.build(bounds, liveRecords, toLight);
+
+  const std::span<const ShadowCell> cells = m_shadowGrid.cells();
+  const std::span<const uint32_t> indices = m_shadowGrid.indices();
+
+  // Nothing to write when the grid gave up, and nothing reads it either: the
+  // uniform says so and the shader walks every record instead.
+  if (!cells.empty()) {
+    m_group.write(SHADOW_CELLS, frame, cells.data(), cells.size_bytes());
+  }
+
+  if (!indices.empty()) {
+    m_group.write(SHADOW_INDICES, frame, indices.data(), indices.size_bytes());
+  }
+
+  const ShadowGridUniform& grid = m_shadowGrid.uniform();
+
+  m_group.write(SHADOW_GRID, frame, &grid, sizeof(grid));
 }
 
 void FieldRecordTable::updatePrimitives(

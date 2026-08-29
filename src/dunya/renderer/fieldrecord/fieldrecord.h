@@ -61,6 +61,27 @@ static_assert(
   "FieldRecord must match its block in field-shader.frag"
 );
 
+// The record's grid box in world space, kept in its own array so the shadow
+// loop can reject a record without reading the 192 bytes that describe it.
+// Six hundred records is 118 KB of FieldRecord and 19 KB of this, which is
+// the difference between thrashing a cache and fitting in one.
+//
+// Two vec4s rather than two vec3s because std430 pads a vec3 to 16 bytes
+// anyway, so the tighter spelling would cost the same and read worse.
+struct RecordBounds {
+  glm::vec4 minimum;
+  glm::vec4 maximum;
+};
+
+static_assert(
+  sizeof(RecordBounds) == 32,
+  "RecordBounds must match its block in field-shader.frag"
+);
+
+// Derived rather than passed: the record already carries the local box and the
+// transform, and two places computing the same world box is how they drift.
+RecordBounds makeRecordBounds(const FieldRecord& record);
+
 FieldRecord makeFieldRecord(
   const dunya::objectmodel::Pose& pose,
   const dunya::objectmodel::SdfGrid& grid,

@@ -2,6 +2,42 @@
 
 namespace dunya::renderer {
 
+RecordBounds makeRecordBounds(const FieldRecord& record) {
+  const glm::uvec3 resolution(record.resolutionVolumeIndex);
+
+  // A slot that has never been filled has no box. Empty rather than huge, so
+  // a stale entry rejects every ray instead of accepting them all.
+  if (resolution.x == 0u || resolution.y == 0u || resolution.z == 0u) {
+    return {glm::vec4(1.0f), glm::vec4(-1.0f)};
+  }
+
+  const glm::vec3 localMinimum(record.localOrigin);
+
+  const glm::vec3 localMaximum =
+    localMinimum
+    + glm::vec3(record.voxelSize) * glm::vec3(resolution - glm::uvec3(1u));
+
+  glm::vec3 minimum(std::numeric_limits<float>::max());
+  glm::vec3 maximum(std::numeric_limits<float>::lowest());
+
+  // All eight, because the pose rotates: the transform of the two extreme
+  // corners is not the extreme of the transformed box.
+  for (uint32_t corner = 0u; corner != 8u; ++corner) {
+    const glm::vec3 at(
+      (corner & 1u) != 0u ? localMaximum.x : localMinimum.x,
+      (corner & 2u) != 0u ? localMaximum.y : localMinimum.y,
+      (corner & 4u) != 0u ? localMaximum.z : localMinimum.z
+    );
+
+    const glm::vec3 world = glm::vec3(record.model * glm::vec4(at, 1.0f));
+
+    minimum = glm::min(minimum, world);
+    maximum = glm::max(maximum, world);
+  }
+
+  return {glm::vec4(minimum, 0.0f), glm::vec4(maximum, 0.0f)};
+}
+
 FieldRecord makeFieldRecord(
   const dunya::objectmodel::Pose& pose,
   const dunya::objectmodel::SdfGrid& grid,

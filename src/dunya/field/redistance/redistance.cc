@@ -353,7 +353,7 @@ float redistance(
   if (!values.empty()) {
     std::copy(repaired.begin(), repaired.end(), values.begin());
   } else {
-    std::vector<uint32_t> materials(count, 0u);
+    std::vector<uint8_t> materials(count, 0u);
 
     size_t at = 0;
 

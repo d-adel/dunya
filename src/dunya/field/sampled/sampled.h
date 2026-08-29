@@ -29,7 +29,7 @@ struct SampledField {
   glm::uvec3 resolution{0u};
 
   std::vector<float> distances;
-  std::vector<uint32_t> materials;
+  std::vector<uint8_t> materials;
 
   // A bound on the interpolant's own gradient, per brick and over all of them.
   // Derived from the stored values, so it survives edits with no source field.
@@ -126,7 +126,7 @@ WriteReport write(
   SampledField& field,
   const SampleBox& box,
   std::span<const float> distances,
-  std::span<const uint32_t> materials
+  std::span<const uint8_t> materials
 );
 
 static_assert(DistanceField<SampledField>);

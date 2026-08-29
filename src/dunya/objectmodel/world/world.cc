@@ -139,14 +139,60 @@ void World::setRigidBody(Entity entity, uint32_t index) {
 }
 
 void World::setSampledField(Entity entity, dunya::field::SampledField field) {
-  m_registry.emplace_or_replace<dunya::field::SampledField>(
+  m_registry.emplace_or_replace<SharedField>(
     entity,
-    std::move(field)
+    std::make_shared<dunya::field::SampledField>(std::move(field))
   );
 
   // Setting the field is what makes it current, so this is where the queue
   // that tracks staleness is answered.
   m_registry.storage<entt::reactive>(RESAMPLE_QUEUE).remove(entity);
+
+  // And a field that came from the primitives is derived from them again,
+  // whatever the one it replaced had been through.
+  m_registry.remove<Deformed>(entity);
+}
+
+void World::shareSampledField(Entity donor, Entity taker) {
+  const auto* held = m_registry.try_get<SharedField>(donor);
+
+  if (held == nullptr) {
+    throw std::runtime_error("Sharing a lattice from an object without one");
+  }
+
+  // By value, not by reference: emplace_or_replace may move the donor's own
+  // component while the taker's is being written.
+  adoptSampledField(taker, SharedField{held->field});
+}
+
+void World::adoptSampledField(Entity entity, const SharedField& held) {
+  if (held.field == nullptr) {
+    throw std::runtime_error("Adopting an empty lattice handle");
+  }
+
+  m_registry.emplace_or_replace<SharedField>(entity, held);
+
+  // Current, because a lattice that exists is one somebody baked. Deformed is
+  // deliberately not touched: whether this lattice has been written in place
+  // is a property of the lattice, and the handle does not carry it - the
+  // caller knows which it is handing over.
+  m_registry.storage<entt::reactive>(RESAMPLE_QUEUE).remove(entity);
+}
+
+const dunya::field::SampledField* World::sampledField(Entity entity) const {
+  const auto* held = m_registry.try_get<SharedField>(entity);
+
+  return held == nullptr ? nullptr : held->field.get();
+}
+
+bool World::hasSampledField(Entity entity) const noexcept {
+  return m_registry.all_of<SharedField>(entity);
+}
+
+long World::sampledFieldUsers(Entity entity) const noexcept {
+  const auto* held = m_registry.try_get<SharedField>(entity);
+
+  return held == nullptr ? 0 : held->field.use_count();
 }
 
 void World::clearBakedVolume(Entity entity) {

@@ -7,6 +7,9 @@
 #include <dunya/field/raycast/raycast.h>
 #include <dunya/objectmodel/sdfgrid/sdfgrid.h>
 #include <dunya/objectmodel/deformable/deformable.h>
+#include <dunya/objectmodel/deformed/deformed.h>
+#include <dunya/objectmodel/rigidbody/rigidbody.h>
+#include <dunya/objectmodel/pose/pose.h>
 #include <dunya/objectmodel/world/world.h>
 #include <dunya/physics/fieldshape/fieldshape.h>
 
@@ -14,6 +17,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <optional>
 #include <iostream>
 #include <iomanip>
@@ -24,6 +28,7 @@
 #include <functional>
 #include <stdexcept>
 #include <cstdint>
+#include <unordered_set>
 #include <vector>
 #include <string>
 #include <utility>

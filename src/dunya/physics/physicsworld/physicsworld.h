@@ -50,6 +50,9 @@ private:
   // members are destroyed in reverse declaration order.
   ImpactListener m_impacts;
 
+  // Reported once, not once a frame: a full cache stays full.
+  bool m_updateErrorReported = false;
+
   JPH::PhysicsSystem m_system;
 };
 

@@ -84,8 +84,6 @@ Application::Application(const StartupOptions& options)
       m_reloadRequested(false)
 
 {
-  m_volumeOwners.fill(dunya::objectmodel::INVALID_ENTITY);
-
   m_keySubscription = dunya::core::EventDispatcher::instance()
                         .subscribe<dunya::platform::KeyEvent>(
                           [this](const dunya::platform::KeyEvent& event) {
@@ -301,7 +299,12 @@ int Application::start(const StartupOptions& options) {
            fired,
            m_frameCarveMs,
            m_frameUploadMs,
-           m_framePhysicsMs}
+           m_framePhysicsMs,
+           m_frameActiveBodies,
+           m_frameSubsteps,
+           m_frameMovedBodies,
+           m_frameMaxMoveMm,
+           m_frameMaxTurnDeg}
         );
       }
 
@@ -340,6 +343,15 @@ int Application::start(const StartupOptions& options) {
       )
                            .count();
 
+      m_frameSubsteps = substeps;
+
+      // After the step, so it is what the step actually simulated rather than
+      // what was awake before it. Jolt takes non-moving bodies out of the
+      // simulation, so this is the number the cost should track.
+      m_frameActiveBodies = m_runtime->physics().system().GetNumActiveBodies(
+        JPH::EBodyType::RigidBody
+      );
+
       // Whatever is left would be paid for next frame and start the spiral
       // again, so it is dropped: simulation time lags, frame rate does not.
       if (substeps == MAX_PHYSICS_SUBSTEPS) {
@@ -363,6 +375,12 @@ int Application::start(const StartupOptions& options) {
       // Once per frame, not once per step: the world only needs where things
       // ended up, and the renderer reads it straight after.
       m_runtime->syncPoses();
+
+      // After the sync, because it reads what the sync wrote. Only under a
+      // scripted run: it walks every body and nothing watches it otherwise.
+      if (m_demoFrames > 0) {
+        measureMotion();
+      }
     }
 
     ++statFrames;
@@ -475,22 +493,22 @@ int Application::start(const StartupOptions& options) {
     // Done here rather than by a listener inside VolumePool, because the pool
     // is a renderer resource and the registry is world state: the frame is
     // where the two meet.
-    for (uint32_t slot = 0; slot != m_volumeOwners.size(); ++slot) {
-      const dunya::objectmodel::Entity owner = m_volumeOwners[slot];
-
-      if (owner == dunya::objectmodel::INVALID_ENTITY) {
-        continue;
-      }
+    for (size_t held = 0; held != m_volumeHolders.size();) {
+      const auto [owner, slot] = m_volumeHolders[held];
 
       if (
         registry.valid(owner)
         && registry.all_of<dunya::objectmodel::BakedVolume>(owner)
       ) {
+        ++held;
+
         continue;
       }
 
       m_volumePool.release(slot);
-      m_volumeOwners[slot] = dunya::objectmodel::INVALID_ENTITY;
+
+      m_volumeHolders[held] = m_volumeHolders.back();
+      m_volumeHolders.pop_back();
     }
 
     uint32_t recordIndex = 0;
@@ -525,8 +543,7 @@ int Application::start(const StartupOptions& options) {
         std::span<const dunya::field::Primitive> primitives =
           world.primitives(entity);
 
-        const auto* carried =
-          registry.try_get<dunya::field::SampledField>(entity);
+        const dunya::field::SampledField* carried = world.sampledField(entity);
 
         // A bake is seconds and a copy is milliseconds. The field the entity
         // already carries was made from these same primitives, so a volume can
@@ -534,9 +551,37 @@ int Application::start(const StartupOptions& options) {
         const bool reusable =
           carried != nullptr && !world.needsResample(entity);
 
+        // Keyed only while the volume is still a pure function of the
+        // primitives it was baked from, which is exactly what Deformed
+        // denies. A carried field is fine to key on - a copy of a bake is
+        // the bake - so the question is divergence, not provenance.
+        const dunya::renderer::VolumeKey key =
+          registry.all_of<dunya::objectmodel::Deformed>(entity)
+            ? dunya::renderer::VolumeKey{}
+            : dunya::renderer::volumeKey(primitives, grid.resolution);
+
+        // Asked before baking, not after. A hit means some other object has
+        // already sampled these primitives onto this lattice, so the bake
+        // would produce a second copy of an answer that is already in memory.
+        uint32_t index = reusable ? UINT32_MAX : m_volumePool.acquire(key);
+
+        const dunya::objectmodel::Entity donor =
+          index == UINT32_MAX ? dunya::objectmodel::INVALID_ENTITY
+                              : fieldOnSlot(index);
+
+        if (
+          index != UINT32_MAX && donor == dunya::objectmodel::INVALID_ENTITY
+        ) {
+          // The slot is there but nothing on it still carries a lattice, and
+          // physics needs one. Give the reference back and bake.
+          m_volumePool.release(index);
+
+          index = UINT32_MAX;
+        }
+
         dunya::field::SampledField baked;
 
-        if (!reusable) {
+        if (!reusable && donor == dunya::objectmodel::INVALID_ENTITY) {
           const dunya::field::Aabb box =
             dunya::objectmodel::gridBox(primitives);
 
@@ -548,8 +593,9 @@ int Application::start(const StartupOptions& options) {
           );
         }
 
-        const uint32_t index =
-          m_volumePool.allocate(reusable ? *carried : baked);
+        if (index == UINT32_MAX) {
+          index = m_volumePool.allocate(reusable ? *carried : baked, key);
+        }
 
         // No volume means nothing to sample, and UINT32_MAX would index
         // the volume array out of bounds on the GPU. Skip it entirely.
@@ -570,13 +616,19 @@ int Application::start(const StartupOptions& options) {
           index
         );
 
-        m_volumeOwners[index] = entity;
+        m_volumeHolders.emplace_back(entity, index);
 
         world.setBakedVolume(entity, index);
 
         // Physics queries this, so a fresh bake is kept rather than dropped
         // once the volume is uploaded. A reused one is already in place.
-        if (!reusable) {
+        //
+        // Shared rather than copied: a thousand crates cut from the same
+        // primitives hold one lattice between them, and the first dent on any
+        // of them takes its own.
+        if (donor != dunya::objectmodel::INVALID_ENTITY) {
+          world.shareSampledField(donor, entity);
+        } else if (!reusable) {
           world.setSampledField(entity, std::move(baked));
         }
 
@@ -586,10 +638,7 @@ int Application::start(const StartupOptions& options) {
         // bound table, so without this its slot holds whatever the
         // device-local buffer came up with and the march reads noise.
         if (registry.all_of<dunya::objectmodel::Deformable>(entity)) {
-          m_recordTable.uploadBounds(
-            index,
-            registry.get<dunya::field::SampledField>(entity)
-          );
+          m_recordTable.uploadBounds(index, *world.sampledField(entity));
         }
 
         // The body reads the field, so it cannot exist before one does: this
@@ -626,7 +675,7 @@ int Application::start(const StartupOptions& options) {
             m_runtime && world.needsResample(entity)
             && registry.all_of<
                dunya::objectmodel::RigidBody,
-               dunya::field::SampledField>(entity)
+               dunya::objectmodel::SharedField>(entity)
           ) {
             const dunya::field::Aabb refit =
               dunya::objectmodel::gridBox(world.primitives(entity));
@@ -830,23 +879,24 @@ dunya::objectmodel::World& Application::activeWorld() noexcept {
   return m_runtime ? m_runtime->world() : m_authoredWorld;
 }
 
+const dunya::objectmodel::World& Application::activeWorld() const noexcept {
+  return m_runtime ? m_runtime->world() : m_authoredWorld;
+}
+
 void Application::releaseAllVolumes() {
   dunya::objectmodel::World& world = activeWorld();
 
-  for (uint32_t slot = 0; slot != m_volumeOwners.size(); ++slot) {
-    if (m_volumeOwners[slot] == dunya::objectmodel::INVALID_ENTITY) {
-      continue;
-    }
-
+  for (const auto& [owner, slot] : m_volumeHolders) {
     // The component must go with the slot, or the world this belonged to
     // renders through a freed volume the next time it is active.
-    if (world.registry().valid(m_volumeOwners[slot])) {
-      world.clearBakedVolume(m_volumeOwners[slot]);
+    if (world.registry().valid(owner)) {
+      world.clearBakedVolume(owner);
     }
 
     m_volumePool.release(slot);
-    m_volumeOwners[slot] = dunya::objectmodel::INVALID_ENTITY;
   }
+
+  m_volumeHolders.clear();
 }
 
 glm::vec3 Application::aimAtPoint(const glm::vec3& target) const {
@@ -928,6 +978,12 @@ void Application::fire(const glm::vec3& aim) {
   // all. The bounds it also used to fill are uploaded once in start(), for the
   // same reason: neither the geometry nor the slot ever moves.
   if (m_ballVolume != UINT32_MAX) {
+    // A reference rather than a bare index, so the slot's count says how many
+    // balls are on it. Without that a split would see one user and overwrite
+    // the volume every other ball is reading.
+    m_volumePool.retain(m_ballVolume);
+    m_volumeHolders.emplace_back(ball, m_ballVolume);
+
     world.setBakedVolume(ball, m_ballVolume);
     world.markBaked(ball);
   }
@@ -974,10 +1030,7 @@ void Application::dent(uint32_t count) {
   dunya::objectmodel::World& world = activeWorld();
   const dunya::objectmodel::Entity target = m_scene.deformable();
 
-  if (
-    !world.registry().valid(target)
-    || !world.registry().all_of<dunya::field::SampledField>(target)
-  ) {
+  if (!world.registry().valid(target) || !world.hasSampledField(target)) {
     std::cout << "Nothing deformable to dent yet\n";
     return;
   }
@@ -1080,7 +1133,7 @@ void Application::dent(uint32_t count) {
 
         const size_t resident =
           field.distances.size() * sizeof(float)
-          + field.materials.size() * sizeof(uint32_t)
+          + field.materials.size() * sizeof(uint8_t)
           + field.brickLipschitz.size() * sizeof(float)
           + field.brickMinimum.size() * sizeof(float)
           + field.brickMaximum.size() * sizeof(float)
@@ -1182,7 +1235,7 @@ void Application::applyImpacts() {
       !registry.valid(entity)
       || !registry.all_of<
           dunya::objectmodel::Deformable,
-          dunya::field::SampledField>(entity)
+          dunya::objectmodel::SharedField>(entity)
     ) {
       continue;
     }
@@ -1242,7 +1295,7 @@ void Application::applyImpacts() {
       !registry.valid(entity)
       || !registry.all_of<
           dunya::objectmodel::Deformable,
-          dunya::field::SampledField>(entity)
+          dunya::objectmodel::SharedField>(entity)
     ) {
       continue;
     }
@@ -1316,6 +1369,56 @@ void Application::applyImpacts() {
   m_pendingCraters.clear();
 }
 
+void Application::measureMotion() {
+  // A body that moved less than this in a frame has not moved: a metre of
+  // float carries about a micron of noise in its last bits, and a solver that
+  // holds a stack still still writes the same pose through the same maths.
+  constexpr float MOVED_METRES = 1.0e-5f;
+  constexpr float TURNED_RADIANS = 1.0e-5f;
+
+  m_frameMovedBodies = 0;
+  m_frameMaxMoveMm = 0.0f;
+  m_frameMaxTurnDeg = 0.0f;
+
+  const entt::registry& registry = activeWorld().registry();
+
+  const auto simulated =
+    registry.view<dunya::objectmodel::RigidBody, dunya::objectmodel::Pose>();
+
+  for (const dunya::objectmodel::Entity entity : simulated) {
+    const dunya::objectmodel::Pose& pose =
+      simulated.get<dunya::objectmodel::Pose>(entity);
+
+    const uint32_t key = static_cast<uint32_t>(entity);
+
+    const auto found = m_posePrevious.find(key);
+
+    if (found == m_posePrevious.end()) {
+      m_posePrevious.emplace(key, pose);
+
+      continue;
+    }
+
+    const float moved = glm::length(pose.position - found->second.position);
+
+    // Quaternions double-cover: q and -q are the same orientation, so the
+    // absolute value is what makes this an angle rather than a coin flip.
+    const float aligned =
+      std::min(1.0f, std::abs(glm::dot(pose.rotation, found->second.rotation)));
+
+    const float turned = 2.0f * std::acos(aligned);
+
+    if (moved > MOVED_METRES || turned > TURNED_RADIANS) {
+      ++m_frameMovedBodies;
+    }
+
+    m_frameMaxMoveMm = std::max(m_frameMaxMoveMm, moved * 1000.0f);
+    m_frameMaxTurnDeg = std::max(m_frameMaxTurnDeg, glm::degrees(turned));
+
+    found->second = pose;
+  }
+}
+
 void Application::reportDemo() const {
   if (m_demoFrameMs.empty()) {
     return;
@@ -1345,8 +1448,28 @@ void Application::reportDemo() const {
     }
   }
 
+  // Distinct lattices, not one per object: identical crates hold one between
+  // them, and a per-object sum would report memory that is not there.
+  const dunya::objectmodel::World& world = activeWorld();
+
+  std::unordered_set<const dunya::field::SampledField*> lattices;
+  size_t resident = 0;
+
+  for (const dunya::objectmodel::Entity entity : world.fields()) {
+    if (const auto* field = world.sampledField(entity)) {
+      if (lattices.insert(field).second) {
+        resident += field->distances.size() * sizeof(float)
+                    + field->materials.size() * sizeof(uint8_t);
+      }
+    }
+  }
+
   std::cout << "\ndemo: " << m_demoFrameMs.size() << " frames, "
-            << m_cratersApplied << " craters\n"
+            << m_cratersApplied << " craters, " << m_volumePool.allocated()
+            << " of " << dunya::core::MAX_FIELD_VOLUMES << " volumes, "
+            << lattices.size() << " lattices over " << world.fields().size()
+            << " objects (" << (resident / (1024 * 1024)) << " MB), "
+            << (m_runtime ? m_runtime->shapeCount() : 0u) << " shapes\n"
             << "  mean " << (total / double(m_demoFrameMs.size()))
             << " ms  median " << at(0.5) << "  p99 " << at(0.99) << "  worst "
             << sorted.back().ms << "\n"
@@ -1356,6 +1479,57 @@ void Application::reportDemo() const {
 
   // Named rather than summarised: a spike on a spawn frame and a spike on a
   // crater frame are different bugs, and the mean cannot tell them apart.
+  // Means per phase, not just the worst frames: a phase that costs two
+  // milliseconds every frame never appears in a worst-six list and is still
+  // the largest thing in the budget.
+  double carveTotal = 0.0;
+  double uploadTotal = 0.0;
+  double physicsTotal = 0.0;
+  double activeTotal = 0.0;
+  double substepTotal = 0.0;
+  uint32_t activeWorst = 0u;
+  uint32_t activeQuietest = UINT32_MAX;
+  double movedTotal = 0.0;
+  double moveTotal = 0.0;
+  uint32_t movedWorst = 0u;
+  uint32_t movedQuietest = UINT32_MAX;
+  float moveWorst = 0.0f;
+  float turnWorst = 0.0f;
+
+  for (const DemoFrame& frame : m_demoFrameMs) {
+    carveTotal += frame.carveMs;
+    uploadTotal += frame.uploadMs;
+    physicsTotal += frame.physicsMs;
+    activeTotal += frame.activeBodies;
+    substepTotal += frame.substeps;
+    activeWorst = std::max(activeWorst, frame.activeBodies);
+    activeQuietest = std::min(activeQuietest, frame.activeBodies);
+    movedTotal += frame.movedBodies;
+    moveTotal += frame.maxMoveMm;
+    movedWorst = std::max(movedWorst, frame.movedBodies);
+    movedQuietest = std::min(movedQuietest, frame.movedBodies);
+    moveWorst = std::max(moveWorst, frame.maxMoveMm);
+    turnWorst = std::max(turnWorst, frame.maxTurnDeg);
+  }
+
+  const double frames = double(m_demoFrameMs.size());
+
+  std::cout << "  mean carve " << (carveTotal / frames) << "  upload "
+            << (uploadTotal / frames) << "  physics " << (physicsTotal / frames)
+            << "  rest "
+            << ((total - carveTotal - uploadTotal - physicsTotal) / frames)
+            << "\n";
+
+  std::cout << "  awake: mean " << (activeTotal / frames) << "  worst "
+            << activeWorst << "  quietest " << activeQuietest
+            << ",  mean substeps " << (substepTotal / frames) << "\n";
+
+  std::cout << "  moved: mean " << (movedTotal / frames) << "  worst "
+            << movedWorst << "  quietest " << movedQuietest
+            << ",  mean furthest " << (moveTotal / frames)
+            << " mm,  worst furthest " << moveWorst << " mm,  worst turn "
+            << turnWorst << " deg\n";
+
   std::cout << "  worst frames:\n";
 
   const size_t show = std::min<size_t>(6u, sorted.size());
@@ -1374,28 +1548,86 @@ void Application::reportDemo() const {
   std::cout << std::flush;
 }
 
+dunya::objectmodel::Entity Application::fieldOnSlot(uint32_t slot) {
+  const dunya::objectmodel::World& world = activeWorld();
+
+  for (const auto& [owner, held] : m_volumeHolders) {
+    if (held != slot || !world.registry().valid(owner)) {
+      continue;
+    }
+
+    if (world.hasSampledField(owner)) {
+      return owner;
+    }
+  }
+
+  return dunya::objectmodel::INVALID_ENTITY;
+}
+
 void Application::uploadDentedVolumes() {
   if (m_pendingUploads.empty()) {
     return;
   }
 
-  const entt::registry& registry = activeWorld().registry();
+  dunya::objectmodel::World& world = activeWorld();
+  const entt::registry& registry = world.registry();
+
+  bool splitFailureReported = false;
 
   for (const auto& [entity, box] : m_pendingUploads) {
     if (
       !registry.valid(entity)
       || !registry.all_of<
           dunya::objectmodel::BakedVolume,
-          dunya::field::SampledField>(entity)
+          dunya::objectmodel::SharedField>(entity)
     ) {
       continue;
     }
 
-    const uint32_t slot =
+    const uint32_t shared =
       registry.get<dunya::objectmodel::BakedVolume>(entity).index;
 
-    const dunya::field::SampledField& field =
-      registry.get<dunya::field::SampledField>(entity);
+    const dunya::field::SampledField& field = *world.sampledField(entity);
+
+    // Copy on write, and this is the write. Until its first dent an object
+    // reads the volume every object with the same primitives shares; the dent
+    // is what earns it one of its own.
+    const uint32_t slot = m_volumePool.makeUnique(m_uploader, shared, field);
+
+    if (slot == UINT32_MAX) {
+      // Writing into the shared slot instead would dent every object holding
+      // it, so the dent stays on the CPU field and off the screen.
+      if (!splitFailureReported) {
+        splitFailureReported = true;
+        std::cout << "Volume pool full, a dent is not drawn\n";
+      }
+
+      continue;
+    }
+
+    if (slot != shared) {
+      m_volumePool.release(shared);
+
+      const auto held = std::find(
+        m_volumeHolders.begin(),
+        m_volumeHolders.end(),
+        std::pair<dunya::objectmodel::Entity, uint32_t>{entity, shared}
+      );
+
+      if (held != m_volumeHolders.end()) {
+        held->second = slot;
+      }
+
+      const auto images = m_volumePool.images(slot);
+
+      m_recordTable.registerVolume(
+        images.distance.imageView(),
+        images.material.imageView(),
+        slot
+      );
+
+      world.setBakedVolume(entity, slot);
+    }
 
     m_volumePool.upload(m_uploader, slot, field, box);
 
@@ -1472,6 +1704,8 @@ void Application::registerPanels() {
     size_t resident = 0;
     size_t deformable = 0;
 
+    std::unordered_set<const dunya::field::SampledField*> counted;
+
     for (const dunya::objectmodel::Entity entity : world.fields()) {
       if (!registry.all_of<dunya::objectmodel::Deformable>(entity)) {
         continue;
@@ -1479,11 +1713,14 @@ void Application::registerPanels() {
 
       ++deformable;
 
-      if (
-        const auto* field = registry.try_get<dunya::field::SampledField>(entity)
-      ) {
-        resident += field->distances.size() * sizeof(float)
-                    + field->materials.size() * sizeof(uint32_t);
+      // Once per lattice, not once per object. Identical crates hold one
+      // between them, and counting it per holder would report memory that is
+      // not there - which is the whole thing this number is watching.
+      if (const auto* field = world.sampledField(entity)) {
+        if (counted.insert(field).second) {
+          resident += field->distances.size() * sizeof(float)
+                      + field->materials.size() * sizeof(uint8_t);
+        }
       }
     }
 
