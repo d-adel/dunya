@@ -44,9 +44,9 @@ public:
     dunya::field::Primitive shape;
     float speed = 0.0f;
 
-    // The height a ball rolls at, and what it is aimed at. A shot is flat and
-    // aimed rather than along the view: a camera looking down at the scene
-    // would fire into the floor.
+    // Where a ball leaves from, and what it is thrown at. Aimed rather than
+    // fired along the view, because a camera looking down at the scene would
+    // send every shot into the floor.
     float height = 0.0f;
     glm::vec3 aimAt{0.0f};
 

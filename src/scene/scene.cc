@@ -121,7 +121,7 @@ Scene::Projectile Scene::projectile() const {
   shot.grid.resolution = glm::uvec3(PROJECTILE_RESOLUTION);
 
   shot.shape = dunya::field::makeSphere(
-    glm::vec3(0.0f, 3.0f, 0.0f),
+    glm::vec3(0.0f),
     PROJECTILE_RADIUS,
     PROJECTILE_MATERIAL
   );
@@ -129,7 +129,7 @@ Scene::Projectile Scene::projectile() const {
   // Fast enough that a step carries the ball further than its own radius,
   // which is the case the swept path exists for.
   shot.speed = 22.0f;
-  shot.height = GROUND_Y + PROJECTILE_RADIUS;
+  shot.height = 2.5f;
 
   shot.mass = 150.0f;
 

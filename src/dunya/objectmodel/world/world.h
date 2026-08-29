@@ -101,6 +101,14 @@ public:
     m_registry.patch<T>(entity, std::forward<Fn>(fn));
   }
 
+  // Write it whether or not it is there. EnTT's verb and EnTT's
+  // precondition, which is none — for a component whose absence is a
+  // meaningful state, and which therefore has nowhere to be created.
+  template<SelfContained T>
+  void emplaceOrReplace(Entity entity, const T& value) {
+    m_registry.emplace_or_replace<T>(entity, value);
+  }
+
   // Whole-component replacement. EnTT's verb and EnTT's precondition: the
   // component has to be there already.
   template<SelfContained T>

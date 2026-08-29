@@ -632,20 +632,20 @@ void Application::fire() {
   const Scene::Projectile& shot = m_shotSettings;
   const glm::vec3 from = glm::vec3(m_camera.position());
 
-  // Flat, and aimed at the stack rather than along the view: the camera looks
-  // down at the scene, so a shot along it would go into the floor. Moving the
-  // camera changes which side the ball comes from, never whether it arrives.
-  const glm::vec3 alongGround(
-    shot.aimAt.x - from.x,
-    0.0f,
-    shot.aimAt.z - from.z
-  );
+  // At the stack rather than along the view: the camera looks down at the
+  // scene, so a shot along it would go into the floor. Moving the camera
+  // changes which side the ball comes from, never whether it arrives.
+  //
+  // Gravity is not solved for, so a shot lands a little under what it is aimed
+  // at - which is the stack, and lower up a stack topples it better anyway.
+  const glm::vec3 muzzle(from.x, shot.height, from.z);
+  const glm::vec3 toTarget = shot.aimAt - muzzle;
 
-  if (glm::length(alongGround) < 1.0e-3f) {
+  if (glm::length(toTarget) < 1.0e-3f) {
     return;
   }
 
-  const glm::vec3 aim = glm::normalize(alongGround);
+  const glm::vec3 aim = glm::normalize(toTarget);
 
   // Oldest out before newest in, so the cap is a cap and not a leak: every
   // ball holds a volume slot and a body, and both are finite.
@@ -656,11 +656,11 @@ void Application::fire() {
 
   dunya::objectmodel::World& world = m_runtime->world();
 
-  // Under the camera at rolling height, then clear of it: spawned any nearer
-  // and the ball fills the screen on the frame it is fired.
+  // At the camera in the ground plane, at the launch height, then a metre
+  // down the aim: spawned any nearer and the ball fills the screen on the
+  // frame it is fired.
   dunya::objectmodel::Pose pose{};
-  pose.position =
-    glm::vec3(from.x, shot.height, from.z) + aim * MUZZLE_DISTANCE;
+  pose.position = muzzle + aim * MUZZLE_DISTANCE;
 
   const dunya::objectmodel::Entity ball = world.createField(pose, shot.grid);
 

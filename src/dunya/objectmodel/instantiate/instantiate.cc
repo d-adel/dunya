@@ -23,6 +23,10 @@ void instantiateWorld(const World& source, World& destination) {
       destination.addStaticBody(entity);
     }
 
+    if (const auto* scale = registry.try_get<MassScale>(entity)) {
+      destination.emplaceOrReplace<MassScale>(entity, *scale);
+    }
+
     for (const dunya::field::Primitive& primitive : source.primitives(entity)) {
       if (!destination.addPrimitive(entity, primitive)) {
         throw std::runtime_error("Cannot instantiate an object's primitives");

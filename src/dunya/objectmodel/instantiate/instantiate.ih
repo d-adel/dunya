@@ -1,5 +1,6 @@
 #include "instantiate.h"
 
 #include <dunya/objectmodel/staticbody/staticbody.h>
+#include <dunya/objectmodel/massscale/massscale.h>
 
 #include <stdexcept>

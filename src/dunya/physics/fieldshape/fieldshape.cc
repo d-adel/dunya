@@ -61,6 +61,158 @@ glm::vec3 ontoSurface(const SampledField& field, glm::vec3 point) {
   return point;
 }
 
+// What the solid weighs, where it is, and how it resists turning. The second
+// moment is about the field's own origin; a body turns about its centre of
+// mass, so the shift to that point happens once the centre is known.
+struct SolidIntegral {
+  double mass = 0.0;
+  glm::dvec3 firstMoment{0.0};
+  glm::dmat3 secondMoment{0.0};
+};
+
+// Summed over the voxels, which is the one thing a volume representation makes
+// trivial: no hollow-versus-solid guess, no hand tuning.
+// What a run of cell centres on one axis contributes: how many there are,
+// where they are, and where they are squared. A brick that is solid throughout
+// needs no per-cell test, and these three numbers stand in for walking it.
+struct AxisSums {
+  double count = 0.0;
+  double first = 0.0;
+  double second = 0.0;
+};
+
+AxisSums axisSums(float origin, float voxel, uint32_t begin, uint32_t end) {
+  AxisSums sums;
+
+  for (uint32_t i = begin; i != end; ++i) {
+    // In float first, so a solid brick and a boundary one place their cells at
+    // the same coordinates rather than at two roundings of them.
+    const double at = double(origin + voxel * (float(i) + 0.5f));
+
+    sums.count += 1.0;
+    sums.first += at;
+    sums.second += at * at;
+  }
+
+  return sums;
+}
+
+// Summed over the voxels, which is the one thing a volume representation makes
+// trivial: no hollow-versus-solid guess, no hand tuning.
+SolidIntegral integrateSolid(const SampledField& field) {
+  const glm::uvec3 cells = field.resolution - glm::uvec3(1u);
+  const glm::uvec3 bricks = dunya::field::brickCounts(field);
+
+  const float cellVolume =
+    field.voxelSize.x * field.voxelSize.y * field.voxelSize.z;
+  const double cellMass = double(cellVolume) * DENSITY;
+
+  // A cell's eight corners, as offsets from the lattice index of its lowest.
+  const uint32_t alongY = field.resolution.x;
+  const uint32_t alongZ = field.resolution.x * field.resolution.y;
+
+  SolidIntegral solid;
+
+  const uint32_t brickCount = bricks.x * bricks.y * bricks.z;
+
+  for (uint32_t brick = 0u; brick != brickCount; ++brick) {
+    // The value range answers both questions before a single sample: a brick
+    // that never goes negative holds nothing, and one that never goes positive
+    // holds nothing else. Only the boundary is worth walking.
+    if (field.brickMinimum[brick] > 0.0f) {
+      continue;
+    }
+
+    const glm::uvec3 at(
+      brick % bricks.x,
+      (brick / bricks.x) % bricks.y,
+      brick / (bricks.x * bricks.y)
+    );
+
+    const glm::uvec3 base = at * glm::uvec3(dunya::field::BRICK_CELLS);
+    const glm::uvec3 last =
+      glm::min(base + glm::uvec3(dunya::field::BRICK_CELLS), cells);
+
+    if (field.brickMaximum[brick] < 0.0f) {
+      // Every cell in it is inside, so what the walk would sum has a closed
+      // form. The ranges are taken over a one-cell halo, which is what makes
+      // that safe out to the brick's last cell.
+      const AxisSums sx =
+        axisSums(field.origin.x, field.voxelSize.x, base.x, last.x);
+      const AxisSums sy =
+        axisSums(field.origin.y, field.voxelSize.y, base.y, last.y);
+      const AxisSums sz =
+        axisSums(field.origin.z, field.voxelSize.z, base.z, last.z);
+
+      const double xx = sx.second * sy.count * sz.count;
+      const double yy = sx.count * sy.second * sz.count;
+      const double zz = sx.count * sy.count * sz.second;
+
+      solid.mass += cellMass * sx.count * sy.count * sz.count;
+
+      solid.firstMoment += cellMass
+                           * glm::dvec3(
+                             sx.first * sy.count * sz.count,
+                             sx.count * sy.first * sz.count,
+                             sx.count * sy.count * sz.first
+                           );
+
+      solid.secondMoment[0][0] += cellMass * (yy + zz);
+      solid.secondMoment[1][1] += cellMass * (xx + zz);
+      solid.secondMoment[2][2] += cellMass * (xx + yy);
+      solid.secondMoment[0][1] -= cellMass * sx.first * sy.first * sz.count;
+      solid.secondMoment[0][2] -= cellMass * sx.first * sy.count * sz.first;
+      solid.secondMoment[1][2] -= cellMass * sx.count * sy.first * sz.first;
+
+      continue;
+    }
+
+    for (uint32_t z = base.z; z < last.z; ++z) {
+      for (uint32_t y = base.y; y < last.y; ++y) {
+        for (uint32_t x = base.x; x < last.x; ++x) {
+          const uint32_t lowest = x + alongY * y + alongZ * z;
+
+          // Trilinear interpolation at the middle of a cell is the mean of its
+          // eight corners, so the sample the walk needs is a sum of eight
+          // values and no coordinate arithmetic at all. Only its sign is read,
+          // which is why it is never divided by eight.
+          const float corners =
+            field.distances[lowest] + field.distances[lowest + 1u]
+            + field.distances[lowest + alongY]
+            + field.distances[lowest + alongY + 1u]
+            + field.distances[lowest + alongZ]
+            + field.distances[lowest + alongZ + 1u]
+            + field.distances[lowest + alongZ + alongY]
+            + field.distances[lowest + alongZ + alongY + 1u];
+
+          if (corners >= 0.0f) {
+            continue;
+          }
+
+          const glm::vec3 centre =
+            field.origin
+            + field.voxelSize * (glm::vec3(x, y, z) + glm::vec3(0.5f));
+
+          solid.mass += cellMass;
+
+          const glm::dvec3 p(centre);
+
+          solid.firstMoment += cellMass * p;
+
+          solid.secondMoment[0][0] += cellMass * (p.y * p.y + p.z * p.z);
+          solid.secondMoment[1][1] += cellMass * (p.x * p.x + p.z * p.z);
+          solid.secondMoment[2][2] += cellMass * (p.x * p.x + p.y * p.y);
+          solid.secondMoment[0][1] -= cellMass * p.x * p.y;
+          solid.secondMoment[0][2] -= cellMass * p.x * p.z;
+          solid.secondMoment[1][2] -= cellMass * p.y * p.z;
+        }
+      }
+    }
+  }
+
+  return solid;
+}
+
 // The cached candidates that fall inside the overlap, in brick order, so the
 // identifiers a manifold is keyed on do not move between frames.
 template<typename Visitor>
@@ -120,6 +272,9 @@ JPH::AABox overlapIn(
   clipped.mMin = JPH::Vec3::sMax(clipped.mMin, brought.mMin);
   clipped.mMax = JPH::Vec3::sMin(clipped.mMax, brought.mMax);
 
+  // Back into the near shape's field space, which is where its bricks are.
+  clipped.Translate(toJph(near.centerOfMass()));
+
   return clipped;
 }
 
@@ -174,9 +329,13 @@ void collideFieldVsField(
         return;
       }
 
-      const JPH::Vec3 probed = intoProbe * toJph(seed);
-      const dunya::field::FieldProbe hit =
-        dunya::field::probe(probeShape.field(), toGlm(probed));
+      const glm::vec3 fromSeedCentre = seed - seedShape.centerOfMass();
+
+      const JPH::Vec3 probed = intoProbe * toJph(fromSeedCentre);
+      const dunya::field::FieldProbe hit = dunya::field::probe(
+        probeShape.field(),
+        toGlm(probed) + probeShape.centerOfMass()
+      );
 
       if (hit.distance >= separation) {
         return;
@@ -184,7 +343,7 @@ void collideFieldVsField(
 
       // The probed body's outward normal, in the space both transforms share.
       const JPH::Vec3 normal = (outOfProbe * toJph(hit.normal)).Normalized();
-      const JPH::Vec3 onSeed = seedAt * toJph(seed);
+      const JPH::Vec3 onSeed = seedAt * toJph(fromSeedCentre);
       const JPH::Vec3 onProbe = onSeed - hit.distance * normal;
 
       JPH::CollideShapeResult result;
@@ -258,9 +417,11 @@ void castFieldVsField(
       everywhereLow,
       everywhereHigh,
       [&](uint32_t brick, const glm::vec3& seed) {
-        const JPH::Vec3 probed = at * toJph(seed);
-        const dunya::field::FieldProbe hit =
-          dunya::field::probe(fixed.field(), toGlm(probed));
+        const JPH::Vec3 probed = at * toJph(seed - moving.centerOfMass());
+        const dunya::field::FieldProbe hit = dunya::field::probe(
+          fixed.field(),
+          toGlm(probed) + fixed.centerOfMass()
+        );
 
         if (hit.distance < closest) {
           closest = hit.distance;
@@ -328,6 +489,46 @@ FieldShape::FieldShape(const dunya::field::SampledField& field)
 
   m_innerRadius = std::max(-deepest, 1.0e-3f);
 
+  // Where the solid is, what it weighs, and how it resists turning - all one
+  // walk, and all needed before any query: Jolt asks for the centre of mass
+  // while creating the body and expresses every transform it later hands over
+  // in that space. Eagerly for the same reason the seeds are.
+  const SolidIntegral solid = integrateSolid(field);
+
+  if (solid.mass > 0.0) {
+    m_centerOfMass = glm::vec3(solid.firstMoment / double(solid.mass));
+
+    // The parallel axis theorem, run backwards: the walk summed about the
+    // field's origin, and a body turns about its centre of mass. An object
+    // whose solid sits away from its own origin is otherwise handed an
+    // inertia dominated by a distance that has nothing to do with its shape.
+    const glm::dvec3 d(m_centerOfMass);
+    const double m = solid.mass;
+
+    glm::dmat3 aboutCentre = solid.secondMoment;
+
+    aboutCentre[0][0] -= m * (d.y * d.y + d.z * d.z);
+    aboutCentre[1][1] -= m * (d.x * d.x + d.z * d.z);
+    aboutCentre[2][2] -= m * (d.x * d.x + d.y * d.y);
+    aboutCentre[0][1] += m * d.x * d.y;
+    aboutCentre[0][2] += m * d.x * d.z;
+    aboutCentre[1][2] += m * d.y * d.z;
+
+    aboutCentre[1][0] = aboutCentre[0][1];
+    aboutCentre[2][0] = aboutCentre[0][2];
+    aboutCentre[2][1] = aboutCentre[1][2];
+
+    m_massProperties.mMass = static_cast<float>(solid.mass);
+    m_massProperties.mInertia = JPH::Mat44::sIdentity();
+
+    for (int column = 0; column != 3; ++column) {
+      for (int row = 0; row != 3; ++row) {
+        m_massProperties.mInertia(row, column) =
+          static_cast<float>(aboutCentre[column][row]);
+      }
+    }
+  }
+
   // One pass for both derived things. The contact candidates are solved here,
   // once, rather than inside the collide and sweep paths: the answer depends
   // on the field alone, and a shape is immutable. Eagerly, so nothing is
@@ -373,10 +574,11 @@ FieldShape::FieldShape(const dunya::field::SampledField& field)
   //
   // Clamped to the grid, because the last brick on an axis runs past the far
   // lattice point whenever the cell count is not a multiple of the brick size.
+  // Held about the centre of mass, which is the space Jolt reads it in.
   if (anySolid) {
     m_bounds = JPH::AABox(
-      toJph(glm::max(solidLow, field.origin)),
-      toJph(glm::min(solidHigh, gridMaximum(field)))
+      toJph(glm::max(solidLow, field.origin) - m_centerOfMass),
+      toJph(glm::min(solidHigh, gridMaximum(field)) - m_centerOfMass)
     );
 
     return;
@@ -395,6 +597,10 @@ std::span<const FieldSeed> FieldShape::seeds() const noexcept {
   return m_seeds;
 }
 
+const glm::vec3& FieldShape::centerOfMass() const noexcept {
+  return m_centerOfMass;
+}
+
 JPH::AABox FieldShape::GetLocalBounds() const {
   return m_bounds;
 }
@@ -408,98 +614,11 @@ float FieldShape::GetInnerRadius() const {
 }
 
 JPH::MassProperties FieldShape::GetMassProperties() const {
-  if (m_massKnown) {
-    return m_massProperties;
-  }
-
-  // Summed over the voxels, which is the one thing a volume representation
-  // makes trivial: no hollow-versus-solid guess, no hand tuning.
-  const glm::uvec3 cells = m_field->resolution - glm::uvec3(1u);
-  const glm::uvec3 bricks = dunya::field::brickCounts(*m_field);
-
-  const float cellVolume =
-    m_field->voxelSize.x * m_field->voxelSize.y * m_field->voxelSize.z;
-  const float cellMass = cellVolume * DENSITY;
-
-  float mass = 0.0f;
-  glm::dmat3 secondMoment(0.0);
-
-  const uint32_t brickCount = bricks.x * bricks.y * bricks.z;
-
-  for (uint32_t brick = 0u; brick != brickCount; ++brick) {
-    // The value range answers both questions before a single sample: a brick
-    // that never goes negative holds nothing, and one that never goes positive
-    // holds nothing else. Only the boundary is worth walking.
-    if (m_field->brickMinimum[brick] > 0.0f) {
-      continue;
-    }
-
-    const bool solid = m_field->brickMaximum[brick] < 0.0f;
-
-    const glm::uvec3 at(
-      brick % bricks.x,
-      (brick / bricks.x) % bricks.y,
-      brick / (bricks.x * bricks.y)
-    );
-
-    const glm::uvec3 base = at * glm::uvec3(dunya::field::BRICK_CELLS);
-    const glm::uvec3 last =
-      glm::min(base + glm::uvec3(dunya::field::BRICK_CELLS), cells);
-
-    for (uint32_t z = base.z; z < last.z; ++z) {
-      for (uint32_t y = base.y; y < last.y; ++y) {
-        for (uint32_t x = base.x; x < last.x; ++x) {
-          const glm::vec3 centre =
-            m_field->origin
-            + m_field->voxelSize * (glm::vec3(x, y, z) + glm::vec3(0.5f));
-
-          if (!solid && dunya::field::distance(*m_field, centre) >= 0.0f) {
-            continue;
-          }
-
-          mass += cellMass;
-
-          const glm::dvec3 p(centre);
-
-          secondMoment[0][0] += cellMass * (p.y * p.y + p.z * p.z);
-          secondMoment[1][1] += cellMass * (p.x * p.x + p.z * p.z);
-          secondMoment[2][2] += cellMass * (p.x * p.x + p.y * p.y);
-          secondMoment[0][1] -= cellMass * p.x * p.y;
-          secondMoment[0][2] -= cellMass * p.x * p.z;
-          secondMoment[1][2] -= cellMass * p.y * p.z;
-        }
-      }
-    }
-  }
-
-  JPH::MassProperties properties;
-
-  if (mass <= 0.0f) {
-    // Nothing solid in the grid. A body on this must supply its own mass.
-    m_massProperties = properties;
-    m_massKnown = true;
-
-    return m_massProperties;
-  }
-
-  secondMoment[1][0] = secondMoment[0][1];
-  secondMoment[2][0] = secondMoment[0][2];
-  secondMoment[2][1] = secondMoment[1][2];
-
-  properties.mMass = mass;
-  properties.mInertia = JPH::Mat44::sIdentity();
-
-  for (int column = 0; column != 3; ++column) {
-    for (int row = 0; row != 3; ++row) {
-      properties.mInertia(row, column) =
-        static_cast<float>(secondMoment[column][row]);
-    }
-  }
-
-  m_massProperties = properties;
-  m_massKnown = true;
-
   return m_massProperties;
+}
+
+JPH::Vec3 FieldShape::GetCenterOfMass() const {
+  return toJph(m_centerOfMass);
 }
 
 const JPH::PhysicsMaterial* FieldShape::GetMaterial(
@@ -513,7 +632,8 @@ JPH::Vec3 FieldShape::GetSurfaceNormal(
   JPH::Vec3Arg localSurfacePosition
 ) const {
   return toJph(
-    dunya::field::probe(*m_field, toGlm(localSurfacePosition)).normal
+    dunya::field::probe(*m_field, toGlm(localSurfacePosition) + m_centerOfMass)
+      .normal
   );
 }
 
@@ -577,7 +697,10 @@ void FieldShape::CollidePoint(
   const JPH::ShapeFilter&
 ) const {
   // One field evaluation, which is the whole test.
-  if (dunya::field::probe(*m_field, toGlm(point)).distance >= 0.0f) {
+  if (
+    dunya::field::probe(*m_field, toGlm(point) + m_centerOfMass).distance
+    >= 0.0f
+  ) {
     return;
   }
 

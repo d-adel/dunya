@@ -42,8 +42,9 @@ public:
   // gone.
   bool despawn(objectmodel::Entity entity);
 
-  // Scales a body to a mass, inertia with it. A demo knob: the shape derives
-  // mass from the volume it describes, and this overrides that.
+  // Scales a body to a mass, inertia with it. What is remembered is the
+  // factor, not the weight, so a later rebake still leaves a carved body
+  // lighter — the shape deriving mass from its volume is the point.
   void setMass(objectmodel::Entity entity, float mass);
 
   // One fixed step of the simulation.
@@ -54,6 +55,10 @@ public:
   void syncPoses();
 
 private:
+  // Puts back what a fresh shape's mass properties just overwrote. Nothing
+  // happens without a MassScale, which is most bodies.
+  void applyMassScale(objectmodel::Entity entity);
+
   // Declaration order is load-bearing: m_physicsWorld holds bodies that refer
   // to entities in m_world, and members are destroyed in reverse declaration
   // order, so the world must outlive the simulation that points into it.

@@ -55,6 +55,10 @@ void Runtime::setBodyShape(
       isStatic ? JPH::EActivation::DontActivate : JPH::EActivation::Activate
     );
 
+    // That call recomputed mass from the new geometry, which is wanted — a
+    // carved body is lighter — and discarded any override, which is not.
+    applyMassScale(entity);
+
     return;
   }
 
@@ -92,6 +96,9 @@ void Runtime::setBodyShape(
   }
 
   m_world.setRigidBody(entity, id.GetIndexAndSequenceNumber());
+
+  // A body instantiated from an authored one brings its scale with it.
+  applyMassScale(entity);
 
   m_broadPhaseStale = true;
 }
@@ -133,8 +140,46 @@ void Runtime::setMass(objectmodel::Entity entity, float mass) {
   // Null on a static body, which has no mass to scale.
   JPH::MotionProperties* motion = lock.GetBody().GetMotionPropertiesUnchecked();
 
-  if (motion != nullptr) {
-    motion->ScaleToMass(mass);
+  if (motion == nullptr) {
+    return;
+  }
+
+  motion->ScaleToMass(mass);
+
+  // Recorded against what the shape says it weighs, so what survives a rebake
+  // is the material rather than the number. A field with nothing solid in it
+  // has no weight to be a multiple of, and asks for no scale.
+  const float derived = lock.GetBody().GetShape()->GetMassProperties().mMass;
+
+  if (derived > 0.0f) {
+    m_world.emplaceOrReplace<objectmodel::MassScale>(entity, {mass / derived});
+  }
+}
+
+void Runtime::applyMassScale(objectmodel::Entity entity) {
+  const entt::registry& registry = m_world.registry();
+
+  const auto* scale = registry.try_get<objectmodel::MassScale>(entity);
+  const auto* body = registry.try_get<objectmodel::RigidBody>(entity);
+
+  if (scale == nullptr || body == nullptr) {
+    return;
+  }
+
+  JPH::BodyLockWrite lock(
+    m_physicsWorld.system().GetBodyLockInterface(),
+    JPH::BodyID(body->id)
+  );
+
+  if (!lock.Succeeded()) {
+    return;
+  }
+
+  JPH::MotionProperties* motion = lock.GetBody().GetMotionPropertiesUnchecked();
+  const float derived = lock.GetBody().GetShape()->GetMassProperties().mMass;
+
+  if (motion != nullptr && derived > 0.0f) {
+    motion->ScaleToMass(derived * scale->factor);
   }
 }
 

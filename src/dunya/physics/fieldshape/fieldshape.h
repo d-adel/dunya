@@ -35,12 +35,17 @@ public:
 
   const dunya::field::SampledField& field() const noexcept;
 
+  // Where the solid sits inside the field, which is where the body turns and
+  // what every transform Jolt hands this shape is expressed about.
+  const glm::vec3& centerOfMass() const noexcept;
+
   // The candidates, in brick order. Pulling a brick centre onto the surface is
   // a pure function of the field, and the alternative is solving it again per
   // pair, per substep, and once per iteration of every sweep.
   std::span<const FieldSeed> seeds() const noexcept;
 
   JPH::AABox GetLocalBounds() const override;
+  JPH::Vec3 GetCenterOfMass() const override;
   JPH::uint GetSubShapeIDBitsRecursive() const override;
   float GetInnerRadius() const override;
   JPH::MassProperties GetMassProperties() const override;
@@ -130,11 +135,11 @@ private:
 
   std::vector<FieldSeed> m_seeds;
 
-  // A shape is immutable, so the walk over two million cells is a pure
-  // function of the field it borrows: done once, on the first body built on
-  // it, and kept. Jolt asks at body creation and at SetShape, never per step.
-  mutable JPH::MassProperties m_massProperties;
-  mutable bool m_massKnown = false;
+  // Both walked once with the shape. Jolt asks for the centre of mass while
+  // the body is being created and needs it for every query after, so there is
+  // no point at which computing it later would be cheaper.
+  glm::vec3 m_centerOfMass{0.0f};
+  JPH::MassProperties m_massProperties;
 
   JPH::AABox m_bounds;
   float m_innerRadius = 0.0f;

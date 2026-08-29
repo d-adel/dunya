@@ -51,13 +51,17 @@ Primitive makeSphere(
 
 // One sphere in a box that clears it by half a radius, so the grid holds
 // outside as well as inside.
-SampledField bakeSphere(float radius, uint32_t resolution) {
+SampledField bakeSphere(
+  float radius,
+  uint32_t resolution,
+  const glm::vec3& centre = glm::vec3(0.0f)
+) {
   const float reach = radius * 1.5f;
 
   return dunya::field::bake(
-    std::vector<Primitive>{makeSphere(glm::vec3(0.0f), radius)},
-    glm::vec3(-reach),
-    glm::vec3(reach),
+    std::vector<Primitive>{makeSphere(centre, radius)},
+    centre - glm::vec3(reach),
+    centre + glm::vec3(reach),
     glm::uvec3(resolution)
   );
 }
@@ -87,6 +91,98 @@ TEST_CASE("the local bounds are the solid, not the grid", "[fieldshape]") {
     REQUIRE(bounds.mMin[axis] > -1.5f);
     REQUIRE(bounds.mMax[axis] < 1.5f);
   }
+}
+
+TEST_CASE(
+  "a solid away from the origin says where its mass is",
+  "[fieldshape]"
+) {
+  // Jolt turns a body about its centre of mass and expresses every transform
+  // it hands a shape in that space. A shape that answers zero for a solid
+  // three metres off its own origin is simulated three metres from where its
+  // geometry is: it culls in the wrong place and every contact is torque.
+  JoltLibrary library;
+
+  const glm::vec3 offset(0.0f, 3.0f, 0.0f);
+
+  const SampledField field = bakeSphere(1.0f, 65u, offset);
+  const FieldShape shape(field);
+
+  const JPH::Vec3 centre = shape.GetCenterOfMass();
+
+  REQUIRE_THAT(centre.GetX(), WithinAbs(offset.x, 0.01f));
+  REQUIRE_THAT(centre.GetY(), WithinAbs(offset.y, 0.01f));
+  REQUIRE_THAT(centre.GetZ(), WithinAbs(offset.z, 0.01f));
+}
+
+TEST_CASE("an offset solid is bounded about its own centre", "[fieldshape]") {
+  // The bounds are read in centre of mass space, so a sphere of radius 1 three
+  // metres up still straddles zero. Left in field space it would be a box from
+  // 2 to 4, and Jolt would cull the body where nothing is.
+  JoltLibrary library;
+
+  const SampledField field = bakeSphere(1.0f, 65u, glm::vec3(0.0f, 3.0f, 0.0f));
+  const FieldShape shape(field);
+
+  const JPH::AABox bounds = shape.GetLocalBounds();
+
+  for (int axis = 0; axis != 3; ++axis) {
+    REQUIRE(bounds.mMin[axis] <= -1.0f);
+    REQUIRE(bounds.mMax[axis] >= 1.0f);
+    REQUIRE(bounds.mMin[axis] > -1.5f);
+    REQUIRE(bounds.mMax[axis] < 1.5f);
+  }
+}
+
+TEST_CASE(
+  "an offset solid resists turning like its own shape",
+  "[fieldshape]"
+) {
+  // The walk sums about the field's origin, so an offset solid picks up a
+  // parallel axis term of m*d*d - here nine times the sphere's own, which
+  // would make a ball behave like a weight on the end of a three metre bar.
+  JoltLibrary library;
+
+  const SampledField centred = bakeSphere(1.0f, 65u);
+  const SampledField offset =
+    bakeSphere(1.0f, 65u, glm::vec3(0.0f, 3.0f, 0.0f));
+
+  const JPH::MassProperties here = FieldShape(centred).GetMassProperties();
+  const JPH::MassProperties there = FieldShape(offset).GetMassProperties();
+
+  REQUIRE_THAT(there.mMass, WithinRel(here.mMass, 0.02f));
+
+  for (int axis = 0; axis != 3; ++axis) {
+    REQUIRE_THAT(
+      there.mInertia(axis, axis),
+      WithinRel(here.mInertia(axis, axis), 0.02f)
+    );
+  }
+}
+
+TEST_CASE("an offset solid is asked about in the right space", "[fieldshape]") {
+  // CollidePoint takes a point in centre of mass space. The sphere's own
+  // centre is the origin there, and the point three metres up - which is where
+  // the solid sits in field space - is outside it.
+  JoltLibrary library;
+
+  const SampledField field = bakeSphere(1.0f, 65u, glm::vec3(0.0f, 3.0f, 0.0f));
+  const FieldShape shape(field);
+
+  JPH::AllHitCollisionCollector<JPH::CollidePointCollector> inside;
+  shape.CollidePoint(JPH::Vec3::sZero(), JPH::SubShapeIDCreator(), inside, {});
+
+  REQUIRE(inside.mHits.size() == 1u);
+
+  JPH::AllHitCollisionCollector<JPH::CollidePointCollector> outside;
+  shape.CollidePoint(
+    JPH::Vec3(0.0f, 3.0f, 0.0f),
+    JPH::SubShapeIDCreator(),
+    outside,
+    {}
+  );
+
+  REQUIRE(outside.mHits.empty());
 }
 
 TEST_CASE("an empty grid answers for its whole box", "[fieldshape]") {
@@ -244,6 +340,66 @@ TEST_CASE(
   // Asked again, in the other order, which is where a shared cache shows.
   REQUIRE(largeShape.GetMassProperties().mMass == largeMass);
   REQUIRE(smallShape.GetMassProperties().mMass == smallMass);
+}
+
+TEST_CASE("a solid box weighs and turns like a solid box", "[fieldshape]") {
+  // A box is nearly all interior, which is the case the walk answers with a
+  // closed form rather than by visiting five hundred cells a brick. Checked
+  // against the analytic box rather than against the walk it replaced: mass
+  // 8*hx*hy*hz*rho, and m*(hb^2 + hc^2)/3 about each axis.
+  JoltLibrary library;
+
+  const glm::vec3 half(0.6f, 0.4f, 0.3f);
+
+  Primitive box{};
+  box.inverseModel =
+    glm::inverse(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f)));
+  box.shape = glm::vec4(half, 0.0f);
+  box.shapeConfig = glm::uvec4(1u, 1u, dunya::core::FIELD_OP_UNION, 0u);
+  dunya::field::updateBounds(box);
+
+  const SampledField field = dunya::field::bake(
+    std::vector<Primitive>{box},
+    -half - glm::vec3(0.25f),
+    half + glm::vec3(0.25f),
+    glm::uvec3(65u)
+  );
+
+  const JPH::MassProperties properties = FieldShape(field).GetMassProperties();
+
+  const float expected = DENSITY * 8.0f * half.x * half.y * half.z;
+
+  REQUIRE_THAT(properties.mMass, WithinRel(expected, 0.03f));
+
+  const glm::vec3 squared = half * half;
+
+  REQUIRE_THAT(
+    properties.mInertia(0, 0),
+    WithinRel(properties.mMass * (squared.y + squared.z) / 3.0f, 0.03f)
+  );
+  REQUIRE_THAT(
+    properties.mInertia(1, 1),
+    WithinRel(properties.mMass * (squared.x + squared.z) / 3.0f, 0.03f)
+  );
+  REQUIRE_THAT(
+    properties.mInertia(2, 2),
+    WithinRel(properties.mMass * (squared.x + squared.y) / 3.0f, 0.03f)
+  );
+
+  // Off centre, because the closed form places cells by a different route than
+  // the per-cell walk and a wrong one shows up as a shifted centre of mass.
+  REQUIRE_THAT(
+    FieldShape(field).GetCenterOfMass().GetX(),
+    WithinAbs(0.0f, 0.005f)
+  );
+  REQUIRE_THAT(
+    FieldShape(field).GetCenterOfMass().GetY(),
+    WithinAbs(0.0f, 0.005f)
+  );
+  REQUIRE_THAT(
+    FieldShape(field).GetCenterOfMass().GetZ(),
+    WithinAbs(0.0f, 0.005f)
+  );
 }
 
 TEST_CASE("carving the solid takes mass with it", "[fieldshape]") {
