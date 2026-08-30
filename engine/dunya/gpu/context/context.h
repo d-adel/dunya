@@ -21,6 +21,8 @@ public:
   Context(Context&&) = delete;
   Context& operator=(Context&&) = delete;
 
+  void retarget(const WindowSystem& windowSystem);
+
   const WindowSystem& windowSystem() const noexcept;
 
   const Instance& instance() const noexcept;
@@ -29,7 +31,7 @@ public:
   Device& device();
 
 private:
-  const WindowSystem& m_windowSystem;
+  const WindowSystem* m_windowSystem;
   Instance m_instance;
   Surface m_surface;
   Device m_device;

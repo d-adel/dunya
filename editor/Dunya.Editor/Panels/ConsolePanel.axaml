@@ -1,0 +1,11 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Dunya.Editor.Panels.ConsolePanel">
+  <ScrollViewer Name="Scroller" Background="{DynamicResource EditorPanelBackground}" Padding="8">
+    <SelectableTextBlock Name="Text"
+                         FontFamily="{DynamicResource EditorMonoFont}"
+                         FontSize="{DynamicResource EditorFontSizeSmall}"
+                         Foreground="{DynamicResource EditorSubtleText}"
+                         Text="waiting for the child window..." />
+  </ScrollViewer>
+</UserControl>

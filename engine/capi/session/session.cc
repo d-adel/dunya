@@ -169,8 +169,26 @@ void Session::render() {
   }
 }
 
+void Session::retarget(std::unique_ptr<dunya::gpu::WindowSystem> windowSystem) {
+  if (windowSystem == nullptr) {
+    throw std::runtime_error("A session needs a window system");
+  }
+
+  m_swapChain.release();
+
+  m_windowSystem = std::move(windowSystem);
+
+  m_context.retarget(*m_windowSystem);
+
+  m_swapChain.recreate();
+}
+
 VkExtent2D Session::extent() const noexcept {
   return m_swapChain.extent();
+}
+
+const dunya::objectmodel::World& Session::world() const noexcept {
+  return m_world;
 }
 
 }

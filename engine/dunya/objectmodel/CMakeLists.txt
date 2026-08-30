@@ -4,6 +4,7 @@ add_library(dunya_objectmodel STATIC
     component/sdfgrid/sdfgrid.cc
     sdfprimitivestore/sdfprimitivestore.cc
     world/world.cc
+    worldcontents/worldcontents.cc
     worldquery/worldquery.cc
 )
 add_library(dunya::objectmodel ALIAS dunya_objectmodel)

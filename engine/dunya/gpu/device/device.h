@@ -54,9 +54,9 @@ public:
   uint32_t graphicsFamilyIndex() const;
 
 private:
-  void setup();
-  void pickPhysicalDevice();
-  void createLogicalDevice();
+  void setup(VkSurfaceKHR surface);
+  void pickPhysicalDevice(VkSurfaceKHR surface);
+  void createLogicalDevice(VkSurfaceKHR surface);
   int rateDeviceSuitability(VkPhysicalDevice device);
   bool checkDeviceExtensionSupport(VkPhysicalDevice device);
   bool checkDeviceFeatureSupport(VkPhysicalDevice device);
@@ -66,7 +66,6 @@ private:
   VkDevice m_device = VK_NULL_HANDLE;
   VkQueue m_graphicsQueue = VK_NULL_HANDLE;
   VkQueue m_presentQueue = VK_NULL_HANDLE;
-  VkSurfaceKHR m_surface = VK_NULL_HANDLE;
 
   QueueFamilyIndices m_indices;
 };

@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:Dunya.Editor"
+             x:Class="Dunya.Editor.Panels.EntitiesPanel">
+  <DockPanel Background="{DynamicResource EditorPanelBackground}">
+    <Border DockPanel.Dock="Top"
+            BorderBrush="{DynamicResource EditorBorder}"
+            BorderThickness="0,0,0,1"
+            Padding="8,5">
+      <TextBlock Name="Count"
+                 Text="no world"
+                 FontSize="{DynamicResource EditorFontSizeSmall}"
+                 FontFamily="{DynamicResource EditorMonoFont}"
+                 Foreground="{DynamicResource EditorSubtleText}" />
+    </Border>
+    <ListBox Name="Entities" Background="Transparent" Padding="4">
+      <ListBox.ItemTemplate>
+        <DataTemplate x:DataType="local:WorldEntity">
+          <StackPanel Spacing="1">
+            <TextBlock Text="{Binding Label}"
+                       FontFamily="{DynamicResource EditorMonoFont}"
+                       FontSize="{DynamicResource EditorFontSize}" />
+            <TextBlock Text="{Binding Summary}"
+                       FontSize="{DynamicResource EditorFontSizeSmall}"
+                       Foreground="{DynamicResource EditorSubtleText}"
+                       TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+  </DockPanel>
+</UserControl>

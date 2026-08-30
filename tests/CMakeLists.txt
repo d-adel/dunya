@@ -35,6 +35,8 @@ add_executable(unit_tests
     sdfprimitivestore_tests.cc
     telemetry_tests.cc
     sampled_tests.cc
+    worldcontents_tests.cc
+    componentjson_tests.cc
     world_tests.cc
 )
 

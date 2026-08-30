@@ -1,0 +1,174 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:Dunya.Editor.Controls">
+
+  <Styles.Resources>
+
+    <ControlTheme x:Key="EditorDisclosure" TargetType="ToggleButton">
+      <Setter Property="Width" Value="14" />
+      <Setter Property="Height" Value="14" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Background="Transparent">
+            <Path Name="PART_Chevron"
+                  Width="5"
+                  Height="9"
+                  Stretch="Fill"
+                  Data="M 0 0 L 5 4.5 L 0 9 Z"
+                  Fill="{DynamicResource EditorSubtleText}"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  RenderTransformOrigin="50%,50%" />
+          </Border>
+        </ControlTemplate>
+      </Setter>
+      <Style Selector="^:checked /template/ Path#PART_Chevron">
+        <Setter Property="RenderTransform" Value="rotate(90deg)" />
+      </Style>
+      <Style Selector="^:pointerover /template/ Path#PART_Chevron">
+        <Setter Property="Fill" Value="{DynamicResource EditorText}" />
+      </Style>
+    </ControlTheme>
+
+    <ControlTheme x:Key="{x:Type c:PanelHeader}" TargetType="c:PanelHeader">
+      <Setter Property="Template">
+        <ControlTemplate>
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock Text="{TemplateBinding Title}"
+                       FontWeight="SemiBold"
+                       FontSize="{DynamicResource EditorFontSize}"
+                       Foreground="{DynamicResource EditorText}"
+                       VerticalAlignment="Center" />
+            <TextBlock Text="{TemplateBinding Detail}"
+                       FontSize="{DynamicResource EditorFontSizeSmall}"
+                       FontFamily="{DynamicResource EditorMonoFont}"
+                       Foreground="{DynamicResource EditorSubtleText}"
+                       VerticalAlignment="Center" />
+          </StackPanel>
+        </ControlTemplate>
+      </Setter>
+    </ControlTheme>
+
+    <ControlTheme x:Key="{x:Type c:FieldRow}" TargetType="c:FieldRow">
+      <Setter Property="MinHeight" Value="{DynamicResource EditorRowHeight}" />
+      <Setter Property="Margin" Value="0,0,0,2" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Grid ColumnDefinitions="92,*,Auto">
+            <TextBlock Grid.Column="0"
+                       Text="{TemplateBinding Label}"
+                       Foreground="{DynamicResource EditorSubtleText}"
+                       FontSize="{DynamicResource EditorFontSize}"
+                       TextTrimming="CharacterEllipsis"
+                       VerticalAlignment="Center"
+                       Margin="0,0,6,0" />
+            <ContentPresenter Grid.Column="1"
+                              Content="{TemplateBinding Content}"
+                              VerticalAlignment="Center" />
+            <TextBlock Grid.Column="2"
+                       Text="{TemplateBinding Unit}"
+                       Foreground="{DynamicResource EditorSubtleText}"
+                       FontSize="{DynamicResource EditorFontSizeSmall}"
+                       VerticalAlignment="Center"
+                       Margin="4,0,0,0" />
+          </Grid>
+        </ControlTemplate>
+      </Setter>
+    </ControlTheme>
+
+    <ControlTheme x:Key="{x:Type c:ComponentCard}" TargetType="c:ComponentCard">
+      <Setter Property="Background" Value="{DynamicResource EditorCardBackground}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource EditorBorder}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="{DynamicResource EditorCornerRadius}" />
+      <Setter Property="Margin" Value="0,0,0,6" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}"
+                  CornerRadius="{TemplateBinding CornerRadius}"
+                  ClipToBounds="True">
+            <DockPanel>
+              <Border DockPanel.Dock="Top"
+                      Background="{DynamicResource EditorCardHeaderBackground}"
+                      Padding="{DynamicResource EditorCardHeaderPadding}">
+                <DockPanel>
+                  <ToggleButton Name="PART_Toggle"
+                                DockPanel.Dock="Left"
+                                Theme="{StaticResource EditorDisclosure}"
+                                VerticalAlignment="Center"
+                                Margin="0,0,6,0"
+                                IsVisible="{Binding !IsTag, RelativeSource={RelativeSource TemplatedParent}}"
+                                IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}" />
+                  <Border DockPanel.Dock="Right"
+                          Background="{DynamicResource EditorFieldBackground}"
+                          BorderBrush="{DynamicResource EditorBorder}"
+                          BorderThickness="1"
+                          CornerRadius="{DynamicResource EditorFieldCornerRadius}"
+                          Padding="4,0"
+                          VerticalAlignment="Center"
+                          IsVisible="{Binding Note, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                    <TextBlock Text="{TemplateBinding Note}"
+                               FontSize="{DynamicResource EditorFontSizeSmall}"
+                               Foreground="{DynamicResource EditorSubtleText}" />
+                  </Border>
+                  <TextBlock Text="{TemplateBinding Header}"
+                             FontSize="{DynamicResource EditorFontSize}"
+                             FontWeight="SemiBold"
+                             Foreground="{DynamicResource EditorText}"
+                             VerticalAlignment="Center" />
+                </DockPanel>
+              </Border>
+              <ContentPresenter Name="PART_ContentPresenter"
+                                Content="{TemplateBinding Content}"
+                                Padding="{DynamicResource EditorCardPadding}"
+                                HorizontalContentAlignment="Stretch"
+                                IsVisible="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}" />
+            </DockPanel>
+          </Border>
+        </ControlTemplate>
+      </Setter>
+      <Style Selector="^[IsTag=True] /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="IsVisible" Value="False" />
+      </Style>
+    </ControlTheme>
+
+  </Styles.Resources>
+
+  <Style Selector="Border.editorPanel">
+    <Setter Property="Background" Value="{DynamicResource EditorPanelBackground}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource EditorBorder}" />
+  </Style>
+
+  <Style Selector="TextBlock.fieldValue">
+    <Setter Property="FontFamily" Value="{DynamicResource EditorMonoFont}" />
+    <Setter Property="FontSize" Value="{DynamicResource EditorFontSize}" />
+    <Setter Property="Foreground" Value="{DynamicResource EditorText}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+
+  <Style Selector="TextBlock.axisLabel">
+    <Setter Property="FontFamily" Value="{DynamicResource EditorMonoFont}" />
+    <Setter Property="FontSize" Value="{DynamicResource EditorFontSizeSmall}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Margin" Value="0,0,4,0" />
+  </Style>
+
+  <Style Selector="Border.fieldLane">
+    <Setter Property="Background" Value="{DynamicResource EditorFieldBackground}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource EditorBorder}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource EditorFieldCornerRadius}" />
+    <Setter Property="Padding" Value="4,2" />
+    <Setter Property="MinHeight" Value="20" />
+  </Style>
+
+</Styles>

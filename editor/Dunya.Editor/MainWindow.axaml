@@ -1,60 +1,25 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:local="clr-namespace:Dunya.Editor"
+        xmlns:dc="using:Dock.Avalonia.Controls"
         x:Class="Dunya.Editor.MainWindow"
-        Title="dunya editor - viewport spike"
+        Title="dunya editor"
+        Background="{DynamicResource EditorWindowBackground}"
         Width="1280" Height="800">
 
   <DockPanel>
     <Menu DockPanel.Dock="Top">
+      <MenuItem Header="_Window">
+        <MenuItem Name="ResetLayoutItem" Header="_Reset Layout" />
+      </MenuItem>
       <MenuItem Header="_File">
         <MenuItem Header="_Open Project..." />
         <MenuItem Header="_Save World" />
         <Separator />
         <MenuItem Header="E_xit" />
       </MenuItem>
-      <MenuItem Header="_View">
-        <MenuItem Header="Hierarchy" />
-        <MenuItem Header="Inspector" />
-        <MenuItem Header="Console" />
-      </MenuItem>
+
     </Menu>
 
-    <Border DockPanel.Dock="Bottom" Height="200" BorderBrush="#3A3A3A" BorderThickness="0,1,0,0">
-      <ScrollViewer Name="LogScroller">
-        <SelectableTextBlock Name="Log"
-                             FontFamily="Consolas,monospace"
-                             FontSize="12"
-                             Padding="8"
-                             Text="waiting for the child window..." />
-      </ScrollViewer>
-    </Border>
-
-    <Grid ColumnDefinitions="220,4,*,4,280">
-      <Border Grid.Column="0" Background="#252526">
-        <StackPanel Margin="8" Spacing="4">
-          <TextBlock Text="Hierarchy" FontWeight="Bold" Margin="0,0,0,8" />
-          <TextBlock Text="wall (20 boxes)" />
-          <TextBlock Text="ground" />
-          <TextBlock Text="plinth" />
-          <TextBlock Text="viking room" />
-        </StackPanel>
-      </Border>
-
-      <GridSplitter Grid.Column="1" Background="#3A3A3A" />
-
-      <local:ViewportHost Grid.Column="2" Name="Viewport" />
-
-      <GridSplitter Grid.Column="3" Background="#3A3A3A" />
-
-      <Border Grid.Column="4" Background="#252526">
-        <StackPanel Margin="8" Spacing="4">
-          <TextBlock Text="Inspector" FontWeight="Bold" Margin="0,0,0,8" />
-          <TextBlock Text="Pose" />
-          <TextBlock Text="SdfGrid" />
-          <TextBlock Text="StaticBody" />
-        </StackPanel>
-      </Border>
-    </Grid>
+    <dc:DockControl Name="Dock" />
   </DockPanel>
 </Window>

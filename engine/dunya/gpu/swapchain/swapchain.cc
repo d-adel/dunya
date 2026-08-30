@@ -186,6 +186,16 @@ void SwapChain::createImageViews() {
   }
 }
 
+void SwapChain::release() {
+  vkDeviceWaitIdle(m_context.device().vkDevice());
+
+  cleanup();
+
+  m_imageViews.clear();
+  m_images.clear();
+  m_swapChain = VK_NULL_HANDLE;
+}
+
 void SwapChain::recreate() {
   m_context.windowSystem().waitForNonZeroExtent();
 

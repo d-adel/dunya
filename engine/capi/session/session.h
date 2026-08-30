@@ -39,9 +39,13 @@ public:
 
   void resize();
 
+  void retarget(std::unique_ptr<dunya::gpu::WindowSystem> windowSystem);
+
   void render();
 
   [[nodiscard]] VkExtent2D extent() const noexcept;
+
+  [[nodiscard]] const dunya::objectmodel::World& world() const noexcept;
 
 private:
   void loadWorld(

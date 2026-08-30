@@ -3,13 +3,21 @@
 namespace dunya::gpu {
 
 Context::Context(const WindowSystem& windowSystem)
-    : m_windowSystem(windowSystem),
-      m_instance(validationLayers, m_windowSystem.instanceExtensions()),
-      m_surface(m_instance.handle(), m_windowSystem),
+    : m_windowSystem(&windowSystem),
+      m_instance(validationLayers, m_windowSystem->instanceExtensions()),
+      m_surface(m_instance.handle(), *m_windowSystem),
       m_device(m_instance.handle(), m_surface.handle()) {}
 
+void Context::retarget(const WindowSystem& windowSystem) {
+  m_device.waitIdle();
+
+  m_windowSystem = &windowSystem;
+
+  m_surface.recreate(*m_windowSystem);
+}
+
 const WindowSystem& Context::windowSystem() const noexcept {
-  return m_windowSystem;
+  return *m_windowSystem;
 }
 
 const Instance& Context::instance() const noexcept {

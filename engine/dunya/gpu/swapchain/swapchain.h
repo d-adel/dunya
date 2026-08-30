@@ -14,6 +14,7 @@ public:
   ~SwapChain();
 
   void recreate();
+  void release();
   void setUncapped(bool uncapped);
   bool uncapped() const noexcept;
 

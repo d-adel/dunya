@@ -3,6 +3,7 @@ add_library(dunya_serialize STATIC
     project/project.cc
     textfile/textfile.cc
     materialfile/materialfile.cc
+    componentjson/componentjson.cc
     worldfile/worldfile.cc
 )
 add_library(dunya::serialize ALIAS dunya_serialize)

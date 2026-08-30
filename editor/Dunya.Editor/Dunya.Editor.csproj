@@ -17,13 +17,16 @@
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.1" />
     <PackageReference Include="Avalonia.Desktop" Version="12.1.1" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.1" />
+    <PackageReference Include="Dock.Avalonia" Version="12.1.0.6" />
+    <PackageReference Include="Dock.Avalonia.Themes.Fluent" Version="12.1.0.6" />
+    <PackageReference Include="Dock.Avalonia.Themes.Simple" Version="12.1.0.6" />
+    <PackageReference Include="Dock.Model.Avalonia" Version="12.1.0.6" />
+    <PackageReference Include="Dock.Serializer.SystemTextJson" Version="12.1.0.6" />
+    <PackageReference Include="Semi.Avalonia" Version="12.1.0.1" />
   </ItemGroup>
 
   <Target Name="DunyaRequireNative" BeforeTargets="BeforeBuild">
-    <Error
-      Condition="!Exists('$(DunyaNativeDir)\dunya_c.dll')"
-      Text="dunya_c.dll was not found in $(DunyaNativeDir). Build the engine first (cmake --build --preset dev), or point DunyaNativeDir elsewhere with -p:DunyaNativeDir=..." />
+    <Error Condition="!Exists('$(DunyaNativeDir)\dunya_c.dll')" Text="dunya_c.dll was not found in $(DunyaNativeDir). Build the engine first (cmake --build --preset dev), or point DunyaNativeDir elsewhere with -p:DunyaNativeDir=..." />
   </Target>
 
   <ItemGroup>

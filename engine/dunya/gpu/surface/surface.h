@@ -13,6 +13,8 @@ public:
   Surface& operator=(Surface const&) = delete;
   ~Surface();
 
+  void recreate(const WindowSystem& windowSystem);
+
   const VkSurfaceKHR& handle() const noexcept;
 
 private:

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
@@ -32,12 +33,15 @@ public sealed class ViewportHost : NativeControlHost
 
     public event Action<string>? Reported;
 
+    public event Action? WorldOpened;
+
     public IntPtr Handle { get; private set; }
 
     public string ProjectRoot { get; set; } = "projects/demo";
 
     public string World { get; set; } = "main";
 
+    private bool m_surfaceLive;
     private IntPtr m_session;
     private DispatcherTimer? m_frames;
     private bool m_renderFailed;
@@ -60,21 +64,43 @@ public sealed class ViewportHost : NativeControlHost
 
         Report($"child window created  hwnd=0x{Handle:X}  descriptor={handle.HandleDescriptor}");
 
-        StartSession();
+        if (m_session == IntPtr.Zero)
+        {
+            StartSession();
+        }
+        else
+        {
+            Retarget();
+        }
 
         return handle;
     }
 
-    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
-    {
-        StopSession();
 
-        base.OnDetachedFromVisualTree(e);
+    public void Shutdown() => StopSession();
+
+    private void Retarget()
+    {
+        if (DunyaNative.dunya_session_retarget(m_session, Handle) != 0)
+        {
+            Report($"session retarget FAILED: {DunyaNative.LastError()}");
+
+            return;
+        }
+
+        m_surfaceLive = true;
+
+        Report($"session retargeted  hwnd=0x{Handle:X}   {Extent()}");
+
+        StartRendering();
     }
 
     protected override void DestroyNativeControlCore(IPlatformHandle control)
     {
-        StopSession();
+        m_surfaceLive = false;
+
+        m_frames?.Stop();
+        m_frames = null;
 
         if (m_previous != IntPtr.Zero)
         {
@@ -99,9 +125,13 @@ public sealed class ViewportHost : NativeControlHost
             return;
         }
 
+        m_surfaceLive = true;
+
         Report($"session created    handle=0x{m_session:X}   {Extent()}");
 
         StartRendering();
+
+        WorldOpened?.Invoke();
     }
 
     private void StopSession()
@@ -110,6 +140,8 @@ public sealed class ViewportHost : NativeControlHost
         {
             return;
         }
+
+        m_surfaceLive = false;
 
         m_frames?.Stop();
         m_frames = null;
@@ -122,6 +154,8 @@ public sealed class ViewportHost : NativeControlHost
 
     private void StartRendering()
     {
+        m_frames?.Stop();
+
         m_frames = new DispatcherTimer(DispatcherPriority.Render)
         {
             Interval = TimeSpan.FromMilliseconds(16)
@@ -133,7 +167,7 @@ public sealed class ViewportHost : NativeControlHost
 
     private void RenderOnce()
     {
-        if (m_session == IntPtr.Zero || m_renderFailed)
+        if (m_session == IntPtr.Zero || m_renderFailed || !m_surfaceLive)
         {
             return;
         }
@@ -146,7 +180,43 @@ public sealed class ViewportHost : NativeControlHost
         }
     }
 
-    private string Extent()
+    public IReadOnlyList<WorldEntity> Contents()
+    {
+        if (m_session == IntPtr.Zero)
+        {
+            return Array.Empty<WorldEntity>();
+        }
+
+        try
+        {
+            uint[] ids = DunyaNative.Entities(m_session);
+            var contents = new List<WorldEntity>(ids.Length);
+
+            foreach (uint id in ids)
+            {
+                contents.Add(new WorldEntity(id, DunyaNative.Components(m_session, id)));
+            }
+
+            return contents;
+        }
+        catch (InvalidOperationException failure)
+        {
+            Report($"contents FAILED: {failure.Message}");
+
+            return Array.Empty<WorldEntity>();
+        }
+    }
+
+    public string? Component(uint entity, string component)
+    {
+        if (m_session == IntPtr.Zero)
+        {
+            return null;
+        }
+
+        return DunyaNative.Component(m_session, entity, component);
+    }
+    internal string Extent()
     {
         if (m_session == IntPtr.Zero)
         {
@@ -166,7 +236,12 @@ public sealed class ViewportHost : NativeControlHost
         switch (message)
         {
             case WM_SIZE:
-                if (m_session != IntPtr.Zero
+                if (m_session != IntPtr.Zero && !m_surfaceLive && Handle != IntPtr.Zero)
+                {
+                    Retarget();
+                }
+                else if (m_session != IntPtr.Zero
+                    && m_surfaceLive
                     && DunyaNative.dunya_session_resize(m_session) != 0)
                 {
                     Report($"resize FAILED: {DunyaNative.LastError()}");

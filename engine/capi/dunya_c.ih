@@ -3,6 +3,12 @@
 #include <capi/session/session.h>
 #include <capi/win32windowsystem/win32windowsystem.h>
 
+#include <dunya/objectmodel/worldcontents/worldcontents.h>
+#include <dunya/serialize/componentjson/componentjson.h>
+
+#include <algorithm>
+#include <cstring>
 #include <exception>
 #include <memory>
 #include <string>
+#include <vector>

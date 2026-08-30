@@ -118,8 +118,8 @@ QueueFamilyIndices findQueueFamilies(
 }
 
 Device::Device(const VkInstance& instance, const VkSurfaceKHR& surface)
-    : m_instance(instance), m_surface(surface) {
-  setup();
+    : m_instance(instance) {
+  setup(surface);
 }
 
 Device::~Device() {
@@ -171,12 +171,12 @@ uint32_t Device::graphicsFamilyIndex() const {
   return m_indices.graphicsFamily.value();
 }
 
-void Device::setup() {
-  pickPhysicalDevice();
-  createLogicalDevice();
+void Device::setup(VkSurfaceKHR surface) {
+  pickPhysicalDevice(surface);
+  createLogicalDevice(surface);
 }
 
-void Device::pickPhysicalDevice() {
+void Device::pickPhysicalDevice(VkSurfaceKHR surface) {
   uint32_t deviceCount = 0;
   VkResult err = vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr);
 
@@ -203,14 +203,14 @@ void Device::pickPhysicalDevice() {
   VkPhysicalDevice bestDevice = VK_NULL_HANDLE;
 
   for (const auto& device : devices) {
-    const QueueFamilyIndices indices = findQueueFamilies(device, m_surface);
+    const QueueFamilyIndices indices = findQueueFamilies(device, surface);
     bool extensionsSupported = checkDeviceExtensionSupport(device);
     bool featuresSupported = checkDeviceFeatureSupport(device);
     bool swapChainAdequate = false;
 
     if (extensionsSupported && featuresSupported) {
       SwapChainSupportDetails swapChainSupport =
-        querySwapChainSupport(device, m_surface);
+        querySwapChainSupport(device, surface);
       swapChainAdequate = !swapChainSupport.formats.empty()
                           && !swapChainSupport.presentModes.empty();
     }
@@ -265,8 +265,8 @@ int Device::rateDeviceSuitability(VkPhysicalDevice device) {
   return score;
 }
 
-void Device::createLogicalDevice() {
-  m_indices = findQueueFamilies(m_physicalDevice, m_surface);
+void Device::createLogicalDevice(VkSurfaceKHR surface) {
+  m_indices = findQueueFamilies(m_physicalDevice, surface);
 
   std::set<uint32_t> uniqueQueueFamilies = {
     m_indices.graphicsFamily.value(),
