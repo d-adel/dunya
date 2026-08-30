@@ -24,20 +24,7 @@ layout(push_constant) uniform PushConstants {
 layout(location = 0) out vec4 clipPosition;
 layout(location = 1) flat out uint recordIndex;
 
-// Eight possible box corners:
-//
-// 0 = min.x, min.y, min.z
-// 1 = max.x, min.y, min.z
-// 2 = min.x, max.y, min.z
-// 3 = max.x, max.y, min.z
-// 4 = min.x, min.y, max.z
-// 5 = max.x, min.y, max.z
-// 6 = min.x, max.y, max.z
-// 7 = max.x, max.y, max.z
-//
-// Six faces, two triangles per face, three vertices per triangle.
 const uint CUBE_INDICES[36] = uint[](
-  // -Z
   0,
   2,
   1,
@@ -45,7 +32,6 @@ const uint CUBE_INDICES[36] = uint[](
   2,
   3,
 
-  // +Z
   4,
   5,
   6,
@@ -53,7 +39,6 @@ const uint CUBE_INDICES[36] = uint[](
   7,
   6,
 
-  // -X
   0,
   4,
   2,
@@ -61,7 +46,6 @@ const uint CUBE_INDICES[36] = uint[](
   6,
   2,
 
-  // +X
   1,
   3,
   5,
@@ -69,7 +53,6 @@ const uint CUBE_INDICES[36] = uint[](
   3,
   7,
 
-  // -Y
   0,
   1,
   4,
@@ -77,7 +60,6 @@ const uint CUBE_INDICES[36] = uint[](
   5,
   4,
 
-  // +Y
   2,
   6,
   3,
@@ -89,8 +71,6 @@ void main() {
   recordIndex = push.recordIndex;
   FieldRecordShared record = fieldRecordTable.records[push.recordIndex];
 
-  // The CPU has already derived the grid. localOrigin is its minimum
-  // lattice point, and N lattice points span N - 1 cells.
   vec3 boxMin = record.localOrigin.xyz;
 
   vec3 span =
@@ -98,8 +78,6 @@ void main() {
 
   vec3 boxMax = boxMin + span;
 
-  // Step 4 only: keep the current unbounded ground visible while validating
-  // the proxy draw path. Inflate around the existing grid's centre.
   vec3 center = 0.5 * (boxMin + boxMax);
   vec3 halfExtent = 0.5 * (boxMax - boxMin);
 

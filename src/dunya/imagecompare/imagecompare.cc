@@ -10,8 +10,6 @@ uint32_t absoluteDelta(uint8_t a, uint8_t b) noexcept {
   return a > b ? static_cast<uint32_t>(a - b) : static_cast<uint32_t>(b - a);
 }
 
-// The largest per-channel difference at one pixel. Alpha counts: a capture that
-// lost its alpha is a changed image even when it looks identical on screen.
 uint32_t pixelDelta(const uint8_t* a, const uint8_t* b) noexcept {
   uint32_t worst = 0;
 
@@ -37,8 +35,6 @@ Bitmap load(const std::string& path) {
   int height = 0;
   int channelsInFile = 0;
 
-  // Owned before anything else can throw: the copy below allocates, and an
-  // allocation that fails would otherwise strand stb's buffer.
   const std::unique_ptr<stbi_uc, void (*)(void*)> pixels(
     stbi_load(
       path.c_str(),
@@ -96,9 +92,6 @@ Difference compare(
 ) {
   Difference difference;
 
-  // Not a tolerance question, and conflating it with one produces a report
-  // saying "every pixel differs" when the honest answer is "these are not the
-  // same picture".
   if (!sameSize(reference, candidate)) {
     return difference;
   }
@@ -170,8 +163,6 @@ Bitmap differenceImage(
     const uint32_t delta =
       pixelDelta(&reference.pixels[at], &candidate.pixels[at]);
 
-    // Quartered rather than a proper luminance: this is context to recognise
-    // the scene by, and it has to stay clearly darker than the marks.
     const uint8_t grey = static_cast<uint8_t>(
       (static_cast<uint32_t>(reference.pixels[at]) + reference.pixels[at + 1]
        + reference.pixels[at + 2])

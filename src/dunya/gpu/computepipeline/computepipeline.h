@@ -7,9 +7,6 @@
 #include <string>
 #include <vector>
 
-// Separate from Pipeline rather than a branch inside it: most of PipelineConfig
-// has no meaning for compute, and a half-inapplicable type misleads.
-
 namespace dunya::gpu {
 
 class ComputePipeline {

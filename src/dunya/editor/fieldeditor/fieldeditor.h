@@ -6,9 +6,6 @@
 
 #include <cstdint>
 
-// Changing the field at runtime. Takes a ray rather than a cursor, because
-// turning a mouse position into one needs the window and the camera.
-
 namespace dunya::editor {
 
 class FieldEditor {
@@ -22,21 +19,13 @@ public:
 
   ~FieldEditor() = default;
 
-  // Carves or adds where this ray meets the surface. Does nothing when it
-  // meets nothing.
   void edit(uint32_t operation, const dunya::field::Ray& ray);
 
-  // Carves a batch at fixed positions, so a measurement can reach a primitive
-  // count that clicking cannot reach patiently or repeatably.
   void stress(uint32_t count);
 
-  // Undo and redo live here rather than on the world: a history is what an
-  // editor remembers doing to a world, not something the world knows.
   void undo();
   void redo();
 
-  // Points the editor at another world. The history goes with it: an undo
-  // cannot cross into a world that never saw the command.
   void retarget(dunya::objectmodel::World& world);
 
 private:

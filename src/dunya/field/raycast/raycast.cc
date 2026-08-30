@@ -18,9 +18,6 @@ std::optional<RayHit> raymarch(
   const Ray& ray,
   const MarchSettings& settings
 ) {
-  // Enhanced sphere tracing: step omega times the distance, and back off
-  // unrelaxed when the unbounding sphere no longer reaches the previous one.
-  // Mirrored exactly in field-shader.frag, or a click carves the wrong place.
   float omega = settings.omega;
   float travelled = 0.0f;
   float previousRadius = 0.0f;
@@ -31,8 +28,6 @@ std::optional<RayHit> raymarch(
     const glm::vec3 point = ray.origin + ray.direction * travelled;
     const AnalyticSample current = sample(primitives, point);
 
-    // Marching from inside solid geometry means walking the distance back up
-    // to zero, so the sign is taken once from where the ray starts.
     if (i == 0) {
       functionSign = current.distance < 0.0f ? -1.0f : 1.0f;
     }

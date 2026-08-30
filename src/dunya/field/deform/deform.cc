@@ -4,8 +4,6 @@ namespace dunya::field {
 
 namespace {
 
-// The operation id, spelled the way analytic.cc spells it: dunya::field does
-// not link dunya::core, which is where the named constants live.
 constexpr uint32_t INTERSECTION = 2u;
 
 uint32_t latticeIndex(const SampledField& field, const glm::uvec3& at) {
@@ -23,14 +21,6 @@ SampleBox affectedBox(
     return {};
   }
 
-  // An unbounded primitive - a plane - has no cull sphere, and no finite box
-  // can hold it.
-  //
-  // Nor does an intersection have a useful one, whatever its shape: it is a
-  // max, so every point outside it that was solid becomes empty, and that
-  // reaches to the edge of the lattice. analytic.cc says the same thing about
-  // skipping one on distance. Measured before this line existed: a centred
-  // intersector left 149,256 of 274,625 lattice points wrong-signed.
   if (primitive.bounds.w <= 0.0f || primitive.shapeConfig.z == INTERSECTION) {
     return {glm::uvec3(0u), field.resolution};
   }
@@ -150,9 +140,6 @@ DeformReport deformAndRepair(
     }
   }
 
-  // One write, not two: the repair happens in the same buffer the fold filled,
-  // because each write rebuilds every brick in range and that walk is most of
-  // what a deformation costs.
   const float settled = redistance(field, box, damaged, distances, sweeps);
 
   return {write(field, box, distances, materials), settled};

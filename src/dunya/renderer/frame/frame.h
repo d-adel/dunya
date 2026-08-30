@@ -28,12 +28,8 @@ struct Frame {
 
   uint32_t fieldRepresentation = dunya::core::FIELD_SAMPLED;
 
-  // Scene state the renderer only reads. Its default is what both shaders
-  // used to hold as a literal each.
   dunya::objectmodel::DirectionalLight light{};
 
-  // Authoritative here rather than in the shader, so a slider and the CPU's own
-  // marching read the same numbers. Defaults come from CMake.
   MarchParams march{
     DUNYA_MARCH_EPSILON,
     DUNYA_MARCH_MAX_DISTANCE,

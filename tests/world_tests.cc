@@ -31,14 +31,10 @@ using dunya::objectmodel::Pose;
 using dunya::objectmodel::SdfGrid;
 using dunya::objectmodel::World;
 
-// Materials number the primitives 1, 2, 3..., which is how a test tells one
-// from another after an edit has shifted them.
 dunya::field::Primitive marker(uint32_t material) {
   return dunya::field::makeSphere(glm::vec3(0.0f), 1.0f, material);
 }
 
-// fitToPrimitives divides by the resolution, so a grid is only usable once it
-// has one.
 SdfGrid blank() {
   SdfGrid grid{};
 
@@ -59,12 +55,6 @@ uint32_t materialAt(const World& world, Entity entity, uint32_t index) {
   return world.primitives(entity)[index].shapeConfig.y;
 }
 
-// Entities in use, not components. An orphan entity carries nothing, so it is
-// invisible to every other read in this file.
-//
-// A pointer because that is what the const overload returns, and never null
-// for the entity type: assure() hands back the registry's own member rather
-// than looking in the pools.
 uint32_t liveEntityCount(const World& world) {
   return static_cast<uint32_t>(world.registry().storage<Entity>()->free_list());
 }
@@ -76,8 +66,6 @@ TEST_CASE("a created field is live and listed", "[world]") {
 
   const Entity entity = world.createField(Pose{}, blank());
 
-  // The dirty flag this replaced defaulted to true, so creation has always
-  // implied a first bake.
   REQUIRE(world.needsBake(entity));
 
   REQUIRE(world.registry().valid(entity));
@@ -87,9 +75,6 @@ TEST_CASE("a created field is live and listed", "[world]") {
   REQUIRE(world.fields()[0] == entity);
 }
 
-// The const-only accessor is the transaction boundary. A non-const overload
-// would put every field back within reach of every caller, so it is pinned
-// here rather than left to review.
 TEST_CASE("the registry is reachable read-only", "[world]") {
   static_assert(
     std::is_same_v<
@@ -116,8 +101,6 @@ TEST_CASE("placing at a hint restores the exact identity", "[world]") {
 
   REQUIRE(world.createFieldAt(entity, marked, blank()));
 
-  // The same value, version included, which is what undo needs: a command
-  // holding this entity must still address the object it restored.
   REQUIRE(world.registry().valid(entity));
   REQUIRE_THAT(
     poseOf(world, entity).position.x,
@@ -132,16 +115,12 @@ TEST_CASE("a taken hint is refused and leaves nothing behind", "[world]") {
 
   REQUIRE(world.destroyField(first));
 
-  // EnTT recycles the freed slot, so this add takes the identity a redo would
-  // have asked for.
   const Entity recycled = world.createField(Pose{}, blank());
 
   const uint32_t before = liveEntityCount(world);
 
   REQUIRE_FALSE(world.createFieldAt(first, Pose{}, blank()));
 
-  // create(hint) does not fail, it substitutes. The substitute must not
-  // survive the refusal, as an object or as a bare entity.
   REQUIRE(world.fields().size() == 1);
   REQUIRE(world.fields()[0] == recycled);
   REQUIRE(liveEntityCount(world) == before);
@@ -162,9 +141,6 @@ TEST_CASE("destroying a field returns its primitives to the pool", "[world]") {
 
   REQUIRE(world.destroyField(entity));
 
-  // The range sat at the end of the arena, so releasing it shrinks the pool
-  // rather than leaving a hole. A pool that stays put means the destroy signal
-  // never reached the store and the allocation leaked.
   REQUIRE(world.pool().empty());
 
   const Entity next = world.createField(Pose{}, blank());
@@ -183,8 +159,6 @@ TEST_CASE("destroying an entity that carries no field is refused", "[world]") {
 
   REQUIRE(world.destroyField(entity));
 
-  // registry.destroy on a dead entity is a precondition violation, so the
-  // refusal has to happen before it.
   REQUIRE_FALSE(world.destroyField(entity));
 }
 
@@ -232,7 +206,6 @@ TEST_CASE(
 
   REQUIRE(world.needsBake(entity));
 
-  // A unit sphere at the origin, plus the grid margin on every side.
   const float expected = -(1.0f + dunya::core::FIELD_GRID_MARGIN);
 
   REQUIRE_THAT(grid.origin.x, WithinAbs(expected, ANALYTIC_TOLERANCE));
@@ -265,9 +238,6 @@ TEST_CASE("the component setters reach the object", "[world]") {
 
   const Entity entity = world.createField(Pose{}, blank());
 
-  // A fresh field entity owns no pool slot, and that is said by the component
-  // not being there at all rather than by a sentinel value inside one. The
-  // frame loop reads exactly this to decide whether to allocate.
   REQUIRE_FALSE(world.registry().all_of<BakedVolume>(entity));
 
   world.setBakedVolume(entity, 3);
@@ -280,8 +250,6 @@ TEST_CASE(
   "setting a baked volume twice replaces rather than throws",
   "[world]"
 ) {
-  // emplace_or_replace, not emplace: a re-bake into a different pool slot must
-  // overwrite the old number. emplace would abort on the second call.
   World world;
 
   const Entity entity = world.createField(Pose{}, blank());
@@ -305,8 +273,6 @@ TEST_CASE("the field span follows creates and destroys", "[world]") {
 
   const std::span<const Entity> remaining = world.fields();
 
-  // Swap-and-pop storage, so the span holds live entities only. If SdfGrid
-  // ever needs stable storage the dense array gains tombstones and this fails.
   REQUIRE(remaining.size() == 2);
 
   REQUIRE(
@@ -330,16 +296,12 @@ TEST_CASE(
     dunya::objectmodel::SelfContained<dunya::objectmodel::Material>
   );
 
-  // Each of these owns something outside its own bytes: state derived from the
-  // primitives, a pool slot in the renderer, a range in the arena.
   static_assert(!dunya::objectmodel::SelfContained<SdfGrid>);
   static_assert(!dunya::objectmodel::SelfContained<BakedVolume>);
   static_assert(
     !dunya::objectmodel::SelfContained<dunya::objectmodel::SdfPrimitiveRange>
   );
 
-  // A RigidBody id names a Jolt body that must be created and destroyed with
-  // it, and a tag has nothing to write at all.
   static_assert(
     !dunya::objectmodel::SelfContained<dunya::objectmodel::RigidBody>
   );
@@ -371,18 +333,12 @@ TEST_CASE(
   "the physics components keep the shape their use depends on",
   "[world]"
 ) {
-  // StaticBody must stay empty: EnTT stores no payload for an empty type, which
-  // is what makes presence-is-the-state free. A member would silently end that.
   static_assert(std::is_empty_v<dunya::objectmodel::StaticBody>);
 
-  // UINT32_MAX rather than 0, because 0 is a valid Jolt body index and a
-  // default-constructed component must not look like it names one.
   REQUIRE(dunya::objectmodel::RigidBody{}.id == UINT32_MAX);
 }
 
 TEST_CASE("the CPU field is stored and read back", "[world]") {
-  // Physics queries this rather than the GPU volume, so it has to survive
-  // being handed over rather than being consumed by the upload.
   World world;
 
   const Entity entity = world.createField(Pose{}, blank());
@@ -405,7 +361,6 @@ TEST_CASE("the CPU field is stored and read back", "[world]") {
   REQUIRE_THAT(stored.distances[13], WithinAbs(-0.75f, ANALYTIC_TOLERANCE));
   REQUIRE_THAT(stored.origin.y, WithinAbs(-2.0f, ANALYTIC_TOLERANCE));
 
-  // Baked from the primitives, so it must never be writable as a plain value.
   static_assert(
     !dunya::objectmodel::selfContained<dunya::field::SampledField>,
     "a sampled field is derived, so only the bake may write it"
@@ -413,10 +368,6 @@ TEST_CASE("the CPU field is stored and read back", "[world]") {
 }
 
 TEST_CASE("a stored field keeps its address when another goes", "[world]") {
-  // A collision shape holds a pointer to this. The component is a handle and
-  // the lattice is on the heap, so nothing the registry does to the pool can
-  // move it - which is what replaced the in-place-delete trait that used to
-  // carry this guarantee.
   World world;
 
   const Entity first = world.createField(Pose{}, blank());
@@ -443,9 +394,6 @@ TEST_CASE("a stored field keeps its address when another goes", "[world]") {
 }
 
 TEST_CASE("a shared lattice is one lattice, not two", "[world]") {
-  // The whole of step 2b: a thousand crates cut from the same primitives hold
-  // one lattice between them. Address equality is the assertion, because equal
-  // contents would pass just as well on two copies.
   World world;
 
   const Entity donor = world.createField(Pose{}, blank());
@@ -466,13 +414,10 @@ TEST_CASE("a shared lattice is one lattice, not two", "[world]") {
   REQUIRE(world.sampledFieldUsers(donor) == 2);
   REQUIRE(world.sampledFieldUsers(taker) == 2);
 
-  // A lattice handed over is current and needs no rebake.
   REQUIRE_FALSE(world.needsResample(taker));
 }
 
 TEST_CASE("a dent on a shared lattice takes a private copy", "[world]") {
-  // Copy on write, and the failure it exists to stop is visible rather than
-  // theoretical: without the copy, denting one crate dents every crate.
   World world;
 
   const Entity donor = world.createField(Pose{}, blank());
@@ -507,7 +452,6 @@ TEST_CASE("a dent on a shared lattice takes a private copy", "[world]") {
     WithinAbs(-5.0f, ANALYTIC_TOLERANCE)
   );
 
-  // The one that was not dented is untouched, which is the point.
   REQUIRE_THAT(
     world.sampledField(donor)->distances[0],
     WithinAbs(1.0f, ANALYTIC_TOLERANCE)
@@ -518,8 +462,6 @@ TEST_CASE("a dent on a shared lattice takes a private copy", "[world]") {
 }
 
 TEST_CASE("a dent on an unshared lattice copies nothing", "[world]") {
-  // The other half of the same rule. A crate takes its own lattice on the
-  // first dent and never again, so the hundredth dent is not a 1.2 MB copy.
   World world;
 
   const Entity entity = world.createField(Pose{}, blank());
@@ -546,9 +488,6 @@ TEST_CASE("a dent on an unshared lattice copies nothing", "[world]") {
 }
 
 TEST_CASE("a dent records that the lattice left its primitives", "[world]") {
-  // What makes two objects with equal primitives interchangeable is that
-  // neither has been written in place. Nothing else records that: the resample
-  // queue answers "the primitives moved", which is the opposite direction.
   World world;
 
   const Entity entity = world.createField(Pose{}, blank());
@@ -575,8 +514,6 @@ TEST_CASE("a dent records that the lattice left its primitives", "[world]") {
 }
 
 TEST_CASE("a fresh bake puts the lattice back on its primitives", "[world]") {
-  // A rebake is derived from the primitives again, whatever the lattice it
-  // replaced had been through, so the mark has to come off with it.
   World world;
 
   const Entity entity = world.createField(Pose{}, blank());

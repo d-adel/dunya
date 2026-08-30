@@ -4,12 +4,8 @@ namespace dunya::objectmodel {
 
 namespace {
 
-// Named, because the point of reactive storage over a flag is that a second
-// consumer opens its own pool rather than sharing this one.
 constexpr entt::id_type BAKE_QUEUE = entt::hashed_string{"bake"};
 
-// Its own queue, and the reason is that it answers a different question: the
-// one above says the GPU volume is stale, this one says the CPU field is.
 constexpr entt::id_type RESAMPLE_QUEUE = entt::hashed_string{"resample"};
 
 }  // namespace
@@ -17,9 +13,6 @@ constexpr entt::id_type RESAMPLE_QUEUE = entt::hashed_string{"resample"};
 World::World() {
   m_primitiveStore.connect(m_registry);
 
-  // on_construct as well as on_update: the dirty flag this replaced defaulted
-  // to true, so a field entity has always needed its first bake on creation.
-  // on_update fires from registry.patch, which is why the store patches.
   m_registry.storage<entt::reactive>(BAKE_QUEUE)
     .on_construct<SdfGrid>()
     .on_update<SdfGrid>();
@@ -45,8 +38,6 @@ Entity World::createField(const Pose& pose, const SdfGrid& grid) {
 bool World::createFieldAt(Entity hint, const Pose& pose, const SdfGrid& grid) {
   const Entity entity = m_registry.create(hint);
 
-  // EnTT treats a hint as a request, not a requirement. For undo/redo that is
-  // failure, because identity is part of the operation.
   if (entity != hint) {
     m_registry.destroy(entity);
     return false;
@@ -63,9 +54,6 @@ bool World::destroyField(Entity entity) {
     return false;
   }
 
-  // If the entity has an SdfPrimitiveRange, destroying it publishes
-  // on_destroy<SdfPrimitiveRange> before removing the component. The
-  // primitive store receives that signal and releases the arena range.
   m_registry.destroy(entity);
 
   return true;
@@ -144,12 +132,8 @@ void World::setSampledField(Entity entity, dunya::field::SampledField field) {
     std::make_shared<dunya::field::SampledField>(std::move(field))
   );
 
-  // Setting the field is what makes it current, so this is where the queue
-  // that tracks staleness is answered.
   m_registry.storage<entt::reactive>(RESAMPLE_QUEUE).remove(entity);
 
-  // And a field that came from the primitives is derived from them again,
-  // whatever the one it replaced had been through.
   m_registry.remove<Deformed>(entity);
 }
 
@@ -160,8 +144,6 @@ void World::shareSampledField(Entity donor, Entity taker) {
     throw std::runtime_error("Sharing a lattice from an object without one");
   }
 
-  // By value, not by reference: emplace_or_replace may move the donor's own
-  // component while the taker's is being written.
   adoptSampledField(taker, SharedField{held->field});
 }
 
@@ -172,10 +154,6 @@ void World::adoptSampledField(Entity entity, const SharedField& held) {
 
   m_registry.emplace_or_replace<SharedField>(entity, held);
 
-  // Current, because a lattice that exists is one somebody baked. Deformed is
-  // deliberately not touched: whether this lattice has been written in place
-  // is a property of the lattice, and the handle does not carry it - the
-  // caller knows which it is handing over.
   m_registry.storage<entt::reactive>(RESAMPLE_QUEUE).remove(entity);
 }
 
@@ -212,8 +190,6 @@ bool World::needsResample(Entity entity) const noexcept {
 }
 
 void World::markBaked(Entity entity) {
-  // remove, not erase: erase asserts on an entity the queue never held, and
-  // the caller re-derives its list from packing slots rather than from here.
   m_registry.storage<entt::reactive>(BAKE_QUEUE).remove(entity);
 }
 
@@ -239,8 +215,6 @@ bool World::createMeshAt(
 ) {
   const Entity entity = m_registry.create(hint);
 
-  // Same contract as createFieldAt: a hint EnTT declines is a failure,
-  // because instantiation keys physics and volumes off the id.
   if (entity != hint) {
     m_registry.destroy(entity);
     return false;

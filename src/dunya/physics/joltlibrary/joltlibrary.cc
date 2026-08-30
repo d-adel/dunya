@@ -51,8 +51,6 @@ JoltLibrary::JoltLibrary() {
 
   JPH::RegisterTypes();
 
-  // Strictly after RegisterTypes: the decorator shapes overwrite every User
-  // slot on their way in, so registering first would be silently undone.
   registerFieldShape();
 }
 

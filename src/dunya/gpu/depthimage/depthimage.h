@@ -15,7 +15,6 @@ public:
 
   DepthImage(const DepthImage&) = delete;
   DepthImage& operator=(const DepthImage&) = delete;
-  // DepthImage& operator=(DepthImage&&) = default;
 
   ~DepthImage() = default;
 

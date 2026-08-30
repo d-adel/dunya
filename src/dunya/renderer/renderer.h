@@ -35,8 +35,6 @@ public:
   Renderer& operator=(Renderer const&) = delete;
   ~Renderer();
 
-  // Draws one frame. onFrameReady runs before present: after that the image
-  // belongs to the presentation engine and reading it is a validation error.
   [[nodiscard]]
   bool drawFrame(
     const dunya::gpu::SwapChain& swapChain,

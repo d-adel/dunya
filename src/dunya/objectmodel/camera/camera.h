@@ -16,14 +16,6 @@ struct CameraInput {
 
   float lookDx = 0.0f;
   float lookDy = 0.0f;
-
-  // float rotateDx = 0.0f;
-  // float rotateDy = 0.0f;
-
-  // float zoomDelta = 0.0f;
-
-  // float panDx = 0.0f;
-  // float panDy = 0.0f;
 };
 
 class Camera {
@@ -45,8 +37,6 @@ public:
 
   void update(float dt, CameraInput input);
 
-  // Where a scene starts the view. A camera with no way to be placed is one
-  // every scene has to be built around.
   void place(const glm::vec3& position, float yaw, float pitch);
 
 private:

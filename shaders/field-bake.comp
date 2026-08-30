@@ -3,9 +3,6 @@
 
 #include "field-types.glsl"
 
-// Set 0 here is the same descriptor set layout the fragment shader declares at
-// set 2. A set can be bound at different indices by different pipelines as long
-// as the layout at that index matches, so no placeholder sets are needed.
 const int MAX_FIELD_VOLUMES = DUNYA_MAX_FIELD_VOLUMES;
 
 layout(std430, set = 0, binding = 3) readonly buffer FieldScene {
@@ -38,14 +35,10 @@ layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
 void main() {
   uvec3 at = gl_GlobalInvocationID;
 
-  // The dispatch is rounded up to whole workgroups, so the tail runs off the
-  // end of the lattice and has to be discarded.
   if (any(greaterThanEqual(at, params.resolution.xyz))) {
     return;
   }
 
-  // Lattice points, matching bake() in sampled.cc: a resolution of N spans N-1
-  // cells, and index zero sits exactly on the grid origin.
   vec3 p = params.origin.xyz + params.voxelSize.xyz * vec3(at);
 
   vec2 field = sceneDistance(p);

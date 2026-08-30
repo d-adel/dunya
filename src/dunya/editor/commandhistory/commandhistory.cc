@@ -7,8 +7,6 @@ namespace dunya::editor {
 
 namespace {
 
-// World deliberately has no contains. The liveness read goes through the const
-// registry, the same predicate FieldEditor::addPrimitive already uses.
 bool isField(
   const dunya::objectmodel::World& world,
   dunya::objectmodel::Entity entity

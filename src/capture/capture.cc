@@ -6,8 +6,6 @@ namespace {
 
 constexpr uint32_t CHANNELS = 4;
 
-// Whether the format's first byte is blue rather than red. Getting it wrong
-// does not fail - it swaps red and blue, which a golden would then enshrine.
 bool blueFirst(VkFormat format) {
   switch (format) {
     case VK_FORMAT_R8G8B8A8_UNORM:
@@ -100,8 +98,6 @@ dunya::image::Bitmap read(
     &region
   );
 
-  // Back to where it started. A swapchain image handed back in the wrong layout
-  // would be presented from a layout the driver was not promised.
   submitBarrier(
     cmd.cmdBuffer(),
     transition(image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, layout)

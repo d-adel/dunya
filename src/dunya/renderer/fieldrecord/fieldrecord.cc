@@ -5,8 +5,6 @@ namespace dunya::renderer {
 RecordBounds makeRecordBounds(const FieldRecord& record) {
   const glm::uvec3 resolution(record.resolutionVolumeIndex);
 
-  // A slot that has never been filled has no box. Empty rather than huge, so
-  // a stale entry rejects every ray instead of accepting them all.
   if (resolution.x == 0u || resolution.y == 0u || resolution.z == 0u) {
     return {glm::vec4(1.0f), glm::vec4(-1.0f)};
   }
@@ -20,8 +18,6 @@ RecordBounds makeRecordBounds(const FieldRecord& record) {
   glm::vec3 minimum(std::numeric_limits<float>::max());
   glm::vec3 maximum(std::numeric_limits<float>::lowest());
 
-  // All eight, because the pose rotates: the transform of the two extreme
-  // corners is not the extreme of the transformed box.
   for (uint32_t corner = 0u; corner != 8u; ++corner) {
     const glm::vec3 at(
       (corner & 1u) != 0u ? localMaximum.x : localMinimum.x,
@@ -62,9 +58,6 @@ FieldRecord makeFieldRecord(
 
   record.localOrigin = grid.origin;
 
-  // .w carried a homogeneous 1 that nothing read. It now says where this
-  // object's brick bounds start, so one volume index still addresses every
-  // sampled resource it owns.
   record.localOrigin.w =
     volume.index == UINT32_MAX
       ? 0.0f

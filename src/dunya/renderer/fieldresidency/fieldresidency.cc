@@ -53,8 +53,6 @@ void FieldResidency::hold(objectmodel::Entity entity, uint32_t slot) {
 
 void FieldResidency::releaseAll(objectmodel::World& world) {
   for (const auto& [owner, slot] : m_holders) {
-    // The component must go with the slot, or the world this belonged to
-    // renders through a freed volume the next time it is active.
     if (world.registry().valid(owner)) {
       world.clearBakedVolume(owner);
     }
@@ -92,14 +90,9 @@ uint32_t FieldResidency::upload(
 
     const field::SampledField& field = *world.sampledField(entity);
 
-    // Copy on write, and this is the write. Until its first dent an object
-    // reads the volume every object with the same primitives shares; the dent
-    // is what earns it one of its own.
     const uint32_t slot = m_pool.makeUnique(m_uploader, shared, field);
 
     if (slot == UINT32_MAX) {
-      // Writing into the shared slot instead would dent every object holding
-      // it, so the dent stays on the CPU field and off the screen.
       ++dropped;
 
       continue;
@@ -131,14 +124,9 @@ uint32_t FieldResidency::upload(
 
     m_pool.upload(m_uploader, slot, field, box);
 
-    // The write that made this box also moved the bricks' gradient bounds, and
-    // the march reads those rather than the samples.
     m_table.uploadBounds(m_uploader, slot, field);
   }
 
-  // One submission for every copy this frame, and no wait: the frame's own
-  // rendering follows on the same queue, and the barriers above order against
-  // it. What this replaces was six queue drains per changed object.
   m_uploader.submit();
 
   return dropped;

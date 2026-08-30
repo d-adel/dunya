@@ -6,9 +6,6 @@
 
 namespace {
 
-// Reads the value that follows a flag, refusing rather than assuming when it is
-// absent. The same shape for every option that takes one, so a new flag cannot
-// invent its own way of being wrong.
 std::string valueFor(
   std::span<char*> arguments,
   size_t& at,
@@ -24,9 +21,6 @@ std::string valueFor(
 }  // namespace
 
 StartupOptions::StartupOptions(std::span<char*> arguments) {
-  // Element zero is the executable. Anything unrecognised is refused rather
-  // than ignored: a mistyped flag would otherwise run happily and measure the
-  // opposite of what was asked, which is worse than not launching.
   for (size_t i = 1; i < arguments.size(); ++i) {
     const std::string argument = arguments[i];
 
@@ -69,9 +63,6 @@ StartupOptions::StartupOptions(std::span<char*> arguments) {
     } else if (argument == "--demo-rate") {
       demoRate = std::stof(valueFor(arguments, i, argument));
     } else if (argument == "--wall") {
-      // COLUMNSxROWS or COLUMNSxROWSxLAYERS, one flag, because the three are
-      // only ever chosen together and a wall four wide by no rows is not a
-      // thing anyone means. The depth is optional and defaults to one.
       const std::string size = valueFor(arguments, i, argument);
 
       std::vector<uint32_t> parts;

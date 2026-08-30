@@ -6,8 +6,6 @@ namespace {
 
 constexpr uint32_t CELL_COUNT = SHADOW_GRID_CELLS * SHADOW_GRID_CELLS;
 
-// Any unit vector across the light will do; this picks the axis the light
-// leans on least, so the cross product is never near zero.
 glm::vec3 acrossFrom(const glm::vec3& toLight) {
   const glm::vec3 axis = std::abs(toLight.y) < 0.9f
                            ? glm::vec3(0.0f, 1.0f, 0.0f)
@@ -16,8 +14,6 @@ glm::vec3 acrossFrom(const glm::vec3& toLight) {
   return glm::normalize(glm::cross(axis, toLight));
 }
 
-// Which cells a footprint touches, clamped to the grid. Inclusive on both
-// ends: a footprint that stops inside a cell still occupies it.
 uint32_t cellOf(float coordinate, float origin, float inverseSize) {
   const float at = (coordinate - origin) * inverseSize;
 
@@ -62,8 +58,6 @@ void ShadowGrid::build(
     const glm::vec3 low(bounds[record].minimum);
     const glm::vec3 high(bounds[record].maximum);
 
-    // An empty box - a slot that was never filled - would drag the extent to
-    // infinity and swallow the resolution of every real one.
     if (glm::any(glm::greaterThan(low, high))) {
       m_footprints.push_back(glm::vec4(1.0f, 1.0f, -1.0f, -1.0f));
 
@@ -73,9 +67,6 @@ void ShadowGrid::build(
     glm::vec2 footprintLow(std::numeric_limits<float>::max());
     glm::vec2 footprintHigh(std::numeric_limits<float>::lowest());
 
-    // The world box's own corners, not the field's: a box contains what it
-    // bounds, so its footprint contains that too, and conservative is the only
-    // thing a prefilter has to be.
     for (uint32_t corner = 0u; corner != 8u; ++corner) {
       const glm::vec3 at(
         (corner & 1u) != 0u ? high.x : low.x,
@@ -110,15 +101,11 @@ void ShadowGrid::build(
     return;
   }
 
-  // A hair wider than the records, so the last cell's far edge is inside the
-  // grid rather than exactly on it.
   const glm::vec2 size = span * 1.001f / float(SHADOW_GRID_CELLS);
   const glm::vec2 inverseSize(1.0f / size.x, 1.0f / size.y);
 
   m_cells.assign(CELL_COUNT, ShadowCell{});
 
-  // Counting pass, then a prefix sum, then a fill: two walks of the records
-  // and no per-cell vector.
   for (uint32_t record = 0u; record != count; ++record) {
     const glm::vec4& footprint = m_footprints[record];
 
@@ -144,7 +131,6 @@ void ShadowGrid::build(
     cell.offset = running;
     running += cell.count;
 
-    // Reset so the fill below can use it as a cursor and end up correct.
     cell.count = 0u;
   }
 

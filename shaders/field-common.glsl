@@ -1,10 +1,6 @@
 #ifndef DUNYA_FIELD_COMMON_GLSL
 #define DUNYA_FIELD_COMMON_GLSL
 
-// The CSG fold, shared by every shader. It exists a second time in analytic.cc,
-// and two copies already diverged silently at M16. Each includer defines
-// FIELD_PRIMITIVE_AT(i) and FIELD_PRIMITIVE_COUNT first.
-
 #include "field-types.glsl"
 
 float smin(float a, float b, float k)
@@ -46,8 +42,6 @@ float primitiveDistance(vec3 p, Primitive prim) {
   }
 }
 
-// Mirrors skippable() in analytic.cc. A radius of zero means no bound is
-// known, so the primitive is always evaluated.
 bool skippable(vec3 p, Primitive prim, float acc) {
   if (prim.bounds.w <= 0.0) {
     return false;
@@ -67,8 +61,6 @@ bool skippable(vec3 p, Primitive prim, float acc) {
   }
 }
 
-// The fold over the first count primitives, optionally only the ones no grid
-// can hold. Exact only while the excluded half unions - the cost of D5.
 vec2 foldDistance(vec3 p, uint count, bool unboundedOnly) {
   vec2 acc = vec2(1e9, 0);
   for (uint i = 0u; i < count; ++i) {
@@ -97,8 +89,6 @@ vec2 foldDistance(vec3 p, uint count, bool unboundedOnly) {
       case 3u:
         acc = vec2(max(acc.x, -cur.x), acc.y);
         break;
-      // smax(a, b, k) = -smin(-a, -b, k), with b = -cur so the inner negation
-      // cancels. Mirrors case 4u in analytic.cc.
       case 4u:
         acc = vec2(-smin(-acc.x, cur.x, prim.shape.w), acc.y);
         break;

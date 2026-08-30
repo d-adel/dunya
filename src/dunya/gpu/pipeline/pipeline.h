@@ -91,7 +91,6 @@ private:
 
   std::vector<VkDescriptorSetLayout> m_setLayouts;
 
-  // Stored, not borrowed: reload() rebuilds the config after construction.
   std::vector<VkVertexInputBindingDescription> m_bindingDescriptions;
   std::vector<VkVertexInputAttributeDescription> m_attributeDescriptions;
   VkFormat m_depthImageFormat;

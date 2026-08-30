@@ -33,8 +33,6 @@ void CameraController::setLookMode(bool looking) {
     clear();
   }
 
-  // Entering or leaving capture teleports the cursor, and a delta across that
-  // jump would spin the camera (idiom 17).
   m_input.cursorDeltaInvalid();
 
   glfwSetInputMode(
@@ -81,7 +79,6 @@ bool CameraController::handleKey(
 
   switch (event.type) {
     case dunya::platform::KeyEventType::Pressed:
-      // Movement belongs to look mode, the same way it does in a scene view.
       *state = acceptsInput && m_looking;
       break;
 
@@ -122,8 +119,6 @@ dunya::field::Ray CameraController::cursorRay(
 ) const {
   const dunya::platform::Cursor cursor = m_input.cursor();
 
-  // Vulkan's NDC y runs downward because the projection flips it, and GLFW
-  // reports the cursor from the top left, so both axes map without a flip.
   const glm::vec2 ndc(
     2.0f * static_cast<float>(cursor.x) / static_cast<float>(extent.width)
       - 1.0f,

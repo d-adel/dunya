@@ -12,9 +12,6 @@ namespace dunya::gpu {
 class Image {
 public:
   Image() = default;
-  // depth of 1 makes a 2D image, anything more a 3D one. The distinction
-  // reaches the image type, the view type and the copy extent together, so it
-  // is taken once rather than inferred in three places.
   Image(
     const Device& device,
     uint32_t width,
@@ -35,7 +32,6 @@ public:
 
   ~Image();
 
-  // Static
   static VkImageView createImageView(
     VkDevice device,
     VkImage image,
@@ -44,12 +40,10 @@ public:
     VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D
   );
 
-  // Getters
   VkImage image() const noexcept;
   VkImageView imageView() const noexcept;
   VkDeviceMemory memory() const noexcept;
 
-  // Helpers
   void copyTo(const Device& device, VkBuffer dst, VkDeviceSize size) const;
 
   void transition(
@@ -57,9 +51,6 @@ public:
     VkImageLayout oldLayout,
     VkImageLayout newLayout
   );
-  // The offset makes this a sub-region copy: a dent rewrites a few dozen
-  // voxels of a 128-cubed volume, and staging the whole grid for that is
-  // 10 MiB of traffic for 30 KB of change.
   void copyFrom(
     const Device& device,
     Buffer& buffer,
@@ -69,9 +60,6 @@ public:
     VkOffset3D offset = {0, 0, 0}
   );
 
-  // The same two, recorded rather than submitted. Load-time callers want the
-  // pair above, which submit and wait; a caller inside a frame wants these,
-  // so a dozen copies become one submission and no stall. See Uploader.
   void recordTransition(
     VkCommandBuffer commandBuffer,
     VkImageLayout oldLayout,

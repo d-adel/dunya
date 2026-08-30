@@ -2,8 +2,6 @@
 
 namespace {
 
-// One kind, because that is all the backend allocates: a combined sampler per
-// texture it is asked to draw, which today is the font atlas and nothing else.
 constexpr uint32_t POOL_CAPACITY = 8;
 
 VkDescriptorPool createPool(VkDevice device) {
@@ -38,9 +36,6 @@ Overlay::Overlay(
   ImGui::CreateContext();
   ImGui::StyleColorsDark();
 
-  // true installs ImGui's GLFW callbacks, which chain to the ones already
-  // registered rather than replacing them, so this project's own input keeps
-  // receiving everything it did before.
   if (!ImGui_ImplGlfw_InitForVulkan(m_context.window().handle(), true)) {
     throw std::runtime_error("Failed to attach the overlay to the window");
   }
@@ -52,9 +47,6 @@ Overlay::Overlay(
   rendering.colorAttachmentCount = 1;
   rendering.pColorAttachmentFormats = &colorFormat;
 
-  // The overlay writes no depth, but it is recorded inside a pass that has a
-  // depth attachment bound, and a pipeline's declared formats must match the
-  // pass it is used in whether or not it touches them.
   rendering.depthAttachmentFormat = swapChain.depthImage().format();
 
   ImGui_ImplVulkan_InitInfo info{};
@@ -68,8 +60,6 @@ Overlay::Overlay(
   info.ImageCount = swapChain.imageCount();
   info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
-  // There is no VkRenderPass to hand it: this project has used dynamic
-  // rendering since M4, so the backend is told the attachment format instead.
   info.UseDynamicRendering = true;
   info.PipelineRenderingCreateInfo = rendering;
 
@@ -99,8 +89,6 @@ void Overlay::panel(std::string name, std::function<void()> draw) {
 }
 
 void Overlay::build() {
-  // The menu is the only chrome the overlay owns itself, because hiding a panel
-  // is the overlay's business and nothing a panel should have to implement.
   if (ImGui::BeginMainMenuBar()) {
     if (ImGui::BeginMenu("Panels")) {
       for (Panel& panel : m_panels) {
@@ -118,9 +106,6 @@ void Overlay::build() {
       continue;
     }
 
-    // Begin returns false when the window is collapsed, and End is still
-    // required either way - which is why the draw is skipped rather than the
-    // pair.
     if (ImGui::Begin(panel.name.c_str(), &panel.visible)) {
       panel.draw();
     }
@@ -143,9 +128,6 @@ void Overlay::drawNotice() {
   const ImVec2 size(340.0f, 58.0f);
   const ImVec2 centre = ImGui::GetMainViewport()->GetCenter();
 
-  // Position and size are both explicit because an auto-fit window draws
-  // nothing on the frame ImGui first meets it, and that frame is the entire
-  // point of this one.
   ImGui::SetNextWindowPos(
     ImVec2(centre.x - size.x * 0.5f, centre.y - size.y * 0.5f)
   );
@@ -173,15 +155,11 @@ void Overlay::end() {
   ImGui::Render();
 }
 
-// A window ImGui has just met produces no geometry on its first frame: it is
-// hidden for one frame while its auto-fit size is measured. That is normal, and
-// it is why a single-frame capture is a poor way to check the overlay works.
 void Overlay::record(VkCommandBuffer commandBuffer) const {
   ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
 }
 
 bool Overlay::wantsMouse() const {
-  // Nothing is drawn in a release build, so nothing can be over the cursor.
   if constexpr (!enableOverlay) {
     return false;
   } else {

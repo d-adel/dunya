@@ -358,9 +358,6 @@ void DescriptorGroup::createSetLayout(
 
     bindings.push_back(layoutBinding);
 
-    // Partially bound, because a volume array has empty slots until objects
-    // fill them. No update-after-bind, so these can only be written while no
-    // submitted work references the set.
     bindingFlags.push_back(VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT);
 
     ImageSlot slot{};
@@ -530,8 +527,6 @@ void DescriptorGroup::createPool(
   poolInfo.pPoolSizes = poolSizes.data();
   poolInfo.maxSets = m_frameCount;
 
-  // The same decision the layout made, not a second reading of it: a layout
-  // carrying the bit may only be allocated from a pool carrying it.
   poolInfo.flags =
     m_updateAfterBind ? VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT : 0;
 
@@ -687,8 +682,6 @@ void DescriptorGroup::createSets(
 
       for (const auto& element : storageImage.elements) {
         VkDescriptorImageInfo imageInfo{};
-        // A storage image is written, not sampled, so it is accessed in
-        // GENERAL rather than a read-only layout.
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
         imageInfo.imageView = element;
 

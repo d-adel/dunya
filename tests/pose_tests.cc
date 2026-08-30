@@ -34,7 +34,6 @@ Primitive makeSphere(const glm::vec3& centre, float radius, uint32_t material) {
   return primitive;
 }
 
-// The crossing the click path and the shader both do before they march.
 Ray toLocal(const Pose& pose, const Ray& world) {
   const glm::mat4 inverseModel = glm::inverse(model(pose));
 
@@ -47,8 +46,6 @@ Ray toLocal(const Pose& pose, const Ray& world) {
 }  // namespace
 
 TEST_CASE("a pose puts an off-centre primitive where the turn says", "[pose]") {
-  // A quarter turn about Y swings local +X onto -Z, so the sphere authored at
-  // local (2, 0, 0) has to be found at world (3, 0, -2) and nowhere else.
   Pose pose{};
   pose.position = glm::vec3(3.0f, 0.0f, 0.0f);
   pose.rotation =
@@ -73,8 +70,6 @@ TEST_CASE("a pose puts an off-centre primitive where the turn says", "[pose]") {
   REQUIRE_THAT(world.y, WithinAbs(0.0f, MARCH_TOLERANCE));
   REQUIRE_THAT(world.z, WithinAbs(-3.0f, MARCH_TOLERANCE));
 
-  // Where an identity pose would have left the sphere. Rotating before
-  // translating would put it at world (0, 0, -5), which this ray also misses.
   const Ray beside{glm::vec3(10.0f, 0.0f, 0.0f), glm::vec3(-1.0f, 0.0f, 0.0f)};
 
   REQUIRE_FALSE(
@@ -83,9 +78,6 @@ TEST_CASE("a pose puts an off-centre primitive where the turn says", "[pose]") {
 }
 
 TEST_CASE("a point crossed into a pose and back comes home", "[pose]") {
-  // The march runs in local space and the shading runs in world space, so the
-  // two crossings have to invert each other on an off-axis turn, not only at
-  // identity.
   Pose pose{};
   pose.position = glm::vec3(-2.0f, 0.7f, 4.0f);
   pose.rotation = glm::angleAxis(
@@ -110,9 +102,6 @@ TEST_CASE("a point crossed into a pose and back comes home", "[pose]") {
 }
 
 TEST_CASE("a default pose is the identity", "[pose]") {
-  // Every field entity is created with this before anything writes to it, so a
-  // wrong quaternion default would place every object subtly askew rather than
-  // failing loudly.
   REQUIRE(model(Pose{}) == glm::mat4(1.0f));
 }
 
@@ -120,9 +109,6 @@ TEST_CASE(
   "a pose reproduces the matrix it replaced, to a float ulp",
   "[pose]"
 ) {
-  // Step 6 turned a stored mat4 into a Pose, so the same transform is now built
-  // by mat4_cast(angleAxis(...)) instead of glm::rotate. Algebraically equal,
-  // and this pins how far apart the two float paths actually land.
   const float angle = glm::radians(-90.0f);
   const glm::vec3 axis(1.0f, 0.0f, 0.0f);
   const glm::vec3 position(0.0f, 0.0f, -2.0f);
@@ -141,7 +127,5 @@ TEST_CASE(
     }
   }
 
-  // One ulp near 1.0 is 1.19e-07. Anything larger is a different transform, not
-  // a different way of spelling the same one.
   REQUIRE(worst < 2.0e-07f);
 }

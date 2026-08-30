@@ -75,12 +75,6 @@ TEST_CASE("Primitive keeps the layout the shader indexes by", "[field]") {
 }
 
 TEST_CASE("bounds culling does not change the field", "[field][bounds]") {
-  // Two spheres, a smooth-union blob, a hard carve and a smooth carve, so
-  // every skip condition is exercised, then the same scene with bounds filled
-  // in. Culling is only ever allowed to save work, so every sample has to agree
-  // exactly. The smooth carve is the one that catches a bound that forgot to
-  // carry its blend radius: it starts rounding k before the cutter arrives, so
-  // a bound sized to the bare radius would skip it while it still had work.
   std::vector<Primitive> unbounded{
     makePrimitive(SPHERE, glm::vec3(0.0f), glm::vec4(1.0f, 0, 0, 0), 3, UNION),
     makePrimitive(
@@ -183,7 +177,6 @@ TEST_CASE("a box reports signed distance to its surface", "[field]") {
     WithinAbs(-0.5f, ANALYTIC_TOLERANCE)
   );
 
-  // Diagonally outside a corner the distance is the length of the overhang.
   REQUIRE_THAT(
     distanceAt(primitives, glm::vec3(1.0f, 1.0f, 0.5f)),
     WithinAbs(std::sqrt(0.5f), ANALYTIC_TOLERANCE)
@@ -248,8 +241,6 @@ TEST_CASE("a rotation turns the field with the shape", "[field]") {
     UNION
   )};
 
-  // The probe sits off the end of the box's long axis. Turning the box a
-  // quarter turn about Y swings that axis onto Z and swallows the probe.
   REQUIRE_THAT(
     distanceAt(unrotated, probe),
     WithinAbs(0.7f, ANALYTIC_TOLERANCE)
@@ -291,7 +282,6 @@ TEST_CASE("intersection takes the farther surface", "[field][csg]") {
     )
   };
 
-  // Inside the first, further from the second: the second's distance wins.
   const AnalyticSample result =
     dunya::field::sample(primitives, glm::vec3(-0.5f, 0.0f, 0.0f));
 
@@ -322,12 +312,6 @@ TEST_CASE(
   "smooth subtraction rounds where the hard one creases",
   "[field][csg]"
 ) {
-  // A unit sphere with a smaller sphere cut out of it, k = 0.5. At radius 0.75
-  // the accumulated distance is -0.25 and the cutter's is +0.25, so the two
-  // arguments of the smooth max are equal: h is 0.5 and the blend adds
-  // k*h*(1-h) = 0.125 to the hard answer. Hand-computed, the same way the
-  // smooth union case is, because the whole point is that this agrees with the
-  // shader's arithmetic and not merely with itself.
   const Primitive solid =
     makePrimitive(SPHERE, glm::vec3(0.0f), glm::vec4(1.0f, 0, 0, 0), 3, UNION);
 
@@ -361,12 +345,8 @@ TEST_CASE(
     WithinAbs(-0.125f, ANALYTIC_TOLERANCE)
   );
 
-  // Smooth max sits above hard max, so a smooth carve removes slightly more.
-  // That is the one place it is less conservative than the hard op, and worth
-  // pinning rather than rediscovering as a march artifact.
   REQUIRE(distanceAt(smooth, probe) > distanceAt(hard, probe));
 
-  // A subtraction of either kind keeps what it cut into.
   REQUIRE(dunya::field::sample(smooth, probe).material == 3);
 }
 
@@ -382,8 +362,6 @@ TEST_CASE("smooth union blends by the shader's smin", "[field][csg]") {
     )
   };
 
-  // Both distances are -0.25 at the midpoint, so h is 0.5 and the blend
-  // subtracts k*h*(1-h) = 0.125 from it.
   REQUIRE_THAT(
     distanceAt(primitives, glm::vec3(0.75f, 0.0f, 0.0f)),
     WithinAbs(-0.375f, ANALYTIC_TOLERANCE)
@@ -411,8 +389,6 @@ TEST_CASE("the fold is order dependent", "[field][csg]") {
   const std::vector<Primitive> carveThenAdd{big, carve, added};
   const std::vector<Primitive> addThenCarve{big, added, carve};
 
-  // The subtraction applies to everything folded before it and nothing after,
-  // so the same three primitives describe two different fields.
   REQUIRE_THAT(
     distanceAt(carveThenAdd, glm::vec3(0.0f)),
     WithinAbs(-0.7f, ANALYTIC_TOLERANCE)

@@ -54,8 +54,6 @@ ResourceTable::ResourceTable(
     throw std::runtime_error("More materials than the material table holds");
   }
 
-  // PARTIALLY_BOUND makes an unwritten array slot undefined rather than an
-  // error, so an out-of-range index here would sample garbage silently.
   for (const dunya::renderer::MaterialRecord& material : materials) {
     const std::array<uint32_t, 5> images{
       material.baseColorTexture,

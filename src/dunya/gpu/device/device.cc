@@ -30,8 +30,6 @@ SwapChainSupportDetails querySwapChainSupport(
   if (formatCount != 0) {
     details.formats.resize(formatCount);
 
-    // VK_INCOMPLETE is a success code but means the list was truncated, so
-    // anything other than VK_SUCCESS is a short read here.
     if (
       vkGetPhysicalDeviceSurfaceFormatsKHR(
         device,
@@ -289,8 +287,6 @@ void Device::createLogicalDevice() {
 
   VkPhysicalDeviceFeatures deviceFeatures{};
   deviceFeatures.samplerAnisotropy = VK_TRUE;
-  // The shaders index the volume arrays by runtime values, which is its own
-  // feature even though desktop drivers tolerate it unenabled.
   deviceFeatures.shaderSampledImageArrayDynamicIndexing = VK_TRUE;
   deviceFeatures.shaderStorageImageArrayDynamicIndexing = VK_TRUE;
 

@@ -2,8 +2,6 @@
 
 namespace dunya::runtime {
 
-// The JoltLibrary reference is a lifetime requirement rather than data:
-// PhysicsWorld allocates through the pointer RegisterDefaultAllocator installs.
 Runtime::Runtime(const objectmodel::World& source, physics::JoltLibrary&) {
   objectmodel::instantiateWorld(source, m_world);
 }
@@ -30,8 +28,6 @@ JPH::ShapeRefC Runtime::shapeFor(const objectmodel::SharedField& held) {
       return found->second.shape;
     }
 
-    // The lattice this described is gone and something else is living at its
-    // address. Whatever the entry says about it is about the wrong geometry.
     m_shapes.erase(found);
   }
 
@@ -46,9 +42,6 @@ void Runtime::rememberShape(
   const objectmodel::SharedField& held,
   const JPH::ShapeRefC& shape
 ) {
-  // Entries whose lattice has gone hold a shape nothing can use, and a shape
-  // is the larger half of what describing a lattice costs. Swept here rather
-  // than on a timer: this is the only place the map grows.
   std::erase_if(m_shapes, [](const auto& entry) {
     return entry.second.lattice.expired();
   });
@@ -60,14 +53,10 @@ void Runtime::refreshBody(objectmodel::Entity entity) {
   const auto* held =
     m_world.registry().try_get<objectmodel::SharedField>(entity);
 
-  // Not an error: bodies follow the field, and the field arrives on the first
-  // frame after Play rather than at construction.
   if (held == nullptr) {
     return;
   }
 
-  // Borrowed, not owned. The component is the owner, and it is what a rebake
-  // replaces, which is why this function has to run again afterwards.
   setBodyShape(entity, shapeFor(*held));
 }
 
@@ -90,13 +79,6 @@ void Runtime::reshapeAfterDeform(
   const JPH::Shape* current =
     m_physicsWorld.bodies().GetShape(JPH::BodyID(body->id));
 
-  // Only a shape over this same grid can be patched. Anything else - a ball
-  // on the shared projectile shape, or a body that has not been built yet -
-  // falls back to the full walk rather than reusing somebody else's bricks.
-  //
-  // A copy-on-write split lands here too: the dent gave this object its own
-  // lattice at a new address, so the shape it shared with every other crate
-  // describes the wrong geometry now and it needs one of its own.
   const auto* shape = dynamic_cast<const physics::FieldShape*>(current);
 
   if (shape == nullptr || &shape->field() != field) {
@@ -108,9 +90,6 @@ void Runtime::reshapeAfterDeform(
     new physics::FieldShape(*field, *shape, brickBegin, brickEnd)
   );
 
-  // The lattice is this object's own - a shared one is copied before it is
-  // written - so the cache entry for it describes only this object, and it
-  // has to name the shape that matches the dent rather than the one before.
   rememberShape(*held, reshaped);
 
   setBodyShape(entity, reshaped);
@@ -121,11 +100,6 @@ size_t Runtime::shapeCount() const noexcept {
 }
 
 void Runtime::wake(const glm::vec3& minimum, const glm::vec3& maximum) {
-  // Jolt's SetShape invalidates the contact cache of the body it changed and
-  // nothing else, and it refuses to activate a static one at all. So a crater
-  // opening under a box that has gone to sleep leaves it resting on geometry
-  // that is no longer there - the lattice, the volume and the shape all show
-  // the hole, and the box hangs over it.
   m_physicsWorld.bodies().ActivateBodiesInAABox(
     JPH::AABox(
       JPH::Vec3(minimum.x, minimum.y, minimum.z),
@@ -144,18 +118,11 @@ void Runtime::setBodyShape(
 
   const bool isStatic = registry.all_of<objectmodel::StaticBody>(entity);
 
-  // Jolt asserts on a zero mass, and a field is allowed to hold nothing: carve
-  // an object away and this is what is left of it. Only a moving body needs
-  // one, so a static body on an empty field is no trouble at all.
   const bool hasMass = shape->GetMassProperties().mMass > 0.0f;
 
   JPH::BodyInterface& bodies = m_physicsWorld.bodies();
 
   if (const auto* body = registry.try_get<objectmodel::RigidBody>(entity)) {
-    // Mass properties come from the field too, so they are recomputed with it.
-    // Recomputed from the new geometry only when there is any: a rebake that
-    // empties an object leaves the body its last mass rather than a zero one,
-    // and nothing is left to collide with either way.
     bodies.SetShape(
       JPH::BodyID(body->id),
       shape,
@@ -163,8 +130,6 @@ void Runtime::setBodyShape(
       isStatic ? JPH::EActivation::DontActivate : JPH::EActivation::Activate
     );
 
-    // That call recomputed mass from the new geometry, which is wanted — a
-    // carved body is lighter — and discarded any override, which is not.
     applyMassScale(entity);
 
     return;
@@ -181,7 +146,6 @@ void Runtime::setBodyShape(
 
   const objectmodel::Pose& pose = registry.get<objectmodel::Pose>(entity);
 
-  // Jolt's Quat takes w last, glm's constructor takes it first.
   JPH::BodyCreationSettings settings(
     shape,
     JPH::RVec3(pose.position.x, pose.position.y, pose.position.z),
@@ -195,12 +159,8 @@ void Runtime::setBodyShape(
     isStatic ? physics::ObjectLayers::NON_MOVING : physics::ObjectLayers::MOVING
   );
 
-  // Not optional: the sweeps measured a body embedding itself in the ground
-  // from one metre of travel per step upward under the discrete solver.
   settings.mMotionQuality = JPH::EMotionQuality::LinearCast;
 
-  // The whole handle, version included: the index alone would let a recycled
-  // entity inherit a stale body's transform.
   settings.mUserData = static_cast<JPH::uint64>(static_cast<uint32_t>(entity));
 
   const JPH::BodyID id = bodies.CreateAndAddBody(
@@ -214,7 +174,6 @@ void Runtime::setBodyShape(
 
   m_world.setRigidBody(entity, id.GetIndexAndSequenceNumber());
 
-  // A body instantiated from an authored one brings its scale with it.
   applyMassScale(entity);
 
   m_broadPhaseStale = true;
@@ -223,8 +182,6 @@ void Runtime::setBodyShape(
 void Runtime::launch(objectmodel::Entity entity, const glm::vec3& velocity) {
   const auto* body = m_world.registry().try_get<objectmodel::RigidBody>(entity);
 
-  // Not an error: a body arrives a frame after the world does, so a key can
-  // reach this before one exists.
   if (body == nullptr) {
     return;
   }
@@ -254,7 +211,6 @@ void Runtime::setMass(objectmodel::Entity entity, float mass) {
     return;
   }
 
-  // Null on a static body, which has no mass to scale.
   JPH::MotionProperties* motion = lock.GetBody().GetMotionPropertiesUnchecked();
 
   if (motion == nullptr) {
@@ -263,9 +219,6 @@ void Runtime::setMass(objectmodel::Entity entity, float mass) {
 
   motion->ScaleToMass(mass);
 
-  // Recorded against what the shape says it weighs, so what survives a rebake
-  // is the material rather than the number. A field with nothing solid in it
-  // has no weight to be a multiple of, and asks for no scale.
   const float derived = lock.GetBody().GetShape()->GetMassProperties().mMass;
 
   if (derived > 0.0f) {
@@ -316,7 +269,6 @@ bool Runtime::despawn(objectmodel::Entity entity) {
 
 void Runtime::step() {
   if (m_broadPhaseStale) {
-    // Once per batch rather than per body: it rebuilds the whole tree.
     m_physicsWorld.optimizeBroadPhase();
     m_broadPhaseStale = false;
   }
@@ -343,7 +295,6 @@ void Runtime::syncPoses() {
       static_cast<uint32_t>(bodies.GetUserData(id))
     };
 
-    // Not an error: a body can outlive the entity that named it.
     if (!registry.valid(entity)) {
       continue;
     }

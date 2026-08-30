@@ -2,17 +2,10 @@
 
 namespace {
 
-// Long enough for the wall to settle out of its drop, short enough that a
-// ten-second recording is not a quarter empty.
 constexpr uint32_t FIRST_SHOT = 80u;
 
-// The first few frames carry the bake of every object in the scene and say
-// nothing about steady state, so they are excluded rather than averaged in.
 constexpr uint32_t WARMUP = 20u;
 
-// A body that moved less than this in a frame has not moved: a metre of float
-// carries about a micron of noise in its last bits, and a solver that holds a
-// stack still writes the same pose through the same maths.
 constexpr float MOVED_METRES = 1.0e-5f;
 constexpr float TURNED_RADIANS = 1.0e-5f;
 
@@ -38,10 +31,6 @@ bool DemoDriver::fires(uint32_t frameIndex) {
                      && (frameIndex - FIRST_SHOT) % m_interval == 0u;
 
   if (m_firedThisFrame) {
-    // Spread across the wall rather than all at one spot, by the same R2
-    // sequence the dents use: successive multiples of these two fractions fill
-    // a square evenly without ever repeating, so a hundred boxes all get hit
-    // and the same run does it the same way twice.
     m_target = glm::fract(
       static_cast<float>(m_shotsFired) * glm::vec2(0.7548777f, 0.5698403f)
     );
@@ -110,8 +99,6 @@ void DemoDriver::measureMotion(const entt::registry& registry) {
 
     const float moved = glm::length(pose.position - found->second.position);
 
-    // Quaternions double-cover: q and -q are the same orientation, so the
-    // absolute value is what makes this an angle rather than a coin flip.
     const float aligned =
       std::min(1.0f, std::abs(glm::dot(pose.rotation, found->second.rotation)));
 
@@ -168,11 +155,6 @@ void DemoDriver::report(const SceneSummary& scene) const {
             << (100.0 * double(overBudget) / double(m_measured.size()))
             << "%)\n";
 
-  // Named rather than summarised: a spike on a spawn frame and a spike on a
-  // crater frame are different bugs, and the mean cannot tell them apart.
-  // Means per phase, not just the worst frames: a phase that costs two
-  // milliseconds every frame never appears in a worst-six list and is still the
-  // largest thing in the budget.
   double carveTotal = 0.0;
   double uploadTotal = 0.0;
   double physicsTotal = 0.0;

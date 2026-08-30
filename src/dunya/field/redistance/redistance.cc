@@ -4,9 +4,6 @@ namespace dunya::field {
 
 namespace {
 
-// How wide the band the residual is reported over is, in voxels. The same
-// number DEFORM_BAND_VOXELS uses, and for the same reason: it is the region
-// D7 promises anything about.
 constexpr uint32_t BAND_VOXELS = 8u;
 
 constexpr float FAR = std::numeric_limits<float>::max();
@@ -15,9 +12,6 @@ uint32_t latticeIndex(const SampledField& field, const glm::uvec3& at) {
   return at.x + field.resolution.x * (at.y + field.resolution.y * at.z);
 }
 
-// Solves sum over the first k terms of (x - d[i])^2 / h[i]^2 = 1 for the
-// larger root. Accumulated in double because the three weights differ by the
-// square of the axis ratio, and this grid's axes differ by a factor of ten.
 float larger(const float* d, const float* h, uint32_t k) {
   double a = 0.0;
   double b = 0.0;
@@ -52,8 +46,6 @@ struct Grid {
   }
 };
 
-// The smaller of the two neighbours along one axis, or FAR when neither is
-// inside the box - which is what makes the update fall back to fewer terms.
 float axisMinimum(
   const Grid& grid,
   uint32_t x,
@@ -87,7 +79,6 @@ float godunov(float a, float b, float c, const glm::vec3& h) {
   float d[3] = {a, b, c};
   float spacing[3] = {h.x, h.y, h.z};
 
-  // Three elements, so an explicit sort beats reaching for a comparator.
   for (uint32_t i = 0; i < 2u; ++i) {
     for (uint32_t j = i + 1u; j < 3u; ++j) {
       if (d[j] < d[i]) {
@@ -108,11 +99,8 @@ float godunov(float a, float b, float c, const glm::vec3& h) {
       break;
     }
 
-    // One term has a closed form; the rest go through the quadratic.
     answer = k == 1u ? d[0] + spacing[0] : larger(d, spacing, k);
 
-    // Accept as soon as the answer no longer reaches the next neighbour: the
-    // terms past it contribute nothing, which is what "upwind" means here.
     if (k == 3u || answer <= d[k]) {
       break;
     }
@@ -140,10 +128,6 @@ float redistance(
   const size_t expected =
     static_cast<size_t>(box.extent.x) * box.extent.y * box.extent.z;
 
-  // Both spans are per-sample over the box. A short damaged mask would freeze
-  // the tail and an empty one would freeze everything, so the sweep would do
-  // nothing at all and report that it had converged; a mismatched values span
-  // would be written past its end. write() next door throws on exactly this.
   if (damaged.size() != expected) {
     throw std::runtime_error(
       "A redistance needs one damaged flag per sample in the box"
@@ -177,8 +161,6 @@ float redistance(
       for (uint32_t x = 0; x < box.extent.x; ++x) {
         const size_t here = grid.at(x, y, z);
 
-        // From the caller buffer when there is one: a fold that has not been
-        // written yet still has to be what this repairs.
         const float value =
           values.empty()
             ? field.distances
@@ -191,10 +173,6 @@ float redistance(
     }
   }
 
-  // The seeds. A point with a neighbour across the surface gets its magnitude
-  // from linear interpolation along that edge and is then never updated: the
-  // sweep has to start somewhere, and the zero set is the one thing a fold got
-  // exactly right.
   for (uint32_t z = 0; z < box.extent.z; ++z) {
     for (uint32_t y = 0; y < box.extent.y; ++y) {
       for (uint32_t x = 0; x < box.extent.x; ++x) {
@@ -228,13 +206,6 @@ float redistance(
           }
         }
 
-        // Frozen at the value it arrived with. The sub-voxel crossing between
-        // two lattice points is the ratio of their two values, so rewriting
-        // either of them moves the surface - and the surface is the one thing
-        // a CSG fold got exactly right. So this is a predicate, not a
-        // distance: an earlier version computed an interpolated distance here
-        // and then discarded it, which read as though the interpolation were
-        // load-bearing when nothing used it.
         if (bordersSurface) {
           grid.value[here] = std::abs(value);
           grid.frozen[here] = 1u;
@@ -243,14 +214,6 @@ float redistance(
     }
   }
 
-  // Everything the caller did not mark as damaged is frozen where it stands.
-  //
-  // This is not an optimisation. A sweep is first order, and on a grid whose
-  // axes differ by ten it is *less* accurate than the bake it would overwrite:
-  // measured on the ground's own lattice, repairing an undamaged field moved
-  // the surface by 0.149, which is nine fine voxels of visible lumps. Only the
-  // fold knows what it changed, so that has to arrive as an input rather than
-  // be guessed at from the values.
   for (size_t i = 0; i < count; ++i) {
     if (grid.frozen[i] != 0u || damaged[i] != 0u) {
       continue;
@@ -260,8 +223,6 @@ float redistance(
     grid.frozen[i] = 1u;
   }
 
-  // The shell is a Dirichlet boundary at the values it arrived with, so the
-  // repaired interior agrees with the untouched field outside the box.
   for (uint32_t z = 0; z < box.extent.z; ++z) {
     for (uint32_t y = 0; y < box.extent.y; ++y) {
       for (uint32_t x = 0; x < box.extent.x; ++x) {
@@ -285,14 +246,8 @@ float redistance(
     }
   }
 
-  // How much the last sweep still moved anything. That is the honest
-  // convergence question, and the residual it replaces could not answer it:
-  // measured, zero sweeps and four sweeps both reported exactly 1.0 while the
-  // converged answer was 0.80, because ||grad phi| - 1| is a kink measurement
-  // wherever two fronts meet - a crater has a medial axis well inside the band.
   float lastMove = 0.0f;
 
-  // Eight orderings, one per octant of the characteristics.
   for (uint32_t pass = 0; pass < sweeps; ++pass) {
     lastMove = 0.0f;
 
@@ -324,8 +279,6 @@ float redistance(
             field.voxelSize
           );
 
-          // Never raise a value. That is what makes Gauss-Seidel monotone
-          // here, and it is why eight sweeps converge instead of oscillating.
           const float settled = std::min(grid.value[here], candidate);
 
           if (grid.value[here] < FAR && settled < grid.value[here]) {
@@ -347,9 +300,6 @@ float redistance(
     repaired[i] = grid.negative[i] != 0u ? -magnitude : magnitude;
   }
 
-  // Handed back rather than written when the caller owns the buffer: each
-  // write rebuilds every brick in range, and doing that twice per deformation
-  // is most of what one costs.
   if (!values.empty()) {
     std::copy(repaired.begin(), repaired.end(), values.begin());
   } else {
@@ -372,10 +322,6 @@ float redistance(
     write(field, box, repaired, materials);
   }
 
-  // What the last sweep still moved, not a gradient residual: the gradient
-  // one is a kink measurement, and a crater's medial axis sits inside the
-  // band it would be measured over. Zero here means another sweep would
-  // change nothing, which is the question a caller is actually asking.
   return lastMove;
 }
 

@@ -18,7 +18,6 @@ struct BakeParams {
   glm::vec4 voxelSize;
   glm::uvec4 resolution;
 
-  // x = which element of the volume arrays this dispatch writes.
   glm::uvec4 volume;
 };
 
@@ -51,8 +50,6 @@ private:
 
   dunya::gpu::ComputePipeline m_bakePipeline;
 
-  // Runs on the bake's output, in the same submission, so no frame can see a
-  // volume whose bounds have not caught up with it.
   dunya::gpu::ComputePipeline m_lipschitzPipeline;
 };
 

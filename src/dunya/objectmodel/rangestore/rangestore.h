@@ -11,9 +11,6 @@
 
 namespace dunya::objectmodel {
 
-// One contiguous arena handed out as variable-length ranges. Contiguous
-// because the GPU indexes the whole pool with per-range offsets, so the
-// elements of one range cannot live in their own vector.
 template<typename T>
 class RangeStore {
 public:
@@ -25,9 +22,6 @@ public:
   explicit RangeStore(uint32_t poolCapacity, uint32_t initialCapacity = 4)
       : m_poolCapacity(poolCapacity), m_initialCapacity(initialCapacity) {}
 
-  // The only way to obtain a range, growth and first allocation alike: a zero
-  // Range runs the same policy from nothing. Allocation and the capacity rule
-  // are private so a second growth policy cannot appear beside this one.
   std::optional<Range> grow(
     Range current,
     uint32_t count,
@@ -85,8 +79,6 @@ public:
       m_free.erase(next);
     }
 
-    // A range at the end shrinks the arena instead of joining the free list,
-    // so a pool that empties returns to zero rather than to one big hole.
     if (offset + capacity == m_elements.size()) {
       m_elements.resize(offset);
       return;
@@ -116,8 +108,6 @@ public:
   }
 
 private:
-  // Best fit rather than first fit: the smallest range that will do leaves the
-  // large ones whole for the objects that need them.
   std::optional<Range> allocate(uint32_t capacity) {
     if (capacity == 0) {
       return Range{};
@@ -163,8 +153,6 @@ private:
     return Range{offset, capacity};
   }
 
-  // Doubling from `initialCapacity`, capped. Nullopt means the request is
-  // larger than a single range is allowed to be.
   std::optional<uint32_t> nextCapacity(
     uint32_t current,
     uint32_t required,
@@ -186,7 +174,6 @@ private:
 
   std::vector<T> m_elements;
 
-  // offset -> capacity, ordered by offset so adjacent free ranges coalesce.
   std::map<uint32_t, uint32_t> m_free;
 
   uint32_t m_poolCapacity;

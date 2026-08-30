@@ -34,8 +34,6 @@ namespace {
 
 constexpr uint32_t RESOLUTION = 33u;
 
-// Bakes what the entity's primitives currently say, at a box that fits them,
-// which is what the frame loop does after an edit.
 void rebake(World& world, Entity entity) {
   const dunya::objectmodel::SdfGrid& grid =
     world.registry().get<dunya::objectmodel::SdfGrid>(entity);
@@ -83,11 +81,6 @@ float bodyMass(Runtime& runtime, Entity entity) {
 }  // namespace
 
 TEST_CASE("a mass override survives a rebake as a density", "[runtime]") {
-  // SetShape recomputes mass from the new geometry - which is what makes a
-  // carved body lighter, and the reason to keep geometry as a volume at all -
-  // and in doing so discards whatever setMass asked for. What is remembered is
-  // the factor, so both hold at once: the ball stays as dense as it was made,
-  // and losing seven eighths of itself costs it seven eighths of its weight.
   JoltLibrary library;
 
   World source;
@@ -106,8 +99,6 @@ TEST_CASE("a mass override survives a rebake as a density", "[runtime]") {
 
   REQUIRE_THAT(bodyMass(runtime, entity), WithinRel(150.0f, 0.001f));
 
-  // Half the radius is an eighth of the volume, through the edit path: the
-  // primitive shrinks, the field is rebaked from it, the shape is rebuilt.
   REQUIRE(
     live.setPrimitive(entity, 0u, fixture::sphere(glm::vec3(0.0f), 0.5f))
   );
@@ -118,8 +109,6 @@ TEST_CASE("a mass override survives a rebake as a density", "[runtime]") {
 }
 
 TEST_CASE("a body nobody weighed follows its geometry", "[runtime]") {
-  // The other half of the same property, and the one that must not regress:
-  // absent a MassScale nothing is put back, so the shape's own mass stands.
   JoltLibrary library;
 
   World source;
@@ -145,9 +134,6 @@ TEST_CASE("a body nobody weighed follows its geometry", "[runtime]") {
 
 namespace {
 
-// A field sphere and a static field slab in one authored world, which is what
-// the criterion is actually about: the trajectory has to be reproducible over
-// this project's collider, not over one Jolt ships.
 void fillFieldWorld(dunya::objectmodel::World& world) {
   dunya::objectmodel::SdfGrid grid{};
   grid.resolution = glm::uvec3(33u);
@@ -222,10 +208,6 @@ TEST_CASE(
   "the same initial conditions reproduce the same trajectory over a field",
   "[physics]"
 ) {
-  // M18's criterion, over this project's collider rather than over Jolt's own
-  // shapes. Contacts here come from a seed walk on worker threads, so nothing
-  // about the shipped test above carries: it proves Jolt is deterministic, not
-  // that FieldShape is.
   JoltLibrary library;
 
   dunya::objectmodel::World source;
@@ -237,23 +219,16 @@ TEST_CASE(
   REQUIRE(first.size() == second.size());
   REQUIRE(first.size() == 240u);
 
-  // Bit-identical, not approximately equal: a tolerance would hide exactly the
-  // drift the criterion is about.
   for (size_t i = 0; i != first.size(); ++i) {
     INFO("sample " << i);
     REQUIRE(first[i] == second[i]);
   }
 
-  // And it has to have actually fallen and stopped, or the comparison is
-  // between two rows of the same starting number.
   REQUIRE(first.back() < 1.0f);
   REQUIRE(first.back() > -1.0f);
 }
 
 TEST_CASE("a field with nothing solid in it gets no body", "[runtime]") {
-  // Jolt asserts on a zero mass, so this used to take the process with it.
-  // Carving an object away is a legitimate thing to do to a volume, and a
-  // milestone away from being the normal thing, so it cannot.
   JoltLibrary library;
 
   World source;
@@ -263,8 +238,6 @@ TEST_CASE("a field with nothing solid in it gets no body", "[runtime]") {
 
   const Entity entity = source.createField(dunya::objectmodel::Pose{}, grid);
 
-  // Baked around a box the sphere is nowhere near, which is the state a carve
-  // that removes everything leaves behind.
   source.setSampledField(
     entity,
     dunya::field::bake(
@@ -288,9 +261,6 @@ TEST_CASE("a field with nothing solid in it gets no body", "[runtime]") {
 
 namespace {
 
-// The shape a body is actually built on, which is the only thing that can tell
-// a reused shape from a rebuilt one. A count cannot: rebuilding under the same
-// key leaves it unchanged (idiom 54).
 const JPH::Shape* bodyShape(Runtime& runtime, Entity entity) {
   const auto& body =
     runtime.world().registry().get<dunya::objectmodel::RigidBody>(entity);
@@ -301,9 +271,6 @@ const JPH::Shape* bodyShape(Runtime& runtime, Entity entity) {
 }  // namespace
 
 TEST_CASE("objects on one lattice get one collision shape", "[runtime]") {
-  // A FieldShape is a pure function of the lattice it reads, so six hundred
-  // crates cut from the same primitives want one between them - and a Jolt
-  // shape is immutable and refcounted, which is what makes that legal.
   JoltLibrary library;
 
   World source;
@@ -326,8 +293,6 @@ TEST_CASE("objects on one lattice get one collision shape", "[runtime]") {
 }
 
 TEST_CASE("a dent takes the object off the shared shape", "[runtime]") {
-  // The other half. Copy on write gives the dented object its own lattice, and
-  // the shape has to follow or every crate wears the same crater.
   JoltLibrary library;
 
   World source;
@@ -365,11 +330,6 @@ TEST_CASE("a dent takes the object off the shared shape", "[runtime]") {
 }
 
 TEST_CASE("a rebuilt shape replaces the one the cache hands out", "[runtime]") {
-  // One shape per lattice means the cache has to follow a dent that does not
-  // move the lattice. An object that already owns its lattice is dented in
-  // place, so the address is unchanged and the entry under it would otherwise
-  // still name the shape from before the crater - and the next refresh would
-  // hand that back, quietly undoing the dent as far as physics is concerned.
   JoltLibrary library;
 
   World source;
@@ -385,8 +345,6 @@ TEST_CASE("a rebuilt shape replaces the one the cache hands out", "[runtime]") {
 
   runtime.refreshBody(entity);
 
-  // The runtime holds the authored lattice, so the first dent is the one that
-  // copies. The second is the one this test is about.
   REQUIRE(live.sampledFieldUsers(entity) == 2);
 
   live.patchSampledField(entity, [](dunya::field::SampledField& grid) {
@@ -403,7 +361,6 @@ TEST_CASE("a rebuilt shape replaces the one the cache hands out", "[runtime]") {
     grid.distances[1] = -1.0f;
   });
 
-  // Unshared now, so the dent landed in place and the address did not move.
   REQUIRE(live.sampledField(entity) == lattice);
 
   const glm::uvec3 bricks = dunya::field::brickCounts(*lattice);

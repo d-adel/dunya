@@ -44,8 +44,6 @@ void requireExtent(
 }  // namespace
 
 TEST_CASE("an axis-aligned box bounds its half extents", "[bounds]") {
-  // The scene's ground slab. A sphere of radius length(10, 0.5, 10) = 14.151
-  // spends 28 of its 29 units on empty space above and below a half-unit slab.
   const std::vector<Primitive> primitives{dunya::field::makeBox(
     glm::vec3(0.0f, -0.5f, 0.0f),
     glm::vec3(10.0f, 0.5f, 10.0f)
@@ -62,8 +60,6 @@ TEST_CASE(
   "a rotated box bounds the turned extents, not the diagonal",
   "[bounds]"
 ) {
-  // Half extents 0.5 turned 45 degrees about Y reach 0.5 * (cos45 + sin45) =
-  // 0.7071 across, and are untouched along the axis of rotation.
   const float diagonal = 0.5f * (std::sqrt(2.0f) / 2.0f) * 2.0f;
 
   const std::vector<Primitive> primitives{dunya::field::makeBox(
@@ -93,8 +89,6 @@ TEST_CASE("a sphere bounds its radius exactly", "[bounds]") {
 }
 
 TEST_CASE("the extent contains every corner of a turned box", "[bounds]") {
-  // The safety half of the property: tightening must not cut the shape. Any
-  // box whose extent excludes one of its own corners is wrong, however tight.
   const glm::vec3 halfExtents(0.4f, 1.2f, 0.7f);
   const glm::mat4 rotation = glm::rotate(
     glm::mat4(1.0f),
@@ -153,7 +147,6 @@ TEST_CASE("an unbounded primitive contributes nothing", "[bounds]") {
   REQUIRE_FALSE(dunya::field::boundedExtent(planeOnly).has_value());
   REQUIRE_FALSE(dunya::field::boundedExtent({}).has_value());
 
-  // A plane beside a sphere leaves the sphere's own extent standing.
   const std::vector<Primitive> mixed{
     dunya::field::makePlane(glm::vec3(0.0f, -1.0f, 0.0f)),
     dunya::field::makeSphere(glm::vec3(0.0f), 2.0f)
@@ -179,8 +172,6 @@ TEST_CASE("the grid box carries the margin past the extent", "[bounds]") {
 }
 
 TEST_CASE("a carve reaching outside does not grow the extent", "[bounds]") {
-  // Subtraction raises the field, so its solid is a subset of what came
-  // before. A carve that pokes out of the object adds nothing to bake.
   const glm::vec3 unitLow(-1.0f);
   const glm::vec3 unitHigh(1.0f);
 

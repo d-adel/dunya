@@ -117,7 +117,6 @@ void FieldBaker::bake(
 
   vkCmdDispatch(cmd.cmdBuffer(), groups.x, groups.y, groups.z);
 
-  // The reduction reads what the dispatch above just wrote.
   transitionVolumes(
     cmd.cmdBuffer(),
     images.distance.image(),
@@ -156,9 +155,6 @@ void FieldBaker::bake(
     (resolution - glm::uvec3(1u) + glm::uvec3(dunya::core::BRICK_CELLS - 1u))
     / glm::uvec3(dunya::core::BRICK_CELLS);
 
-  // The table reserves a fixed slot sized from the largest grid allowed, while
-  // this dispatch sizes itself from the object's own resolution - a larger one
-  // would write through the next slot.
   const uint64_t brickCount =
     static_cast<uint64_t>(bricks.x) * bricks.y * bricks.z;
 
@@ -172,9 +168,6 @@ void FieldBaker::bake(
 
   vkCmdDispatch(cmd.cmdBuffer(), brickGroups.x, brickGroups.y, brickGroups.z);
 
-  // And one more, folding those bricks into the bound over the whole grid that
-  // the shadow march reads. A second dispatch rather than an atomic, because it
-  // has to see every brick finished and the pass is one invocation.
   VkMemoryBarrier2 boundsWritten{};
   boundsWritten.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
   boundsWritten.srcStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
@@ -204,8 +197,6 @@ void FieldBaker::bake(
 
   vkCmdDispatch(cmd.cmdBuffer(), 1, 1, 1);
 
-  // The volumes get a layout transition below, which carries their writes to
-  // the fragment shader. The bound buffer needs a dependency of its own.
   VkMemoryBarrier2 boundsVisible{};
   boundsVisible.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
   boundsVisible.srcStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
@@ -240,8 +231,6 @@ void FieldBaker::bake(
 
 namespace {
 
-// Pulls a whole volume back into host memory. Only ever called by the bake
-// check, so it takes the simple route and waits for the copy.
 std::vector<uint8_t> readVolume(
   const dunya::gpu::Device& device,
   const dunya::gpu::Image& image,
@@ -311,8 +300,6 @@ std::vector<uint8_t> readVolume(
   return bytes;
 }
 
-// Pulls one object's range of the bound table back, global first and bricks
-// after it. Same shape as readVolume, and used by the same check.
 std::vector<float> readBounds(
   const dunya::gpu::Device& device,
   const dunya::gpu::Buffer& bounds,
@@ -450,8 +437,6 @@ void FieldBaker::verifyBake(
     gpuLargestBrick = std::max(gpuLargestBrick, gpuBrick);
   }
 
-  // The shadow march reads this one float, so it gets two comparisons: against
-  // the bricks the GPU produced, and against the CPU's own reduction.
   const float gpuGlobal = bounds[0];
 
   std::cout << "bound check  worst brick " << std::scientific << worstBound

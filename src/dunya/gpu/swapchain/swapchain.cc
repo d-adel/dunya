@@ -94,9 +94,6 @@ void SwapChain::createSwapChain() {
   createInfo.imageColorSpace = surfaceFormat.colorSpace;
   createInfo.imageExtent = extent;
   createInfo.imageArrayLayers = 1;
-  // TRANSFER_SRC is what lets a rendered frame be read back for the golden
-  // image tests. It is asked for rather than assumed: the surface has to offer
-  // it, and a query is not a request (idiom 11).
   if (
     (m_swapChainSupport.capabilities.supportedUsageFlags
      & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
@@ -127,16 +124,12 @@ void SwapChain::createSwapChain() {
     createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
   }
 
-  // This is how to pre-transform images
   createInfo.preTransform = m_swapChainSupport.capabilities.currentTransform;
 
-  // Whether we want to blend the alpha with other windows (no)
   createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 
   createInfo.presentMode = presentMode;
-  // Clipping = disabled reading back pixels
   createInfo.clipped = VK_TRUE;
-  // For resizing
   createInfo.oldSwapchain = m_swapChain;
 
   if (

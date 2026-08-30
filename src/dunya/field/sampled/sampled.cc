@@ -4,8 +4,6 @@ namespace dunya::field {
 
 namespace {
 
-// Below this a gradient names no direction, so a caller gets a substitute
-// rather than a normalize by zero - which traps, on Jolt's worker threads.
 constexpr float GRADIENT_FLOOR = 1e-6f;
 
 uint32_t latticeIndex(const SampledField& field, const glm::uvec3& at) {
@@ -17,7 +15,6 @@ glm::vec3 maximumCorner(const SampledField& field) {
          + field.voxelSize * glm::vec3(field.resolution - glm::uvec3(1u));
 }
 
-// Zero inside the grid, otherwise the distance to the box it covers.
 float outsideDistance(const SampledField& field, const glm::vec3& point) {
   const glm::vec3 clamped =
     glm::clamp(point, field.origin, maximumCorner(field));
@@ -49,8 +46,6 @@ void readCorners(
   }
 }
 
-// Each partial derivative of the trilinear form is a bilinear blend of that
-// axis' four edge slopes, so the largest of them bounds it.
 float cellLipschitz(const SampledField& field, const glm::uvec3& cell) {
   float corner[8];
   readCorners(field, cell, corner);
@@ -72,15 +67,11 @@ float cellLipschitz(const SampledField& field, const glm::uvec3& cell) {
   return glm::length(slope / field.voxelSize);
 }
 
-// Half-open, so an empty range is begin == end and needs no sentinel.
 struct BrickRange {
   glm::uvec3 begin{0u};
   glm::uvec3 end{0u};
 };
 
-// Inclusive in cells; the caller decides which cells a change reached. Returns
-// the bricks it visited, because a caller that changed the lattice has to tell
-// everything else derived per brick which ones moved.
 BrickRange rebuildBricks(
   SampledField& field,
   const glm::uvec3& cellMinimum,
@@ -98,9 +89,6 @@ BrickRange rebuildBricks(
         const glm::uvec3 base =
           glm::uvec3(bx, by, bz) * glm::uvec3(BRICK_CELLS);
 
-        // One cell of halo on every side. A step is allowed to cross the wall
-        // by up to half a voxel, so the bound has to describe the ground just
-        // beyond it as well - otherwise the excursion is outside what it says.
         const glm::uvec3 start =
           glm::max(base, glm::uvec3(1u)) - glm::uvec3(1u);
         const glm::uvec3 end =
@@ -117,8 +105,6 @@ BrickRange rebuildBricks(
           }
         }
 
-        // The cells in [start, end) touch the lattice points in [start, end],
-        // so the value walk is inclusive where the cell walk above is not.
         float lowest = std::numeric_limits<float>::max();
         float highest = std::numeric_limits<float>::lowest();
 
@@ -153,7 +139,6 @@ BrickRange rebuildBricks(
   return {first, last + glm::uvec3(1u)};
 }
 
-// The world box one brick covers, clamped to the grid's own last cell.
 void brickBox(
   const SampledField& field,
   const glm::uvec3& brick,
@@ -168,11 +153,9 @@ void brickBox(
   maximum = field.origin + field.voxelSize * glm::vec3(end);
 }
 
-// Only meaningful inside the grid, so both callers test the box first.
 Cell locate(const SampledField& field, const glm::vec3& point) {
   const glm::vec3 lattice = (point - field.origin) / field.voxelSize;
 
-  // The cell whose far corner is still in range, so base + 1 is always valid.
   const glm::uvec3 base = glm::min(
     glm::uvec3(glm::floor(lattice)),
     field.resolution - glm::uvec3(2u)
@@ -270,8 +253,6 @@ float distance(const SampledField& field, const glm::vec3& point) {
   const float outside = outsideDistance(field, point);
 
   if (outside > 0.0f) {
-    // Distance to the box the grid covers. Conservative: nothing inside can be
-    // nearer than this, so a march steps up to the grid and no further.
     return outside;
   }
 
@@ -301,8 +282,6 @@ uint32_t material(const SampledField& field, const glm::vec3& point) {
 
   const Cell cell = locate(field, point);
 
-  // Material ids are names, not quantities: interpolating them would invent a
-  // material that does not exist, so the nearest lattice point wins.
   const glm::uvec3 nearest = cell.base
                              + glm::uvec3(
                                cell.t.x < 0.5f ? 0u : 1u,
@@ -317,8 +296,6 @@ glm::vec3 gradient(const SampledField& field, const glm::vec3& point) {
   const float outside = outsideDistance(field, point);
 
   if (outside > 0.0f) {
-    // Outside, the field is the distance to the box, whose gradient points
-    // straight away from the nearest point on it.
     const glm::vec3 clamped =
       glm::clamp(point, field.origin, maximumCorner(field));
 
@@ -366,8 +343,6 @@ FieldProbe probe(const SampledField& field, const glm::vec3& point) {
     };
   }
 
-  // Past the grid the field carries on: the gap adds to the distance, and the
-  // direction turns from the surface's own normal towards the way out.
   const glm::vec3 blended =
     (usable ? derivative / steepness * std::fabs(inner) : glm::vec3(0.0f))
     + gap;
@@ -401,8 +376,6 @@ float stepBound(
   glm::vec3 maximum(0.0f);
   brickBox(field, brick, minimum, maximum);
 
-  // The bound holds in this brick alone, so a step may not leave it: the next
-  // one may be steeper, and there the same step would be too long.
   float exit = std::numeric_limits<float>::max();
 
   for (int axis = 0; axis < 3; ++axis) {
@@ -415,10 +388,6 @@ float stepBound(
     exit = std::min(exit, (wall - point[axis]) / direction[axis]);
   }
 
-  // A ray starting next to a wall has almost no room before it, and stepping
-  // that gap repeatedly never leaves the brick. Half a voxel is the floor:
-  // enough to cross, short enough that the bound still describes what it
-  // covers.
   const glm::vec3 voxel = field.voxelSize;
 
   exit = std::max(exit, 0.5f * std::min(voxel.x, std::min(voxel.y, voxel.z)));
@@ -489,8 +458,6 @@ WriteReport write(
     }
   }
 
-  // A cell's bound reads the eight samples around it, so a written sample also
-  // changes the cell before it - which can sit in the neighbouring brick.
   const glm::uvec3 cells = cellCounts(field);
 
   const glm::uvec3 cellMinimum =
@@ -498,8 +465,6 @@ WriteReport write(
   const glm::uvec3 cellMaximum =
     glm::min(end - glm::uvec3(1u), cells - glm::uvec3(1u));
 
-  // And one cell wider again before choosing bricks, because a brick's bound
-  // now reads a cell beyond its own walls: a change there belongs to both.
   const glm::uvec3 reachMinimum =
     glm::max(cellMinimum, glm::uvec3(1u)) - glm::uvec3(1u);
   const glm::uvec3 reachMaximum =

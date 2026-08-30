@@ -6,8 +6,6 @@ static bool compileShader(
   const std::string& source,
   const std::string& output
 ) {
-  // Every path is quoted here rather than baked into the flag string, so a
-  // directory with a space in it stays one argument.
   const std::string command = "\"\"" GLSLC_PATH "\" " GLSLC_DEFINES
                               " -I\"" GLSLC_INCLUDE_DIR "\" \""
                               + source + "\" -o \"" + output + "\"\"";
@@ -133,9 +131,6 @@ void Pipeline::create() {
 }
 
 std::filesystem::file_time_type Pipeline::newestIncludeTime() {
-  // A shader's own file is not the whole of its source any more: the shared
-  // evaluation lives in an include, and editing that has to reload just the
-  // same. Newest wins, so adding a file counts as a change too.
   std::filesystem::file_time_type newest{};
   std::error_code ec;
 
@@ -185,9 +180,6 @@ void Pipeline::reload() {
 
   makeConfig();
 
-  // Build first, swap second: the old pipeline stays usable unless a
-  // replacement exists. buildPipeline throws on a missing .spv, and a throw
-  // here would leave the frame loop with none.
   VkPipeline rebuilt = VK_NULL_HANDLE;
 
   try {
@@ -241,7 +233,6 @@ VkPipeline Pipeline::buildPipeline() {
   ShaderModule vertexShaderModule(m_device, m_config.vertexShader);
   ShaderModule fragShaderModule(m_device, m_config.fragmentShader);
 
-  // Vertex module
   VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
   vertShaderStageInfo.sType =
     VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -249,7 +240,6 @@ VkPipeline Pipeline::buildPipeline() {
   vertShaderStageInfo.module = vertexShaderModule.handle();
   vertShaderStageInfo.pName = "main";
 
-  // Fragment module
   VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
   fragShaderStageInfo.sType =
     VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -313,34 +303,34 @@ VkPipeline Pipeline::buildPipeline() {
     VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
   multisampling.sampleShadingEnable = VK_FALSE;
   multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-  multisampling.minSampleShading = 1.0f;           // Optional
-  multisampling.pSampleMask = nullptr;             // Optional
-  multisampling.alphaToCoverageEnable = VK_FALSE;  // Optional
-  multisampling.alphaToOneEnable = VK_FALSE;       // Optional
+  multisampling.minSampleShading = 1.0f;
+  multisampling.pSampleMask = nullptr;
+  multisampling.alphaToCoverageEnable = VK_FALSE;
+  multisampling.alphaToOneEnable = VK_FALSE;
 
   VkPipelineColorBlendAttachmentState colorBlendAttachment{};
   colorBlendAttachment.colorWriteMask =
     VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT
     | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
   colorBlendAttachment.blendEnable = VK_FALSE;
-  colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;   // Optional
-  colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;  // Optional
-  colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;              // Optional
-  colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;   // Optional
-  colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;  // Optional
-  colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;              // Optional
+  colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+  colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+  colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+  colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+  colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+  colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 
   VkPipelineColorBlendStateCreateInfo colorBlending{};
   colorBlending.sType =
     VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
   colorBlending.logicOpEnable = VK_FALSE;
-  colorBlending.logicOp = VK_LOGIC_OP_COPY;  // Optional
+  colorBlending.logicOp = VK_LOGIC_OP_COPY;
   colorBlending.attachmentCount = 1;
   colorBlending.pAttachments = &colorBlendAttachment;
-  colorBlending.blendConstants[0] = 0.0f;  // Optional
-  colorBlending.blendConstants[1] = 0.0f;  // Optional
-  colorBlending.blendConstants[2] = 0.0f;  // Optional
-  colorBlending.blendConstants[3] = 0.0f;  // Optional
+  colorBlending.blendConstants[0] = 0.0f;
+  colorBlending.blendConstants[1] = 0.0f;
+  colorBlending.blendConstants[2] = 0.0f;
+  colorBlending.blendConstants[3] = 0.0f;
 
   VkPipelineRenderingCreateInfo renderingCreateInfo{};
   renderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
@@ -355,11 +345,11 @@ VkPipeline Pipeline::buildPipeline() {
   depthStencil.depthWriteEnable = m_config.depthWriteEnable;
   depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
   depthStencil.depthBoundsTestEnable = VK_FALSE;
-  depthStencil.minDepthBounds = 0.0f;  // Optional
-  depthStencil.maxDepthBounds = 1.0f;  // Optional
+  depthStencil.minDepthBounds = 0.0f;
+  depthStencil.maxDepthBounds = 1.0f;
   depthStencil.stencilTestEnable = VK_FALSE;
-  depthStencil.front = {};  // Optional
-  depthStencil.back = {};   // Optional
+  depthStencil.front = {};
+  depthStencil.back = {};
 
   VkGraphicsPipelineCreateInfo pipelineInfo{};
   pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -375,8 +365,8 @@ VkPipeline Pipeline::buildPipeline() {
   pipelineInfo.pDynamicState = &dynamicState;
   pipelineInfo.layout = m_pipelineLayout;
   pipelineInfo.subpass = 0;
-  pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;  // Optional
-  pipelineInfo.basePipelineIndex = -1;               // Optional
+  pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+  pipelineInfo.basePipelineIndex = -1;
   pipelineInfo.pDepthStencilState = &depthStencil;
 
   VkPipeline pipeline;

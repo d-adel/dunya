@@ -2,11 +2,9 @@
 
 namespace {
 
-// What counts as noise rather than change. Strict, because three runs here
-// produced bit-identical frames; widen it by measuring, not to clear red.
 constexpr dunya::image::Tolerance TOLERANCE{0, 0, 255};
 
-}  // namespace
+}
 
 FrameCheck::FrameCheck(
   const dunya::gpu::Context& context,
@@ -30,9 +28,6 @@ FrameCheck::~FrameCheck() {
 
   m_stream.close();
 
-  // The stream carries no header, so the size it was written at has to reach
-  // whoever encodes it. Printed rather than stored, because the next step is a
-  // person running ffmpeg.
   std::cout << "Recorded " << m_captured << " frames of " << m_width << "x"
             << m_height << " to " << m_capture << "/frames.raw\n"
             << "  ffmpeg -f rawvideo -pixel_format rgba -video_size " << m_width
@@ -59,14 +54,10 @@ bool FrameCheck::failed() const noexcept {
 dunya::image::Bitmap FrameCheck::read(VkImage image) const {
   const VkExtent2D extent = m_swapChain.extent();
 
-  // A minimised window presents nothing. Failing here is deliberate - a
-  // zero-sized or stale capture silently blessed as a reference is the failure
-  // the whole golden-image idea exists to prevent.
   if (extent.width == 0 || extent.height == 0) {
     throw std::runtime_error("Cannot capture a frame from a zero-sized window");
   }
 
-  // The recorded frame left it ready to present, and it goes back that way.
   return dunya::capture::read(
     m_context.device(),
     image,
@@ -76,8 +67,6 @@ dunya::image::Bitmap FrameCheck::read(VkImage image) const {
   );
 }
 
-// A missing reference writes one and still fails; passing would let a mistyped
-// path report success forever.
 bool FrameCheck::compareToReference(const dunya::image::Bitmap& frame) const {
   const std::filesystem::path reference(m_reference);
 
@@ -116,8 +105,6 @@ bool FrameCheck::compareToReference(const dunya::image::Bitmap& frame) const {
             << difference.worstChannelDelta << " at (" << difference.worstX
             << ", " << difference.worstY << ")\n";
 
-  // Named after the reference but written to the working directory rather than
-  // the source tree: the evidence belongs where the run happened.
   const std::string stem = reference.stem().string();
 
   dunya::image::save(frame, stem + "-actual.png");
@@ -137,14 +124,6 @@ void FrameCheck::run(VkImage image) {
 
   const dunya::image::Bitmap frame = read(image);
 
-  // A recording rather than a test: it does not set m_ran, so the loop keeps
-  // going.
-  //
-  // One raw stream rather than a PNG apiece. Compressing a 3.7 MB frame sixty
-  // times a second costs far more than drawing it - it ran the recording at
-  // twenty-odd frames a second, which looks like the engine failing and is
-  // only the encoder. Raw is a memcpy to a sequential file; ffmpeg reads it
-  // directly and does the compressing afterwards, when nothing is waiting.
   if (!m_capture.empty()) {
     if (!m_stream.is_open()) {
       m_stream.open(m_capture + "/frames.raw", std::ios::binary);

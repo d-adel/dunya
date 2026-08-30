@@ -6,22 +6,6 @@
 
 namespace dunya::field {
 
-/* Shape parameter conventions
- * Sphere: (radius, -)
- * Box: (halfExtents.xyz -)
- * .w = blend radius
- */
-
-/* Config parameter shape conventions
- * .x = Shape type (0 = sphere, 1 = box, 2 = plane..)
- * .y = material id
- * .z = operation
- *      0 = union
- *      1 = smooth union
- *      2 = intersection
- *      3 = subtraction
- */
-
 struct Primitive {
   glm::mat4 inverseModel;
   glm::vec4 shape;

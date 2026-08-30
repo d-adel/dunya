@@ -15,10 +15,6 @@ void ImpactListener::OnContactAdded(
     return;
   }
 
-  // The solver has not run yet - this callback is the only place a contact can
-  // be seen before it is resolved - so the impulse has to be estimated from
-  // the incoming velocities. Jolt supplies exactly this for exactly this
-  // purpose, and the settings carry the friction and restitution it needs.
   JPH::CollisionEstimationResult estimate;
 
   JPH::EstimateCollisionResponse(
@@ -45,9 +41,6 @@ void ImpactListener::OnContactAdded(
     }
   }
 
-  // A manifold can carry more points than the estimate has impulses for, and
-  // an empty estimate leaves `at` at zero, so the index is clamped rather than
-  // trusted.
   const uint32_t point =
     std::min(at, uint32_t(manifold.mRelativeContactPointsOn1.size() - 1u));
 
@@ -56,16 +49,9 @@ void ImpactListener::OnContactAdded(
     std::min(point, uint32_t(manifold.mRelativeContactPointsOn2.size() - 1u))
   );
 
-  // Reading a body's velocity is allowed here; changing anything is not.
-  // Point velocity rather than centre-of-mass velocity, so a box toppling
-  // onto its corner counts the corner's speed rather than the pivot's.
   const JPH::Vec3 closing =
     body1.GetPointVelocity(on1) - body2.GetPointVelocity(on2);
 
-  // The manifold's normal is "move body 2 along this to separate them", so it
-  // points out of body 1 and into body 2. Body 2 approaching body 1 therefore
-  // has a negative component along it, and body 1's own outward normal is the
-  // vector itself.
   const float speed = closing.Dot(manifold.mWorldSpaceNormal);
 
   if (speed < m_threshold.load(std::memory_order_relaxed)) {

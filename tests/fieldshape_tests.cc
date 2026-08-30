@@ -35,8 +35,6 @@ namespace {
 
 constexpr float DENSITY = 1000.0f;
 
-// One sphere in a box that clears it by half a radius, so the grid holds
-// outside as well as inside.
 SampledField bakeSphere(
   float radius,
   uint32_t resolution,
@@ -59,10 +57,6 @@ float sphereMass(float radius) {
 }  // namespace
 
 TEST_CASE("the local bounds are the solid, not the grid", "[fieldshape]") {
-  // Jolt culls on this box. A grid carries whatever margin it was baked with,
-  // and every broad phase pair that margin wins is a seed walk that cannot
-  // reach - but one voxel too small drops contacts, so it has to contain the
-  // solid. This grid reaches 1.5 around a sphere of radius 1.
   JoltLibrary library;
 
   const SampledField field = bakeSphere(1.0f, 65u);
@@ -83,10 +77,6 @@ TEST_CASE(
   "a solid away from the origin says where its mass is",
   "[fieldshape]"
 ) {
-  // Jolt turns a body about its centre of mass and expresses every transform
-  // it hands a shape in that space. A shape that answers zero for a solid
-  // three metres off its own origin is simulated three metres from where its
-  // geometry is: it culls in the wrong place and every contact is torque.
   JoltLibrary library;
 
   const glm::vec3 offset(0.0f, 3.0f, 0.0f);
@@ -102,9 +92,6 @@ TEST_CASE(
 }
 
 TEST_CASE("an offset solid is bounded about its own centre", "[fieldshape]") {
-  // The bounds are read in centre of mass space, so a sphere of radius 1 three
-  // metres up still straddles zero. Left in field space it would be a box from
-  // 2 to 4, and Jolt would cull the body where nothing is.
   JoltLibrary library;
 
   const SampledField field = bakeSphere(1.0f, 65u, glm::vec3(0.0f, 3.0f, 0.0f));
@@ -124,9 +111,6 @@ TEST_CASE(
   "an offset solid resists turning like its own shape",
   "[fieldshape]"
 ) {
-  // The walk sums about the field's origin, so an offset solid picks up a
-  // parallel axis term of m*d*d - here nine times the sphere's own, which
-  // would make a ball behave like a weight on the end of a three metre bar.
   JoltLibrary library;
 
   const SampledField centred = bakeSphere(1.0f, 65u);
@@ -147,9 +131,6 @@ TEST_CASE(
 }
 
 TEST_CASE("an offset solid is asked about in the right space", "[fieldshape]") {
-  // CollidePoint takes a point in centre of mass space. The sphere's own
-  // centre is the origin there, and the point three metres up - which is where
-  // the solid sits in field space - is outside it.
   JoltLibrary library;
 
   const SampledField field = bakeSphere(1.0f, 65u, glm::vec3(0.0f, 3.0f, 0.0f));
@@ -172,8 +153,6 @@ TEST_CASE("an offset solid is asked about in the right space", "[fieldshape]") {
 }
 
 TEST_CASE("an empty grid answers for its whole box", "[fieldshape]") {
-  // There is no solid to be tighter than, and a degenerate box is a body Jolt
-  // can never find. The grid is what the field can answer for, so it is that.
   JoltLibrary library;
 
   const SampledField field = dunya::field::bake(
@@ -203,9 +182,6 @@ TEST_CASE(
   "the seeds are on the surface, one per surface brick",
   "[fieldshape]"
 ) {
-  // Solved with the shape and read from there by every collide and every
-  // iteration of every sweep, so what they are has to hold before any query is
-  // made. One per brick that holds surface, in brick order, on the zero set.
   JoltLibrary library;
 
   const SampledField field = bakeSphere(1.0f, 65u);
@@ -241,8 +217,6 @@ TEST_CASE(
 }
 
 TEST_CASE("the inner radius is the deepest point inside", "[fieldshape]") {
-  // Jolt reads it as the distance a body may travel before a cast is worth
-  // doing, so it has to be the inscribed sphere and never zero.
   JoltLibrary library;
 
   const SampledField field = bakeSphere(1.0f, 33u);
@@ -252,8 +226,6 @@ TEST_CASE("the inner radius is the deepest point inside", "[fieldshape]") {
 }
 
 TEST_CASE("an empty grid still reports a usable inner radius", "[fieldshape]") {
-  // Nothing solid means nothing negative, and a zero here trips Jolt's own
-  // assert rather than producing a slow body.
   JoltLibrary library;
 
   const SampledField field = dunya::field::bake(
@@ -269,8 +241,6 @@ TEST_CASE("an empty grid still reports a usable inner radius", "[fieldshape]") {
 }
 
 TEST_CASE("the mass is the solid's, not the grid box's", "[fieldshape]") {
-  // The box is 27 times the sphere here, so integrating the wrong region is
-  // not a near miss.
   JoltLibrary library;
 
   const SampledField field = bakeSphere(1.0f, 65u);
@@ -283,8 +253,6 @@ TEST_CASE("the mass is the solid's, not the grid box's", "[fieldshape]") {
 }
 
 TEST_CASE("the inertia is the solid's, about its own axes", "[fieldshape]") {
-  // A sphere's tensor is isotropic, which makes both halves visible at once:
-  // the diagonal names the distribution, the off-diagonal has to vanish.
   JoltLibrary library;
 
   const SampledField field = bakeSphere(1.0f, 65u);
@@ -306,9 +274,6 @@ TEST_CASE(
   "each shape keeps its own mass, not the last one asked",
   "[fieldshape]"
 ) {
-  // The walk is kept after the first ask, since every body built on a shape
-  // asks again. Kept on the shape: a cache that outlived one would hand every
-  // later shape the first shape's answer, and a ball would weigh a ground.
   JoltLibrary library;
 
   const SampledField small = bakeSphere(0.5f, 65u);
@@ -323,16 +288,11 @@ TEST_CASE(
   REQUIRE_THAT(smallMass, WithinRel(sphereMass(0.5f), 0.05f));
   REQUIRE_THAT(largeMass, WithinRel(sphereMass(1.0f), 0.05f));
 
-  // Asked again, in the other order, which is where a shared cache shows.
   REQUIRE(largeShape.GetMassProperties().mMass == largeMass);
   REQUIRE(smallShape.GetMassProperties().mMass == smallMass);
 }
 
 TEST_CASE("a solid box weighs and turns like a solid box", "[fieldshape]") {
-  // A box is nearly all interior, which is the case the walk answers with a
-  // closed form rather than by visiting five hundred cells a brick. Checked
-  // against the analytic box rather than against the walk it replaced: mass
-  // 8*hx*hy*hz*rho, and m*(hb^2 + hc^2)/3 about each axis.
   JoltLibrary library;
 
   const glm::vec3 half(0.6f, 0.4f, 0.3f);
@@ -372,8 +332,6 @@ TEST_CASE("a solid box weighs and turns like a solid box", "[fieldshape]") {
     WithinRel(properties.mMass * (squared.x + squared.y) / 3.0f, 0.03f)
   );
 
-  // Off centre, because the closed form places cells by a different route than
-  // the per-cell walk and a wrong one shows up as a shifted centre of mass.
   REQUIRE_THAT(
     FieldShape(field).GetCenterOfMass().GetX(),
     WithinAbs(0.0f, 0.005f)
@@ -389,8 +347,6 @@ TEST_CASE("a solid box weighs and turns like a solid box", "[fieldshape]") {
 }
 
 TEST_CASE("carving the solid takes mass with it", "[fieldshape]") {
-  // The property denting depends on: mass follows the geometry, so a body
-  // that loses material loses weight without anyone maintaining a number.
   JoltLibrary library;
 
   const SampledField whole = bakeSphere(1.0f, 65u);
@@ -412,15 +368,11 @@ TEST_CASE("carving the solid takes mass with it", "[fieldshape]") {
   const float lost = FieldShape(whole).GetMassProperties().mMass
                      - FieldShape(carved).GetMassProperties().mMass;
 
-  // The bite is the part of the small sphere lying inside the large one, which
-  // is most of it but not all, so this brackets rather than equates.
   REQUIRE(lost > sphereMass(0.5f) * 0.5f);
   REQUIRE(lost < sphereMass(0.5f));
 }
 
 TEST_CASE("every brick has a sub shape id of its own", "[fieldshape]") {
-  // Two bricks sharing an id collide in Jolt's manifold cache, which is a
-  // warm start reading last frame's contact for a different part of the body.
   JoltLibrary library;
 
   const SampledField field = bakeSphere(1.0f, 33u);
@@ -453,8 +405,6 @@ TEST_CASE("a point inside collides and one outside does not", "[fieldshape]") {
   const SampledField field = bakeSphere(1.0f, 33u);
   const FieldShape shape(field);
 
-  // The collector reads a body id off its context, which a query through a
-  // physics system supplies and a direct call has to stand in for.
   const JPH::TransformedShape context{};
 
   JPH::AllHitCollisionCollector<JPH::CollidePointCollector> inside;
@@ -485,8 +435,6 @@ TEST_CASE(
   "the shape borrows the field rather than copying it",
   "[fieldshape]"
 ) {
-  // Sixteen megabytes per body is the reason, and it is also the constraint: a
-  // rebake replaces the field, so it has to rebuild the shape.
   JoltLibrary library;
 
   const SampledField field = bakeSphere(1.0f, 17u);
@@ -497,8 +445,6 @@ TEST_CASE(
 
 namespace {
 
-// A wide slab and a small ball resolve at very different scales in grids of
-// the same size, which is the pairing contact generation used to fail on.
 SampledField bakeSlab(uint32_t resolution) {
   Primitive slab{};
   slab.inverseModel =
@@ -551,10 +497,6 @@ TEST_CASE(
   "a coarse body against a fine one collides either way round",
   "[fieldshape]"
 ) {
-  // Jolt orders a body pair by id, not by resolution, so the slot a body lands
-  // in is not ours to choose. Seeding from the coarse one put nothing where the
-  // fine one touches: a brick of the slab spans metres, the contact patch does
-  // not, and that direction produced no contacts at all.
   JoltLibrary library;
 
   const SampledField slab = bakeSlab(33u);
@@ -565,7 +507,6 @@ TEST_CASE(
   const FieldShape slabShape(slab);
   const FieldShape ballShape(ball);
 
-  // Pressed into the slab top face by a twentieth of the ball radius.
   const glm::vec3 slabAt(0.0f);
   const glm::vec3 ballAt(0.0f, 0.95f, 0.0f);
 
@@ -579,12 +520,6 @@ TEST_CASE(
 }
 
 TEST_CASE("a degenerate gradient still names a direction", "[fieldshape]") {
-  // With floating point exceptions unmasked on Jolt's workers, normalising a
-  // zero gradient is a trap rather than a NaN, and the contact path normalises
-  // whatever probe returns. A scan of 859,564 interior cells across a slab and
-  // a ball found none below the floor - the weakest was 7.2e-06, at the ball's
-  // own centre - so the case is reached by contract rather than by geometry,
-  // and a flat field is the only honest way to ask for it.
   JoltLibrary library;
 
   SampledField flat = bakeSphere(1.0f, 17u);
@@ -597,7 +532,6 @@ TEST_CASE("a degenerate gradient still names a direction", "[fieldshape]") {
   REQUIRE(glm::length(dunya::field::gradient(flat, glm::vec3(0.0f))) == 0.0f);
   REQUIRE_THAT(glm::length(probed.normal), WithinAbs(1.0f, 1e-6f));
 
-  // And the shape's own accessor, which is what Jolt asks for at a contact.
   const JPH::Vec3 normal = FieldShape(flat).GetSurfaceNormal(
     JPH::SubShapeID(),
     JPH::Vec3(0.0f, 0.0f, 0.0f)
@@ -647,8 +581,6 @@ TEST_CASE(
   const JPH::MassProperties wanted = scratch->GetMassProperties();
   const JPH::MassProperties got = patched->GetMassProperties();
 
-  // The deformation has to have moved something, or this compares a shape
-  // against itself and cannot tell a reuse bug from a correct rebuild.
   REQUIRE(wanted.mMass < before->GetMassProperties().mMass * 0.999f);
 
   REQUIRE_THAT(got.mMass, WithinRel(wanted.mMass, 1.0e-6f));
@@ -694,11 +626,6 @@ TEST_CASE(
     );
   }
 
-  // And that anything is reused at all. Everything above passes with reuse
-  // switched off, because recomputing every brick just is the from-scratch
-  // answer - so none of it can tell a working cache from an absent one. An
-  // empty range reuses every brick from the pre-deform shape, and that has to
-  // disagree with a field material has been taken out of.
   const JPH::Ref<FieldShape> allReused =
     new FieldShape(field, *before, glm::uvec3(0u), glm::uvec3(0u));
 

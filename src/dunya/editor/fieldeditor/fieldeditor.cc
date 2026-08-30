@@ -53,9 +53,6 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
     return;
   }
 
-  // Place the sphere so its far wall lands one advance past the surface. Both
-  // ends of the range are degenerate: a full radius in puts the clicked point
-  // on the cutter, where max(acc, -0) does nothing.
   const float offset = dunya::core::EDIT_RADIUS - dunya::core::EDIT_ADVANCE;
   const glm::vec3 centre = dunya::core::fieldOpRemovesMaterial(operation)
                              ? minHit.position - localRay.direction * offset
@@ -74,8 +71,6 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
   }
 }
 
-// Low-discrepancy rather than random: the carves spread through the volume, and
-// land in the same places every run so both representations see one scene.
 void FieldEditor::stress(uint32_t count) {
   if (m_world->fields().empty()) {
     std::cout << "No field to carve into\n";
@@ -99,16 +94,11 @@ void FieldEditor::stress(uint32_t count) {
   const uint32_t before = static_cast<uint32_t>(primitives.size());
 
   for (uint32_t i = 0; i < count; ++i) {
-    // The R3 sequence: successive multiples of these three fractions fill a
-    // volume evenly without ever repeating a position.
     const glm::vec3 at = glm::fract(
       static_cast<float>(before + i)
       * glm::vec3(0.8191725f, 0.6710436f, 0.5497005f)
     );
 
-    // Deliberately the hard op with no blend, unlike a click: M17's comparison
-    // table was measured with this, so changing it would move published
-    // numbers.
     if (!addPrimitive(
           target,
           extent->minimum + span * at,

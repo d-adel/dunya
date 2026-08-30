@@ -25,7 +25,6 @@ ComputePipeline::ComputePipeline(
       throw std::runtime_error("Failed to create compute pipeline layout");
     }
 
-    // Scoped so the module is destroyed once the pipeline owns its code.
     ShaderModule module(m_device, spirvPath);
 
     VkPipelineShaderStageCreateInfo stageInfo{};
@@ -53,8 +52,6 @@ ComputePipeline::ComputePipeline(
       throw std::runtime_error("Failed to create compute pipeline");
     }
   } catch (...) {
-    // A constructor that throws never gets its destructor called, so the
-    // layout created above would leak (see Pipeline, same fix).
     destroy();
     throw;
   }

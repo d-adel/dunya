@@ -16,17 +16,12 @@ using dunya::objectmodel::SdfGrid;
 using dunya::objectmodel::SdfPrimitiveRange;
 using dunya::objectmodel::SdfPrimitiveStore;
 
-// A reactive pool standing in for the one World opens. The store owes an
-// on_update every time it refreshes derived state; this is what watches for it,
-// and it is the whole of what the old dirty bool meant.
 auto& bakeQueue(entt::registry& registry) {
   auto& queue = registry.storage<entt::reactive>(entt::hashed_string{"bake"});
   queue.on_update<SdfGrid>();
   return queue;
 }
 
-// Materials number the primitives 1, 2, 3..., which is how a test tells one
-// from another after an edit has shifted them.
 dunya::field::Primitive marker(uint32_t material) {
   return dunya::field::makeSphere(glm::vec3(0.0f), 1.0f, material);
 }
@@ -78,7 +73,6 @@ TEST_CASE("appending keeps order and grows the count", "[sdfstore]") {
 }
 
 TEST_CASE("inserting shifts the primitives after it", "[sdfstore]") {
-  // Order is what the CSG fold means, so an insert cannot swap-and-pop.
   entt::registry registry;
   SdfPrimitiveStore store;
 
@@ -132,7 +126,6 @@ TEST_CASE(
   "crossing the capacity boundary preserves the primitives",
   "[sdfstore]"
 ) {
-  // The first range holds four. The fifth append has to move the other four.
   entt::registry registry;
   SdfPrimitiveStore store;
 
@@ -170,8 +163,6 @@ TEST_CASE(
 }
 
 TEST_CASE("destroying an entity returns its range to the arena", "[sdfstore]") {
-  // The invariant the destruction signal exists for. A leak here is silent:
-  // the arena simply never hears that the range is free.
   entt::registry registry;
   SdfPrimitiveStore store;
 
@@ -188,7 +179,6 @@ TEST_CASE("destroying an entity returns its range to the arena", "[sdfstore]") {
 }
 
 TEST_CASE("removing the range component alone returns it too", "[sdfstore]") {
-  // The path a World::destroy transaction would not have covered.
   entt::registry registry;
   SdfPrimitiveStore store;
 
@@ -226,8 +216,6 @@ TEST_CASE(
   "clearing empties the primitives and keeps the allocation",
   "[sdfstore]"
 ) {
-  // Distinct from removal: the range survives, so the arena does not shrink
-  // and the next append needs no growth.
   entt::registry registry;
   SdfPrimitiveStore store;
 

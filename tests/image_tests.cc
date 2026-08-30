@@ -57,8 +57,6 @@ TEST_CASE("a single changed pixel is found, and where") {
   REQUIRE_FALSE(dunya::image::passes(difference, Tolerance{}));
 }
 
-// The two numbers exist to tell these two cases apart, so the tests that matter
-// most are the ones where one number looks innocent and the other does not.
 TEST_CASE("faint drift everywhere reads as a count, not a magnitude") {
   const Bitmap reference = filled(8, 4, 100);
   const Bitmap candidate = filled(8, 4, 101);
@@ -69,8 +67,6 @@ TEST_CASE("faint drift everywhere reads as a count, not a magnitude") {
   REQUIRE(difference.differingPixels == 32);
   REQUIRE(difference.worstChannelDelta == 1);
 
-  // Under a noise floor of one channel step it is not a change at all, which is
-  // the sRGB-rounding case an image test must not cry wolf over.
   const Tolerance forgiving{1, 0, 255};
 
   const Difference forgiven =
@@ -91,8 +87,6 @@ TEST_CASE("one catastrophic pixel cannot hide inside an allowance") {
   const Difference difference =
     dunya::image::compare(reference, candidate, generous);
 
-  // Well inside the pixel allowance, and still a failure: this is the NaN or
-  // the black frame, and a count alone would wave it through.
   REQUIRE(difference.differingPixels == 1);
   REQUIRE(difference.differingPixels < generous.allowedPixels);
   REQUIRE(difference.worstChannelDelta == 255);
@@ -108,7 +102,6 @@ TEST_CASE("mismatched sizes are a different failure, not a large one") {
 
   REQUIRE_FALSE(difference.comparable);
 
-  // It must not claim to have measured anything, because it has not.
   REQUIRE(difference.differingPixels == 0);
   REQUIRE(difference.worstChannelDelta == 0);
   REQUIRE_FALSE(dunya::image::passes(difference, Tolerance{}));
@@ -131,8 +124,6 @@ TEST_CASE("the difference image marks where, in context") {
   REQUIRE(picture.pixels[marked + 1] == 0);
   REQUIRE(picture.pixels[marked + 2] == 0);
 
-  // Everything else keeps a dim version of the reference, so the shape of the
-  // scene is still readable around the marks.
   REQUIRE(picture.pixels[0] == 30);
   REQUIRE(picture.pixels[1] == 30);
   REQUIRE(picture.pixels[2] == 30);

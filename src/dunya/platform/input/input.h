@@ -35,10 +35,10 @@ struct MouseButtonEvent {
 };
 
 struct KeyTiming {
-  uint64_t doubleWindowMs = 250;    // Max gap between 2 presses
-  uint64_t holdDelayMs = 350;       // Time before Hold event
-  uint64_t repeatDelayMs = 400;     // Time before first Repeat
-  uint64_t repeatIntervalMs = 100;  // Repeat cadence
+  uint64_t doubleWindowMs = 250;
+  uint64_t holdDelayMs = 350;
+  uint64_t repeatDelayMs = 400;
+  uint64_t repeatIntervalMs = 100;
 };
 
 struct KeyState {

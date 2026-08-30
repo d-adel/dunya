@@ -9,9 +9,6 @@
 
 #include <cstdint>
 
-// Primitives every field test needs and none of them should be spelling out:
-// four lines of shape indices and a bounds refresh, wrong in a way that reads
-// as a physics result rather than as a typo.
 namespace fixture {
 
 inline constexpr uint32_t SPHERE_KIND = 0u;

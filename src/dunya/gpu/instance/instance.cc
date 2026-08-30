@@ -65,9 +65,6 @@ std::vector<VkLayerProperties> Instance::enumerateInstanceLayerProperties() {
 void Instance::setup(const std::vector<char const*>& validationLayers) {
   createVkInstance(validationLayers);
 
-  // Guarded on the same flag as the extension request above: without
-  // VK_EXT_debug_utils the entry point does not resolve, and asking for the
-  // messenger anyway is what made a Release build throw before it drew.
   if (enableValidationLayers) {
     setupDebugMessenger();
   }

@@ -10,8 +10,6 @@ constexpr uint32_t MATERIAL_FLAG_DOUBLE_SIDED = 1u << 0;
 constexpr uint32_t MATERIAL_FLAG_ALPHA_MASK = 1u << 1;
 constexpr uint32_t MATERIAL_FLAG_ALPHA_BLEND = 1u << 2;
 
-// One entry in the table the shaders index by material id. A GPU record, not a
-// material: the layout is std140, and the static_assert is what pins it.
 struct MaterialRecord {
   glm::vec4 baseColor;
   glm::vec4 emissive;

@@ -8,7 +8,7 @@ constexpr VkDeviceSize BRICK_BOUNDS_BYTES =
   static_cast<VkDeviceSize>(dunya::core::MAX_FIELD_VOLUMES)
   * dunya::core::BRICK_TABLE_STRIDE * sizeof(float);
 
-}  // namespace
+}
 
 FieldRecordTable::FieldRecordTable(const dunya::gpu::Device& device)
     : m_device(device),
@@ -41,8 +41,6 @@ FieldRecordTable::FieldRecordTable(const dunya::gpu::Device& device)
           VK_SHADER_STAGE_FRAGMENT_BIT,
           dunya::gpu::DescriptorGroup::BufferUpdate::PerFrame,
           VK_DESCRIPTOR_TYPE_STORAGE_BUFFER},
-         // In this set rather than the frame globals, because it is derived
-         // from the records and set 0 is written before they are packed.
          {SHADOW_GRID,
           sizeof(ShadowGridUniform),
           VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -70,8 +68,6 @@ FieldRecordTable::FieldRecordTable(const dunya::gpu::Device& device)
       m_brickBounds(
         device,
         BRICK_BOUNDS_BYTES,
-        // TRANSFER_SRC so the bake check can copy a slot back out.
-        // TRANSFER_DST so a deformable's bounds can be written from the CPU.
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT
           | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
@@ -133,8 +129,6 @@ dunya::gpu::Buffer FieldRecordTable::stageBounds(
   const dunya::field::SampledField& field,
   VkDeviceSize& sizeBytes
 ) const {
-  // The global bound sits first so a shader can read it from the range's own
-  // address without knowing how many bricks follow.
   std::vector<float> table;
   table.reserve(1u + field.brickLipschitz.size());
   table.push_back(field.globalLipschitz);
@@ -178,11 +172,6 @@ void FieldRecordTable::recordBounds(
   uint32_t volumeIndex,
   VkDeviceSize sizeBytes
 ) const {
-  // A frame is still in flight reading this very range: submission order is
-  // not a dependency, and the queue wait inside submit() happens after the
-  // copy is already queued. Without this the fragment shader can read a torn
-  // mix of the old bounds and the new, and the one value the shadow march
-  // divides by is in there.
   VkMemoryBarrier2 boundsFree{};
   boundsFree.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
   boundsFree.srcStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT
@@ -212,9 +201,6 @@ void FieldRecordTable::recordBounds(
     &region
   );
 
-  // And the write has to be made visible to the shader that reads it. A queue
-  // wait is a host-domain fence, not a device-side availability operation -
-  // the same dependency the bake pass writes after its own reduction.
   VkMemoryBarrier2 boundsVisible{};
   boundsVisible.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
   boundsVisible.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
@@ -261,8 +247,6 @@ void FieldRecordTable::setRecord(
     fieldRepresentation
   );
 
-  // Here rather than in update(), so the box and the record it describes can
-  // never be a frame apart.
   m_recordBounds[recordIndex] = makeRecordBounds(m_records[recordIndex]);
 }
 
@@ -284,8 +268,6 @@ void FieldRecordTable::update(
   const std::span<const ShadowCell> cells = m_shadowGrid.cells();
   const std::span<const uint32_t> indices = m_shadowGrid.indices();
 
-  // Nothing to write when the grid gave up, and nothing reads it either: the
-  // uniform says so and the shader walks every record instead.
   if (!cells.empty()) {
     m_group.write(SHADOW_CELLS, frame, cells.data(), cells.size_bytes());
   }

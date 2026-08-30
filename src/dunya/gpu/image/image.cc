@@ -128,7 +128,7 @@ void Image::createImage(
   imageInfo.usage = usage;
   imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
   imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-  imageInfo.flags = 0;  // Optional
+  imageInfo.flags = 0;
 
   if (
     vkCreateImage(device.vkDevice(), &imageInfo, nullptr, &m_image)
@@ -204,9 +204,6 @@ void Image::recordTransition(
     oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
     && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
   ) {
-    // A volume going back to the CPU for a sub-region rewrite. The wait is on
-    // every stage that samples it, because a frame in flight may still be
-    // reading the region about to be overwritten.
     barrier.srcStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT
                            | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
     barrier.srcAccessMask = VK_ACCESS_2_SHADER_READ_BIT;

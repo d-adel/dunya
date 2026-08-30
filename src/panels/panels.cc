@@ -29,9 +29,6 @@ void dunya(
 
     ++deformable;
 
-    // Once per lattice, not once per object. Identical crates hold one between
-    // them, and counting it per holder would report memory that is not there -
-    // which is the whole thing this number is watching.
     if (const auto* field = world.sampledField(entity)) {
       if (counted.insert(field).second) {
         resident += field->distances.size() * sizeof(float)
@@ -44,9 +41,6 @@ void dunya(
   ImGui::Text("deformable       %zu", deformable);
   ImGui::Separator();
 
-  // The point. A representation that stored edits would have one primitive per
-  // crater and a lattice that grew with them; these two lines are what it costs
-  // instead, and they do not move.
   ImGui::Text("primitives       %zu", world.pool().size());
   ImGui::Text(
     "lattice          %.1f MiB",
@@ -135,9 +129,6 @@ void frame(
 }
 
 void march(dunya::renderer::MarchParams& march) {
-  // Logarithmic where the useful range spans orders of magnitude: a linear
-  // slider from 0.0001 to 0.01 spends nearly all of its travel in values that
-  // make the march crawl.
   ImGui::SliderFloat(
     "epsilon",
     &march.epsilon,
@@ -148,8 +139,6 @@ void march(dunya::renderer::MarchParams& march) {
   );
   ImGui::SliderFloat("gradient", &march.gradientEpsilon, 0.001f, 0.1f, "%.4f");
 
-  // Below 1 is plain sphere tracing and above 2 is unstable even when the
-  // estimator is conservative.
   ImGui::SliderFloat("omega", &march.omega, 1.0f, 2.0f);
 
   ImGui::SliderFloat("max distance", &march.maxDistance, 10.0f, 500.0f);

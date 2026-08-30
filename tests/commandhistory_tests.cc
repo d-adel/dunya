@@ -16,8 +16,6 @@ using Catch::Matchers::WithinAbs;
 
 namespace {
 
-// Materials number the primitives 1, 2, 3..., which is how a test tells one
-// slot from another after an edit has moved them around.
 dunya::objectmodel::Entity makeObject(
   dunya::objectmodel::World& world,
   uint32_t primitives
@@ -70,8 +68,6 @@ TEST_CASE(
   "undoing an added primitive restores the count and requeues the bake",
   "[commandhistory]"
 ) {
-  // The bake only runs for objects the world flagged, so an undo that
-  // forgets the flag changes the edit list and leaves the image behind.
   dunya::objectmodel::World world;
   dunya::editor::CommandHistory history;
 
@@ -97,8 +93,6 @@ TEST_CASE(
   "a rejected edit returns false and records nothing",
   "[commandhistory]"
 ) {
-  // An edit that never landed must stay out of the history: undoing it later
-  // would remove a primitive this command never added.
   dunya::objectmodel::World world;
   dunya::editor::CommandHistory history;
 
@@ -138,8 +132,6 @@ TEST_CASE("redo replays an undone edit", "[commandhistory]") {
 }
 
 TEST_CASE("a fresh edit clears the redo stack", "[commandhistory]") {
-  // Editing after an undo abandons the branch that was undone; keeping it
-  // would let a later redo splice an edit onto a list it never saw.
   dunya::objectmodel::World world;
   dunya::editor::CommandHistory history;
 
@@ -162,8 +154,6 @@ TEST_CASE("a fresh edit clears the redo stack", "[commandhistory]") {
 }
 
 TEST_CASE("undo runs last-in-first-out across objects", "[commandhistory]") {
-  // Edit lists are per object but undo is global, so the history is the only
-  // thing that knows which object was carved most recently.
   dunya::objectmodel::World world;
   dunya::editor::CommandHistory history;
 
@@ -203,8 +193,6 @@ TEST_CASE(
   "undoing a removal puts the primitive back in its own slot",
   "[commandhistory]"
 ) {
-  // Primitive order is the CSG fold order, so restoring at the end instead of
-  // in place would rebuild a different shape from the same list.
   dunya::objectmodel::World world;
   dunya::editor::CommandHistory history;
 
@@ -231,8 +219,6 @@ TEST_CASE(
   "a redo that cannot apply stays on the redo stack",
   "[commandhistory]"
 ) {
-  // A redo that fails must not consume the command: dropping it would lose
-  // the edit from both stacks with nothing said.
   dunya::objectmodel::World world;
   dunya::editor::CommandHistory history;
 
@@ -256,8 +242,6 @@ TEST_CASE(
   "an undo that cannot revert stays on the undo stack",
   "[commandhistory]"
 ) {
-  // The mirror of the failed redo. A revert that cannot run leaves the
-  // history where it was rather than dropping the edit on the floor.
   dunya::objectmodel::World world;
   dunya::editor::CommandHistory history;
 
@@ -276,8 +260,6 @@ TEST_CASE(
 }
 
 TEST_CASE("undoing a transform restores the old pose", "[commandhistory]") {
-  // A pose change never touches the edit list, so this one must move the
-  // object back without asking for a rebake.
   dunya::objectmodel::World world;
   dunya::editor::CommandHistory history;
 

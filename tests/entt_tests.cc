@@ -1,7 +1,3 @@
-/* M31 step 0. Proves the dependency compiles, links and behaves, and pins the
- * one property that decided the design: an entity handle is not a dense index.
- */
-
 #include <catch2/catch_test_macros.hpp>
 
 #include <entt/entity/registry.hpp>
@@ -27,9 +23,6 @@ TEST_CASE("a component round trips through a registry", "[entt]") {
 }
 
 TEST_CASE("a handle to a destroyed entity is detectable", "[entt]") {
-  // This is what the old ObjectId could not do: a recycled id was
-  // indistinguishable from the one it replaced, so a stale handle read whatever
-  // took its place.
   entt::registry registry;
 
   const entt::entity entity = registry.create();
@@ -39,9 +32,6 @@ TEST_CASE("a handle to a destroyed entity is detectable", "[entt]") {
 }
 
 TEST_CASE("a recycled entity is not the same number", "[entt]") {
-  // The property that broke `ObjectId == GPU slot`. EnTT reuses the index and
-  // bumps a version packed into the same 32 bits, so the numeric value of a
-  // handle is not small, not dense, and not a subscript.
   entt::registry registry;
 
   const entt::entity first = registry.create();
@@ -72,8 +62,6 @@ TEST_CASE(
   "patch and replace publish on_update, a write through get does not",
   "[entt]"
 ) {
-  // What World::patch and World::replace are built on. The silent third case is
-  // why World::setPose went: an in-place write is invisible to every listener.
   entt::registry registry;
 
   UpdateCounter counter;

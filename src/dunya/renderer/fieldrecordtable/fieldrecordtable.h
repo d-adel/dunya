@@ -16,8 +16,6 @@ namespace dunya::renderer {
 
 class FieldRecordTable {
 public:
-  // Set 2's layout, shared with field-shader.frag and field-bake.comp. The
-  // bake kept its 4/5, which is why the buffers are not consecutive.
   static constexpr uint32_t ENTRIES = 0;
   static constexpr uint32_t DISTANCE_VOLUMES = 1;
   static constexpr uint32_t MATERIAL_VOLUMES = 2;
@@ -42,7 +40,6 @@ public:
   const VkDescriptorSet& descriptorSet(uint32_t frame) const noexcept;
   const VkDescriptorSetLayout& setLayout() const noexcept;
 
-  // Both views twice: sampled for the fragment shader, storage for the bake.
   void registerVolume(
     VkImageView distanceView,
     VkImageView materialView,
@@ -59,9 +56,6 @@ public:
     uint32_t fieldRepresentation
   );
 
-  // Also rebuilds the light-space grid, from the same boxes the shadow loop
-  // reads, so the two cannot describe different frames. The count is the live
-  // one, not the table capacity.
   void update(uint32_t frame, uint32_t liveRecords, const glm::vec3& toLight);
 
   void updatePrimitives(
@@ -78,16 +72,6 @@ public:
 
   const FieldRecord& record(uint32_t recordIndex) const;
 
-  // Exposed for the bake check, which reads a slot back and compares it with
-  // the same reduction run on the CPU.
-  // The march reads a per-brick gradient bound and one global bound per
-  // object, and the bake dispatch is what normally fills them. A deformable
-  // never joins that dispatch, so its bounds arrive from the CPU grid, which
-  // has maintained them since the write that changed it.
-  //
-  // Two forms, differing only in whether they block. The uploader one is for
-  // a caller inside a frame; the other submits and waits, which is right at
-  // load time and ruinous anywhere else.
   void uploadBounds(
     dunya::gpu::Uploader& uploader,
     uint32_t volumeIndex,
@@ -102,9 +86,6 @@ public:
   const dunya::gpu::Buffer& brickBounds() const noexcept;
 
 private:
-  // The table's bytes, host-visible, ready to be copied into the slot. The
-  // caller owns it because it has to outlive the copy by exactly as long as
-  // the copy takes, and only the caller knows that.
   [[nodiscard]] dunya::gpu::Buffer stageBounds(
     const dunya::field::SampledField& field,
     VkDeviceSize& sizeBytes
@@ -117,23 +98,16 @@ private:
     VkDeviceSize sizeBytes
   ) const;
 
-  // Borrowed for the CPU-side bound upload above; the Context outlives every
-  // table built on it.
   const dunya::gpu::Device& m_device;
 
   std::vector<FieldRecord> m_records;
 
-  // One per record, filled beside it. Its own array so the shadow loop reads
-  // 32 bytes to reject a record instead of 192.
   std::vector<RecordBounds> m_recordBounds;
 
   ShadowGrid m_shadowGrid;
   std::vector<uint32_t> m_bakeList;
   dunya::gpu::DescriptorGroup m_group;
 
-  // Device-local because the compute pass writes it and the fragment shader
-  // reads it: the CPU never touches these bytes. One fixed slot per volume
-  // index, so the same number addresses an object's volumes and its bounds.
   dunya::gpu::Buffer m_brickBounds;
 };
 

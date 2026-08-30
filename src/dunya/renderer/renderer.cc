@@ -159,13 +159,6 @@ void Renderer::recordCommandBuffer(
   depthBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
   depthBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   depthBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
-  // There is one depth image and two frames in flight, so the frame that is
-  // about to claim it may still be being written by the one before. Discarding
-  // the contents - the layout is UNDEFINED and the loadOp clears - says
-  // nothing about *when*, and TOP_OF_PIPE with no access declared no
-  // dependency at all: synchronisation validation reports a WRITE_AFTER_WRITE
-  // against the previous frame's depth store, twenty times in a hundred
-  // frames.
   depthBarrier.srcStageMask = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT
                               | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
   depthBarrier.srcAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
@@ -192,7 +185,7 @@ void Renderer::recordCommandBuffer(
   attachmentInfo.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
   attachmentInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
   attachmentInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-  attachmentInfo.clearValue = {{{0.0f, 0.0f, 0.0f, 1.0f}}};  // Black
+  attachmentInfo.clearValue = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
 
   VkRenderingAttachmentInfo depthAttachmentInfo{};
   depthAttachmentInfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
@@ -312,7 +305,6 @@ void Renderer::recordCommandBuffer(
     );
     m_recordTable.updatePrimitives(m_currentFrame, frameContext.primitives);
 
-    // After the pool write, because the dispatch reads this frame's copy.
     for (uint32_t slot : m_recordTable.bakeList()) {
       const FieldRecord& gpu = m_recordTable.record(slot);
 
@@ -357,9 +349,6 @@ void Renderer::recordCommandBuffer(
     }
   }
 
-  // Last, and inside the pass: the overlay draws over the finished scene, and
-  // it is given a command buffer rather than being known about - the renderer
-  // has no idea what ImGui is.
   if (onOverlay) {
     onOverlay(m_commandBuffers[m_currentFrame]);
   }
@@ -505,9 +494,6 @@ bool Renderer::drawFrame(
     throw std::runtime_error("failed to submit draw command buffer!");
   }
 
-  // Still acquired, and the submit above is the work the reader wants to see,
-  // so the wait belongs here rather than in the reader: it is this frame's
-  // completion being waited for, which is the renderer's own business.
   if (onFrameReady) {
     if (vkDeviceWaitIdle(m_device) != VK_SUCCESS) {
       throw std::runtime_error("Failed waiting for the frame to be readable");
@@ -529,7 +515,7 @@ bool Renderer::drawFrame(
   presentInfo.swapchainCount = 1;
   presentInfo.pSwapchains = swapChains;
   presentInfo.pImageIndices = &m_imageIndex;
-  presentInfo.pResults = nullptr;  // Optional
+  presentInfo.pResults = nullptr;
 
   result = vkQueuePresentKHR(m_presentQueue, &presentInfo);
   if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {

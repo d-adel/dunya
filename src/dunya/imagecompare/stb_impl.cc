@@ -1,6 +1,3 @@
-// The single definition of stb's implementations. Warnings are pushed around
-// the includes because a per-source /W0 collides with the target's /W4 (D9025).
-
 #if defined(_MSC_VER)
   #pragma warning(push, 0)
 #elif defined(__clang__) || defined(__GNUC__)

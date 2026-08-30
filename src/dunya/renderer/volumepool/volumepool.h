@@ -65,13 +65,6 @@ public:
 
   [[nodiscard]] uint32_t allocated() const;
 
-  // Rewrites one box of an allocated slot from the CPU grid. This is the only
-  // way a deformable's volume changes: its records never join the bake list,
-  // because that dispatch fills from the primitives and would erase the dent.
-  //
-  // Recorded into the uploader rather than submitted, because this runs inside
-  // a frame: the six submissions it used to take were six waits on a queue
-  // holding two frames of rendering.
   void upload(
     dunya::gpu::Uploader& uploader,
     uint32_t index,

@@ -155,8 +155,6 @@ void Input::mouseButtonCallback(
 
   Input* input = it->second;
 
-  // Only press and release exist for buttons; there is no repeat, so this
-  // needs none of the timing the key path carries.
   if (action == GLFW_PRESS || action == GLFW_RELEASE) {
     dunya::core::EventDispatcher::instance().dispatch(
       MouseButtonEvent{

@@ -20,8 +20,6 @@ using dunya::physics::PhysicsWorld;
 
 namespace {
 
-// A floor at y = 0 with one sphere above it, dropped or fired, stepped until
-// it has landed. Everything the impact cases need and nothing else.
 struct Drop {
   JPH::BodyID floor;
   JPH::BodyID sphere;
@@ -49,8 +47,6 @@ void addFloor(PhysicsWorld& world, Drop& out) {
   REQUIRE_FALSE(out.floor.IsInvalid());
 }
 
-// Height and downward speed rather than a drop, so a case can ask for a slow
-// arrival and a fast one without waiting for gravity to supply either.
 void run(PhysicsWorld& world, Drop& out, float height, float speed, int steps) {
   JPH::BodyCreationSettings settings(
     new JPH::SphereShape(0.5f),
@@ -100,8 +96,6 @@ TEST_CASE("a hard landing is recorded for both bodies", "[impact]") {
 
   REQUIRE_FALSE(drop.impacts.empty());
 
-  // Both sides of the manifold, because either could be the deformable and
-  // the listener does not know which.
   REQUIRE(drop.impacts.size() % 2u == 0u);
 
   const Impact& first = drop.impacts[0];
@@ -111,13 +105,9 @@ TEST_CASE("a hard landing is recorded for both bodies", "[impact]") {
   REQUIRE(second.speed == first.speed);
   REQUIRE(first.impulse > 0.0f);
 
-  // The two outward normals are opposites: that is what lets a caller sink a
-  // cutter into whichever body it is looking at without asking which slot it
-  // arrived in.
   REQUIRE(std::abs(first.outward.y + second.outward.y) < 1e-5f);
   REQUIRE(std::abs(first.outward.y) > 0.9f);
 
-  // The contact is where the sphere meets the floor, not at either centre.
   REQUIRE(std::abs(first.point.y) < 0.1f);
 
   destroy(world, drop);
@@ -130,15 +120,10 @@ TEST_CASE("a body settling under gravity records nothing", "[impact]") {
   Drop drop;
   addFloor(world, drop);
 
-  // Released just above the floor with no speed of its own, so it arrives at
-  // the few centimetres a second gravity gives it over one step. This is the
-  // case a threshold on impulse cannot separate from a real hit: the contact
-  // renews every step carrying the body's whole weight.
   run(world, drop, 0.505f, 0.0f, 120);
 
   REQUIRE(drop.impacts.empty());
 
-  // And it really did land - otherwise the case passes by never touching.
   const float resting =
     world.bodies().GetCenterOfMassPosition(drop.sphere).GetY();
 
@@ -152,8 +137,6 @@ TEST_CASE("the threshold is what decides, and it moves", "[impact]") {
   JoltLibrary library;
   PhysicsWorld world;
 
-  // Well above the 3 m/s default, so the landing below is refused for the one
-  // reason under test rather than for want of speed.
   world.impacts().setThreshold(500.0f);
 
   REQUIRE(world.impacts().threshold() == 500.0f);
@@ -177,8 +160,6 @@ TEST_CASE("a drained listener does not repeat itself", "[impact]") {
 
   REQUIRE_FALSE(drop.impacts.empty());
 
-  // run() drained after every step, so a further drain with no step between
-  // has nothing left to hand over.
   std::vector<Impact> again;
   world.impacts().drain(again);
 

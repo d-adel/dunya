@@ -15,7 +15,6 @@ public:
   Texture() = default;
   Texture(const Device& device, const std::string& texturePath);
 
-  // Four bytes per texel, which is what every 2D format here uses.
   Texture(
     const Device& device,
     uint32_t width,
@@ -24,8 +23,6 @@ public:
     const void* pixels
   );
 
-  // The general form: any format, so the caller states the byte count. Extra
-  // usage is for images a shader writes, which need STORAGE_BIT at creation.
   Texture(
     const Device& device,
     uint32_t width,
@@ -48,8 +45,6 @@ public:
 
   const Image& image() const noexcept;
 
-  // Non-const because a layout transition and a sub-region copy are writes to
-  // the image, and an owner that can rewrite its contents needs both.
   Image& image() noexcept;
 
 private:

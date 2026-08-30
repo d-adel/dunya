@@ -11,17 +11,12 @@
 
 namespace dunya::objectmodel {
 
-// Where an entity's primitives sit in the one contiguous pool. The GPU reads
-// offset and count; capacity is the arena's business and never leaves the CPU.
 struct SdfPrimitiveRange {
   uint32_t offset = 0;
   uint32_t count = 0;
   uint32_t capacity = 0;
 };
 
-// The arena the registry does not own. Every mutation is a transaction: move
-// the elements, update the range, re-fit the grid - which signals the bake
-// queue.
 class SdfPrimitiveStore {
 public:
   SdfPrimitiveStore();
@@ -31,9 +26,6 @@ public:
   SdfPrimitiveStore(SdfPrimitiveStore&&) = delete;
   SdfPrimitiveStore& operator=(SdfPrimitiveStore&&) = delete;
 
-  // Releasing a range is a lifetime invariant rather than a transaction: it has
-  // to hold however the component goes away, including registry::clear. The
-  // listener captures this store, so the store must outlive the registry.
   void connect(entt::registry& registry);
 
   [[nodiscard]]
@@ -72,7 +64,6 @@ public:
 
   uint32_t count(const entt::registry& registry, Entity entity) const;
 
-  // The whole arena, which is what the GPU is handed.
   std::span<const dunya::field::Primitive> pool() const noexcept;
 
 private:

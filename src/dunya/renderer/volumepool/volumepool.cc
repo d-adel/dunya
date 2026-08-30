@@ -186,10 +186,6 @@ void VolumePool::release(uint32_t index) {
     return;
   }
 
-  // Frames in flight may still name these images, and destroying a VkImage a
-  // submitted command buffer references is a use-after-free. Releases are rare
-  // - only an undone create - so this waits rather than deferring, the same
-  // trade the swapchain already makes when it recreates.
   m_device.waitIdle();
 
   if (!volume.key.bytes.empty()) {
@@ -223,8 +219,6 @@ uint32_t VolumePool::allocated() const {
 
 namespace {
 
-// One tightly packed copy of a box out of a lattice, so the copy region needs
-// no row length or image height and the staging buffer is exactly the box.
 template<typename T, typename Source>
 std::vector<T> gather(
   const SampledField& grid,
@@ -281,8 +275,6 @@ void stageInto(
 
   const VkCommandBuffer commandBuffer = uploader.begin();
 
-  // A deformable's volumes never enter the bake, so they sit where the
-  // texture's own upload left them and go back there.
   target.recordTransition(
     commandBuffer,
     from,
@@ -308,7 +300,6 @@ void stageInto(
     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
   );
 
-  // The GPU reads this after submit returns, so it outlives the call.
   uploader.keep(std::move(staging));
 }
 
@@ -393,8 +384,6 @@ dunya::gpu::Texture VolumePool::makeDistanceVolume(
   const dunya::gpu::Device& device,
   const SampledField& grid
 ) {
-  // 32-bit for the first measurement, deliberately: half's spacing near a
-  // distance of one is about 0.001, which is the march epsilon
   return dunya::gpu::Texture(
     device,
     grid.resolution.x,

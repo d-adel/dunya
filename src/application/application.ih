@@ -14,8 +14,6 @@
 #include <dunya/objectmodel/world/world.h>
 #include <dunya/physics/fieldshape/fieldshape.h>
 
-#include <imgui.h>
-
 #include <algorithm>
 #include <array>
 #include <cmath>

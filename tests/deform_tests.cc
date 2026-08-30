@@ -22,8 +22,6 @@ constexpr float SPAN = 2.0f;
 constexpr uint32_t RESOLUTION = 65u;
 constexpr float VOXEL = 2.0f * SPAN / static_cast<float>(RESOLUTION - 1u);
 
-// A subtracting sphere: the carve half of the general operation, which is
-// what the dent tests were about.
 Primitive carver(const glm::vec3& centre, float radius) {
   Primitive cutter = dunya::field::makeSphere(
     centre,
@@ -50,8 +48,6 @@ SampledField unitSphere() {
   );
 }
 
-// Where the field changes sign along +x, found by bisection on the samples so
-// the answer is the surface the marcher would actually meet.
 std::optional<float> crossingAlongX(const SampledField& field, float until) {
   float previous = dunya::field::distance(field, glm::vec3(0.0f));
 
@@ -82,8 +78,6 @@ TEST_CASE(
   REQUIRE(before.has_value());
   REQUIRE_THAT(*before, WithinAbs(1.0f, VOXEL));
 
-  // Centred on the sphere's +x pole, so the solid now ends at 1 - 0.35 and
-  // there is nothing beyond it: the cutter's far wall is outside the sphere.
   dunya::field::deform(field, carver(glm::vec3(1.0f, 0.0f, 0.0f), 0.35f));
 
   const std::optional<float> after = crossingAlongX(field, 1.5f);
@@ -132,9 +126,6 @@ TEST_CASE(
                              && y >= box.minimum.y && y < beyond.y
                              && z >= box.minimum.z && z < beyond.z;
 
-        // Inside the box the operation has to be exact. Outside it, skipping
-        // the write is either a no-op or only leaves values already deeper
-        // than the band - which is precisely what D7 declines to promise.
         if (written) {
           REQUIRE(field.distances[index] == want);
         } else {
@@ -166,7 +157,6 @@ TEST_CASE("a deformation that misses the grid writes nothing", "[deform]") {
 TEST_CASE("a deformation over the lattice edge clamps", "[deform]") {
   SampledField field = unitSphere();
 
-  // Centred on the grid's own corner, so most of the cutter is outside it.
   REQUIRE_NOTHROW(dunya::field::deform(field, carver(glm::vec3(-SPAN), 0.5f)));
 
   const dunya::field::SampleBox box =
@@ -183,10 +173,6 @@ TEST_CASE("subtraction exposes material, it does not paint it", "[deform]") {
 
   const SampledField before = field;
 
-  // The cutter carries material 7 and the sphere is material 3. A hard
-  // subtraction keeps the accumulator's material, because carving reveals what
-  // was already there - which is what the analytic fold does, and the two
-  // representations have to agree about it.
   dunya::field::deform(field, carver(glm::vec3(1.0f, 0.0f, 0.0f), 0.35f));
 
   uint32_t moved = 0u;
@@ -226,9 +212,6 @@ TEST_CASE("a union brings its own material with it", "[deform]") {
     }
   }
 
-  // Where, not merely how many. A fold that took the blob material over its
-  // whole affected box would paint every one of the 24,389 samples in it and
-  // still satisfy "painted > 0" with every value equal to 7.
   REQUIRE(dunya::field::material(field, glm::vec3(1.2f, 0.0f, 0.0f)) == 7u);
   REQUIRE(dunya::field::material(field, glm::vec3(0.0f)) == 3u);
 
@@ -254,8 +237,6 @@ TEST_CASE("a union welds material on, at the far wall", "[deform]") {
   dunya::field::updateBounds(blob);
   dunya::field::deform(field, blob);
 
-  // The same sphere, the other operation: the surface now ends at the blob's
-  // far wall rather than at its near one.
   const std::optional<float> after = crossingAlongX(field, 2.5f);
 
   REQUIRE(after.has_value());
@@ -265,8 +246,6 @@ TEST_CASE("a union welds material on, at the far wall", "[deform]") {
 TEST_CASE("an operation only the general form can express", "[deform]") {
   SampledField field = unitSphere();
 
-  // A box, not a sphere, and smooth-subtracted rather than hard: neither the
-  // shape nor the operation was reachable when this took a centre and radius.
   Primitive chisel = dunya::field::makeBox(
     glm::vec3(1.0f, 0.0f, 0.0f),
     glm::vec3(0.4f),
@@ -286,8 +265,6 @@ TEST_CASE("an operation only the general form can express", "[deform]") {
 
   const std::optional<float> after = crossingAlongX(field, 1.5f);
 
-  // The box reaches 0.4 from its centre at x = 1, so the solid ends at 0.6.
-  // "less than 1" would pass a change of one part in eight thousand.
   REQUIRE(after.has_value());
   REQUIRE_THAT(*after, WithinAbs(0.6f, VOXEL));
 }

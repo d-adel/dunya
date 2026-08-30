@@ -6,8 +6,6 @@ Uploader::Uploader(const Device& device) : m_device(device) {
   VkCommandPoolCreateInfo poolInfo{};
   poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 
-  // Reset rather than transient: buffers are freed individually as their
-  // fences signal, which a transient pool does not promise to reclaim.
   poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
   poolInfo.queueFamilyIndex = device.graphicsFamilyIndex();
 
@@ -20,8 +18,6 @@ Uploader::Uploader(const Device& device) : m_device(device) {
 }
 
 Uploader::~Uploader() {
-  // Nothing here may still be in flight, so this waits once - at shutdown,
-  // where a drain is what is wanted anyway.
   if (m_recording) {
     vkEndCommandBuffer(m_open.commandBuffer);
     release(m_open);
@@ -44,7 +40,6 @@ Uploader::~Uploader() {
 }
 
 void Uploader::release(Batch& batch) noexcept {
-  // The staging goes first: it is what the fence was protecting.
   batch.staging.clear();
 
   if (batch.commandBuffer != VK_NULL_HANDLE) {
@@ -125,9 +120,6 @@ void Uploader::submit() {
   submitInfo.commandBufferCount = 1;
   submitInfo.pCommandBuffers = &m_open.commandBuffer;
 
-  // No wait, and no semaphore either. The frame's own submission follows this
-  // one on the same queue, and the barriers recorded above order against
-  // everything submitted earlier there.
   if (
     vkQueueSubmit(m_device.graphicsQueue(), 1, &submitInfo, m_open.fence)
     != VK_SUCCESS
@@ -147,8 +139,6 @@ void Uploader::retire() {
   for (size_t i = 0; i != m_inFlight.size(); ++i) {
     Batch& batch = m_inFlight[i];
 
-    // Asking rather than waiting: a batch the GPU has not reached yet stays,
-    // and is looked at again next frame.
     if (vkGetFenceStatus(m_device.vkDevice(), batch.fence) == VK_SUCCESS) {
       release(batch);
 

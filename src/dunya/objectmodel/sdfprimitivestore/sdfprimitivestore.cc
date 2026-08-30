@@ -16,7 +16,6 @@ void SdfPrimitiveStore::onDestroyRange(
   entt::registry& registry,
   Entity entity
 ) {
-  // EnTT publishes this before it pops the component, so the range is readable.
   const SdfPrimitiveRange& range = registry.get<SdfPrimitiveRange>(entity);
 
   m_primitives.release({range.offset, range.capacity});
@@ -28,9 +27,6 @@ void SdfPrimitiveStore::refresh(entt::registry& registry, Entity entity) {
   const std::span<const Primitive> primitives =
     m_primitives.at({range.offset, range.capacity}, range.count);
 
-  // patch, not a write through get<>: the update signal is what puts this
-  // entity in the bake queue, and a bare reference write is invisible to it.
-  // Queue membership is the flag now, and nobody writes it by hand.
   registry.patch<SdfGrid>(entity, [primitives](SdfGrid& object) {
     fitToPrimitives(object, primitives);
   });
@@ -42,8 +38,6 @@ bool SdfPrimitiveStore::insert(
   uint32_t index,
   const Primitive& primitive
 ) {
-  // A grid is required, not implied: primitives describe a field, and a field
-  // has to have a lattice to be sampled onto before it can hold any.
   if (!registry.valid(entity) || !registry.all_of<SdfGrid>(entity)) {
     return false;
   }
@@ -149,7 +143,6 @@ bool SdfPrimitiveStore::remove(
   const std::span<Primitive> elements =
     m_primitives.at({range.offset, range.capacity}, range.count);
 
-  // Shifted rather than swapped: primitive order is what the CSG fold means.
   std::move(
     elements.begin() + index + 1,
     elements.begin() + range.count,

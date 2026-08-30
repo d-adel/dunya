@@ -17,8 +17,6 @@ struct CameraUniform {
   glm::vec4 position;
 };
 
-// The march's tunable numbers, as the field shader reads them; defaults from
-// CMake. std140 rounds the 28 bytes to 32; the static_assert catches a reorder.
 struct MarchParams {
   float epsilon;
   float maxDistance;
@@ -35,8 +33,6 @@ static_assert(
   "MarchParams must match its std140 block in field-shader.frag"
 );
 
-// How many of each thing this frame carries. Shaders read their loop bound from
-// here rather than walking a table's capacity.
 struct SceneCounts {
   uint32_t fieldRecords;
 };
@@ -46,13 +42,6 @@ static_assert(
   "SceneCounts must match its std140 block in field-shader.frag"
 );
 
-// The scene's light, as both shaders read it. It was a literal in each of them
-// and the CPU now needs the same value, which is three copies of one number and
-// exactly the drift a uniform exists to stop.
-//
-// xyz is the unit direction toward the light and w is the ambient term: std140
-// pads a vec3 to sixteen bytes, so the second value is free where a second
-// vector would not be.
 struct LightUniform {
   glm::vec4 direction;
 };

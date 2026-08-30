@@ -37,9 +37,6 @@ float primitiveDistance(const Primitive& primitive, const glm::vec3& point) {
   }
 }
 
-// A primitive can be skipped only when it provably cannot change the
-// accumulator. The conditions differ per operation and getting them wrong is
-// silent, so they are stated once here and mirrored exactly in the shader.
 bool skippable(
   const Primitive& primitive,
   const glm::vec3& point,
@@ -53,35 +50,23 @@ bool skippable(
     glm::length(point - glm::vec3(primitive.bounds)) - primitive.bounds.w;
 
   switch (primitive.shapeConfig.z) {
-    // Union and smooth union lose to a nearer accumulator. The blend radius is
-    // folded into the stored radius, so a smooth union that could still pull
-    // the surface toward itself never satisfies this.
     case 0u:
     case 1u:
       return bound > accumulated;
 
-    // Subtraction only bites when the cutter reaches within the accumulated
-    // distance. The smooth one bites k sooner, and updateBounds already folded
-    // k into the stored radius, so both share this test.
     case 3u:
     case 4u:
       return bound >= -accumulated;
 
-    // Intersection takes a max, so an arbitrarily distant primitive still
-    // dominates and can never be skipped on distance.
     default:
       return false;
   }
 }
 
-// Only a union can put material somewhere new: subtraction and intersection
-// both raise the field, so their solid is a subset of what came before.
 bool addsMaterial(uint32_t operation) {
   return operation != 2u && operation != 3u && operation != 4u;
 }
 
-// The world-space half extent of one primitive about its own centre. Kept
-// apart from bounds.w, which stays a sphere because skippable() culls on it.
 glm::vec3 halfExtent(const Primitive& primitive) {
   glm::vec3 extent(0.0f);
   bool bounded = true;
@@ -92,8 +77,6 @@ glm::vec3 halfExtent(const Primitive& primitive) {
       break;
 
     case 1u: {
-      // The box of an oriented box: each world axis reaches the sum of the
-      // half extents projected onto it, which is the absolute rotation.
       const glm::mat3 model = glm::mat3(glm::inverse(primitive.inverseModel));
 
       glm::mat3 absolute;
@@ -105,7 +88,6 @@ glm::vec3 halfExtent(const Primitive& primitive) {
       break;
     }
 
-    // A plane is unbounded, and an unknown shape has no bound we can trust.
     default:
       bounded = false;
       break;
@@ -137,14 +119,11 @@ void updateBounds(Primitive& primitive) {
       radius = glm::length(glm::vec3(primitive.shape));
       break;
 
-    // A plane is unbounded, and an unknown shape has no bound we can trust.
     default:
       radius = 0.0f;
       break;
   }
 
-  // A blend reaches k further than the shape does, both ways, so the bound has
-  // to carry k or skippable() culls a primitive that still had work to do.
   if (
     radius > 0.0f
     && (primitive.shapeConfig.z == 1u || primitive.shapeConfig.z == 4u)
@@ -218,9 +197,6 @@ AnalyticSample combine(
         };
         break;
 
-      // Smooth subtraction: smax(a, b, k) = -smin(-a, -b, k), and b is -cur, so
-      // the inner negation cancels. smax sits up to k/4 above the hard max, so
-      // it is not a safe under-estimate for sphere tracing.
       case 4u:
         accumulated = {
           -smoothMin(
@@ -307,8 +283,6 @@ glm::vec3 gradient(
   return gradient(field.primitives, point, epsilon);
 }
 
-// The direction is unused: the bound is the same in every direction, which is
-// what sphere tracing is.
 float stepBound(
   AnalyticFieldView field,
   const glm::vec3& point,

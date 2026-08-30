@@ -14,39 +14,21 @@
 
 namespace dunya::physics {
 
-// A contact candidate: one per brick that holds surface, pulled onto the zero
-// set. Where the brick is decides which contact this is, so a manifold keyed
-// on it stays keyed on the same thing between frames.
 struct FieldSeed {
   glm::vec3 point;
   uint32_t brick;
 };
 
-// One brick's contribution to the shape's mass, centre and inertia. Kept per
-// brick so a rebuild after a deformation recomputes only what moved; the
-// totals are a sum over them.
 struct SolidIntegral {
   double mass = 0.0;
   glm::dvec3 firstMoment{0.0};
   glm::dmat3 secondMoment{0.0};
 };
 
-// A Jolt collision shape over a sampled field. Contacts come from the field
-// itself - distance and normal at a point - so there is no mesh, no convex
-// decomposition, and no restriction on the geometry's shape.
-//
-// It borrows the field rather than owning it: at 16 MiB a copy per body is not
-// affordable. The field must therefore outlive every body built on it, and a
-// rebake replaces it in place, so a rebake must rebuild the shape as well.
 class FieldShape final : public JPH::Shape {
 public:
   explicit FieldShape(const dunya::field::SampledField& field);
 
-  // Rebuilt from a previous shape over the same grid, recomputing only the
-  // bricks a write reported as changed - the half-open range a WriteReport
-  // carries. Everything else is copied, which is what turns a rebuild after a
-  // deformation from a walk over two million cells into a walk over a handful
-  // of bricks. A Jolt shape stays immutable; this only makes a new one cheap.
   FieldShape(
     const dunya::field::SampledField& field,
     const FieldShape& previous,
@@ -56,13 +38,8 @@ public:
 
   const dunya::field::SampledField& field() const noexcept;
 
-  // Where the solid sits inside the field, which is where the body turns and
-  // what every transform Jolt hands this shape is expressed about.
   const glm::vec3& centerOfMass() const noexcept;
 
-  // The candidates, in brick order. Pulling a brick centre onto the surface is
-  // a pure function of the field, and the alternative is solving it again per
-  // pair, per substep, and once per iteration of every sweep.
   std::span<const FieldSeed> seeds() const noexcept;
 
   JPH::AABox GetLocalBounds() const override;
@@ -152,7 +129,6 @@ public:
   float GetVolume() const override;
 
 private:
-  // The shared body of both constructors; null means build everything.
   FieldShape(
     const dunya::field::SampledField& field,
     const FieldShape* previous,
@@ -162,16 +138,11 @@ private:
 
   const dunya::field::SampledField* m_field;
 
-  // Per brick, so a rebuild reuses what did not move. The totals are re-summed
-  // from these rather than kept as a running total: exact, and microseconds.
   std::vector<SolidIntegral> m_brickIntegral;
   std::vector<FieldSeed> m_brickSeed;
 
   std::vector<FieldSeed> m_seeds;
 
-  // Both walked once with the shape. Jolt asks for the centre of mass while
-  // the body is being created and needs it for every query after, so there is
-  // no point at which computing it later would be cheaper.
   glm::vec3 m_centerOfMass{0.0f};
   JPH::MassProperties m_massProperties;
 
@@ -180,9 +151,6 @@ private:
   JPH::uint m_subShapeBits = 0u;
 };
 
-// Fills the dispatch table for field-versus-field collision and sweeps. Must
-// run after JPH::RegisterTypes(), which unconditionally overwrites every
-// User slot on behalf of the decorator shapes.
 void registerFieldShape();
 
 }  // namespace dunya::physics
