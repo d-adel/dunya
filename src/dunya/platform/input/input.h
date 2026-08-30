@@ -77,8 +77,6 @@ public:
   [[nodiscard]]
   bool isDown(int key) const noexcept;
 
-  void setTiming(const KeyTiming& timing) noexcept;
-
   Cursor cursor() const noexcept;
   void cursorDeltaInvalid();
 

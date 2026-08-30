@@ -8,8 +8,10 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 
 add_executable(unit_tests
+    asset_tests.cc
     boundedextent_tests.cc
     commandhistory_tests.cc
+    crack_tests.cc
     deform_tests.cc
     entt_tests.cc
     field_tests.cc
@@ -23,6 +25,7 @@ add_executable(unit_tests
     redistance_tests.cc
     runtime_tests.cc
     sdfprimitivestore_tests.cc
+    telemetry_tests.cc
     sampled_tests.cc
     world_tests.cc
 )
@@ -56,8 +59,8 @@ set(GOLDEN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/golden")
 function(add_golden_test name)
     add_test(
         NAME "golden ${name}"
-        COMMAND ${PROJECT_NAME} --golden "${GOLDEN_DIR}/${name}.png" ${ARGN}
-        WORKING_DIRECTORY $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        COMMAND DunyaEditor --golden "${GOLDEN_DIR}/${name}.png" ${ARGN}
+        WORKING_DIRECTORY $<TARGET_FILE_DIR:DunyaEditor>
     )
 endfunction()
 add_golden_test(field-sampled --carves 6)

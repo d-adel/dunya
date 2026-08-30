@@ -23,13 +23,8 @@ public:
   const VkFormat& format() const noexcept;
 
   void recreate(const Device& device, VkExtent2D extent);
-  bool hasStencilComponent(VkFormat format);
 
 private:
-  void createDepthResources(
-    const Device& device,
-    const VkExtent2D& swapChainExtent
-  );
   VkFormat findSupportedFormat(
     const VkPhysicalDevice& physicalDevice,
     const std::vector<VkFormat>& candidates,
@@ -38,7 +33,6 @@ private:
   );
   void findDepthFormat(const VkPhysicalDevice& physicalDevice);
 
-  VkDevice m_device = VK_NULL_HANDLE;
   VkFormat m_format = VK_FORMAT_UNDEFINED;
   Image m_depthImage;
 };

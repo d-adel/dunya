@@ -3,6 +3,7 @@
 #include <Jolt/Jolt.h>
 #include <Jolt/Physics/Collision/Shape/Shape.h>
 
+#include <dunya/objectmodel/renderpose/renderpose.h>
 #include <dunya/objectmodel/world/world.h>
 #include <dunya/physics/physicsworld/physicsworld.h>
 #include <dunya/physics/joltlibrary/joltlibrary.h>
@@ -48,7 +49,7 @@ public:
 
   void step();
 
-  void syncPoses();
+  void syncPoses(float alpha);
 
 private:
   void applyMassScale(objectmodel::Entity entity);
@@ -69,6 +70,10 @@ private:
   physics::PhysicsWorld m_physicsWorld;
 
   std::vector<std::pair<objectmodel::Entity, objectmodel::Pose>> m_poseScratch;
+  std::vector<std::pair<objectmodel::Entity, objectmodel::RenderPose>>
+    m_renderScratch;
+
+  std::unordered_map<uint32_t, objectmodel::Pose> m_previousPoses;
 
   std::unordered_map<const dunya::field::SampledField*, SharedShape> m_shapes;
 

@@ -8,7 +8,9 @@
 #include <dunya/objectmodel/material/material.h>
 #include <dunya/objectmodel/mesh/mesh.h>
 #include <dunya/objectmodel/pose/pose.h>
+#include <dunya/core/asset/assetids.h>
 #include <dunya/objectmodel/deformable/deformable.h>
+#include <dunya/objectmodel/renderpose/renderpose.h>
 #include <dunya/editor/command/command.h>
 
 #include <algorithm>

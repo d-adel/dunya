@@ -97,7 +97,7 @@ StartupOptions::StartupOptions(std::span<char*> arguments) {
     } else {
       throw std::runtime_error(
         "Unknown argument: " + argument
-        + "\nUsage: DunyaRenderer [--analytic] [--carves N] [--verify-bake]"
+        + "\nUsage: dunya [--analytic] [--carves N] [--verify-bake]"
           " [--screenshot PATH] [--golden PATH] [--dents N] [--dent-log PATH]"
           " [--demo FRAMES] [--demo-rate PER_SEC] [--wall COLUMNSxROWS]"
           " [--capture DIR]"

@@ -2,6 +2,7 @@
 
 #include <dunya/field/sampled/sampled.h>
 #include <dunya/objectmodel/entity/entity.h>
+#include <dunya/core/telemetry/telemetry.h>
 #include <dunya/physics/impact/impact.h>
 #include <dunya/runtime/runtime/runtime.h>
 
@@ -35,7 +36,6 @@ public:
     float impulse = 0.0f;
     float depth = 0.0f;
     float radius = 0.0f;
-    float milliseconds = 0.0f;
   };
 
   [[nodiscard]] Damage& damage() noexcept;
@@ -43,7 +43,7 @@ public:
 
   [[nodiscard]] uint32_t cratersApplied() const noexcept;
 
-  void applyImpacts(Runtime& runtime);
+  void applyImpacts(Runtime& runtime, core::Telemetry& telemetry);
 
   void carve(
     Runtime& runtime,

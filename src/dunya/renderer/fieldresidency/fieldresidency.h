@@ -1,6 +1,7 @@
 #pragma once
 
 #include <dunya/field/sampled/sampled.h>
+#include <dunya/core/telemetry/telemetry.h>
 #include <dunya/gpu/uploader/uploader.h>
 #include <dunya/objectmodel/entity/entity.h>
 #include <dunya/objectmodel/world/world.h>
@@ -38,9 +39,10 @@ public:
 
   void releaseAll(objectmodel::World& world);
 
-  uint32_t upload(
+  void upload(
     objectmodel::World& world,
-    std::span<const std::pair<objectmodel::Entity, field::SampleBox>> dirty
+    std::span<const std::pair<objectmodel::Entity, field::SampleBox>> dirty,
+    core::Telemetry& telemetry
   );
 
 private:

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.28)
 
-project(DunyaRenderer VERSION 0.0 LANGUAGES CXX)
+project(Dunya VERSION 0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 20)
@@ -119,7 +119,7 @@ add_subdirectory(src/dunya/physics)
 add_subdirectory(src/dunya/runtime)
 add_subdirectory(src/dunya/imagecompare)
 enable_testing()
-add_executable(${PROJECT_NAME}
+add_executable(DunyaEditor
     src/main.cc
     src/capture/capture.cc
     src/overlay/overlay.cc
@@ -127,6 +127,7 @@ add_executable(${PROJECT_NAME}
     src/framecheck/framecheck.cc
     src/demodriver/demodriver.cc
     src/panels/panels.cc
+    src/editortools/editortools.cc
     src/cameracontroller/cameracontroller.cc
     src/application/application.cc
     src/scene/scene.cc
@@ -141,7 +142,7 @@ find_program(
 )
 add_subdirectory(src/dunya/gpu)
 add_subdirectory(src/dunya/renderer)
-target_compile_definitions(${PROJECT_NAME} PRIVATE
+target_compile_definitions(DunyaEditor PRIVATE
     SHADER_SOURCE_DIR=\"${SHADER_SOURCE_DIR}\"
     GLSLC_PATH=\"${GLSLC_EXECUTABLE}\"
     GLSLC_DEFINES=\"${SHADER_DEFINES_ARGS}\"
@@ -187,9 +188,9 @@ add_custom_target(
     DEPENDS ${SHADER_OUTPUTS}
 )
 
-add_dependencies(${PROJECT_NAME} SHADER_TARGET)
-add_executable(DunyaGame
-    src/game/main.cc
+add_dependencies(DunyaEditor SHADER_TARGET)
+add_executable(DunyaRuntime
+    src/runtime/main.cc
     src/capture/capture.cc
     src/startupoptions/startupoptions.cc
     src/framecheck/framecheck.cc
@@ -198,13 +199,13 @@ add_executable(DunyaGame
     src/application/application.cc
     src/scene/scene.cc
 )
-add_dependencies(DunyaGame SHADER_TARGET)
+add_dependencies(DunyaRuntime SHADER_TARGET)
 if (MSVC)
-    target_compile_options(DunyaGame PRIVATE /W4 /WX /w15038 /Zc:__cplusplus)
+    target_compile_options(DunyaRuntime PRIVATE /W4 /WX /w15038 /Zc:__cplusplus)
 else()
-    target_compile_options(DunyaGame PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    target_compile_options(DunyaRuntime PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
-target_link_libraries(DunyaGame PRIVATE
+target_link_libraries(DunyaRuntime PRIVATE
     glfw
     Vulkan::Vulkan
     glm::glm
@@ -219,14 +220,14 @@ target_link_libraries(DunyaGame PRIVATE
     dunya::imagecompare
 )
 
-target_include_directories(DunyaGame PRIVATE src ${stb_SOURCE_DIR} ${tinyobjloader_SOURCE_DIR})
+target_include_directories(DunyaRuntime PRIVATE src ${stb_SOURCE_DIR} ${tinyobjloader_SOURCE_DIR})
 if (MSVC)
-    target_compile_options(${PROJECT_NAME} PRIVATE /W4 /WX /w15038 /Zc:__cplusplus)
+    target_compile_options(DunyaEditor PRIVATE /W4 /WX /w15038 /Zc:__cplusplus)
 else()
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    target_compile_options(DunyaEditor PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
-target_compile_definitions(${PROJECT_NAME} PRIVATE DUNYA_EDITOR=1)
-target_link_libraries(${PROJECT_NAME} PRIVATE
+target_compile_definitions(DunyaEditor PRIVATE DUNYA_EDITOR=1)
+target_link_libraries(DunyaEditor PRIVATE
     glfw
     Vulkan::Vulkan
     glm::glm
@@ -242,27 +243,29 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     dunya::imagecompare
     imgui
 )
-target_include_directories(${PROJECT_NAME} PRIVATE src ${stb_SOURCE_DIR} ${tinyobjloader_SOURCE_DIR})
+target_include_directories(DunyaEditor PRIVATE src ${stb_SOURCE_DIR} ${tinyobjloader_SOURCE_DIR})
 
-add_custom_command(
-    TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${SHADER_OUTPUT_DIR} $<TARGET_FILE_DIR:${PROJECT_NAME}>/shaders
-    COMMENT "Copying shaders"
-    VERBATIM
-)
-add_custom_command(
-    TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${TEXTURE_SOURCE_DIR} $<TARGET_FILE_DIR:${PROJECT_NAME}>/textures
-    COMMENT "Copying textures"
-    VERBATIM
-)
-add_custom_command(
-    TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${MODEL_SOURCE_DIR} $<TARGET_FILE_DIR:${PROJECT_NAME}>/models
-    COMMENT "Copying models"
-    VERBATIM
-)
+foreach(DUNYA_APP DunyaEditor DunyaRuntime)
+    add_custom_command(
+        TARGET ${DUNYA_APP} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+                ${SHADER_OUTPUT_DIR} $<TARGET_FILE_DIR:${DUNYA_APP}>/shaders
+        COMMENT "Copying shaders"
+        VERBATIM
+    )
+    add_custom_command(
+        TARGET ${DUNYA_APP} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+                ${TEXTURE_SOURCE_DIR} $<TARGET_FILE_DIR:${DUNYA_APP}>/textures
+        COMMENT "Copying textures"
+        VERBATIM
+    )
+    add_custom_command(
+        TARGET ${DUNYA_APP} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+                ${MODEL_SOURCE_DIR} $<TARGET_FILE_DIR:${DUNYA_APP}>/models
+        COMMENT "Copying models"
+        VERBATIM
+    )
+endforeach()
 add_subdirectory(tests)

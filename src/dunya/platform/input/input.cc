@@ -115,10 +115,6 @@ bool Input::isDown(int key) const noexcept {
   return m_keyStates[key].prevDown;
 }
 
-void Input::setTiming(const KeyTiming& timing) noexcept {
-  m_timing = timing;
-}
-
 void Input::keyCallback(
   GLFWwindow* window,
   int key,

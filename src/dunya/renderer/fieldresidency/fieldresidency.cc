@@ -63,17 +63,18 @@ void FieldResidency::releaseAll(objectmodel::World& world) {
   m_holders.clear();
 }
 
-uint32_t FieldResidency::upload(
+void FieldResidency::upload(
   objectmodel::World& world,
-  std::span<const std::pair<objectmodel::Entity, field::SampleBox>> dirty
+  std::span<const std::pair<objectmodel::Entity, field::SampleBox>> dirty,
+  core::Telemetry& telemetry
 ) {
   if (dirty.empty()) {
-    return 0u;
+    return;
   }
 
-  const entt::registry& registry = world.registry();
+  const auto dropped = telemetry.key("dentsDropped");
 
-  uint32_t dropped = 0u;
+  const entt::registry& registry = world.registry();
 
   for (const auto& [entity, box] : dirty) {
     if (
@@ -93,7 +94,7 @@ uint32_t FieldResidency::upload(
     const uint32_t slot = m_pool.makeUnique(m_uploader, shared, field);
 
     if (slot == UINT32_MAX) {
-      ++dropped;
+      telemetry.add(dropped, 1.0);
 
       continue;
     }
@@ -128,8 +129,6 @@ uint32_t FieldResidency::upload(
   }
 
   m_uploader.submit();
-
-  return dropped;
 }
 
 }

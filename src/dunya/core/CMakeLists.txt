@@ -1,5 +1,8 @@
 add_library(dunya_core STATIC
     event/event.cc
+    asset/asset.cc
+    nametable/nametable.cc
+    telemetry/telemetry.cc
 )
 add_library(dunya::core ALIAS dunya_core)
 target_include_directories(dunya_core PUBLIC "${PROJECT_SOURCE_DIR}/src")

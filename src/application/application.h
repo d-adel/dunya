@@ -19,11 +19,10 @@
 #include <dunya/renderer/resourcetable/resourcetable.h>
 #include <dunya/renderer/frameglobals/frameglobals.h>
 #include <dunya/field/field.h>
-#include <dunya/editor/fieldeditor/fieldeditor.h>
 #include <cameracontroller/cameracontroller.h>
 #include <demodriver/demodriver.h>
 #include <framecheck/framecheck.h>
-#include <overlay/overlay.h>
+#include <tools/tools.h>
 #include <startupoptions/startupoptions.h>
 #include <dunya/renderer/fieldrecordtable/fieldrecordtable.h>
 #include <dunya/renderer/fieldresidency/fieldresidency.h>
@@ -33,13 +32,15 @@
 
 #include <array>
 #include <deque>
+#include <functional>
+#include <memory>
 #include <optional>
 #include <utility>
 #include <vector>
 
 class Application {
 public:
-  explicit Application(const StartupOptions& options);
+  Application(const StartupOptions& options, ToolsFactory tools = {});
   ~Application();
 
   Application(const Application&) = delete;
@@ -48,6 +49,29 @@ public:
   Application& operator=(Application&&) = delete;
 
   int start(const StartupOptions& options = {});
+
+  struct PanelSources {
+    dunya::objectmodel::World* world = nullptr;
+    dunya::runtime::Deformation* deformation = nullptr;
+    dunya::physics::ImpactListener* impacts = nullptr;
+    Scene::Projectile* shot = nullptr;
+    dunya::renderer::MarchParams* march = nullptr;
+
+    size_t balls = 0;
+    size_t maxBalls = 0;
+    size_t primitives = 0;
+
+    bool playing = false;
+    bool analytic = false;
+
+    double frameMs = 0.0;
+    VkExtent2D extent{};
+
+    std::function<void()> fire;
+    std::function<void()> resetWall;
+  };
+
+  [[nodiscard]] PanelSources panelSources();
 
 private:
   void handleKeyEvent(const dunya::platform::KeyEvent& event);
@@ -81,7 +105,7 @@ private:
 
   void dent(uint32_t count);
 
-  [[nodiscard]] DemoDriver::SceneSummary sceneSummary() const;
+  void recordSceneTelemetry();
 
   void uploadDentedVolumes();
 
@@ -89,7 +113,6 @@ private:
 
   const dunya::objectmodel::World& activeWorld() const noexcept;
 
-  void registerPanels();
   bool acceptsInput() const noexcept;
 
   dunya::gpu::Context m_context;
@@ -120,9 +143,7 @@ private:
   dunya::gpu::Pipeline m_fieldPipeline;
   dunya::renderer::Renderer m_renderer;
 
-  Overlay m_overlay;
-
-  dunya::editor::FieldEditor m_fieldEditor;
+  std::unique_ptr<Tools> m_tools;
 
   Stall m_stall = Stall::None;
   Transition m_transition = Transition::None;
@@ -140,6 +161,8 @@ private:
 
   double m_lastFrameMs = 0.0;
 
+  dunya::core::Telemetry m_telemetry;
+
   std::vector<dunya::objectmodel::Entity> m_recordEntities;
 
   dunya::runtime::Deformation m_deformation;
@@ -147,13 +170,6 @@ private:
   DemoDriver m_demo;
 
   uint32_t m_frameIndex = 0;
-
-  float m_frameCarveMs = 0.0f;
-  float m_frameUploadMs = 0.0f;
-  float m_framePhysicsMs = 0.0f;
-
-  uint32_t m_frameActiveBodies = 0;
-  uint32_t m_frameSubsteps = 0;
 
   uint32_t m_dentsApplied = 0;
 

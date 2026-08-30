@@ -70,7 +70,6 @@ public:
   bool removePrimitive(Entity entity, uint32_t index);
 
   void addStaticBody(Entity entity);
-  void removeStaticBody(Entity entity);
 
   std::span<const dunya::field::Primitive> primitives(Entity entity) const;
 

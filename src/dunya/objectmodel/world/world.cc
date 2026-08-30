@@ -100,10 +100,6 @@ void World::addStaticBody(Entity entity) {
   m_registry.emplace_or_replace<StaticBody>(entity);
 }
 
-void World::removeStaticBody(Entity entity) {
-  m_registry.remove<StaticBody>(entity);
-}
-
 std::span<const dunya::field::Primitive> World::primitives(
   Entity entity
 ) const {

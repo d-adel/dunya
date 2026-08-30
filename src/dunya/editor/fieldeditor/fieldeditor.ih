@@ -3,7 +3,6 @@
 #include <dunya/core/config/config.h>
 #include <dunya/field/analytic/analytic.h>
 #include <dunya/objectmodel/world/world.h>
-#include <dunya/core/config/config.h>
 
 #include <chrono>
 #include <iomanip>

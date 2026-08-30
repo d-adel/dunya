@@ -276,7 +276,7 @@ void Runtime::step() {
   m_physicsWorld.step();
 }
 
-void Runtime::syncPoses() {
+void Runtime::syncPoses(float alpha) {
   JPH::BodyIDVector active;
   m_physicsWorld.system().GetActiveBodies(JPH::EBodyType::RigidBody, active);
 
@@ -289,6 +289,9 @@ void Runtime::syncPoses() {
 
   m_poseScratch.clear();
   m_poseScratch.reserve(active.size());
+
+  m_renderScratch.clear();
+  m_renderScratch.reserve(active.size());
 
   for (const JPH::BodyID& id : active) {
     const objectmodel::Entity entity{
@@ -303,21 +306,44 @@ void Runtime::syncPoses() {
     JPH::Quat rotation;
     bodies.GetPositionAndRotation(id, position, rotation);
 
-    m_poseScratch.push_back(
+    const objectmodel::Pose settled{
+      glm::vec3(position.GetX(), position.GetY(), position.GetZ()),
+      glm::quat(
+        rotation.GetW(),
+        rotation.GetX(),
+        rotation.GetY(),
+        rotation.GetZ()
+      )
+    };
+
+    const uint32_t slot = static_cast<uint32_t>(entity);
+
+    const auto seen = m_previousPoses.find(slot);
+
+    const objectmodel::Pose before =
+      seen == m_previousPoses.end() ? settled : seen->second;
+
+    m_poseScratch.push_back({entity, settled});
+
+    m_renderScratch.push_back(
       {entity,
-       objectmodel::Pose{
-         glm::vec3(position.GetX(), position.GetY(), position.GetZ()),
-         glm::quat(
-           rotation.GetW(),
-           rotation.GetX(),
-           rotation.GetY(),
-           rotation.GetZ()
-         )
-       }}
+       objectmodel::RenderPose{objectmodel::Pose{
+         glm::mix(before.position, settled.position, alpha),
+         glm::slerp(before.rotation, settled.rotation, alpha)
+       }}}
     );
+
+    m_previousPoses[slot] = settled;
   }
 
   m_world.replaceMany<objectmodel::Pose>(m_poseScratch);
+
+  for (const auto& drawn : m_renderScratch) {
+    m_world.emplaceOrReplace<objectmodel::RenderPose>(
+      drawn.first,
+      drawn.second
+    );
+  }
 }
 
 }

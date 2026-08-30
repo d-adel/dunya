@@ -16,9 +16,23 @@ constexpr float GROUND_MARGIN = 4.0f;
 
 constexpr float PROJECTILE_RADIUS = 0.35f;
 
-constexpr uint32_t PROJECTILE_MATERIAL = 4u;
-
 constexpr uint32_t PROJECTILE_RESOLUTION = dunya::core::FIELD_GRID_RESOLUTION;
+
+constexpr float SIDE_CLEARANCE = 1.2f;
+
+constexpr float ROOM_HALF_WIDTH = 1.0f;
+
+constexpr float ROOM_LOWEST = -0.108f;
+
+constexpr float ROOM_UPRIGHT_DEGREES = -90.0f;
+constexpr float ROOM_FACING_DEGREES = -120.0f;
+
+constexpr float PLINTH_HALF_WIDTH = 0.5f;
+constexpr float PLINTH_HALF_HEIGHT = 0.6f;
+
+constexpr float PLINTH_ORB_RADIUS = 0.45f;
+constexpr float PLINTH_ORB_SINK = 0.18f;
+constexpr float PLINTH_ORB_BLEND = 0.15f;
 
 }
 
@@ -39,7 +53,7 @@ Scene::Scene(
   dunya::objectmodel::SdfGrid boxGrid{};
   boxGrid.resolution = glm::uvec3(BOX_RESOLUTION);
 
-  constexpr uint32_t RESERVED_SLOTS = 2u + 24u;
+  constexpr uint32_t RESERVED_SLOTS = 3u + 24u;
 
   const uint32_t affordable =
     std::min(dunya::core::MAX_FIELD_VOLUMES, dunya::core::MAX_FIELD_RECORDS)
@@ -123,7 +137,7 @@ Scene::Scene(
       glm::vec3(groundHalfWidth, GROUND_HALF_THICKNESS, groundHalfWidth),
       0.0f,
       glm::vec3(0.0f, 1.0f, 0.0f),
-      1
+      materialIndex(dunya::core::MATERIAL_FIELD_PLANE)
     ),
     "the ground plane"
   );
@@ -136,6 +150,79 @@ Scene::Scene(
   );
 
   m_deformable = planeEntity;
+
+  dunya::objectmodel::SdfGrid plinthGrid{};
+  plinthGrid.resolution = glm::uvec3(BOX_RESOLUTION);
+
+  pose.position = glm::vec3(
+    m_wallMinimum.x - SIDE_CLEARANCE - PLINTH_HALF_WIDTH,
+    GROUND_Y,
+    0.0f
+  );
+
+  const dunya::objectmodel::Entity plinthEntity =
+    m_world.createField(pose, plinthGrid);
+
+  addPrimitive(
+    plinthEntity,
+    dunya::field::makeBox(
+      glm::vec3(0.0f, PLINTH_HALF_HEIGHT, 0.0f),
+      glm::vec3(PLINTH_HALF_WIDTH, PLINTH_HALF_HEIGHT, PLINTH_HALF_WIDTH),
+      0.0f,
+      glm::vec3(0.0f, 1.0f, 0.0f),
+      materialIndex(dunya::core::MATERIAL_FIELD_PLANE)
+    ),
+    "the plinth"
+  );
+
+  addPrimitive(
+    plinthEntity,
+    dunya::field::makeSphere(
+      glm::vec3(
+        0.0f,
+        2.0f * PLINTH_HALF_HEIGHT + PLINTH_ORB_RADIUS - PLINTH_ORB_SINK,
+        0.0f
+      ),
+      PLINTH_ORB_RADIUS,
+      materialIndex(dunya::core::MATERIAL_PROJECTILE),
+      dunya::core::FIELD_OP_SMOOTH_UNION,
+      PLINTH_ORB_BLEND
+    ),
+    "the orb on the plinth"
+  );
+
+  m_world.addStaticBody(plinthEntity);
+
+  m_meshAssets.bind(
+    dunya::core::MESH_VIKING_ROOM,
+    static_cast<uint32_t>(m_meshes.size())
+  );
+
+  m_meshes.emplace_back(
+    dunya::renderer::MeshBuffers(context.device(), "models/viking_room.obj")
+  );
+
+  m_world.createMesh(
+    dunya::objectmodel::Pose{
+      glm::vec3(
+        m_wallMaximum.x + SIDE_CLEARANCE + ROOM_HALF_WIDTH,
+        GROUND_Y - ROOM_LOWEST,
+        0.0f
+      ),
+      glm::angleAxis(
+        glm::radians(ROOM_FACING_DEGREES),
+        glm::vec3(0.0f, 1.0f, 0.0f)
+      )
+        * glm::angleAxis(
+          glm::radians(ROOM_UPRIGHT_DEGREES),
+          glm::vec3(1.0f, 0.0f, 0.0f)
+        )
+    },
+    dunya::objectmodel::Mesh{meshIndex(dunya::core::MESH_VIKING_ROOM)},
+    dunya::objectmodel::Material{
+      materialIndex(dunya::core::MATERIAL_VIKING_ROOM)
+    }
+  );
 
   const Projectile shot = projectile();
   const dunya::field::Aabb box = dunya::objectmodel::gridBox({&shot.shape, 1});
@@ -156,7 +243,7 @@ Scene::Projectile Scene::projectile() const {
   shot.shape = dunya::field::makeSphere(
     glm::vec3(0.0f),
     PROJECTILE_RADIUS,
-    PROJECTILE_MATERIAL
+    materialIndex(dunya::core::MATERIAL_PROJECTILE)
   );
 
   shot.speed = 42.0f;
@@ -195,7 +282,9 @@ void Scene::augmentFrameContext(
       {registry.get<dunya::objectmodel::Mesh>(entity).index,
        registry.get<dunya::objectmodel::Material>(entity).index,
        dunya::objectmodel::model(
-         registry.get<dunya::objectmodel::Pose>(entity)
+         registry.all_of<dunya::objectmodel::RenderPose>(entity)
+           ? registry.get<dunya::objectmodel::RenderPose>(entity).pose
+           : registry.get<dunya::objectmodel::Pose>(entity)
        )}
     );
   }
@@ -308,6 +397,12 @@ std::vector<dunya::renderer::MaterialRecord> Scene::createMaterials() {
   dunya::renderer::MaterialRecord projectile = neutral;
   projectile.baseColor = glm::vec4(0.15f, 0.65f, 0.75f, 1.0f);
 
+  m_materialAssets.bind(dunya::core::MATERIAL_FIELD_SPHERE, 0u);
+  m_materialAssets.bind(dunya::core::MATERIAL_FIELD_PLANE, 1u);
+  m_materialAssets.bind(dunya::core::MATERIAL_VIKING_ROOM, 2u);
+  m_materialAssets.bind(dunya::core::MATERIAL_CHECKER, 3u);
+  m_materialAssets.bind(dunya::core::MATERIAL_PROJECTILE, 4u);
+
   return {fieldSphere, fieldPlane, vikingRoom, checker, projectile};
 }
 
@@ -348,4 +443,32 @@ glm::vec3 Scene::wallPoint(float u, float v) const {
 
 dunya::objectmodel::Entity Scene::deformable() const noexcept {
   return m_deformable;
+}
+
+uint32_t Scene::materialIndex(dunya::core::AssetId id) const {
+  const uint32_t index = m_materialAssets.index(id);
+
+  if (index == dunya::core::UNBOUND_ASSET) {
+    throw std::runtime_error("Scene: no material is bound under that asset id");
+  }
+
+  return index;
+}
+
+uint32_t Scene::meshIndex(dunya::core::AssetId id) const {
+  const uint32_t index = m_meshAssets.index(id);
+
+  if (index == dunya::core::UNBOUND_ASSET) {
+    throw std::runtime_error("Scene: no mesh is bound under that asset id");
+  }
+
+  return index;
+}
+
+const dunya::core::AssetRegistry& Scene::materialAssets() const noexcept {
+  return m_materialAssets;
+}
+
+const dunya::core::AssetRegistry& Scene::meshAssets() const noexcept {
+  return m_meshAssets;
 }

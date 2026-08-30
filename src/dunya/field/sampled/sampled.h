@@ -78,8 +78,6 @@ float stepBound(
 glm::uvec3 brickCounts(const SampledField& field);
 bool brickHoldsSurface(const SampledField& field, uint32_t brick);
 
-float bakeError(const SampledField& field, float sourceLipschitz = 1.0f);
-
 WriteReport write(
   SampledField& field,
   const SampleBox& box,

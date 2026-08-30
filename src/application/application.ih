@@ -9,6 +9,7 @@
 #include <dunya/objectmodel/sdfgrid/sdfgrid.h>
 #include <dunya/objectmodel/deformable/deformable.h>
 #include <dunya/objectmodel/deformed/deformed.h>
+#include <dunya/objectmodel/renderpose/renderpose.h>
 #include <dunya/objectmodel/rigidbody/rigidbody.h>
 #include <dunya/objectmodel/pose/pose.h>
 #include <dunya/objectmodel/world/world.h>

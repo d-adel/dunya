@@ -189,7 +189,7 @@ std::vector<float> fieldDrop(
 
   for (uint32_t step = 0u; step != steps; ++step) {
     runtime.step();
-    runtime.syncPoses();
+    runtime.syncPoses(1.0f);
 
     for (const dunya::objectmodel::Entity entity : runtime.world().fields()) {
       heights.push_back(runtime.world()

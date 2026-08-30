@@ -4,6 +4,8 @@ namespace {
 
 constexpr uint32_t MAX_PHYSICS_SUBSTEPS = 5;
 
+constexpr double MAX_PHYSICS_DELTA = MAX_PHYSICS_SUBSTEPS / 60.0;
+
 constexpr size_t MAX_BALLS = 24;
 
 constexpr float MUZZLE_DISTANCE = 2.5f;
@@ -15,9 +17,22 @@ const std::vector<VkVertexInputBindingDescription> MESH_BINDINGS{
 const auto MESH_ATTRIBUTES =
   dunya::renderer::Vertex::getAttributeDescriptions();
 
+const dunya::objectmodel::Pose& drawnPose(
+  const entt::registry& registry,
+  dunya::objectmodel::Entity entity
+) {
+  if (
+    const auto* drawn = registry.try_get<dunya::objectmodel::RenderPose>(entity)
+  ) {
+    return drawn->pose;
+  }
+
+  return registry.get<dunya::objectmodel::Pose>(entity);
 }
 
-Application::Application(const StartupOptions& options)
+}
+
+Application::Application(const StartupOptions& options, ToolsFactory tools)
     : m_input(m_context.window().handle()),
       m_cameraController(m_input, m_context.window()),
       m_swapChain(m_context),
@@ -74,11 +89,12 @@ Application::Application(const StartupOptions& options)
         m_context.surface().handle(),
         m_swapChain.imageCount()
       ),
-      m_overlay(m_context, m_swapChain),
-      m_fieldEditor(m_authoredWorld),
-      m_reloadRequested(false)
 
-{
+      m_reloadRequested(false) {
+  if (tools) {
+    m_tools = tools(m_context, m_swapChain, m_authoredWorld);
+  }
+
   m_keySubscription = dunya::core::EventDispatcher::instance()
                         .subscribe<dunya::platform::KeyEvent>(
                           [this](const dunya::platform::KeyEvent& event) {
@@ -115,7 +131,9 @@ int Application::start(const StartupOptions& options) {
             << "Alt + click carves by hand once stopped\n";
 
   if (options.carves > 0) {
-    m_fieldEditor.stress(options.carves);
+    if (m_tools) {
+      m_tools->stress(options.carves);
+    }
   }
 
   m_pendingDents = options.dents;
@@ -155,8 +173,6 @@ int Application::start(const StartupOptions& options) {
   bool volumePoolFullReported = false;
 
   FrameCheck frameCheck(m_context, m_swapChain, options);
-
-  registerPanels();
 
   if (!frameCheck.wanted()) {
     announce("Baking fields", Transition::None);
@@ -201,11 +217,16 @@ int Application::start(const StartupOptions& options) {
 
     m_uploader.retire();
 
-    constexpr uint32_t DEMO_PLAY_FRAME = 4u;
+    constexpr uint32_t FIRST_PLAY_FRAME = 4u;
 
     const bool measuring = frameCheck.wanted() || m_pendingDents > 0;
 
-    if (m_frameIndex == DEMO_PLAY_FRAME && !measuring && !m_runtime) {
+    const bool simulatesOnItsOwn = m_tools == nullptr || m_demo.active();
+
+    if (
+      m_frameIndex == FIRST_PLAY_FRAME && simulatesOnItsOwn && !measuring
+      && !m_runtime
+    ) {
       play();
     }
 
@@ -216,29 +237,21 @@ int Application::start(const StartupOptions& options) {
         fire(aimAtPoint(m_scene.wallPoint(at.x, at.y)));
       }
 
-      m_demo.record(
-        m_frameIndex,
-        realDt,
-        m_deformation.cratersApplied(),
-        {m_frameCarveMs,
-         m_frameUploadMs,
-         m_framePhysicsMs,
-         m_frameActiveBodies,
-         m_frameSubsteps}
-      );
+      m_telemetry.set(m_telemetry.key("frame"), double(realDt) * 1000.0);
 
-      m_frameCarveMs = 0.0f;
-      m_frameUploadMs = 0.0f;
-      m_framePhysicsMs = 0.0f;
+      m_demo.record(m_frameIndex, m_telemetry);
+
+      m_telemetry.clear();
 
       if (m_demo.finished(m_frameIndex)) {
-        m_demo.report(sceneSummary());
+        recordSceneTelemetry();
+        m_demo.report(m_telemetry);
         glfwSetWindowShouldClose(m_context.window().handle(), GLFW_TRUE);
       }
     }
 
     if (m_runtime) {
-      physicsAccumulator += dt;
+      physicsAccumulator += std::min(double(dt), MAX_PHYSICS_DELTA);
 
       uint32_t substeps = 0;
 
@@ -252,45 +265,52 @@ int Application::start(const StartupOptions& options) {
         physicsAccumulator -= dunya::physics::PhysicsWorld::TIME_STEP;
       }
 
-      m_framePhysicsMs = std::chrono::duration<float, std::milli>(
-                           std::chrono::steady_clock::now() - stepStart
-      )
-                           .count();
-
-      m_frameSubsteps = substeps;
-
-      m_frameActiveBodies = m_runtime->physics().system().GetNumActiveBodies(
-        JPH::EBodyType::RigidBody
+      m_telemetry.set(
+        m_telemetry.key("physics"),
+        std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - stepStart
+        )
+          .count()
       );
 
-      if (substeps == MAX_PHYSICS_SUBSTEPS) {
-        physicsAccumulator = 0.0;
-      }
+      m_telemetry.set(m_telemetry.key("substeps"), double(substeps));
+
+      m_telemetry.set(
+        m_telemetry.key("awake"),
+        double(m_runtime->physics().system().GetNumActiveBodies(
+          JPH::EBodyType::RigidBody
+        ))
+      );
 
       {
         const auto carveStart = std::chrono::steady_clock::now();
 
-        m_deformation.applyImpacts(*m_runtime);
+        m_deformation.applyImpacts(*m_runtime, m_telemetry);
 
         if (m_demo.active()) {
           for (const auto& crater : m_deformation.cratersThisFrame()) {
             std::cout << "  crater on " << static_cast<uint32_t>(crater.entity)
                       << "  impulse " << crater.impulse << "  depth "
-                      << crater.depth << "  radius " << crater.radius << "  "
-                      << crater.milliseconds << " ms" << std::endl;
+                      << crater.depth << "  radius " << crater.radius
+                      << std::endl;
           }
         }
 
-        m_frameCarveMs = std::chrono::duration<float, std::milli>(
-                           std::chrono::steady_clock::now() - carveStart
-        )
-                           .count();
+        m_telemetry.set(
+          m_telemetry.key("carve"),
+          std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - carveStart
+          )
+            .count()
+        );
       }
 
-      m_runtime->syncPoses();
+      m_runtime->syncPoses(
+        float(physicsAccumulator / dunya::physics::PhysicsWorld::TIME_STEP)
+      );
 
       if (m_demo.active()) {
-        m_demo.measureMotion(activeWorld().registry());
+        m_demo.measureMotion(activeWorld().registry(), m_telemetry);
       }
     }
 
@@ -368,7 +388,9 @@ int Application::start(const StartupOptions& options) {
 
       m_transition = Transition::None;
       m_stall = Stall::None;
-      m_overlay.notice("");
+      if (m_tools) {
+        m_tools->notice("");
+      }
     }
 
     dunya::objectmodel::World& world = activeWorld();
@@ -490,7 +512,7 @@ int Application::start(const StartupOptions& options) {
         recordIndex,
         primitiveOffset,
         primitiveCount,
-        registry.get<dunya::objectmodel::Pose>(entity),
+        drawnPose(registry, entity),
         grid,
         registry.get<dunya::objectmodel::BakedVolume>(entity),
         m_frameContext.fieldRepresentation
@@ -551,10 +573,13 @@ int Application::start(const StartupOptions& options) {
 
       uploadDentedVolumes();
 
-      m_frameUploadMs = std::chrono::duration<float, std::milli>(
-                          std::chrono::steady_clock::now() - uploadStart
-      )
-                          .count();
+      m_telemetry.set(
+        m_telemetry.key("upload"),
+        std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - uploadStart
+        )
+          .count()
+      );
     }
 
     m_frameContext.fieldRecordCount = recordIndex;
@@ -562,16 +587,12 @@ int Application::start(const StartupOptions& options) {
 
     std::function<void(VkCommandBuffer)> overlayHook;
 
-    if constexpr (enableOverlay) {
-      if (!captureHook) {
-        m_overlay.begin();
-        m_overlay.build();
-        m_overlay.end();
+    if (m_tools && !captureHook) {
+      m_tools->build(*this);
 
-        overlayHook = [this](VkCommandBuffer commandBuffer) {
-          m_overlay.record(commandBuffer);
-        };
-      }
+      overlayHook = [this](VkCommandBuffer commandBuffer) {
+        m_tools->record(commandBuffer);
+      };
     }
 
     const bool swapChainStale = m_context.window().takeResized()
@@ -589,9 +610,11 @@ int Application::start(const StartupOptions& options) {
     } else {
       m_swapChain.recreate();
     }
-    if (bakeCheckPending) {
-      bakeCheckPending = false;
+    if (bakeCheckPending && !announcing) {
       m_context.device().waitIdle();
+
+      uint32_t checked = 0;
+
       for (dunya::objectmodel::Entity entity : world.fields()) {
         const dunya::objectmodel::SdfGrid& grid =
           registry.get<dunya::objectmodel::SdfGrid>(entity);
@@ -607,7 +630,11 @@ int Application::start(const StartupOptions& options) {
         dunya::renderer::VolumeImages images =
           m_volumePool.images(volume->index);
         m_fieldBaker.verifyBake(grid, volume->index, primitives, images);
+
+        ++checked;
       }
+
+      bakeCheckPending = checked == 0;
     }
 
     if (frameCheck.ran()) {
@@ -616,6 +643,12 @@ int Application::start(const StartupOptions& options) {
   }
 
   m_context.device().waitIdle();
+
+  if (bakeCheckPending) {
+    std::cout << "bake check: nothing was verified" << std::endl;
+
+    return 1;
+  }
 
   return frameCheck.failed() ? 1 : 0;
 }
@@ -631,7 +664,7 @@ void Application::handleMouseButtonEvent(
     return;
   }
 
-  if (!m_cameraController.looking() && m_overlay.wantsMouse()) {
+  if (!m_cameraController.looking() && m_tools && m_tools->wantsMouse()) {
     return;
   }
 
@@ -659,7 +692,11 @@ void Application::handleMouseButtonEvent(
     return;
   }
 
-  m_fieldEditor.edit(
+  if (m_tools == nullptr) {
+    return;
+  }
+
+  m_tools->edit(
     (event.mods & GLFW_MOD_SHIFT) != 0
       ? dunya::core::FIELD_OP_SMOOTH_UNION
       : dunya::core::FIELD_OP_SMOOTH_SUBTRACTION,
@@ -753,7 +790,9 @@ void Application::fire(const glm::vec3& aim) {
 }
 
 void Application::announce(std::string text, Transition transition) {
-  m_overlay.notice(std::move(text));
+  if (m_tools) {
+    m_tools->notice(std::move(text));
+  }
   m_transition = transition;
   m_stall = Stall::Announced;
 }
@@ -767,7 +806,9 @@ void Application::play() {
 
   m_runtime.emplace(m_authoredWorld, m_joltLibrary);
 
-  m_fieldEditor.retarget(m_runtime->world());
+  if (m_tools) {
+    m_tools->retarget(m_runtime->world());
+  }
 
   std::cout << "Play" << std::endl;
 }
@@ -893,38 +934,48 @@ void Application::dent(uint32_t count) {
   m_deformation.markDirty(target, touched);
 }
 
-DemoDriver::SceneSummary Application::sceneSummary() const {
+void Application::recordSceneTelemetry() {
   const dunya::objectmodel::World& world = activeWorld();
 
   std::unordered_set<const dunya::field::SampledField*> lattices;
 
-  DemoDriver::SceneSummary summary{};
+  size_t residentBytes = 0;
 
   for (const dunya::objectmodel::Entity entity : world.fields()) {
     if (const auto* field = world.sampledField(entity)) {
       if (lattices.insert(field).second) {
-        summary.residentBytes += field->distances.size() * sizeof(float)
-                                 + field->materials.size() * sizeof(uint8_t);
+        residentBytes += field->distances.size() * sizeof(float)
+                         + field->materials.size() * sizeof(uint8_t);
       }
     }
   }
 
-  summary.volumes = m_volumePool.allocated();
-  summary.volumeCapacity = dunya::core::MAX_FIELD_VOLUMES;
-  summary.lattices = lattices.size();
-  summary.objects = world.fields().size();
-  summary.shapes = m_runtime ? m_runtime->shapeCount() : 0u;
-
-  return summary;
+  m_telemetry.set(m_telemetry.key("volumes"), double(m_volumePool.allocated()));
+  m_telemetry.set(
+    m_telemetry.key("volumeCapacity"),
+    double(dunya::core::MAX_FIELD_VOLUMES)
+  );
+  m_telemetry.set(m_telemetry.key("lattices"), double(lattices.size()));
+  m_telemetry.set(m_telemetry.key("objects"), double(world.fields().size()));
+  m_telemetry.set(
+    m_telemetry.key("residentMB"),
+    double(residentBytes / (1024 * 1024))
+  );
+  m_telemetry.set(
+    m_telemetry.key("shapes"),
+    double(m_runtime ? m_runtime->shapeCount() : 0u)
+  );
 }
 
 void Application::uploadDentedVolumes() {
-  const uint32_t dropped =
-    m_residency.upload(activeWorld(), m_deformation.dirty());
+  m_residency.upload(activeWorld(), m_deformation.dirty(), m_telemetry);
 
   m_deformation.clearDirty();
 
-  if (dropped > 0 && !m_splitFailureReported) {
+  if (
+    m_telemetry.get(m_telemetry.key("dentsDropped")) > 0.0
+    && !m_splitFailureReported
+  ) {
     m_splitFailureReported = true;
 
     std::cout << "Volume pool full, a dent is not drawn\n";
@@ -942,59 +993,47 @@ void Application::stop() {
 
   m_runtime.reset();
 
-  m_fieldEditor.retarget(m_authoredWorld);
+  if (m_tools) {
+    m_tools->retarget(m_authoredWorld);
+  }
 
   std::cout << "Stop" << std::endl;
 }
 
-void Application::registerPanels() {
-  if constexpr (!enableOverlay) {
-    return;
-  }
+Application::PanelSources Application::panelSources() {
+  PanelSources frame{};
 
-  const panels::ShotActions shotActions{
-    [this] { fire(aimAtTarget()); },
-    [this] {
-      if (m_stall == Stall::None && m_runtime) {
-        announce("Resetting", Transition::Restart);
-      }
+  frame.world = &activeWorld();
+  frame.deformation = &m_deformation;
+  frame.impacts = m_runtime ? &m_runtime->physics().impacts() : nullptr;
+  frame.shot = &m_shotSettings;
+  frame.march = &m_frameContext.march;
+
+  frame.balls = m_balls.size();
+  frame.maxBalls = MAX_BALLS;
+  frame.primitives = activeWorld().pool().size();
+
+  frame.playing = m_runtime.has_value();
+  frame.analytic =
+    m_frameContext.fieldRepresentation == dunya::core::FIELD_ANALYTIC;
+
+  frame.frameMs = m_lastFrameMs;
+  frame.extent = m_swapChain.extent();
+
+  frame.fire = [this] {
+    fire(aimAtTarget());
+  };
+  frame.resetWall = [this] {
+    if (m_stall == Stall::None && m_runtime) {
+      announce("Resetting", Transition::Restart);
     }
   };
 
-  m_overlay.panel("Dunya", [this] {
-    panels::dunya(
-      activeWorld(),
-      m_deformation,
-      m_runtime.has_value(),
-      m_lastFrameMs
-    );
-  });
-
-  m_overlay.panel("Damage", [this] {
-    panels::damage(
-      m_deformation,
-      m_runtime ? &m_runtime->physics().impacts() : nullptr
-    );
-  });
-
-  m_overlay.panel("Shot", [this, shotActions] {
-    panels::shot(m_shotSettings, m_balls.size(), MAX_BALLS, shotActions);
-  });
-
-  m_overlay.panel("Frame", [this] {
-    panels::frame(
-      m_lastFrameMs,
-      m_swapChain.extent(),
-      activeWorld().pool().size(),
-      m_frameContext.fieldRepresentation == dunya::core::FIELD_ANALYTIC
-    );
-  });
-
-  m_overlay.panel("March", [this] { panels::march(m_frameContext.march); });
+  return frame;
 }
 
 void Application::handleKeyEvent(const dunya::platform::KeyEvent& event) {
-  if (m_overlay.wantsKeyboard() && event.key != GLFW_KEY_ESCAPE) {
+  if (m_tools && m_tools->wantsKeyboard() && event.key != GLFW_KEY_ESCAPE) {
     return;
   }
 
@@ -1022,7 +1061,9 @@ void Application::handleKeyEvent(const dunya::platform::KeyEvent& event) {
     event.key == GLFW_KEY_B
     && event.type == dunya::platform::KeyEventType::SinglePressed
   ) {
-    m_fieldEditor.stress(10);
+    if (m_tools) {
+      m_tools->stress(10);
+    }
     return;
   }
 
@@ -1093,7 +1134,9 @@ void Application::handleKeyEvent(const dunya::platform::KeyEvent& event) {
     && event.type == dunya::platform::KeyEventType::Pressed
   ) {
     if (m_input.isDown(GLFW_KEY_LEFT_CONTROL)) {
-      m_fieldEditor.undo();
+      if (m_tools) {
+        m_tools->undo();
+      }
     }
   }
 
@@ -1102,7 +1145,9 @@ void Application::handleKeyEvent(const dunya::platform::KeyEvent& event) {
     && event.type == dunya::platform::KeyEventType::Pressed
   ) {
     if (m_input.isDown(GLFW_KEY_LEFT_CONTROL)) {
-      m_fieldEditor.redo();
+      if (m_tools) {
+        m_tools->redo();
+      }
     }
   }
   static_cast<void>(m_cameraController.handleKey(event, acceptsInput()));

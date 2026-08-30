@@ -8,6 +8,7 @@
 #include <dunya/gpu/sampler/sampler.h>
 #include <dunya/gpu/texture/texture.h>
 #include <dunya/renderer/frame/frame.h>
+#include <dunya/core/asset/asset.h>
 #include <dunya/objectmodel/camera/camera.h>
 #include <dunya/objectmodel/sdfgrid/sdfgrid.h>
 #include <dunya/objectmodel/world/world.h>
@@ -65,8 +66,16 @@ public:
   [[nodiscard]]
   dunya::objectmodel::Entity deformable() const noexcept;
 
+  [[nodiscard]] uint32_t materialIndex(dunya::core::AssetId id) const;
+  [[nodiscard]] uint32_t meshIndex(dunya::core::AssetId id) const;
+
+  [[nodiscard]] const dunya::core::AssetRegistry&
+  materialAssets() const noexcept;
+
+  [[nodiscard]] const dunya::core::AssetRegistry& meshAssets() const noexcept;
+
 private:
-  static std::vector<dunya::renderer::MaterialRecord> createMaterials();
+  std::vector<dunya::renderer::MaterialRecord> createMaterials();
   static std::vector<dunya::gpu::Texture> createTextures(
     const dunya::gpu::Device& device
   );
@@ -79,6 +88,9 @@ private:
     const dunya::field::Primitive& primitive,
     const char* what
   );
+
+  dunya::core::AssetRegistry m_materialAssets;
+  dunya::core::AssetRegistry m_meshAssets;
 
   std::vector<dunya::renderer::MaterialRecord> m_materials;
   std::vector<dunya::gpu::Sampler> m_samplers;

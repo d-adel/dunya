@@ -72,7 +72,8 @@ void Deformation::carve(
   markDirty(entity, report.samples);
 }
 
-void Deformation::applyImpacts(Runtime& runtime) {
+void Deformation::applyImpacts(Runtime& runtime, core::Telemetry& telemetry) {
+  const auto craters = telemetry.key("craters");
   m_carved.clear();
 
   runtime.physics().impacts().drain(m_impacts);
@@ -164,21 +165,12 @@ void Deformation::applyImpacts(Runtime& runtime) {
 
     field::updateBounds(cutter);
 
-    const auto started = std::chrono::steady_clock::now();
-
     carve(runtime, entity, cutter);
     ++m_cratersApplied;
 
-    m_carved.push_back(
-      {entity,
-       pending.impulse,
-       depth,
-       radius,
-       std::chrono::duration<float, std::milli>(
-         std::chrono::steady_clock::now() - started
-       )
-         .count()}
-    );
+    telemetry.add(craters, 1.0);
+
+    m_carved.push_back({entity, pending.impulse, depth, radius});
   }
 
   m_pending.clear();

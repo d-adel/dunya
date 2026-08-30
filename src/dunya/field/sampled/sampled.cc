@@ -410,10 +410,6 @@ bool brickHoldsSurface(const SampledField& field, uint32_t brick) {
   return field.brickMinimum[brick] <= 0.0f && field.brickMaximum[brick] >= 0.0f;
 }
 
-float bakeError(const SampledField& field, float sourceLipschitz) {
-  return 0.5f * sourceLipschitz * glm::length(field.voxelSize);
-}
-
 WriteReport write(
   SampledField& field,
   const SampleBox& box,

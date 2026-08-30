@@ -2,8 +2,10 @@
 
 namespace dunya::gpu {
 
-DepthImage::DepthImage(const Device& device, const VkExtent2D& swapChainExtent)
-    : m_device(device.vkDevice()) {
+DepthImage::DepthImage(
+  const Device& device,
+  const VkExtent2D& swapChainExtent
+) {
   recreate(device, swapChainExtent);
 }
 
@@ -67,11 +69,6 @@ void DepthImage::findDepthFormat(const VkPhysicalDevice& physicalDevice) {
     VK_IMAGE_TILING_OPTIMAL,
     VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
   );
-}
-
-bool DepthImage::hasStencilComponent(VkFormat format) {
-  return format == VK_FORMAT_D32_SFLOAT_S8_UINT
-         || format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
 
 }
