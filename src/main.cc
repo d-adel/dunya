@@ -4,7 +4,7 @@ int main(int argc, char** argv) {
   try {
     const StartupOptions options{std::span(argv, argc)};
 
-    Application application(options, EditorTools::factory());
+    Application application(options, DebugTools::factory());
 
     return application.start(options);
   } catch (const std::exception& e) {

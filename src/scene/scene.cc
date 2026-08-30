@@ -195,7 +195,7 @@ Scene::Scene(
 
   m_world.addStaticBody(plinthEntity);
 
-  m_meshAssets.bind(
+  m_assets.bind<dunya::objectmodel::Mesh>(
     dunya::core::MESH_VIKING_ROOM,
     static_cast<uint32_t>(m_meshes.size())
   );
@@ -399,11 +399,26 @@ std::vector<dunya::renderer::MaterialRecord> Scene::createMaterials() {
   dunya::renderer::MaterialRecord projectile = neutral;
   projectile.baseColor = glm::vec4(0.15f, 0.65f, 0.75f, 1.0f);
 
-  m_materialAssets.bind(dunya::core::MATERIAL_FIELD_SPHERE, 0u);
-  m_materialAssets.bind(dunya::core::MATERIAL_FIELD_PLANE, 1u);
-  m_materialAssets.bind(dunya::core::MATERIAL_VIKING_ROOM, 2u);
-  m_materialAssets.bind(dunya::core::MATERIAL_CHECKER, 3u);
-  m_materialAssets.bind(dunya::core::MATERIAL_PROJECTILE, 4u);
+  m_assets.bind<dunya::objectmodel::Material>(
+    dunya::core::MATERIAL_FIELD_SPHERE,
+    0u
+  );
+  m_assets.bind<dunya::objectmodel::Material>(
+    dunya::core::MATERIAL_FIELD_PLANE,
+    1u
+  );
+  m_assets.bind<dunya::objectmodel::Material>(
+    dunya::core::MATERIAL_VIKING_ROOM,
+    2u
+  );
+  m_assets.bind<dunya::objectmodel::Material>(
+    dunya::core::MATERIAL_CHECKER,
+    3u
+  );
+  m_assets.bind<dunya::objectmodel::Material>(
+    dunya::core::MATERIAL_PROJECTILE,
+    4u
+  );
 
   return {fieldSphere, fieldPlane, vikingRoom, checker, projectile};
 }
@@ -460,7 +475,7 @@ dunya::objectmodel::Entity Scene::deformable() const noexcept {
 }
 
 uint32_t Scene::materialIndex(dunya::core::AssetId id) const {
-  const uint32_t index = m_materialAssets.index(id);
+  const uint32_t index = m_assets.index<dunya::objectmodel::Material>(id);
 
   if (index == dunya::core::UNBOUND_ASSET) {
     throw std::runtime_error("Scene: no material is bound under that asset id");
@@ -470,7 +485,7 @@ uint32_t Scene::materialIndex(dunya::core::AssetId id) const {
 }
 
 uint32_t Scene::meshIndex(dunya::core::AssetId id) const {
-  const uint32_t index = m_meshAssets.index(id);
+  const uint32_t index = m_assets.index<dunya::objectmodel::Mesh>(id);
 
   if (index == dunya::core::UNBOUND_ASSET) {
     throw std::runtime_error("Scene: no mesh is bound under that asset id");
@@ -479,10 +494,6 @@ uint32_t Scene::meshIndex(dunya::core::AssetId id) const {
   return index;
 }
 
-const dunya::core::AssetRegistry& Scene::materialAssets() const noexcept {
-  return m_materialAssets;
-}
-
-const dunya::core::AssetRegistry& Scene::meshAssets() const noexcept {
-  return m_meshAssets;
+const dunya::core::AssetDatabase& Scene::assets() const noexcept {
+  return m_assets;
 }

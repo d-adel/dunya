@@ -1,8 +1,8 @@
 #include "instantiate.h"
 
-#include <dunya/objectmodel/staticbody/staticbody.h>
-#include <dunya/objectmodel/massscale/massscale.h>
-#include <dunya/objectmodel/deformable/deformable.h>
+#include <dunya/objectmodel/authoredcomponents/authoredcomponents.h>
 #include <dunya/objectmodel/deformed/deformed.h>
+#include <dunya/objectmodel/sharedfield/sharedfield.h>
 
 #include <stdexcept>
+#include <type_traits>

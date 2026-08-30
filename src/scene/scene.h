@@ -8,7 +8,7 @@
 #include <dunya/gpu/sampler/sampler.h>
 #include <dunya/gpu/texture/texture.h>
 #include <dunya/renderer/frame/frame.h>
-#include <dunya/core/asset/asset.h>
+#include <dunya/core/asset/assetdatabase.h>
 #include <dunya/objectmodel/camera/camera.h>
 #include <dunya/objectmodel/sdfgrid/sdfgrid.h>
 #include <dunya/objectmodel/world/world.h>
@@ -71,10 +71,7 @@ public:
   [[nodiscard]] uint32_t materialIndex(dunya::core::AssetId id) const;
   [[nodiscard]] uint32_t meshIndex(dunya::core::AssetId id) const;
 
-  [[nodiscard]] const dunya::core::AssetRegistry&
-  materialAssets() const noexcept;
-
-  [[nodiscard]] const dunya::core::AssetRegistry& meshAssets() const noexcept;
+  [[nodiscard]] const dunya::core::AssetDatabase& assets() const noexcept;
 
 private:
   std::vector<dunya::renderer::MaterialRecord> createMaterials();
@@ -91,8 +88,7 @@ private:
     const char* what
   );
 
-  dunya::core::AssetRegistry m_materialAssets;
-  dunya::core::AssetRegistry m_meshAssets;
+  dunya::core::AssetDatabase m_assets;
 
   std::vector<dunya::renderer::MaterialRecord> m_materials;
   std::vector<dunya::gpu::Sampler> m_samplers;

@@ -92,7 +92,7 @@ Application::Application(const StartupOptions& options, ToolsFactory tools)
 
       m_reloadRequested(false) {
   if (tools) {
-    m_tools = tools(m_context, m_swapChain, m_authoredWorld);
+    m_tools = tools(m_context, m_swapChain);
   }
 
   m_keySubscription = dunya::core::EventDispatcher::instance()
@@ -131,9 +131,7 @@ int Application::start(const StartupOptions& options) {
             << "Alt + click carves by hand once stopped\n";
 
   if (options.carves > 0) {
-    if (m_tools) {
-      m_tools->stress(options.carves);
-    }
+    carveForMeasurement(options.carves);
   }
 
   m_pendingDents = options.dents;
@@ -588,7 +586,7 @@ int Application::start(const StartupOptions& options) {
     std::function<void(VkCommandBuffer)> overlayHook;
 
     if (m_tools && !captureHook) {
-      m_tools->build(*this);
+      m_tools->build(m_panels);
 
       overlayHook = [this](VkCommandBuffer commandBuffer) {
         m_tools->record(commandBuffer);
@@ -691,20 +689,6 @@ void Application::handleMouseButtonEvent(
 
     return;
   }
-
-  if (m_tools == nullptr) {
-    return;
-  }
-
-  m_tools->edit(
-    (event.mods & GLFW_MOD_SHIFT) != 0
-      ? dunya::core::FIELD_OP_SMOOTH_UNION
-      : dunya::core::FIELD_OP_SMOOTH_SUBTRACTION,
-    m_cameraController.cursorRay(
-      m_swapChain.extent(),
-      m_frameContext.proj * m_frameContext.view
-    )
-  );
 }
 
 dunya::objectmodel::World& Application::activeWorld() noexcept {
@@ -807,7 +791,6 @@ void Application::play() {
   m_runtime.emplace(m_authoredWorld, m_joltLibrary);
 
   if (m_tools) {
-    m_tools->retarget(m_runtime->world());
   }
 
   std::cout << "Play" << std::endl;
@@ -994,42 +977,9 @@ void Application::stop() {
   m_runtime.reset();
 
   if (m_tools) {
-    m_tools->retarget(m_authoredWorld);
   }
 
   std::cout << "Stop" << std::endl;
-}
-
-Application::PanelSources Application::panelSources() {
-  PanelSources frame{};
-
-  frame.world = &activeWorld();
-  frame.deformation = &m_deformation;
-  frame.impacts = m_runtime ? &m_runtime->physics().impacts() : nullptr;
-  frame.shot = &m_shotSettings;
-  frame.march = &m_frameContext.march;
-
-  frame.balls = m_balls.size();
-  frame.maxBalls = MAX_BALLS;
-  frame.primitives = activeWorld().pool().size();
-
-  frame.playing = m_runtime.has_value();
-  frame.analytic =
-    m_frameContext.fieldRepresentation == dunya::core::FIELD_ANALYTIC;
-
-  frame.frameMs = m_lastFrameMs;
-  frame.extent = m_swapChain.extent();
-
-  frame.fire = [this] {
-    fire(aimAtTarget());
-  };
-  frame.resetWall = [this] {
-    if (m_stall == Stall::None && m_runtime) {
-      announce("Resetting", Transition::Restart);
-    }
-  };
-
-  return frame;
 }
 
 void Application::handleKeyEvent(const dunya::platform::KeyEvent& event) {
@@ -1062,7 +1012,6 @@ void Application::handleKeyEvent(const dunya::platform::KeyEvent& event) {
     && event.type == dunya::platform::KeyEventType::SinglePressed
   ) {
     if (m_tools) {
-      m_tools->stress(10);
     }
     return;
   }
@@ -1135,7 +1084,6 @@ void Application::handleKeyEvent(const dunya::platform::KeyEvent& event) {
   ) {
     if (m_input.isDown(GLFW_KEY_LEFT_CONTROL)) {
       if (m_tools) {
-        m_tools->undo();
       }
     }
   }
@@ -1146,9 +1094,53 @@ void Application::handleKeyEvent(const dunya::platform::KeyEvent& event) {
   ) {
     if (m_input.isDown(GLFW_KEY_LEFT_CONTROL)) {
       if (m_tools) {
-        m_tools->redo();
       }
     }
   }
   static_cast<void>(m_cameraController.handleKey(event, acceptsInput()));
+}
+
+void Application::carveForMeasurement(uint32_t count) {
+  if (m_authoredWorld.fields().empty()) {
+    std::cout << "No field to carve into\n";
+    return;
+  }
+
+  const dunya::objectmodel::Entity target = m_authoredWorld.fields()[0];
+
+  const std::optional<dunya::field::Aabb> extent =
+    dunya::field::boundedExtent(m_authoredWorld.primitives(target));
+
+  if (!extent.has_value()) {
+    std::cout << "Nothing bounded to carve into\n";
+    return;
+  }
+
+  const glm::vec3 span = extent->maximum - extent->minimum;
+  const uint32_t before = m_authoredWorld.primitiveCount(target);
+
+  for (uint32_t i = 0; i != count; ++i) {
+    const glm::vec3 at = glm::fract(
+      static_cast<float>(before + i)
+      * glm::vec3(0.8191725f, 0.6710436f, 0.5497005f)
+    );
+
+    dunya::field::Primitive cutter = dunya::field::makeSphere(
+      extent->minimum + span * at,
+      dunya::core::EDIT_RADIUS,
+      0u,
+      dunya::core::FIELD_OP_SUBTRACTION,
+      0.0f
+    );
+
+    dunya::field::updateBounds(cutter);
+
+    if (!m_authoredWorld.addPrimitive(target, cutter)) {
+      std::cout << "Primitive budget full\n";
+      break;
+    }
+  }
+
+  std::cout << "stress  primitives " << before << " -> "
+            << m_authoredWorld.primitiveCount(target) << "\n";
 }

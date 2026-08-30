@@ -1,5 +1,6 @@
 #pragma once
 
+#include <dunya/core/panels/panels.h>
 #include <dunya/gpu/context/context.h>
 #include <dunya/gpu/swapchain/swapchain.h>
 
@@ -30,12 +31,10 @@ public:
 
   ~Overlay();
 
-  void panel(std::string name, std::function<void()> draw);
-
   void notice(std::string text);
 
   void begin();
-  void build();
+  void build(dunya::core::Panels& registry);
   void end();
 
   void record(VkCommandBuffer commandBuffer) const;
@@ -46,15 +45,7 @@ public:
 private:
   void drawNotice();
 
-  struct Panel {
-    std::string name;
-    std::function<void()> draw;
-    bool visible = true;
-  };
-
   const dunya::gpu::Context& m_context;
-
-  std::vector<Panel> m_panels;
 
   std::string m_notice;
 

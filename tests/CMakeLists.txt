@@ -9,18 +9,23 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(unit_tests
     asset_tests.cc
+    assetdatabase_tests.cc
     boundedextent_tests.cc
     commandhistory_tests.cc
     crack_tests.cc
+    panels_tests.cc
     deform_tests.cc
     entt_tests.cc
     field_tests.cc
     glmmeta_tests.cc
+    worldmeta_tests.cc
+    worldfile_tests.cc
     fieldshape_tests.cc
     impact_tests.cc
     instantiateworld_tests.cc
     pose_tests.cc
     physics_tests.cc
+    project_tests.cc
     rangestore_tests.cc
     raycast_tests.cc
     redistance_tests.cc

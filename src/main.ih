@@ -1,5 +1,5 @@
 #include <application/application.h>
-#include <editortools/editortools.h>
+#include <debugtools/debugtools.h>
 #include <startupoptions/startupoptions.h>
 #include <iostream>
 #include <span>

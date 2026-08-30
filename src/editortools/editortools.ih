@@ -1,5 +1,0 @@
-#include "editortools.h"
-
-#include <panels/panels.h>
-
-#include <utility>

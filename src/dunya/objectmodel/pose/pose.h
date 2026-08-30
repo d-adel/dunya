@@ -1,5 +1,7 @@
 #pragma once
 
+#include <dunya/objectmodel/authored/authored.h>
+
 #include <dunya/objectmodel/selfcontained/selfcontained.h>
 
 #include <glm/glm.hpp>
@@ -23,5 +25,8 @@ inline glm::mat4 model(const Pose& pose) {
 
   return translationMatrix * rotationMatrix;
 }
+
+template<>
+inline constexpr bool authored<Pose> = true;
 
 }

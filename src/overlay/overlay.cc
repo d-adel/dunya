@@ -84,15 +84,91 @@ void Overlay::begin() {
   ImGui::NewFrame();
 }
 
-void Overlay::panel(std::string name, std::function<void()> draw) {
-  m_panels.push_back({std::move(name), std::move(draw), true});
+namespace {
+
+void drawWidget(const dunya::core::Widget& widget) {
+  switch (widget.kind) {
+    case dunya::core::WidgetKind::Separator:
+      ImGui::Separator();
+      return;
+
+    case dunya::core::WidgetKind::Button:
+      if (ImGui::Button(widget.name.c_str()) && widget.press) {
+        widget.press();
+      }
+      return;
+
+    case dunya::core::WidgetKind::Text:
+      if (widget.text) {
+        ImGui::Text("%s  %s", widget.name.c_str(), widget.text().c_str());
+      }
+      return;
+
+    case dunya::core::WidgetKind::Toggle: {
+      if (!widget.read) {
+        return;
+      }
+
+      bool on = widget.read() != 0.0;
+
+      if (ImGui::Checkbox(widget.name.c_str(), &on) && widget.write) {
+        widget.write(on ? 1.0 : 0.0);
+      }
+
+      return;
+    }
+
+    case dunya::core::WidgetKind::Slider: {
+      if (!widget.read) {
+        return;
+      }
+
+      float held = static_cast<float>(widget.read());
+
+      const std::string format =
+        widget.unit.empty() ? std::string("%.4f") : "%.4f " + widget.unit;
+
+      if (
+        ImGui::SliderFloat(
+          widget.name.c_str(),
+          &held,
+          static_cast<float>(widget.minimum),
+          static_cast<float>(widget.maximum),
+          format.c_str()
+        )
+        && widget.write
+      ) {
+        widget.write(static_cast<double>(held));
+      }
+
+      return;
+    }
+
+    case dunya::core::WidgetKind::Value:
+      if (widget.read) {
+        ImGui::Text(
+          "%-18s %10.3f %s",
+          widget.name.c_str(),
+          widget.read(),
+          widget.unit.c_str()
+        );
+      }
+
+      return;
+  }
 }
 
-void Overlay::build() {
+}
+
+void Overlay::build(dunya::core::Panels& registry) {
   if (ImGui::BeginMainMenuBar()) {
     if (ImGui::BeginMenu("Panels")) {
-      for (Panel& panel : m_panels) {
-        ImGui::MenuItem(panel.name.c_str(), nullptr, &panel.visible);
+      for (dunya::core::Panel& panel : registry.panels()) {
+        bool on = panel.visible();
+
+        if (ImGui::MenuItem(panel.name().c_str(), nullptr, &on)) {
+          panel.show(on);
+        }
       }
 
       ImGui::EndMenu();
@@ -101,16 +177,22 @@ void Overlay::build() {
     ImGui::EndMainMenuBar();
   }
 
-  for (Panel& panel : m_panels) {
-    if (!panel.visible) {
+  for (dunya::core::Panel& panel : registry.panels()) {
+    if (!panel.visible()) {
       continue;
     }
 
-    if (ImGui::Begin(panel.name.c_str(), &panel.visible)) {
-      panel.draw();
+    bool open = true;
+
+    if (ImGui::Begin(panel.name().c_str(), &open)) {
+      for (const dunya::core::Widget& widget : panel.widgets()) {
+        drawWidget(widget);
+      }
     }
 
     ImGui::End();
+
+    panel.show(open);
   }
 
   drawNotice();

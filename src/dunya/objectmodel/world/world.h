@@ -8,6 +8,7 @@
 #include <dunya/objectmodel/deformable/deformable.h>
 #include <dunya/objectmodel/deformed/deformed.h>
 #include <dunya/objectmodel/entity/entity.h>
+#include <dunya/objectmodel/authored/authored.h>
 #include <dunya/objectmodel/pose/pose.h>
 #include <dunya/objectmodel/sdfgrid/sdfgrid.h>
 #include <dunya/objectmodel/sdfprimitivestore/sdfprimitivestore.h>
@@ -19,6 +20,7 @@
 #include <entt/core/hashed_string.hpp>
 #include <entt/entity/registry.hpp>
 
+#include <type_traits>
 #include <cstddef>
 #include <stdexcept>
 #include <cstdint>
@@ -38,6 +40,22 @@ public:
   World& operator=(World&&) = delete;
 
   const entt::registry& registry() const noexcept;
+
+  void clear();
+
+  Entity createAuthored();
+
+  [[nodiscard]]
+  bool createAuthoredAt(Entity hint);
+
+  template<Authored T>
+  void emplaceAuthored(Entity entity, const T& value) {
+    if constexpr (std::is_empty_v<T>) {
+      m_registry.emplace_or_replace<T>(entity);
+    } else {
+      m_registry.emplace_or_replace<T>(entity, value);
+    }
+  }
 
   Entity createField(const Pose& pose, const SdfGrid& grid);
 

@@ -1,4 +1,5 @@
 add_library(dunya_core STATIC
+    panels/panels.cc
     event/event.cc
     asset/asset.cc
     nametable/nametable.cc

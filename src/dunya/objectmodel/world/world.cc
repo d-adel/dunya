@@ -26,6 +26,25 @@ const entt::registry& World::registry() const noexcept {
   return m_registry;
 }
 
+void World::clear() {
+  m_registry.clear();
+}
+
+Entity World::createAuthored() {
+  return m_registry.create();
+}
+
+bool World::createAuthoredAt(Entity hint) {
+  const Entity entity = m_registry.create(hint);
+
+  if (entity != hint) {
+    m_registry.destroy(entity);
+    return false;
+  }
+
+  return true;
+}
+
 Entity World::createField(const Pose& pose, const SdfGrid& grid) {
   const Entity entity = m_registry.create();
 

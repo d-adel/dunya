@@ -1,5 +1,4 @@
 #include "application.h"
-#include <panels/panels.h>
 #include <dunya/renderer/vertex/vertex.h>
 #include <dunya/core/config/config.h>
 #include <dunya/field/analytic/analytic.h>
@@ -10,6 +9,7 @@
 #include <dunya/objectmodel/deformable/deformable.h>
 #include <dunya/objectmodel/deformed/deformed.h>
 #include <dunya/objectmodel/renderpose/renderpose.h>
+#include <dunya/core/asset/assetdatabase.h>
 #include <dunya/objectmodel/rigidbody/rigidbody.h>
 #include <dunya/objectmodel/pose/pose.h>
 #include <dunya/objectmodel/world/world.h>

@@ -23,6 +23,7 @@
 #include <demodriver/demodriver.h>
 #include <framecheck/framecheck.h>
 #include <tools/tools.h>
+#include <dunya/core/panels/panels.h>
 #include <startupoptions/startupoptions.h>
 #include <dunya/renderer/fieldrecordtable/fieldrecordtable.h>
 #include <dunya/renderer/fieldresidency/fieldresidency.h>
@@ -50,30 +51,9 @@ public:
 
   int start(const StartupOptions& options = {});
 
-  struct PanelSources {
-    dunya::objectmodel::World* world = nullptr;
-    dunya::runtime::Deformation* deformation = nullptr;
-    dunya::physics::ImpactListener* impacts = nullptr;
-    Scene::Projectile* shot = nullptr;
-    dunya::renderer::MarchParams* march = nullptr;
-
-    size_t balls = 0;
-    size_t maxBalls = 0;
-    size_t primitives = 0;
-
-    bool playing = false;
-    bool analytic = false;
-
-    double frameMs = 0.0;
-    VkExtent2D extent{};
-
-    std::function<void()> fire;
-    std::function<void()> resetWall;
-  };
-
-  [[nodiscard]] PanelSources panelSources();
-
 private:
+  void carveForMeasurement(uint32_t count);
+
   void handleKeyEvent(const dunya::platform::KeyEvent& event);
   void handleMouseButtonEvent(const dunya::platform::MouseButtonEvent& event);
 
@@ -144,6 +124,8 @@ private:
   dunya::renderer::Renderer m_renderer;
 
   std::unique_ptr<Tools> m_tools;
+
+  dunya::core::Panels m_panels;
 
   Stall m_stall = Stall::None;
   Transition m_transition = Transition::None;

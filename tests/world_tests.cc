@@ -540,3 +540,43 @@ TEST_CASE("a fresh bake puts the lattice back on its primitives", "[world]") {
 
   REQUIRE_FALSE(world.registry().all_of<dunya::objectmodel::Deformed>(entity));
 }
+
+TEST_CASE("clearing a world releases its entities and arena", "[world]") {
+  World world;
+
+  dunya::objectmodel::SdfGrid grid{};
+  grid.resolution = glm::uvec3(65u);
+
+  for (int i = 0; i != 3; ++i) {
+    const dunya::objectmodel::Entity entity =
+      world.createField(dunya::objectmodel::Pose{}, grid);
+
+    REQUIRE(world.addPrimitive(
+      entity,
+      dunya::field::makeBox(glm::vec3(0.0f), glm::vec3(0.5f))
+    ));
+  }
+
+  REQUIRE(world.fields().size() == 3);
+
+  const size_t held = world.pool().size();
+
+  world.clear();
+
+  REQUIRE(world.fields().empty());
+
+  const auto* poses = world.registry().storage<dunya::objectmodel::Pose>();
+
+  REQUIRE((poses == nullptr || poses->empty()));
+
+  const dunya::objectmodel::Entity fresh =
+    world.createField(dunya::objectmodel::Pose{}, grid);
+
+  REQUIRE(world.addPrimitive(
+    fresh,
+    dunya::field::makeBox(glm::vec3(0.0f), glm::vec3(0.5f))
+  ));
+
+  REQUIRE(world.fields().size() == 1);
+  REQUIRE(world.pool().size() <= held);
+}

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <dunya/objectmodel/authored/authored.h>
+
 #include <dunya/field/analytic/analytic.h>
 #include <dunya/field/field.h>
 
@@ -21,5 +23,8 @@ void fitToPrimitives(
   SdfGrid& grid,
   std::span<const dunya::field::Primitive> primitives
 );
+
+template<>
+inline constexpr bool authored<SdfGrid> = true;
 
 }

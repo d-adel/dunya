@@ -107,12 +107,14 @@ add_library(imgui STATIC
     "${imgui_SOURCE_DIR}/imgui_draw.cpp"
     "${imgui_SOURCE_DIR}/imgui_tables.cpp"
     "${imgui_SOURCE_DIR}/imgui_widgets.cpp"
+    "${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp"
     "${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp"
     "${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp"
 )
 target_include_directories(imgui SYSTEM PUBLIC
     "${imgui_SOURCE_DIR}"
     "${imgui_SOURCE_DIR}/backends"
+    "${imgui_SOURCE_DIR}/misc/cpp"
 )
 target_link_libraries(imgui PUBLIC glfw Vulkan::Vulkan)
 target_compile_features(imgui PUBLIC cxx_std_20)
@@ -133,8 +135,8 @@ add_executable(DunyaEditor
     src/startupoptions/startupoptions.cc
     src/framecheck/framecheck.cc
     src/demodriver/demodriver.cc
-    src/panels/panels.cc
-    src/editortools/editortools.cc
+
+    src/debugtools/debugtools.cc
     src/cameracontroller/cameracontroller.cc
     src/application/application.cc
     src/scene/scene.cc
@@ -213,6 +215,7 @@ else()
     target_compile_options(DunyaRuntime PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
 target_link_libraries(DunyaRuntime PRIVATE
+    dunya::serialize
     glfw
     Vulkan::Vulkan
     glm::glm
@@ -235,6 +238,7 @@ else()
 endif()
 target_compile_definitions(DunyaEditor PRIVATE DUNYA_EDITOR=1)
 target_link_libraries(DunyaEditor PRIVATE
+    dunya::serialize
     glfw
     Vulkan::Vulkan
     glm::glm
