@@ -2,13 +2,13 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include <dunya/core/config/config.h>
-#include <dunya/objectmodel/sdfgrid/sdfgrid.h>
-#include <dunya/objectmodel/material/material.h>
-#include <dunya/objectmodel/mesh/mesh.h>
-#include <dunya/objectmodel/pose/pose.h>
-#include <dunya/objectmodel/rigidbody/rigidbody.h>
-#include <dunya/objectmodel/selfcontained/selfcontained.h>
-#include <dunya/objectmodel/staticbody/staticbody.h>
+#include <dunya/objectmodel/component/sdfgrid/sdfgrid.h>
+#include <dunya/objectmodel/component/material/material.h>
+#include <dunya/objectmodel/component/mesh/mesh.h>
+#include <dunya/objectmodel/component/pose/pose.h>
+#include <dunya/objectmodel/component/rigidbody/rigidbody.h>
+#include <dunya/objectmodel/trait/selfcontained/selfcontained.h>
+#include <dunya/objectmodel/component/staticbody/staticbody.h>
 #include <dunya/objectmodel/world/world.h>
 
 #include <entt/entity/registry.hpp>

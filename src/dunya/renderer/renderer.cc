@@ -130,7 +130,7 @@ void Renderer::createSyncObjects(uint32_t imageCount) {
 void Renderer::recordCommandBuffer(
   const dunya::gpu::SwapChain& swapChain,
   const Frame& frameContext,
-  const std::function<void(VkCommandBuffer)>& onOverlay
+  const std::function<void(VkCommandBuffer)>& onAfterScene
 ) {
   VkCommandBufferBeginInfo beginInfo{};
   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -349,8 +349,8 @@ void Renderer::recordCommandBuffer(
     }
   }
 
-  if (onOverlay) {
-    onOverlay(m_commandBuffers[m_currentFrame]);
+  if (onAfterScene) {
+    onAfterScene(m_commandBuffers[m_currentFrame]);
   }
 
   vkCmdEndRendering(m_commandBuffers[m_currentFrame]);
@@ -390,7 +390,7 @@ void Renderer::recordCommandBuffer(
 bool Renderer::drawFrame(
   const dunya::gpu::SwapChain& swapChain,
   const Frame& frameContext,
-  const std::function<void(VkCommandBuffer)>& onOverlay,
+  const std::function<void(VkCommandBuffer)>& onAfterScene,
   const std::function<void(VkImage)>& onFrameReady
 ) {
   if (
@@ -456,7 +456,7 @@ bool Renderer::drawFrame(
     light
   );
 
-  recordCommandBuffer(swapChain, frameContext, onOverlay);
+  recordCommandBuffer(swapChain, frameContext, onAfterScene);
 
   VkSubmitInfo2 submitInfo2{};
   submitInfo2.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;

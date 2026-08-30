@@ -2,12 +2,15 @@
 
 #include <dunya/serialize/worldfile/worldfile.h>
 
-#include <dunya/objectmodel/deformable/deformable.h>
-#include <dunya/objectmodel/massscale/massscale.h>
-#include <dunya/objectmodel/staticbody/staticbody.h>
-#include <dunya/objectmodel/bakedvolume/bakedvolume.h>
-#include <dunya/objectmodel/deformed/deformed.h>
-#include <dunya/objectmodel/rigidbody/rigidbody.h>
+#include <dunya/objectmodel/component/deformable/deformable.h>
+#include <dunya/objectmodel/component/massscale/massscale.h>
+#include <dunya/objectmodel/component/staticbody/staticbody.h>
+#include <dunya/objectmodel/component/bakedvolume/bakedvolume.h>
+#include <dunya/objectmodel/component/deformed/deformed.h>
+#include <dunya/objectmodel/component/rigidbody/rigidbody.h>
+#include <dunya/objectmodel/component/lens/lens.h>
+
+#include <vector>
 
 using dunya::core::AssetDatabase;
 using dunya::objectmodel::World;
@@ -62,6 +65,49 @@ dunya::objectmodel::Entity authorBox(World& world, uint32_t material) {
   return entity;
 }
 
+}
+
+TEST_CASE("entities keep the order they were authored in", "[worldfile]") {
+  World authored;
+
+  dunya::objectmodel::SdfGrid grid{};
+  grid.resolution = glm::uvec3(65u);
+
+  std::vector<float> heights;
+
+  for (uint32_t index = 0u; index != 5u; ++index) {
+    dunya::objectmodel::Pose pose{};
+    pose.position = glm::vec3(0.0f, float(index), 0.0f);
+
+    const dunya::objectmodel::Entity entity = authored.createField(pose, grid);
+
+    REQUIRE(authored.addPrimitive(
+      entity,
+      dunya::field::makeBox(glm::vec3(0.0f), glm::vec3(0.45f))
+    ));
+
+    heights.push_back(float(index));
+  }
+
+  const StoredWorld stored = captureWorld(authored, inOrder());
+
+  REQUIRE(stored.entities.size() == heights.size());
+
+  for (size_t at = 0u; at != heights.size(); ++at) {
+    REQUIRE(stored.entities[at].pose.has_value());
+    REQUIRE(stored.entities[at].pose->position.y == heights[at]);
+  }
+
+  World reloaded;
+  REQUIRE(restoreWorld(stored, reloaded, inOrder()));
+
+  const StoredWorld again = captureWorld(reloaded, inOrder());
+
+  REQUIRE(again.entities.size() == stored.entities.size());
+
+  for (size_t at = 0u; at != again.entities.size(); ++at) {
+    REQUIRE(again.entities[at].pose->position.y == heights[at]);
+  }
 }
 
 TEST_CASE("a world survives a round trip through text", "[worldfile]") {
@@ -299,4 +345,47 @@ TEST_CASE("a key this build never heard of is skipped", "[worldfile]") {
 
   REQUIRE(restoreWorld(stored, loaded, assets));
   REQUIRE(loaded.fields().size() == 1);
+}
+
+TEST_CASE("a camera is a pose and a lens", "[worldfile]") {
+  World authored;
+
+  const dunya::objectmodel::Entity eye = authored.createAuthored();
+
+  authored.emplaceAuthored<dunya::objectmodel::Pose>(
+    eye,
+    dunya::objectmodel::Pose{glm::vec3(0.0f, 3.0f, 12.0f), glm::quat()}
+  );
+
+  authored.emplaceAuthored<dunya::objectmodel::Lens>(
+    eye,
+    dunya::objectmodel::Lens{55.0f, 0.05f, 500.0f}
+  );
+
+  const AssetDatabase assets = inOrder();
+
+  const std::string text = writeWorld(captureWorld(authored, assets));
+
+  StoredWorld stored{};
+  REQUIRE(readWorld(text, stored));
+  REQUIRE(stored.entities.size() == 1);
+
+  World loaded;
+  REQUIRE(restoreWorld(stored, loaded, assets));
+
+  const auto view =
+    loaded.registry()
+      .view<const dunya::objectmodel::Lens, const dunya::objectmodel::Pose>();
+
+  REQUIRE(view.size_hint() == 1);
+
+  for (const dunya::objectmodel::Entity entity : view) {
+    const auto& lens = view.get<const dunya::objectmodel::Lens>(entity);
+    const auto& pose = view.get<const dunya::objectmodel::Pose>(entity);
+
+    REQUIRE(lens.verticalFov == 55.0f);
+    REQUIRE(lens.nearPlane == 0.05f);
+    REQUIRE(lens.farPlane == 500.0f);
+    REQUIRE(pose.position.z == 12.0f);
+  }
 }

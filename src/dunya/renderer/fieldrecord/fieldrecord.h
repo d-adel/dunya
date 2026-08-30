@@ -1,8 +1,8 @@
 #pragma once
 
-#include <dunya/objectmodel/sdfgrid/sdfgrid.h>
-#include <dunya/objectmodel/bakedvolume/bakedvolume.h>
-#include <dunya/objectmodel/pose/pose.h>
+#include <dunya/objectmodel/component/sdfgrid/sdfgrid.h>
+#include <dunya/objectmodel/component/bakedvolume/bakedvolume.h>
+#include <dunya/objectmodel/component/pose/pose.h>
 
 #include <glm/glm.hpp>
 

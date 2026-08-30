@@ -5,7 +5,7 @@
 #include <dunya/editor/commandhistory/commandhistory.h>
 #include <dunya/core/config/config.h>
 #include <dunya/field/field.h>
-#include <dunya/objectmodel/pose/pose.h>
+#include <dunya/objectmodel/component/pose/pose.h>
 #include <dunya/objectmodel/world/world.h>
 
 #include "tolerances.h"

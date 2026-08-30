@@ -11,6 +11,23 @@ struct WorldOptions : glz::opts {
   uint8_t indentation_width = 2;
 };
 
+bool carriesAnything(const StoredEntity& kept) {
+  if (!kept.primitives.empty()) {
+    return true;
+  }
+
+  bool any = false;
+
+  std::apply(
+    [&](auto... bound) {
+      ((any = any || (kept.*(bound.slot)).has_value()), ...);
+    },
+    PORTABLE_COMPONENTS
+  );
+
+  return any;
+}
+
 template<dunya::objectmodel::Authored T>
 std::optional<StoredType<T>> componentOf(
   const entt::registry& registry,
@@ -86,32 +103,40 @@ StoredWorld captureWorld(
     return kept;
   };
 
-  for (const dunya::objectmodel::Entity entity : world.fields()) {
-    StoredEntity kept = keep(entity);
+  std::vector<dunya::objectmodel::Entity> order;
 
-    for (const dunya::field::Primitive& primitive : world.primitives(entity)) {
-      StoredPrimitive held{};
-
-      held.primitive = primitive;
-
-      held.material = assets.id<dunya::objectmodel::Material>(
-        primitive.shapeConfig[MATERIAL_LANE]
-      );
-
-      held.primitive.shapeConfig[MATERIAL_LANE] = 0u;
-
-      kept.primitives.push_back(held);
-    }
-
-    stored.entities.push_back(std::move(kept));
+  for (const dunya::objectmodel::Entity entity :
+       registry.view<entt::entity>()) {
+    order.push_back(entity);
   }
 
-  for (const dunya::objectmodel::Entity entity : world.meshes()) {
+  std::reverse(order.begin(), order.end());
+
+  for (const dunya::objectmodel::Entity entity : order) {
+    StoredEntity kept = keep(entity);
+
     if (registry.all_of<dunya::objectmodel::SdfGrid>(entity)) {
+      for (const dunya::field::Primitive& primitive :
+           world.primitives(entity)) {
+        StoredPrimitive held{};
+
+        held.primitive = primitive;
+
+        held.material = assets.id<dunya::objectmodel::Material>(
+          primitive.shapeConfig[MATERIAL_LANE]
+        );
+
+        held.primitive.shapeConfig[MATERIAL_LANE] = 0u;
+
+        kept.primitives.push_back(held);
+      }
+    }
+
+    if (!carriesAnything(kept)) {
       continue;
     }
 
-    stored.entities.push_back(keep(entity));
+    stored.entities.push_back(std::move(kept));
   }
 
   return stored;

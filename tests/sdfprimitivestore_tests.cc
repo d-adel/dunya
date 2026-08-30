@@ -1,7 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <dunya/core/config/config.h>
-#include <dunya/objectmodel/sdfgrid/sdfgrid.h>
+#include <dunya/objectmodel/component/sdfgrid/sdfgrid.h>
 #include <dunya/objectmodel/sdfprimitivestore/sdfprimitivestore.h>
 
 #include <entt/core/hashed_string.hpp>

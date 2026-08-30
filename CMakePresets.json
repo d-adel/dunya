@@ -15,11 +15,11 @@
       }
     },
     {
-      "name": "debug",
-      "displayName": "Debug (build-ninja)",
+      "name": "dev",
+      "displayName": "Dev (build-dev)",
       "description": "Validation layers on, checked iterators on. The tree the goldens and IntelliSense are wired to.",
       "inherits": "ninja-base",
-      "binaryDir": "${sourceDir}/build-ninja",
+      "binaryDir": "${sourceDir}/build-dev",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       }
@@ -37,9 +37,9 @@
   ],
   "buildPresets": [
     {
-      "name": "debug",
-      "displayName": "Debug",
-      "configurePreset": "debug"
+      "name": "dev",
+      "displayName": "Dev",
+      "configurePreset": "dev"
     },
     {
       "name": "release",
@@ -49,9 +49,9 @@
   ],
   "testPresets": [
     {
-      "name": "debug",
-      "displayName": "Debug",
-      "configurePreset": "debug",
+      "name": "dev",
+      "displayName": "Dev",
+      "configurePreset": "dev",
       "output": {
         "outputOnFailure": true
       }

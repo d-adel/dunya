@@ -2,20 +2,20 @@
 
 #include <dunya/field/sampled/sampled.h>
 
-#include <dunya/objectmodel/material/material.h>
-#include <dunya/objectmodel/mesh/mesh.h>
-#include <dunya/objectmodel/bakedvolume/bakedvolume.h>
-#include <dunya/objectmodel/deformable/deformable.h>
-#include <dunya/objectmodel/deformed/deformed.h>
+#include <dunya/objectmodel/component/material/material.h>
+#include <dunya/objectmodel/component/mesh/mesh.h>
+#include <dunya/objectmodel/component/bakedvolume/bakedvolume.h>
+#include <dunya/objectmodel/component/deformable/deformable.h>
+#include <dunya/objectmodel/component/deformed/deformed.h>
 #include <dunya/objectmodel/entity/entity.h>
-#include <dunya/objectmodel/authored/authored.h>
-#include <dunya/objectmodel/pose/pose.h>
-#include <dunya/objectmodel/sdfgrid/sdfgrid.h>
+#include <dunya/objectmodel/trait/authored/authored.h>
+#include <dunya/objectmodel/component/pose/pose.h>
+#include <dunya/objectmodel/component/sdfgrid/sdfgrid.h>
 #include <dunya/objectmodel/sdfprimitivestore/sdfprimitivestore.h>
-#include <dunya/objectmodel/selfcontained/selfcontained.h>
-#include <dunya/objectmodel/sharedfield/sharedfield.h>
-#include <dunya/objectmodel/rigidbody/rigidbody.h>
-#include <dunya/objectmodel/staticbody/staticbody.h>
+#include <dunya/objectmodel/trait/selfcontained/selfcontained.h>
+#include <dunya/objectmodel/component/sharedfield/sharedfield.h>
+#include <dunya/objectmodel/component/rigidbody/rigidbody.h>
+#include <dunya/objectmodel/component/staticbody/staticbody.h>
 
 #include <entt/core/hashed_string.hpp>
 #include <entt/entity/registry.hpp>

@@ -17,11 +17,11 @@
   // The VS-generator tree in build/ stays as-is -- that is the path the README
   // documents and the one verification builds use.
   "cmake.generator": "Ninja",
-  "cmake.buildDirectory": "${workspaceFolder}/build-ninja",
+  "cmake.buildDirectory": "${workspaceFolder}/build-dev",
   // Fallback for files the provider cannot place (a new .cc not yet in any
   // target, a header opened before the first configure). Harmless when the
   // provider does know the file -- the provider wins.
-  "C_Cpp.default.compileCommands": "${workspaceFolder}/build-ninja/compile_commands.json",
+  "C_Cpp.default.compileCommands": "${workspaceFolder}/build-dev/compile_commands.json",
   // The SDK include arrives from an imported target, so CMake marks it system
   // and MSVC spells it -external:I, which not every cpptools version parses as
   // an include path. Listing it plainly costs nothing and removes the doubt.
@@ -35,11 +35,11 @@
   "C_Cpp.default.includePath": [
     "${workspaceFolder}/src",
     "${env:VULKAN_SDK}/Include",
-    "${workspaceFolder}/build-ninja/_deps/glm-src",
-    "${workspaceFolder}/build-ninja/_deps/glfw-src/include",
-    "${workspaceFolder}/build-ninja/_deps/stb-src",
-    "${workspaceFolder}/build-ninja/_deps/tinyobjloader-src",
-    "${workspaceFolder}/build-ninja/_deps/joltphysics-src"
+    "${workspaceFolder}/build-dev/_deps/glm-src",
+    "${workspaceFolder}/build-dev/_deps/glfw-src/include",
+    "${workspaceFolder}/build-dev/_deps/stb-src",
+    "${workspaceFolder}/build-dev/_deps/tinyobjloader-src",
+    "${workspaceFolder}/build-dev/_deps/joltphysics-src"
   ],
   // Shader language server (antaalt.shader-validator): semantic highlighting,
   // completion, signature help, symbols, and glslang validation inline. It is

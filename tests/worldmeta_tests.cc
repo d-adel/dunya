@@ -2,10 +2,10 @@
 
 #include <dunya/serialize/worldmeta/worldmeta.h>
 
-#include <dunya/objectmodel/massscale/massscale.h>
-#include <dunya/objectmodel/material/material.h>
-#include <dunya/objectmodel/mesh/mesh.h>
-#include <dunya/objectmodel/pose/pose.h>
+#include <dunya/objectmodel/component/massscale/massscale.h>
+#include <dunya/objectmodel/component/material/material.h>
+#include <dunya/objectmodel/component/mesh/mesh.h>
+#include <dunya/objectmodel/component/pose/pose.h>
 
 #include <string>
 

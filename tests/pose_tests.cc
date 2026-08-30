@@ -6,7 +6,7 @@
 
 #include <dunya/field/field.h>
 #include <dunya/field/raycast/raycast.h>
-#include <dunya/objectmodel/pose/pose.h>
+#include <dunya/objectmodel/component/pose/pose.h>
 
 #include "tolerances.h"
 

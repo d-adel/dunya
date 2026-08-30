@@ -2,9 +2,9 @@
 
 #include <dunya/core/config/config.h>
 #include <dunya/field/field.h>
-#include <dunya/objectmodel/deformable/deformable.h>
+#include <dunya/objectmodel/component/deformable/deformable.h>
 #include <dunya/objectmodel/instantiate/instantiate.h>
-#include <dunya/objectmodel/staticbody/staticbody.h>
+#include <dunya/objectmodel/component/staticbody/staticbody.h>
 #include <dunya/objectmodel/world/world.h>
 
 #include <cstdint>

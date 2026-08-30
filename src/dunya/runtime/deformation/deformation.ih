@@ -3,9 +3,9 @@
 #include <dunya/core/config/config.h>
 #include <dunya/field/analytic/analytic.h>
 #include <dunya/field/deform/deform.h>
-#include <dunya/objectmodel/deformable/deformable.h>
-#include <dunya/objectmodel/pose/pose.h>
-#include <dunya/objectmodel/sharedfield/sharedfield.h>
+#include <dunya/objectmodel/component/deformable/deformable.h>
+#include <dunya/objectmodel/component/pose/pose.h>
+#include <dunya/objectmodel/component/sharedfield/sharedfield.h>
 #include <dunya/objectmodel/world/world.h>
 
 #include <glm/gtc/matrix_transform.hpp>

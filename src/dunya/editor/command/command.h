@@ -1,8 +1,8 @@
 #pragma once
 
 #include <dunya/objectmodel/entity/entity.h>
-#include <dunya/objectmodel/sdfgrid/sdfgrid.h>
-#include <dunya/objectmodel/pose/pose.h>
+#include <dunya/objectmodel/component/sdfgrid/sdfgrid.h>
+#include <dunya/objectmodel/component/pose/pose.h>
 
 #include <optional>
 #include <variant>

@@ -27,15 +27,17 @@ jobs:
       - name: Cache fetched dependencies
         uses: actions/cache@v4
         with:
-          path: build/_deps
+          path: build-dev/_deps
           key: deps-${{ runner.os }}-${{ hashFiles('CMakeLists.txt', 'tests/CMakeLists.txt') }}
-      - name: Configure
-        run: cmake -S . -B build
-      - name: Build
-        run: cmake --build build --config Debug
 
-      - name: Test
-        run: ctest --test-dir build -C Debug --output-on-failure -E "^golden"
+      - name: Configure, build and test
+        shell: cmd
+        run: |
+          for /f "usebackq tokens=*" %%i in (`"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set VSPATH=%%i
+          call "%VSPATH%\VC\Auxiliary\Build\vcvars64.bat"
+          cmake --preset dev || exit /b 1
+          cmake --build --preset dev || exit /b 1
+          ctest --preset dev -E "^golden" || exit /b 1
 
   format:
     name: clang-format

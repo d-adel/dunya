@@ -1,0 +1,3903 @@
+{
+  "version": 1,
+  "entities": [{
+    "pose": {
+      "position": [-5.0049996, -1.55, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-4.095, -1.55, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-3.1849997, -1.55, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-2.2749996, -1.55, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-1.3649998, -1.55, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-0.45499992, -1.55, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [0.4550004, -1.55, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [1.3650002, -1.55, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [2.275, -1.55, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [3.185, -1.55, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [4.095, -1.55, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [5.0049996, -1.55, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-5.0049996, -0.64, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-4.095, -0.64, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-3.1849997, -0.64, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-2.2749996, -0.64, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-1.3649998, -0.64, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-0.45499992, -0.64, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [0.4550004, -0.64, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [1.3650002, -0.64, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [2.275, -0.64, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [3.185, -0.64, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [4.095, -0.64, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [5.0049996, -0.64, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-5.0049996, 0.26999998, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-4.095, 0.26999998, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-3.1849997, 0.26999998, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-2.2749996, 0.26999998, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-1.3649998, 0.26999998, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-0.45499992, 0.26999998, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [0.4550004, 0.26999998, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [1.3650002, 0.26999998, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [2.275, 0.26999998, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [3.185, 0.26999998, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [4.095, 0.26999998, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [5.0049996, 0.26999998, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-5.0049996, 1.1800001, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-4.095, 1.1800001, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-3.1849997, 1.1800001, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-2.2749996, 1.1800001, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-1.3649998, 1.1800001, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-0.45499992, 1.1800001, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [0.4550004, 1.1800001, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [1.3650002, 1.1800001, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [2.275, 1.1800001, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [3.185, 1.1800001, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [4.095, 1.1800001, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [5.0049996, 1.1800001, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-5.0049996, 2.09, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-4.095, 2.09, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-3.1849997, 2.09, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-2.2749996, 2.09, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-1.3649998, 2.09, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-0.45499992, 2.09, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [0.4550004, 2.09, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [1.3650002, 2.09, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [2.275, 2.09, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [3.185, 2.09, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [4.095, 2.09, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [5.0049996, 2.09, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-5.0049996, 2.9999998, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-4.095, 2.9999998, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-3.1849997, 2.9999998, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-2.2749996, 2.9999998, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-1.3649998, 2.9999998, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-0.45499992, 2.9999998, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [0.4550004, 2.9999998, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [1.3650002, 2.9999998, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [2.275, 2.9999998, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [3.185, 2.9999998, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [4.095, 2.9999998, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [5.0049996, 2.9999998, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-5.0049996, 3.91, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-4.095, 3.91, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-3.1849997, 3.91, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-2.2749996, 3.91, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-1.3649998, 3.91, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-0.45499992, 3.91, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [0.4550004, 3.91, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [1.3650002, 3.91, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [2.275, 3.91, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [3.185, 3.91, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [4.095, 3.91, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [5.0049996, 3.91, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-5.0049996, 4.8199997, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-4.095, 4.8199997, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-3.1849997, 4.8199997, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-2.2749996, 4.8199997, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-1.3649998, 4.8199997, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-0.45499992, 4.8199997, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [0.4550004, 4.8199997, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [1.3650002, 4.8199997, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [2.275, 4.8199997, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [3.185, 4.8199997, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [4.095, 4.8199997, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [5.0049996, 4.8199997, -0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-5.0049996, -1.55, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-4.095, -1.55, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-3.1849997, -1.55, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-2.2749996, -1.55, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-1.3649998, -1.55, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-0.45499992, -1.55, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [0.4550004, -1.55, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [1.3650002, -1.55, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [2.275, -1.55, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [3.185, -1.55, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [4.095, -1.55, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [5.0049996, -1.55, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-5.0049996, -0.64, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-4.095, -0.64, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-3.1849997, -0.64, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-2.2749996, -0.64, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-1.3649998, -0.64, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-0.45499992, -0.64, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [0.4550004, -0.64, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [1.3650002, -0.64, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [2.275, -0.64, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [3.185, -0.64, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [4.095, -0.64, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [5.0049996, -0.64, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-5.0049996, 0.26999998, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-4.095, 0.26999998, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-3.1849997, 0.26999998, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-2.2749996, 0.26999998, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-1.3649998, 0.26999998, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-0.45499992, 0.26999998, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [0.4550004, 0.26999998, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [1.3650002, 0.26999998, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [2.275, 0.26999998, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [3.185, 0.26999998, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [4.095, 0.26999998, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [5.0049996, 0.26999998, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-5.0049996, 1.1800001, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-4.095, 1.1800001, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-3.1849997, 1.1800001, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-2.2749996, 1.1800001, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-1.3649998, 1.1800001, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-0.45499992, 1.1800001, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [0.4550004, 1.1800001, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [1.3650002, 1.1800001, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [2.275, 1.1800001, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [3.185, 1.1800001, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [4.095, 1.1800001, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [5.0049996, 1.1800001, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-5.0049996, 2.09, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-4.095, 2.09, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-3.1849997, 2.09, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-2.2749996, 2.09, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-1.3649998, 2.09, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-0.45499992, 2.09, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [0.4550004, 2.09, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [1.3650002, 2.09, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [2.275, 2.09, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [3.185, 2.09, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [4.095, 2.09, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [5.0049996, 2.09, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-5.0049996, 2.9999998, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-4.095, 2.9999998, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-3.1849997, 2.9999998, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-2.2749996, 2.9999998, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-1.3649998, 2.9999998, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-0.45499992, 2.9999998, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [0.4550004, 2.9999998, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [1.3650002, 2.9999998, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [2.275, 2.9999998, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [3.185, 2.9999998, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [4.095, 2.9999998, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [5.0049996, 2.9999998, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-5.0049996, 3.91, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-4.095, 3.91, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-3.1849997, 3.91, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-2.2749996, 3.91, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-1.3649998, 3.91, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-0.45499992, 3.91, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [0.4550004, 3.91, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [1.3650002, 3.91, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [2.275, 3.91, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [3.185, 3.91, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [4.095, 3.91, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [5.0049996, 3.91, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-5.0049996, 4.8199997, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-4.095, 4.8199997, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-3.1849997, 4.8199997, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-2.2749996, 4.8199997, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-1.3649998, 4.8199997, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [-0.45499992, 4.8199997, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [0.4550004, 4.8199997, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [1.3650002, 4.8199997, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [2.275, 4.8199997, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [3.185, 4.8199997, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [4.095, 4.8199997, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [5.0049996, 4.8199997, -0.90999997],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.45, 0.45, 0.45, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.7794228]
+      },
+      "material": 11469614539487796753
+    }]
+  }, {
+    "pose": {
+      "position": [0, -2, 0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [128, 128, 128]
+    },
+    "staticBody": {
+      
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0.5, -0, 1],
+        "shape": [10, 0.5, 10, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [-0, -0.5, -0, 14.150971]
+      },
+      "material": 5444297618490564435
+    }]
+  }, {
+    "pose": {
+      "position": [-7.1549997, -2, 0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "staticBody": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, -0.6, -0, 1],
+        "shape": [0.5, 0.6, 0.5, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [-0, 0.6, -0, 0.92736185]
+      },
+      "material": 5444297618490564435
+    }, {
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, -1.47, -0, 1],
+        "shape": [0.45, 0, 0, 0.15],
+        "shapeConfig": [0, 0, 1, 0],
+        "bounds": [-0, 1.47, -0, 0.6]
+      },
+      "material": 3056980637089549575
+    }]
+  }, {
+    "pose": {
+      "position": [7.6549997, -1.892, 0],
+      "rotation": [0.35355335, -0.35355335, -0.61237246, -0.61237246]
+    },
+    "mesh": 14245873093005299565,
+    "material": 16364492891285643480,
+    "primitives": []
+  }]
+}

@@ -3,7 +3,7 @@
 #include <Jolt/Jolt.h>
 #include <Jolt/Physics/Collision/Shape/Shape.h>
 
-#include <dunya/objectmodel/renderpose/renderpose.h>
+#include <dunya/objectmodel/component/renderpose/renderpose.h>
 #include <dunya/objectmodel/world/world.h>
 #include <dunya/physics/physicsworld/physicsworld.h>
 #include <dunya/physics/joltlibrary/joltlibrary.h>

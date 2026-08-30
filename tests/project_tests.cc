@@ -104,6 +104,31 @@ TEST_CASE("an imported asset is copied and given an id", "[project]") {
   REQUIRE(project->ofType("mesh").empty());
 }
 
+TEST_CASE("an asset can be imported under the id it already has", "[project]") {
+  const std::filesystem::path root = scratch("adopt");
+
+  auto project = Project::create(root, "Adopt");
+  REQUIRE(project.has_value());
+
+  const std::filesystem::path source =
+    writeSource(scratch("adopt_src"), "room.obj", "v 0 0 0");
+
+  constexpr dunya::core::AssetId KNOWN = 0x0123456789ABCDEFULL;
+
+  const dunya::core::AssetId id = project->importAsset(source, "mesh", KNOWN);
+
+  REQUIRE(id == KNOWN);
+  REQUIRE(project->find(KNOWN) != nullptr);
+  REQUIRE(project->find(KNOWN)->path == "assets/room.obj");
+
+  REQUIRE(project->save());
+
+  auto reopened = Project::open(root);
+  REQUIRE(reopened.has_value());
+  REQUIRE(reopened->find(KNOWN) != nullptr);
+  REQUIRE(reopened->ofType("mesh").size() == 1);
+}
+
 TEST_CASE("importing a file that is not there fails", "[project]") {
   const std::filesystem::path root = scratch("missing");
 

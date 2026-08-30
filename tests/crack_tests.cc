@@ -7,7 +7,7 @@
 #include <dunya/field/deform/deform.h>
 #include <dunya/field/field.h>
 #include <dunya/field/sampled/sampled.h>
-#include <dunya/objectmodel/sdfgrid/sdfgrid.h>
+#include <dunya/objectmodel/component/sdfgrid/sdfgrid.h>
 #include <dunya/physics/fieldshape/fieldshape.h>
 #include <dunya/physics/joltlibrary/joltlibrary.h>
 

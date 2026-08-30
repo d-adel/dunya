@@ -1,5 +1,5 @@
-#include <application/application.h>
-#include <startupoptions/startupoptions.h>
+#include <app/application/application.h>
+#include <app/startupoptions/startupoptions.h>
 
 #include <cstdlib>
 #include <span>

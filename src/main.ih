@@ -1,7 +1,0 @@
-#include <application/application.h>
-#include <debugtools/debugtools.h>
-#include <startupoptions/startupoptions.h>
-#include <iostream>
-#include <span>
-
-using namespace std;

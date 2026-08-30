@@ -39,7 +39,7 @@ public:
   bool drawFrame(
     const dunya::gpu::SwapChain& swapChain,
     const Frame& frameContext,
-    const std::function<void(VkCommandBuffer)>& onOverlay = {},
+    const std::function<void(VkCommandBuffer)>& onAfterScene = {},
     const std::function<void(VkImage)>& onFrameReady = {}
   );
 
@@ -54,7 +54,7 @@ private:
   void recordCommandBuffer(
     const dunya::gpu::SwapChain& swapChain,
     const Frame& frameContext,
-    const std::function<void(VkCommandBuffer)>& onOverlay
+    const std::function<void(VkCommandBuffer)>& onAfterScene
   );
 
   VkCommandPool m_commandPool;

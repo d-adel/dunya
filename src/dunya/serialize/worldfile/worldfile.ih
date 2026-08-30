@@ -1,8 +1,10 @@
 #include "worldfile.h"
 
+#include <algorithm>
+
 #include <dunya/serialize/worldmeta/worldmeta.h>
 
-#include <dunya/objectmodel/authored/authored.h>
+#include <dunya/objectmodel/trait/authored/authored.h>
 
 #include <type_traits>
 #include <utility>

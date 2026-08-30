@@ -129,17 +129,19 @@ add_subdirectory(src/dunya/runtime)
 add_subdirectory(src/dunya/imagecompare)
 enable_testing()
 add_executable(DunyaEditor
-    src/main.cc
-    src/capture/capture.cc
-    src/overlay/overlay.cc
-    src/startupoptions/startupoptions.cc
-    src/framecheck/framecheck.cc
-    src/demodriver/demodriver.cc
+    src/editor/main.cc
+    src/app/capture/capture.cc
+    src/editor/imguidebugui/imguidebugui.cc
+    src/app/startupoptions/startupoptions.cc
+    src/app/framecheck/framecheck.cc
+    src/app/demodriver/demodriver.cc
 
-    src/debugtools/debugtools.cc
-    src/cameracontroller/cameracontroller.cc
-    src/application/application.cc
-    src/scene/scene.cc
+    src/app/flycamera/flycamera.cc
+    src/app/projectile/projectile.cc
+    src/app/worldquery/worldquery.cc
+    src/app/flycontroller/flycontroller.cc
+    src/app/application/application.cc
+    src/app/assetlibrary/assetlibrary.cc
 )
 find_program(
     GLSLC_EXECUTABLE
@@ -200,13 +202,16 @@ add_custom_target(
 add_dependencies(DunyaEditor SHADER_TARGET)
 add_executable(DunyaRuntime
     src/runtime/main.cc
-    src/capture/capture.cc
-    src/startupoptions/startupoptions.cc
-    src/framecheck/framecheck.cc
-    src/demodriver/demodriver.cc
-    src/cameracontroller/cameracontroller.cc
-    src/application/application.cc
-    src/scene/scene.cc
+    src/app/capture/capture.cc
+    src/app/startupoptions/startupoptions.cc
+    src/app/framecheck/framecheck.cc
+    src/app/demodriver/demodriver.cc
+    src/app/flycamera/flycamera.cc
+    src/app/projectile/projectile.cc
+    src/app/worldquery/worldquery.cc
+    src/app/flycontroller/flycontroller.cc
+    src/app/application/application.cc
+    src/app/assetlibrary/assetlibrary.cc
 )
 add_dependencies(DunyaRuntime SHADER_TARGET)
 if (MSVC)
@@ -276,6 +281,13 @@ foreach(DUNYA_APP DunyaEditor DunyaRuntime)
         COMMAND ${CMAKE_COMMAND} -E copy_directory
                 ${MODEL_SOURCE_DIR} $<TARGET_FILE_DIR:${DUNYA_APP}>/models
         COMMENT "Copying models"
+        VERBATIM
+    )
+    add_custom_command(
+        TARGET ${DUNYA_APP} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+                ${PROJECT_SOURCE_DIR}/projects $<TARGET_FILE_DIR:${DUNYA_APP}>/projects
+        COMMENT "Copying projects"
         VERBATIM
     )
 endforeach()

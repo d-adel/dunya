@@ -134,9 +134,11 @@ You need:
 - The [LunarG Vulkan SDK](https://vulkan.lunarg.com/). CMake finds it through
   the `VULKAN_SDK` environment variable that the installer sets, and it also
   provides `glslc`, which compiles the shaders as part of the build.
-- CMake 3.28 or newer.
-- A C++20 compiler. I build with Visual Studio 2026, and the warning settings
+- CMake 3.28 or newer, and Ninja.
+- A C++23 compiler. I build with Visual Studio 2026, and the warning settings
   are strict, so the build should be silent.
+- On Windows, a Developer Command Prompt for VS (or VS Code with the CMake
+  Tools extension), so that `cl.exe` and `ninja` are on `PATH`.
 - Git (obviously)
 
 Then:
@@ -144,5 +146,7 @@ Then:
 ```sh
 git clone https://github.com/d-adel/dunya.git
 cd dunya
-cmake -S . -B build
-cmake --build build
+cmake --preset dev
+cmake --build --preset dev
+ctest --preset dev
+```

@@ -1,0 +1,68 @@
+#pragma once
+
+#include <dunya/core/asset/assetdatabase.h>
+#include <dunya/gpu/context/context.h>
+#include <dunya/gpu/sampler/sampler.h>
+#include <dunya/gpu/texture/texture.h>
+#include <dunya/objectmodel/world/world.h>
+#include <dunya/renderer/frame/frame.h>
+#include <dunya/renderer/materialrecord/materialrecord.h>
+#include <dunya/renderer/meshbuffers/meshbuffers.h>
+#include <dunya/renderer/meshrecord/meshrecord.h>
+
+#include <vector>
+
+class AssetLibrary {
+public:
+  explicit AssetLibrary(const dunya::gpu::Context& context);
+
+  AssetLibrary(const AssetLibrary&) = delete;
+  AssetLibrary& operator=(const AssetLibrary&) = delete;
+  AssetLibrary(AssetLibrary&&) = delete;
+  AssetLibrary& operator=(AssetLibrary&&) = delete;
+
+  void augmentFrameContext(
+    dunya::renderer::Frame& frameContext,
+    const dunya::objectmodel::World& world
+  );
+
+  [[nodiscard]] const std::vector<dunya::renderer::MaterialRecord>&
+  materials() const noexcept;
+
+  [[nodiscard]] const std::vector<dunya::gpu::Texture>&
+  textures() const noexcept;
+
+  [[nodiscard]] const std::vector<dunya::gpu::Sampler>&
+  samplers() const noexcept;
+
+  [[nodiscard]] const dunya::core::AssetDatabase& assets() const noexcept;
+
+  [[nodiscard]] uint32_t materialIndex(dunya::core::AssetId id) const;
+  [[nodiscard]] uint32_t meshIndex(dunya::core::AssetId id) const;
+
+  uint32_t loadMesh(
+    const dunya::gpu::Device& device,
+    dunya::core::AssetId id,
+    const char* path
+  );
+
+private:
+  std::vector<dunya::renderer::MaterialRecord> createMaterials();
+
+  static std::vector<dunya::gpu::Texture> createTextures(
+    const dunya::gpu::Device& device
+  );
+
+  static std::vector<dunya::gpu::Sampler> createSamplers(
+    const dunya::gpu::Device& device
+  );
+
+  dunya::core::AssetDatabase m_assets;
+
+  std::vector<dunya::renderer::MaterialRecord> m_materials;
+  std::vector<dunya::gpu::Sampler> m_samplers;
+  std::vector<dunya::gpu::Texture> m_textures;
+  std::vector<dunya::renderer::MeshBuffers> m_meshes;
+
+  std::vector<dunya::renderer::MeshRecord> m_meshRecords;
+};

@@ -102,7 +102,8 @@ const std::filesystem::path& Project::root() const noexcept {
 
 dunya::core::AssetId Project::importAsset(
   const std::filesystem::path& file,
-  std::string type
+  std::string type,
+  dunya::core::AssetId id
 ) {
   std::error_code failed;
 
@@ -128,7 +129,7 @@ dunya::core::AssetId Project::importAsset(
 
   AssetEntry entry{};
 
-  entry.id = mintAssetId();
+  entry.id = id == dunya::core::INVALID_ASSET ? mintAssetId() : id;
   entry.type = std::move(type);
   entry.path = relative.generic_string();
 

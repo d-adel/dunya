@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "name": "dunya",
+  "assets": [{
+    "id": 14245873093005299565,
+    "type": "mesh",
+    "path": "assets/viking_room.obj"
+  }]
+}

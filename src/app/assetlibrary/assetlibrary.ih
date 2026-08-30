@@ -1,0 +1,7 @@
+#include "assetlibrary.h"
+
+#include <dunya/core/asset/assetids.h>
+#include <dunya/core/config/config.h>
+#include <dunya/objectmodel/component/renderpose/renderpose.h>
+
+#include <stdexcept>

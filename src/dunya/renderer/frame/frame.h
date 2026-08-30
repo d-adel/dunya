@@ -6,8 +6,8 @@
 #include <dunya/gpu/pipeline/pipeline.h>
 #include <dunya/field/field.h>
 #include <dunya/renderer/meshrecord/meshrecord.h>
-#include <dunya/objectmodel/directionallight/directionallight.h>
-#include <dunya/objectmodel/sdfgrid/sdfgrid.h>
+#include <dunya/objectmodel/component/directionallight/directionallight.h>
+#include <dunya/objectmodel/component/sdfgrid/sdfgrid.h>
 
 #include <glm/glm.hpp>
 #include <span>

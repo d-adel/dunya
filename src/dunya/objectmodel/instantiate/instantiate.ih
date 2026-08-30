@@ -1,8 +1,8 @@
 #include "instantiate.h"
 
-#include <dunya/objectmodel/authoredcomponents/authoredcomponents.h>
-#include <dunya/objectmodel/deformed/deformed.h>
-#include <dunya/objectmodel/sharedfield/sharedfield.h>
+#include <dunya/objectmodel/trait/authoredcomponents/authoredcomponents.h>
+#include <dunya/objectmodel/component/deformed/deformed.h>
+#include <dunya/objectmodel/component/sharedfield/sharedfield.h>
 
 #include <stdexcept>
 #include <type_traits>

@@ -2,10 +2,10 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "build debug",
+      "label": "build dev",
       "type": "shell",
       "command": "cmake",
-      "args": ["--build", "--preset", "debug"],
+      "args": ["--build", "--preset", "dev"],
       "options": { "cwd": "${workspaceFolder}" },
       "problemMatcher": ["$msCompile"],
       "group": { "kind": "build", "isDefault": true }
@@ -20,13 +20,22 @@
       "group": "build"
     },
     {
-      "label": "test debug",
+      "label": "test dev",
       "type": "shell",
       "command": "ctest",
-      "args": ["--preset", "debug"],
+      "args": ["--preset", "dev"],
       "options": { "cwd": "${workspaceFolder}" },
       "problemMatcher": [],
       "group": { "kind": "test", "isDefault": true }
+    },
+    {
+      "label": "test release",
+      "type": "shell",
+      "command": "ctest",
+      "args": ["--preset", "release"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "group": "test"
     }
   ]
 }

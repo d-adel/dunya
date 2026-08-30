@@ -4,7 +4,7 @@
 #include <dunya/core/config/config.h>
 #include <dunya/field/analytic/analytic.h>
 #include <dunya/field/field.h>
-#include <dunya/objectmodel/sdfgrid/sdfgrid.h>
+#include <dunya/objectmodel/component/sdfgrid/sdfgrid.h>
 
 #include "tolerances.h"
 

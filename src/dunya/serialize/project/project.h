@@ -49,7 +49,8 @@ public:
 
   [[nodiscard]] dunya::core::AssetId importAsset(
     const std::filesystem::path& file,
-    std::string type
+    std::string type,
+    dunya::core::AssetId id = dunya::core::INVALID_ASSET
   );
 
   [[nodiscard]] const AssetEntry* find(dunya::core::AssetId id) const noexcept;

@@ -1,8 +1,8 @@
 #include "runtime.h"
 
-#include <dunya/objectmodel/rigidbody/rigidbody.h>
-#include <dunya/objectmodel/staticbody/staticbody.h>
-#include <dunya/objectmodel/massscale/massscale.h>
+#include <dunya/objectmodel/component/rigidbody/rigidbody.h>
+#include <dunya/objectmodel/component/staticbody/staticbody.h>
+#include <dunya/objectmodel/component/massscale/massscale.h>
 
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyLock.h>
