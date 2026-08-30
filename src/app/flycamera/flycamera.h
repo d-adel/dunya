@@ -36,8 +36,6 @@ public:
 
   void place(const glm::vec3& position, float yaw, float pitch);
 
-  void setLens(const dunya::objectmodel::Lens& lens) noexcept;
-
   [[nodiscard]] const dunya::objectmodel::Lens& lens() const noexcept;
 
 private:

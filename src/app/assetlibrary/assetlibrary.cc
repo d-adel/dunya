@@ -129,18 +129,6 @@ uint32_t AssetLibrary::addMaterial(
   return index;
 }
 
-uint32_t AssetLibrary::textureIndex(dunya::core::AssetId id) const {
-  const uint32_t index = m_assets.index<dunya::gpu::Texture>(id);
-
-  if (index == dunya::core::UNBOUND_ASSET) {
-    throw std::runtime_error(
-      "AssetLibrary: no texture is bound under that asset id"
-    );
-  }
-
-  return index;
-}
-
 uint32_t AssetLibrary::loadMesh(
   const dunya::gpu::Device& device,
   dunya::core::AssetId id,
@@ -252,18 +240,6 @@ uint32_t AssetLibrary::materialIndex(dunya::core::AssetId id) const {
   if (index == dunya::core::UNBOUND_ASSET) {
     throw std::runtime_error(
       "AssetLibrary: no material is bound under that asset id"
-    );
-  }
-
-  return index;
-}
-
-uint32_t AssetLibrary::meshIndex(dunya::core::AssetId id) const {
-  const uint32_t index = m_assets.index<dunya::objectmodel::Mesh>(id);
-
-  if (index == dunya::core::UNBOUND_ASSET) {
-    throw std::runtime_error(
-      "AssetLibrary: no mesh is bound under that asset id"
     );
   }
 

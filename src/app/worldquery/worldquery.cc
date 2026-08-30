@@ -40,16 +40,13 @@ void absorbSolid(
   }
 }
 
-WorldExtent extentOf(const dunya::objectmodel::World& world, bool wantStatic) {
+WorldExtent extentOf(const dunya::objectmodel::World& world) {
   const entt::registry& registry = world.registry();
 
   WorldExtent extent;
 
   for (const dunya::objectmodel::Entity entity : world.fields()) {
-    const bool isStatic =
-      registry.all_of<dunya::objectmodel::StaticBody>(entity);
-
-    if (isStatic != wantStatic) {
+    if (registry.all_of<dunya::objectmodel::StaticBody>(entity)) {
       continue;
     }
 
@@ -74,11 +71,7 @@ glm::vec3 WorldExtent::span() const noexcept {
 }
 
 WorldExtent dynamicExtent(const dunya::objectmodel::World& world) {
-  return extentOf(world, false);
-}
-
-WorldExtent staticExtent(const dunya::objectmodel::World& world) {
-  return extentOf(world, true);
+  return extentOf(world);
 }
 
 WorldExtent entityExtent(

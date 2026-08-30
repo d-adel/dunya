@@ -26,8 +26,6 @@ public:
   void undo();
   void redo();
 
-  void retarget(dunya::objectmodel::World& world);
-
 private:
   [[nodiscard]]
   bool addPrimitive(

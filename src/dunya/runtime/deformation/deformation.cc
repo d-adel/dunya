@@ -10,10 +10,6 @@ const Deformation::Damage& Deformation::damage() const noexcept {
   return m_damage;
 }
 
-uint32_t Deformation::cratersApplied() const noexcept {
-  return m_cratersApplied;
-}
-
 void Deformation::markDirty(
   objectmodel::Entity entity,
   const field::SampleBox& box
@@ -166,7 +162,6 @@ void Deformation::applyImpacts(Runtime& runtime, core::Telemetry& telemetry) {
     field::updateBounds(cutter);
 
     carve(runtime, entity, cutter);
-    ++m_cratersApplied;
 
     telemetry.add(craters, 1.0);
 

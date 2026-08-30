@@ -6,6 +6,5 @@
 #include <dunya/objectmodel/component/sdfgrid/sdfgrid.h>
 #include <dunya/objectmodel/component/staticbody/staticbody.h>
 
-#include <algorithm>
 #include <optional>
 #include <span>

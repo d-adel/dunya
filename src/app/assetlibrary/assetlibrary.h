@@ -43,8 +43,6 @@ public:
   [[nodiscard]] const dunya::core::AssetDatabase& assets() const noexcept;
 
   [[nodiscard]] uint32_t materialIndex(dunya::core::AssetId id) const;
-  [[nodiscard]] uint32_t textureIndex(dunya::core::AssetId id) const;
-  [[nodiscard]] uint32_t meshIndex(dunya::core::AssetId id) const;
 
 private:
   void loadProject(

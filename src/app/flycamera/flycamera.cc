@@ -39,10 +39,6 @@ glm::mat4 FlyCamera::rotationMatrix() const {
   return glm::toMat4(yawRotation) * glm::toMat4(pitchRotation);
 }
 
-void FlyCamera::setLens(const dunya::objectmodel::Lens& lens) noexcept {
-  m_lens = lens;
-}
-
 const dunya::objectmodel::Lens& FlyCamera::lens() const noexcept {
   return m_lens;
 }

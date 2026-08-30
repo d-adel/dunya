@@ -41,8 +41,6 @@ public:
   [[nodiscard]] Damage& damage() noexcept;
   [[nodiscard]] const Damage& damage() const noexcept;
 
-  [[nodiscard]] uint32_t cratersApplied() const noexcept;
-
   void applyImpacts(Runtime& runtime, core::Telemetry& telemetry);
 
   void carve(
@@ -77,8 +75,6 @@ private:
   std::vector<Crater> m_carved;
 
   std::vector<std::pair<objectmodel::Entity, field::SampleBox>> m_dirty;
-
-  uint32_t m_cratersApplied = 0;
 };
 
 }

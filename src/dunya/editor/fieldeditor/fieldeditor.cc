@@ -152,9 +152,4 @@ void FieldEditor::redo() {
   m_commandHistory.redo(*m_world);
 }
 
-void FieldEditor::retarget(dunya::objectmodel::World& world) {
-  m_world = &world;
-  m_commandHistory.clear();
-}
-
 }

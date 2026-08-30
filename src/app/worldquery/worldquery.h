@@ -16,8 +16,6 @@ struct WorldExtent {
 
 [[nodiscard]] WorldExtent dynamicExtent(const dunya::objectmodel::World& world);
 
-[[nodiscard]] WorldExtent staticExtent(const dunya::objectmodel::World& world);
-
 [[nodiscard]] WorldExtent entityExtent(
   const dunya::objectmodel::World& world,
   dunya::objectmodel::Entity entity
