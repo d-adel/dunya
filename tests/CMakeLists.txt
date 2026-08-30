@@ -67,8 +67,8 @@ set(GOLDEN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/golden")
 function(add_golden_test name)
     add_test(
         NAME "golden ${name}"
-        COMMAND DunyaEditor --golden "${GOLDEN_DIR}/${name}.png" ${ARGN}
-        WORKING_DIRECTORY $<TARGET_FILE_DIR:DunyaEditor>
+        COMMAND DunyaDevHost --golden "${GOLDEN_DIR}/${name}.png" ${ARGN}
+        WORKING_DIRECTORY $<TARGET_FILE_DIR:DunyaDevHost>
     )
 endfunction()
 add_golden_test(field-sampled --carves 6)

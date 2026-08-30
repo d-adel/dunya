@@ -110,7 +110,7 @@ Currently working on:
 
 ## How I use AI
 
-Most lines in `src/` are written by myself because I'm building this to
+Most lines in `engine/` are written by myself because I'm building this to
 understand how these systems actually work.
 When I don't something I ask, and then I go and write it myself.
 Things I do understand but require a lot of scaffolding I let Claude write as

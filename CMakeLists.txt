@@ -116,30 +116,30 @@ target_include_directories(imgui SYSTEM PUBLIC
 )
 target_link_libraries(imgui PUBLIC glfw Vulkan::Vulkan)
 target_compile_features(imgui PUBLIC cxx_std_20)
-add_subdirectory(src/dunya/core)
-add_subdirectory(src/dunya/objectmodel)
-add_subdirectory(src/dunya/editor)
-add_subdirectory(src/dunya/platform)
-add_subdirectory(src/dunya/field)
-add_subdirectory(src/dunya/physics)
-add_subdirectory(src/dunya/serialize)
-add_subdirectory(src/dunya/runtime)
-add_subdirectory(src/dunya/imagecompare)
+add_subdirectory(engine/dunya/core)
+add_subdirectory(engine/dunya/objectmodel)
+add_subdirectory(engine/dunya/editor)
+add_subdirectory(engine/dunya/platform)
+add_subdirectory(engine/dunya/field)
+add_subdirectory(engine/dunya/physics)
+add_subdirectory(engine/dunya/serialize)
+add_subdirectory(engine/dunya/runtime)
+add_subdirectory(engine/dunya/imagecompare)
 enable_testing()
-add_executable(DunyaEditor
-    src/editor/main.cc
-    src/app/capture/capture.cc
-    src/editor/imguidebugui/imguidebugui.cc
-    src/app/startupoptions/startupoptions.cc
-    src/app/framecheck/framecheck.cc
-    src/app/demodriver/demodriver.cc
+add_executable(DunyaDevHost
+    engine/devhost/main.cc
+    engine/app/capture/capture.cc
+    engine/devhost/imguidebugui/imguidebugui.cc
+    engine/app/startupoptions/startupoptions.cc
+    engine/app/framecheck/framecheck.cc
+    engine/app/demodriver/demodriver.cc
 
-    src/app/flycamera/flycamera.cc
-    src/app/projectile/projectile.cc
-    src/app/worldquery/worldquery.cc
-    src/app/flycontroller/flycontroller.cc
-    src/app/application/application.cc
-    src/app/assetlibrary/assetlibrary.cc
+    engine/app/flycamera/flycamera.cc
+    engine/app/projectile/projectile.cc
+    engine/app/worldquery/worldquery.cc
+    engine/app/flycontroller/flycontroller.cc
+    engine/app/application/application.cc
+    engine/app/assetlibrary/assetlibrary.cc
 )
 find_program(
     GLSLC_EXECUTABLE
@@ -149,9 +149,9 @@ find_program(
         "$ENV{VULKAN_SDK}/bin"
     REQUIRED
 )
-add_subdirectory(src/dunya/gpu)
-add_subdirectory(src/dunya/renderer)
-target_compile_definitions(DunyaEditor PRIVATE
+add_subdirectory(engine/dunya/gpu)
+add_subdirectory(engine/dunya/renderer)
+target_compile_definitions(DunyaDevHost PRIVATE
     SHADER_SOURCE_DIR=\"${SHADER_SOURCE_DIR}\"
     GLSLC_PATH=\"${GLSLC_EXECUTABLE}\"
     GLSLC_DEFINES=\"${SHADER_DEFINES_ARGS}\"
@@ -197,19 +197,19 @@ add_custom_target(
     DEPENDS ${SHADER_OUTPUTS}
 )
 
-add_dependencies(DunyaEditor SHADER_TARGET)
+add_dependencies(DunyaDevHost SHADER_TARGET)
 add_executable(DunyaRuntime
-    src/runtime/main.cc
-    src/app/capture/capture.cc
-    src/app/startupoptions/startupoptions.cc
-    src/app/framecheck/framecheck.cc
-    src/app/demodriver/demodriver.cc
-    src/app/flycamera/flycamera.cc
-    src/app/projectile/projectile.cc
-    src/app/worldquery/worldquery.cc
-    src/app/flycontroller/flycontroller.cc
-    src/app/application/application.cc
-    src/app/assetlibrary/assetlibrary.cc
+    engine/runtime/main.cc
+    engine/app/capture/capture.cc
+    engine/app/startupoptions/startupoptions.cc
+    engine/app/framecheck/framecheck.cc
+    engine/app/demodriver/demodriver.cc
+    engine/app/flycamera/flycamera.cc
+    engine/app/projectile/projectile.cc
+    engine/app/worldquery/worldquery.cc
+    engine/app/flycontroller/flycontroller.cc
+    engine/app/application/application.cc
+    engine/app/assetlibrary/assetlibrary.cc
 )
 add_dependencies(DunyaRuntime SHADER_TARGET)
 if (MSVC)
@@ -233,14 +233,13 @@ target_link_libraries(DunyaRuntime PRIVATE
     dunya::imagecompare
 )
 
-target_include_directories(DunyaRuntime PRIVATE src ${stb_SOURCE_DIR} ${tinyobjloader_SOURCE_DIR})
+target_include_directories(DunyaRuntime PRIVATE engine ${stb_SOURCE_DIR} ${tinyobjloader_SOURCE_DIR})
 if (MSVC)
-    target_compile_options(DunyaEditor PRIVATE /W4 /WX /w15038 /Zc:__cplusplus)
+    target_compile_options(DunyaDevHost PRIVATE /W4 /WX /w15038 /Zc:__cplusplus)
 else()
-    target_compile_options(DunyaEditor PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    target_compile_options(DunyaDevHost PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
-target_compile_definitions(DunyaEditor PRIVATE DUNYA_EDITOR=1)
-target_link_libraries(DunyaEditor PRIVATE
+target_link_libraries(DunyaDevHost PRIVATE
     dunya::serialize
     glfw
     Vulkan::Vulkan
@@ -257,9 +256,9 @@ target_link_libraries(DunyaEditor PRIVATE
     dunya::imagecompare
     imgui
 )
-target_include_directories(DunyaEditor PRIVATE src ${stb_SOURCE_DIR} ${tinyobjloader_SOURCE_DIR})
+target_include_directories(DunyaDevHost PRIVATE engine ${stb_SOURCE_DIR} ${tinyobjloader_SOURCE_DIR})
 
-foreach(DUNYA_APP DunyaEditor DunyaRuntime)
+foreach(DUNYA_APP DunyaDevHost DunyaRuntime)
     add_custom_command(
         TARGET ${DUNYA_APP} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory

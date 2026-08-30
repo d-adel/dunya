@@ -2,20 +2,20 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Editor (Dev)",
+      "name": "Dev host (Dev)",
       "type": "cppvsdbg",
       "request": "launch",
-      "program": "${workspaceFolder}/build-dev/DunyaEditor.exe",
+      "program": "${workspaceFolder}/build-dev/DunyaDevHost.exe",
       "args": [],
       "cwd": "${workspaceFolder}/build-dev",
       "console": "integratedTerminal",
       "preLaunchTask": "build dev"
     },
     {
-      "name": "Editor (Release)",
+      "name": "Dev host (Release)",
       "type": "cppvsdbg",
       "request": "launch",
-      "program": "${workspaceFolder}/build-release/DunyaEditor.exe",
+      "program": "${workspaceFolder}/build-release/DunyaDevHost.exe",
       "args": [],
       "cwd": "${workspaceFolder}/build-release",
       "console": "integratedTerminal",
@@ -42,20 +42,20 @@
       "preLaunchTask": "build release"
     },
     {
-      "name": "Editor (Release, big wall)",
+      "name": "Dev host (Release, big wall)",
       "type": "cppvsdbg",
       "request": "launch",
-      "program": "${workspaceFolder}/build-release/DunyaEditor.exe",
+      "program": "${workspaceFolder}/build-release/DunyaDevHost.exe",
       "args": ["--world", "wall-big", "--demo", "100000", "--demo-rate", "6"],
       "cwd": "${workspaceFolder}/build-release",
       "console": "integratedTerminal",
       "preLaunchTask": "build release"
     },
     {
-      "name": "Editor (Release, record)",
+      "name": "Dev host (Release, record)",
       "type": "cppvsdbg",
       "request": "launch",
-      "program": "${workspaceFolder}/build-release/DunyaEditor.exe",
+      "program": "${workspaceFolder}/build-release/DunyaDevHost.exe",
       "args": [
         "--world",
         "wall-big",

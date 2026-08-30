@@ -1,0 +1,7 @@
+#include <app/application/application.h>
+#include <devhost/imguidebugui/imguidebugui.h>
+#include <app/startupoptions/startupoptions.h>
+#include <iostream>
+#include <span>
+
+using namespace std;

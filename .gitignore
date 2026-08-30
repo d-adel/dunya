@@ -1,2 +1,6 @@
 /build-dev
 /build-release
+
+# C# editor
+/editor/**/bin/
+/editor/**/obj/

@@ -33,7 +33,7 @@
   // own default, which is how a header can show errors the compiler does not.
   "C_Cpp.default.cppStandard": "c++20",
   "C_Cpp.default.includePath": [
-    "${workspaceFolder}/src",
+    "${workspaceFolder}/engine",
     "${env:VULKAN_SDK}/Include",
     "${workspaceFolder}/build-dev/_deps/glm-src",
     "${workspaceFolder}/build-dev/_deps/glfw-src/include",
