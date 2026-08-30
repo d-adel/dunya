@@ -8,7 +8,7 @@ constexpr entt::id_type BAKE_QUEUE = entt::hashed_string{"bake"};
 
 constexpr entt::id_type RESAMPLE_QUEUE = entt::hashed_string{"resample"};
 
-}  // namespace
+}
 
 World::World() {
   m_primitiveStore.connect(m_registry);
@@ -237,4 +237,4 @@ std::span<const Entity> World::meshes() const noexcept {
   return {storage->data(), storage->size()};
 }
 
-}  // namespace dunya::objectmodel
+}

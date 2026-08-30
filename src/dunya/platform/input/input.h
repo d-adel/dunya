@@ -124,4 +124,4 @@ private:
   inline static std::unordered_map<GLFWwindow*, Input*> s_inputs;
 };
 
-}  // namespace dunya::platform
+}

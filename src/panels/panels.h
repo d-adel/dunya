@@ -41,4 +41,4 @@ void frame(double frameMs, VkExtent2D extent, size_t primitives, bool analytic);
 
 void march(dunya::renderer::MarchParams& march);
 
-}  // namespace panels
+}

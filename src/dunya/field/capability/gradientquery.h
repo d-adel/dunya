@@ -11,4 +11,4 @@ concept GradientQueryable = requires(const T& field, const glm::vec3& point) {
   { gradient(field, point) } -> std::convertible_to<glm::vec3>;
 };
 
-}  // namespace dunya::field
+}

@@ -48,4 +48,4 @@ inline dunya::field::Primitive box(
   return primitive;
 }
 
-}  // namespace fixture
+}

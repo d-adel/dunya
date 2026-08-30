@@ -43,7 +43,7 @@ Ray toLocal(const Pose& pose, const Ray& world) {
   };
 }
 
-}  // namespace
+}
 
 TEST_CASE("a pose puts an off-centre primitive where the turn says", "[pose]") {
   Pose pose{};

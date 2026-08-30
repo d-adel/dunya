@@ -157,4 +157,4 @@ void FieldEditor::retarget(dunya::objectmodel::World& world) {
   m_commandHistory.clear();
 }
 
-}  // namespace dunya::editor
+}

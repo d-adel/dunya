@@ -20,7 +20,7 @@ void fill(Store& store, Range range, uint32_t count, uint32_t first) {
   }
 }
 
-}  // namespace
+}
 
 TEST_CASE("an allocation grows the pool", "[rangestore]") {
   Store store(POOL);

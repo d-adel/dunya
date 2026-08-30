@@ -77,4 +77,4 @@ private:
   dunya::gpu::DescriptorGroup m_group;
 };
 
-}  // namespace dunya::renderer
+}

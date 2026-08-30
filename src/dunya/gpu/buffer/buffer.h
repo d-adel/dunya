@@ -103,4 +103,4 @@ Buffer Buffer::deviceLocal(
   return result;
 }
 
-}  // namespace dunya::gpu
+}

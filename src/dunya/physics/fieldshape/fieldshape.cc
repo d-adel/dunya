@@ -406,7 +406,7 @@ void castFieldVsField(
   }
 }
 
-}  // namespace
+}
 
 FieldShape::FieldShape(const dunya::field::SampledField& field)
     : FieldShape(field, nullptr, glm::uvec3(0u), glm::uvec3(0u)) {}
@@ -724,4 +724,4 @@ void registerFieldShape() {
   );
 }
 
-}  // namespace dunya::physics
+}

@@ -81,4 +81,4 @@ private:
   uint32_t m_cratersApplied = 0;
 };
 
-}  // namespace dunya::runtime
+}

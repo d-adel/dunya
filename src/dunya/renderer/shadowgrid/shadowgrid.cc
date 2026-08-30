@@ -26,7 +26,7 @@ uint32_t cellOf(float coordinate, float origin, float inverseSize) {
   return cell >= SHADOW_GRID_CELLS ? SHADOW_GRID_CELLS - 1u : cell;
 }
 
-}  // namespace
+}
 
 void ShadowGrid::giveUp() {
   m_uniform.cell = glm::vec4(0.0f);
@@ -186,4 +186,4 @@ std::span<const uint32_t> ShadowGrid::indices() const noexcept {
   return m_indices;
 }
 
-}  // namespace dunya::renderer
+}

@@ -10,7 +10,7 @@ struct Marker {
   float value;
 };
 
-}  // namespace
+}
 
 TEST_CASE("a component round trips through a registry", "[entt]") {
   entt::registry registry;
@@ -56,7 +56,7 @@ struct UpdateCounter {
   }
 };
 
-}  // namespace
+}
 
 TEST_CASE(
   "patch and replace publish on_update, a write through get does not",

@@ -102,7 +102,7 @@ glm::vec3 halfExtent(const Primitive& primitive) {
   return extent;
 }
 
-}  // namespace
+}
 
 void updateBounds(Primitive& primitive) {
   const glm::mat4 model = glm::inverse(primitive.inverseModel);
@@ -291,4 +291,4 @@ float stepBound(
   return std::abs(distance(field, point));
 }
 
-}  // namespace dunya::field
+}

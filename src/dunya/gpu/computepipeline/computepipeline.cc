@@ -77,4 +77,4 @@ void ComputePipeline::destroy() noexcept {
   m_pipelineLayout = VK_NULL_HANDLE;
 }
 
-}  // namespace dunya::gpu
+}

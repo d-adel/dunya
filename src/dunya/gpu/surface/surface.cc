@@ -24,4 +24,4 @@ void Surface::createSurface() {
   }
 }
 
-}  // namespace dunya::gpu
+}

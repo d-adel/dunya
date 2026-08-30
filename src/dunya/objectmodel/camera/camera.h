@@ -48,4 +48,4 @@ private:
   float m_lookSensitivity = 1 / 200.f;
 };
 
-}  // namespace dunya::objectmodel
+}

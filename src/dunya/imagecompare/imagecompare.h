@@ -49,4 +49,4 @@ Bitmap differenceImage(
   const Tolerance& tolerance
 );
 
-}  // namespace dunya::image
+}

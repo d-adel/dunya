@@ -48,4 +48,4 @@ private:
   bool m_uncapped = false;
 };
 
-}  // namespace dunya::gpu
+}

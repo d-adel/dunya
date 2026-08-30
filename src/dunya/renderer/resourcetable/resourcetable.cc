@@ -97,4 +97,4 @@ const VkDescriptorSetLayout& ResourceTable::setLayout() const noexcept {
   return m_group.setLayout();
 }
 
-}  // namespace dunya::renderer
+}

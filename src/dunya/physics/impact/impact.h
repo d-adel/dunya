@@ -46,4 +46,4 @@ private:
   std::atomic<float> m_threshold;
 };
 
-}  // namespace dunya::physics
+}

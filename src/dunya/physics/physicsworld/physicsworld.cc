@@ -16,7 +16,7 @@ uint workerCount() {
   return count > 1 ? count - 1 : 1;
 }
 
-}  // namespace
+}
 
 namespace dunya::physics {
 
@@ -77,4 +77,4 @@ ImpactListener& PhysicsWorld::impacts() noexcept {
   return m_impacts;
 }
 
-}  // namespace dunya::physics
+}

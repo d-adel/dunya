@@ -56,7 +56,7 @@ void submitBarrier(VkCommandBuffer cmd, const VkImageMemoryBarrier2& barrier) {
   vkCmdPipelineBarrier2(cmd, &dependency);
 }
 
-}  // namespace
+}
 
 dunya::image::Bitmap read(
   const dunya::gpu::Device& device,
@@ -130,4 +130,4 @@ dunya::image::Bitmap read(
   return bitmap;
 }
 
-}  // namespace dunya::capture
+}

@@ -43,4 +43,4 @@ private:
   CommandHistory m_commandHistory;
 };
 
-}  // namespace dunya::editor
+}

@@ -69,4 +69,4 @@ Primitive makePlane(glm::vec3 position, uint32_t material, uint32_t operation) {
   return primitive;
 }
 
-}  // namespace dunya::field
+}

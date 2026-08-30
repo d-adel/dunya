@@ -320,4 +320,4 @@ void Runtime::syncPoses() {
   m_world.replaceMany<objectmodel::Pose>(m_poseScratch);
 }
 
-}  // namespace dunya::runtime
+}

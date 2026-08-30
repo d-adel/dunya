@@ -70,4 +70,4 @@ void Sampler::destroy() noexcept {
   m_sampler = VK_NULL_HANDLE;
 }
 
-}  // namespace dunya::gpu
+}

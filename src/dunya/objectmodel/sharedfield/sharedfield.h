@@ -10,4 +10,4 @@ struct SharedField {
   std::shared_ptr<dunya::field::SampledField> field;
 };
 
-}  // namespace dunya::objectmodel
+}

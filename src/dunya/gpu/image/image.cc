@@ -277,4 +277,4 @@ void Image::recordCopyFrom(
   );
 }
 
-}  // namespace dunya::gpu
+}

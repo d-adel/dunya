@@ -41,7 +41,7 @@ void requireExtent(
   REQUIRE_THAT(extent->maximum.z, WithinAbs(maximum.z, ANALYTIC_TOLERANCE));
 }
 
-}  // namespace
+}
 
 TEST_CASE("an axis-aligned box bounds its half extents", "[bounds]") {
   const std::vector<Primitive> primitives{dunya::field::makeBox(

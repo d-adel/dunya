@@ -111,4 +111,4 @@ private:
   dunya::gpu::Buffer m_brickBounds;
 };
 
-}  // namespace dunya::renderer
+}

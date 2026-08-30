@@ -63,7 +63,7 @@ float distanceAt(const std::vector<Primitive>& primitives, const glm::vec3& p) {
   return dunya::field::sample(primitives, p).distance;
 }
 
-}  // namespace
+}
 
 TEST_CASE("Primitive keeps the layout the shader indexes by", "[field]") {
   REQUIRE(sizeof(Primitive) == 112);

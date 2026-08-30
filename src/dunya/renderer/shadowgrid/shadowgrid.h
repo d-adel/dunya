@@ -54,4 +54,4 @@ private:
   std::vector<glm::vec4> m_footprints;
 };
 
-}  // namespace dunya::renderer
+}

@@ -155,4 +155,4 @@ void Uploader::retire() {
   m_inFlight.resize(kept);
 }
 
-}  // namespace dunya::gpu
+}

@@ -13,4 +13,4 @@ struct Mesh {
 template<>
 inline constexpr bool selfContained<Mesh> = true;
 
-}  // namespace dunya::objectmodel
+}

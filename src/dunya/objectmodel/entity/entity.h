@@ -9,4 +9,4 @@ using Entity = entt::entity;
 
 inline constexpr Entity INVALID_ENTITY = entt::null;
 
-}  // namespace dunya::objectmodel
+}

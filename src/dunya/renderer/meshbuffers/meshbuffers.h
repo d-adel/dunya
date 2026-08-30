@@ -33,4 +33,4 @@ private:
   uint32_t m_indexCount = 0;
 };
 
-}  // namespace dunya::renderer
+}

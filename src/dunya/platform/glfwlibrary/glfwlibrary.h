@@ -18,4 +18,4 @@ private:
   static void errorCallback(int errorCode, const char* description);
 };
 
-}  // namespace dunya::platform
+}

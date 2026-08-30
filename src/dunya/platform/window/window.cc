@@ -79,4 +79,4 @@ void Window::windowFocusCallback(GLFWwindow* window, int focused) {
   }
 }
 
-}  // namespace dunya::platform
+}

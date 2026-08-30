@@ -40,4 +40,4 @@ private:
   bool m_windowFocused;
 };
 
-}  // namespace dunya::platform
+}

@@ -48,4 +48,4 @@ private:
   std::vector<Batch> m_inFlight;
 };
 
-}  // namespace dunya::gpu
+}

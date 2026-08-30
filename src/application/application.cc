@@ -15,7 +15,7 @@ const std::vector<VkVertexInputBindingDescription> MESH_BINDINGS{
 const auto MESH_ATTRIBUTES =
   dunya::renderer::Vertex::getAttributeDescriptions();
 
-}  // namespace
+}
 
 Application::Application(const StartupOptions& options)
     : m_input(m_context.window().handle()),

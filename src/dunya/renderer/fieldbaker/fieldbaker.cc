@@ -49,7 +49,7 @@ void transitionVolumes(
   vkCmdPipelineBarrier2(cmd, &dependency);
 }
 
-}  // namespace
+}
 
 void FieldBaker::bake(
   const FieldRecord& gpu,
@@ -351,7 +351,7 @@ std::vector<float> readBounds(
   return values;
 }
 
-}  // namespace
+}
 
 FieldBaker::FieldBaker(
   const dunya::gpu::Device& device,
@@ -446,4 +446,4 @@ void FieldBaker::verifyBake(
             << std::abs(gpuGlobal - reference.globalLipschitz) << '\n';
 }
 
-}  // namespace dunya::renderer
+}

@@ -25,7 +25,7 @@ VkDescriptorPool createPool(VkDevice device) {
   return pool;
 }
 
-}  // namespace
+}
 
 Overlay::Overlay(
   const dunya::gpu::Context& context,

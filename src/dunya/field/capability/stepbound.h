@@ -12,4 +12,4 @@ concept StepBounded =
     { stepBound(field, point, direction) } -> std::convertible_to<float>;
   };
 
-}  // namespace dunya::field
+}

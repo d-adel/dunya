@@ -180,4 +180,4 @@ private:
   uint32_t m_initialCapacity;
 };
 
-}  // namespace dunya::objectmodel
+}

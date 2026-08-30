@@ -40,4 +40,4 @@ static_assert(
   "MaterialRecord must keep the std140 layout the shaders index by"
 );
 
-}  // namespace dunya::renderer
+}

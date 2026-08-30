@@ -28,4 +28,4 @@ void fitToPrimitives(
     dunya::field::voxelSize(box.minimum, box.maximum, grid.resolution);
 }
 
-}  // namespace dunya::objectmodel
+}

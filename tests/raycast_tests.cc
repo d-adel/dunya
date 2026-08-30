@@ -30,7 +30,7 @@ Primitive makeSphere(const glm::vec3& centre, float radius, uint32_t material) {
   return primitive;
 }
 
-}  // namespace
+}
 
 TEST_CASE("a ray through a projected point aims back at it", "[raycast]") {
   const glm::vec3 eye(3.0f, 2.0f, 5.0f);

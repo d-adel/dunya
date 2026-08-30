@@ -31,4 +31,4 @@ Device& Context::device() {
   return m_device;
 }
 
-}  // namespace dunya::gpu
+}

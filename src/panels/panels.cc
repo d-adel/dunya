@@ -151,4 +151,4 @@ void march(dunya::renderer::MarchParams& march) {
   }
 }
 
-}  // namespace panels
+}

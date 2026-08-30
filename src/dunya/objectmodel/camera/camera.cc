@@ -53,4 +53,4 @@ glm::vec4 Camera::position() const {
   return glm::vec4(m_position, nearPlane);
 }
 
-}  // namespace dunya::objectmodel
+}

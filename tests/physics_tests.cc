@@ -144,7 +144,7 @@ std::vector<float> dropTrajectory(int steps) {
   return heights;
 }
 
-}  // namespace
+}
 
 TEST_CASE(
   "the same initial conditions reproduce the same trajectory",

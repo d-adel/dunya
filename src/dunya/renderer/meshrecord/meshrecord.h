@@ -12,4 +12,4 @@ struct MeshRecord {
   glm::mat4 model = glm::mat4(1.0f);
 };
 
-}  // namespace dunya::renderer
+}

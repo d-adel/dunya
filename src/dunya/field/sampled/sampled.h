@@ -92,4 +92,4 @@ static_assert(MaterialQueryable<SampledField>);
 static_assert(GradientQueryable<SampledField>);
 static_assert(StepBounded<SampledField>);
 
-}  // namespace dunya::field
+}

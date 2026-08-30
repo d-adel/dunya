@@ -78,4 +78,4 @@ static_assert(GradientQueryable<AnalyticFieldView>);
 static_assert(MaterialQueryable<AnalyticFieldView>);
 static_assert(StepBounded<AnalyticFieldView>);
 
-}  // namespace dunya::field
+}

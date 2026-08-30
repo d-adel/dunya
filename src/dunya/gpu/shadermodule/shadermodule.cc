@@ -20,7 +20,7 @@ std::vector<char> readSpirv(const std::string& path) {
   return buffer;
 }
 
-}  // namespace
+}
 
 ShaderModule::ShaderModule(const VkDevice& device, const std::string& path)
     : ShaderModule(device, readSpirv(path)) {}
@@ -79,4 +79,4 @@ void ShaderModule::destroy() noexcept {
   m_module = VK_NULL_HANDLE;
 }
 
-}  // namespace dunya::gpu
+}

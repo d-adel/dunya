@@ -184,4 +184,4 @@ void Deformation::applyImpacts(Runtime& runtime) {
   m_pending.clear();
 }
 
-}  // namespace dunya::runtime
+}

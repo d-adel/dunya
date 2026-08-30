@@ -74,4 +74,4 @@ bool DepthImage::hasStencilComponent(VkFormat format) {
          || format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
 
-}  // namespace dunya::gpu
+}

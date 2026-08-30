@@ -10,7 +10,7 @@ uint32_t latticeIndex(const SampledField& field, const glm::uvec3& at) {
   return at.x + field.resolution.x * (at.y + field.resolution.y * at.z);
 }
 
-}  // namespace
+}
 
 SampleBox affectedBox(
   const SampledField& field,
@@ -145,4 +145,4 @@ DeformReport deformAndRepair(
   return {write(field, box, distances, materials), settled};
 }
 
-}  // namespace dunya::field
+}

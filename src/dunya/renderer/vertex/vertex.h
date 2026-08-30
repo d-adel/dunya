@@ -60,7 +60,7 @@ void hashHelper(std::size_t& seed, const T& value) {
   seed = std::hash<T>{}(value) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 }
 
-}  // namespace dunya::renderer
+}
 
 namespace std {
 template<>
@@ -75,4 +75,4 @@ struct hash<dunya::renderer::Vertex> {
     return seed;
   }
 };
-}  // namespace std
+}

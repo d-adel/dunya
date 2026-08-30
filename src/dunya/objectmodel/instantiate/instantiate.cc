@@ -53,4 +53,4 @@ void instantiateWorld(const World& source, World& destination) {
   }
 }
 
-}  // namespace dunya::objectmodel
+}

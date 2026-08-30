@@ -9,7 +9,7 @@ constexpr uint32_t WARMUP = 20u;
 constexpr float MOVED_METRES = 1.0e-5f;
 constexpr float TURNED_RADIANS = 1.0e-5f;
 
-}  // namespace
+}
 
 DemoDriver::DemoDriver(uint32_t frames, float shotsPerSecond)
     : m_frames(frames) {

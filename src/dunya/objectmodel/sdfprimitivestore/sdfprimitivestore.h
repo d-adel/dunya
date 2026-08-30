@@ -74,4 +74,4 @@ private:
   RangeStore<dunya::field::Primitive> m_primitives;
 };
 
-}  // namespace dunya::objectmodel
+}

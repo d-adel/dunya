@@ -103,4 +103,4 @@ std::optional<std::pair<float, float>> intersect(
 
   return std::pair{std::max(tEnter, 0.0f), tExit};
 }
-}  // namespace dunya::field
+}

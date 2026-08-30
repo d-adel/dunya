@@ -168,4 +168,4 @@ void Instance::setupDebugMessenger() {
   }
 }
 
-}  // namespace dunya::gpu
+}

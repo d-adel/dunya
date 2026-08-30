@@ -164,7 +164,7 @@ Cell locate(const SampledField& field, const glm::vec3& point) {
   return {base, lattice - glm::vec3(base)};
 }
 
-}  // namespace
+}
 
 SampleBox merge(const SampleBox& first, const SampleBox& second) {
   if (glm::any(glm::equal(first.extent, glm::uvec3(0u)))) {
@@ -475,4 +475,4 @@ WriteReport write(
   return {box, bricks.begin, bricks.end};
 }
 
-}  // namespace dunya::field
+}

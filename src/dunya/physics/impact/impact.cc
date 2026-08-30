@@ -101,4 +101,4 @@ float ImpactListener::threshold() const noexcept {
   return m_threshold.load(std::memory_order_relaxed);
 }
 
-}  // namespace dunya::physics
+}

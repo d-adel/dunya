@@ -116,4 +116,4 @@ void Buffer::copyTo(
   cmd.submit(device);
 }
 
-}  // namespace dunya::gpu
+}

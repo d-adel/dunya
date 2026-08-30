@@ -28,4 +28,4 @@ float redistance(SampledField& field, const SampleBox& box);
 
 float godunov(float a, float b, float c, const glm::vec3& h);
 
-}  // namespace dunya::field
+}

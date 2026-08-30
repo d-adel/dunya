@@ -136,4 +136,4 @@ private:
   std::vector<uint32_t> m_deviceBufferSlots;
 };
 
-}  // namespace dunya::gpu
+}

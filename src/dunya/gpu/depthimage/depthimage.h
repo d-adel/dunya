@@ -43,4 +43,4 @@ private:
   Image m_depthImage;
 };
 
-}  // namespace dunya::gpu
+}

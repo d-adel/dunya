@@ -51,4 +51,4 @@ private:
   std::vector<std::pair<objectmodel::Entity, uint32_t>> m_holders;
 };
 
-}  // namespace dunya::renderer
+}

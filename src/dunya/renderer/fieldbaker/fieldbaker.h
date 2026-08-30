@@ -53,4 +53,4 @@ private:
   dunya::gpu::ComputePipeline m_lipschitzPipeline;
 };
 
-}  // namespace dunya::renderer
+}

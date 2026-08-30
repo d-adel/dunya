@@ -11,4 +11,4 @@ concept DensityField = requires(const T& field, const glm::vec3& point) {
   { density(field, point) } -> std::convertible_to<float>;
 };
 
-}  // namespace dunya::field
+}

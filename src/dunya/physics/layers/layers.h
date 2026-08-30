@@ -14,7 +14,7 @@ inline constexpr JPH::ObjectLayer NON_MOVING = 0;
 inline constexpr JPH::ObjectLayer MOVING = 1;
 inline constexpr JPH::ObjectLayer NUM_LAYERS = 2;
 
-}  // namespace ObjectLayers
+}
 
 namespace BroadPhaseLayers {
 
@@ -22,7 +22,7 @@ inline constexpr JPH::BroadPhaseLayer NON_MOVING{0};
 inline constexpr JPH::BroadPhaseLayer MOVING{1};
 inline constexpr JPH::uint NUM_LAYERS = 2;
 
-}  // namespace BroadPhaseLayers
+}
 
 class ObjectLayerPairFilter final : public JPH::ObjectLayerPairFilter {
 public:
@@ -60,4 +60,4 @@ public:
   ) const override;
 };
 
-}  // namespace dunya::physics
+}

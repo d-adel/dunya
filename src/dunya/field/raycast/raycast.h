@@ -53,4 +53,4 @@ std::optional<std::pair<float, float>> intersect(
   const Ray& ray
 );
 
-}  // namespace dunya::field
+}

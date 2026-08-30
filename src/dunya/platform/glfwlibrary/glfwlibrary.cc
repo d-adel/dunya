@@ -17,4 +17,4 @@ void GLFWLibrary::errorCallback(int errorCode, const char* description) {
   std::cerr << "GLFW Error [" << errorCode << "]: " << description << '\n';
 }
 
-}  // namespace dunya::platform
+}

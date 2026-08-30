@@ -62,4 +62,4 @@ private:
   Image m_textureImage;
 };
 
-}  // namespace dunya::gpu
+}

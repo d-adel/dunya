@@ -54,7 +54,7 @@ float sphereMass(float radius) {
   return DENSITY * 4.0f / 3.0f * glm::pi<float>() * radius * radius * radius;
 }
 
-}  // namespace
+}
 
 TEST_CASE("the local bounds are the solid, not the grid", "[fieldshape]") {
   JoltLibrary library;
@@ -491,7 +491,7 @@ uint32_t contactsBetween(
   return static_cast<uint32_t>(collector.mHits.size());
 }
 
-}  // namespace
+}
 
 TEST_CASE(
   "a coarse body against a fine one collides either way round",

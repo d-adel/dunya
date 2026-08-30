@@ -65,7 +65,7 @@ std::optional<float> crossingAlongX(const SampledField& field, float until) {
   return std::nullopt;
 }
 
-}  // namespace
+}
 
 TEST_CASE(
   "a subtraction moves the surface to the cutter's near wall",

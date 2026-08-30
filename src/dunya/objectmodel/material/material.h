@@ -13,4 +13,4 @@ struct Material {
 template<>
 inline constexpr bool selfContained<Material> = true;
 
-}  // namespace dunya::objectmodel
+}

@@ -24,4 +24,4 @@ inline glm::mat4 model(const Pose& pose) {
   return translationMatrix * rotationMatrix;
 }
 
-}  // namespace dunya::objectmodel
+}

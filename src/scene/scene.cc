@@ -20,7 +20,7 @@ constexpr uint32_t PROJECTILE_MATERIAL = 4u;
 
 constexpr uint32_t PROJECTILE_RESOLUTION = dunya::core::FIELD_GRID_RESOLUTION;
 
-}  // namespace
+}
 
 Scene::Scene(
   const dunya::gpu::Context& context,

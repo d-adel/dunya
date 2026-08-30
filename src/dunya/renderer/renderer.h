@@ -78,4 +78,4 @@ private:
   FrameGlobals& m_frameGlobals;
 };
 
-}  // namespace dunya::renderer
+}

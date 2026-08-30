@@ -35,4 +35,4 @@ private:
   VkDevice m_device = VK_NULL_HANDLE;
 };
 
-}  // namespace dunya::gpu
+}

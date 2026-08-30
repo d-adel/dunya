@@ -67,4 +67,4 @@ constexpr float FIELD_GRID_MARGIN = 0.5f;
 
 constexpr uint32_t INVALID_PRIMITIVE_OFFSET = UINT32_MAX;
 
-}  // namespace dunya::core
+}

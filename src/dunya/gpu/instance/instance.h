@@ -38,4 +38,4 @@ private:
   );
 };
 
-}  // namespace dunya::gpu
+}

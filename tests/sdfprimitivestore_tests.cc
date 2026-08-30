@@ -46,7 +46,7 @@ uint32_t materialAt(
   return store.primitives(registry, entity)[index].shapeConfig.y;
 }
 
-}  // namespace
+}
 
 TEST_CASE("primitives need a grid to be sampled onto", "[sdfstore]") {
   entt::registry registry;

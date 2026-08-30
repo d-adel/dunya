@@ -529,4 +529,4 @@ bool Renderer::drawFrame(
   return false;
 }
 
-}  // namespace dunya::renderer
+}

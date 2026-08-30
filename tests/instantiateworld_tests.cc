@@ -45,7 +45,7 @@ uint32_t materialAt(const World& world, Entity entity, uint32_t index) {
   return world.primitives(entity)[index].shapeConfig.y;
 }
 
-}  // namespace
+}
 
 TEST_CASE("every object arrives at the id it had", "[instantiate]") {
   World authored;

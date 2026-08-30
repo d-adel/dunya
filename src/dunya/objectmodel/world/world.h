@@ -167,4 +167,4 @@ private:
   entt::registry m_registry;
 };
 
-}  // namespace dunya::objectmodel
+}

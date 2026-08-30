@@ -73,7 +73,7 @@ float axisMinimum(
   return lowest;
 }
 
-}  // namespace
+}
 
 float godunov(float a, float b, float c, const glm::vec3& h) {
   float d[3] = {a, b, c};
@@ -343,4 +343,4 @@ float redistance(SampledField& field, const SampleBox& box) {
   return redistance(field, box, everywhere);
 }
 
-}  // namespace dunya::field
+}

@@ -84,7 +84,7 @@ void destroy(PhysicsWorld& world, const Drop& drop) {
   bodies.DestroyBody(drop.floor);
 }
 
-}  // namespace
+}
 
 TEST_CASE("a hard landing is recorded for both bodies", "[impact]") {
   JoltLibrary library;

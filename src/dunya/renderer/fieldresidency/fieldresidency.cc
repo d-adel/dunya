@@ -132,4 +132,4 @@ uint32_t FieldResidency::upload(
   return dropped;
 }
 
-}  // namespace dunya::renderer
+}

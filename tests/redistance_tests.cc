@@ -45,7 +45,7 @@ void flatten(SampledField& field, float factor) {
   dunya::field::write(field, whole(field), field.distances, field.materials);
 }
 
-}  // namespace
+}
 
 TEST_CASE("the Godunov update solves its own equation", "[redistance]") {
   const glm::vec3 unit(1.0f);

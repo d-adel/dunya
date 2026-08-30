@@ -21,4 +21,4 @@ private:
   VkCommandBuffer m_commandBuffer;
 };
 
-}  // namespace dunya::gpu
+}

@@ -194,4 +194,4 @@ std::span<const Primitive> SdfPrimitiveStore::pool() const noexcept {
   return m_primitives.pool();
 }
 
-}  // namespace dunya::objectmodel
+}

@@ -387,4 +387,4 @@ VkPipeline Pipeline::buildPipeline() {
   return pipeline;
 }
 
-}  // namespace dunya::gpu
+}

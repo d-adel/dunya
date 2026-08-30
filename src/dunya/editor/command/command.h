@@ -58,4 +58,4 @@ using Command = std::variant<
   RemovePrimitiveCommand,
   UpdatePrimitiveCommand>;
 
-}  // namespace dunya::editor
+}

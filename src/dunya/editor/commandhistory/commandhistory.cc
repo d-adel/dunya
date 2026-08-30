@@ -15,7 +15,7 @@ bool isField(
          && world.registry().all_of<dunya::objectmodel::SdfGrid>(entity);
 }
 
-}  // namespace
+}
 
 void CommandHistory::undo(dunya::objectmodel::World& world) {
   if (m_undo.empty()) {
@@ -189,4 +189,4 @@ bool CommandHistory::revert(
   );
 }
 
-}  // namespace dunya::editor
+}

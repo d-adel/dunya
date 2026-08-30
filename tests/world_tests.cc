@@ -59,7 +59,7 @@ uint32_t liveEntityCount(const World& world) {
   return static_cast<uint32_t>(world.registry().storage<Entity>()->free_list());
 }
 
-}  // namespace
+}
 
 TEST_CASE("a created field is live and listed", "[world]") {
   World world;

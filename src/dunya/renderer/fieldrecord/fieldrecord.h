@@ -70,4 +70,4 @@ FieldRecord makeFieldRecord(
   uint32_t fieldRepresentation
 );
 
-}  // namespace dunya::renderer
+}

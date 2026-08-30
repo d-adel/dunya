@@ -42,4 +42,4 @@ Primitive makePlane(
   uint32_t operation = 0
 );
 
-}  // namespace dunya::field
+}

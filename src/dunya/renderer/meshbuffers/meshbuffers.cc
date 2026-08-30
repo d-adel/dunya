@@ -87,4 +87,4 @@ void MeshBuffers::loadModel(
   m_indexCount = static_cast<uint32_t>(indices.size());
 }
 
-}  // namespace dunya::renderer
+}

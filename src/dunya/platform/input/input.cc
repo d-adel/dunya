@@ -257,4 +257,4 @@ bool Input::isValidKey(int key) noexcept {
   return key >= 0 && key <= GLFW_KEY_LAST;
 }
 
-}  // namespace dunya::platform
+}

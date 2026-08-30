@@ -38,4 +38,4 @@ private:
   Device m_device;
 };
 
-}  // namespace dunya::gpu
+}

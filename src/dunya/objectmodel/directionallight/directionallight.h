@@ -18,4 +18,4 @@ inline glm::vec3 toLight(const DirectionalLight& light) {
                                         : glm::vec3(0.0f, 1.0f, 0.0f);
 }
 
-}  // namespace dunya::objectmodel
+}

@@ -400,4 +400,4 @@ bool Device::checkDeviceFeatureSupport(VkPhysicalDevice device) {
          && features12.descriptorBindingSampledImageUpdateAfterBind == VK_TRUE;
 }
 
-}  // namespace dunya::gpu
+}

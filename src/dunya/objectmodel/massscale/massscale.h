@@ -11,4 +11,4 @@ struct MassScale {
 template<>
 inline constexpr bool selfContained<MassScale> = true;
 
-}  // namespace dunya::objectmodel
+}

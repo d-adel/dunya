@@ -28,7 +28,7 @@ bool sameSize(const Bitmap& a, const Bitmap& b) noexcept {
   return a.width == b.width && a.height == b.height;
 }
 
-}  // namespace
+}
 
 Bitmap load(const std::string& path) {
   int width = 0;
@@ -180,4 +180,4 @@ Bitmap differenceImage(
   return result;
 }
 
-}  // namespace dunya::image
+}

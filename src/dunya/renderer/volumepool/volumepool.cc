@@ -17,7 +17,7 @@ size_t hashKey(const VolumeKey& key) {
   return hash;
 }
 
-}  // namespace
+}
 
 VolumeKey volumeKey(
   std::span<const dunya::field::Primitive> primitives,
@@ -303,7 +303,7 @@ void stageInto(
   uploader.keep(std::move(staging));
 }
 
-}  // namespace
+}
 
 void VolumePool::writeInto(
   dunya::gpu::Uploader& uploader,
@@ -412,4 +412,4 @@ dunya::gpu::Texture VolumePool::makeMaterialVolume(
   );
 }
 
-}  // namespace dunya::renderer
+}

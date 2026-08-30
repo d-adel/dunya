@@ -41,4 +41,4 @@ struct Frame {
   };
 };
 
-}  // namespace dunya::renderer
+}

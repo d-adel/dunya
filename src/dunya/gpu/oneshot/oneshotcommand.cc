@@ -70,4 +70,4 @@ void OneShotCommand::submit(const Device& device) const {
   vkDestroyCommandPool(device.vkDevice(), m_commandPool, nullptr);
 }
 
-}  // namespace dunya::gpu
+}

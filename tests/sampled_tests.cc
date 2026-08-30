@@ -39,7 +39,7 @@ Primitive makeSphere(
   return primitive;
 }
 
-}  // namespace
+}
 
 TEST_CASE(
   "a bake reproduces the field exactly at lattice points",
@@ -454,7 +454,7 @@ uint32_t brickAt(const SampledField& field, const glm::vec3& point) {
   return brick.x + counts * (brick.y + counts * brick.z);
 }
 
-}  // namespace
+}
 
 TEST_CASE("every brick the surface crosses reports it", "[sampled][bound]") {
   const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
@@ -640,7 +640,7 @@ void trueBrickRange(
   }
 }
 
-}  // namespace
+}
 
 TEST_CASE("a write reports exactly the bricks it moved", "[sampled][write]") {
   const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};

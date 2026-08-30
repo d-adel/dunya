@@ -15,4 +15,4 @@ public:
   JoltLibrary& operator=(JoltLibrary&&) = delete;
 };
 
-}  // namespace dunya::physics
+}

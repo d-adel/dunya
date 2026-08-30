@@ -111,4 +111,4 @@ private:
   std::unordered_map<size_t, std::vector<uint32_t>> m_shared;
 };
 
-}  // namespace dunya::renderer
+}

@@ -36,4 +36,4 @@ private:
   VkPipeline m_pipeline = VK_NULL_HANDLE;
 };
 
-}  // namespace dunya::gpu
+}

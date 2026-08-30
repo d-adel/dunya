@@ -18,7 +18,7 @@ std::string valueFor(
   return arguments[++at];
 }
 
-}  // namespace
+}
 
 StartupOptions::StartupOptions(std::span<char*> arguments) {
   for (size_t i = 1; i < arguments.size(); ++i) {

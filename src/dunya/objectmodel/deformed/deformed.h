@@ -9,4 +9,4 @@ struct Deformed {};
 template<>
 inline constexpr bool selfContained<Deformed> = true;
 
-}  // namespace dunya::objectmodel
+}

@@ -26,7 +26,7 @@ void setPixel(Bitmap& bitmap, uint32_t x, uint32_t y, uint8_t value) {
   bitmap.pixels[at + 3] = value;
 }
 
-}  // namespace
+}
 
 TEST_CASE("identical images differ nowhere") {
   const Bitmap reference = filled(8, 4, 100);

@@ -265,4 +265,4 @@ VkExtent2D SwapChain::chooseSwapExtent(
   }
 }
 
-}  // namespace dunya::gpu
+}

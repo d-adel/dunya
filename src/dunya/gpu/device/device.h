@@ -71,4 +71,4 @@ private:
   QueueFamilyIndices m_indices;
 };
 
-}  // namespace dunya::gpu
+}

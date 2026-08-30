@@ -59,4 +59,4 @@ private:
   std::vector<Command> m_redo;
 };
 
-}  // namespace dunya::editor
+}

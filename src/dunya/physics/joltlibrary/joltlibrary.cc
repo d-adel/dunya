@@ -34,7 +34,7 @@ bool assertFailed(
 
 #endif
 
-}  // namespace
+}
 
 namespace dunya::physics {
 
@@ -67,4 +67,4 @@ JoltLibrary::~JoltLibrary() {
 #endif
 }
 
-}  // namespace dunya::physics
+}

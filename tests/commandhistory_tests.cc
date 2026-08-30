@@ -62,7 +62,7 @@ const dunya::objectmodel::Pose& poseOf(
   return world.registry().get<dunya::objectmodel::Pose>(entity);
 }
 
-}  // namespace
+}
 
 TEST_CASE(
   "undoing an added primitive restores the count and requeues the bake",

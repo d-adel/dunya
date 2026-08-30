@@ -10,7 +10,7 @@ constexpr VkDeviceSize MARCH_PARAMS_BLOCK_BYTES =
 constexpr VkDeviceSize SCENE_COUNTS_BLOCK_BYTES =
   (sizeof(SceneCounts) + 15u) / 16u * 16u;
 
-}  // namespace
+}
 
 FrameGlobals::FrameGlobals(const dunya::gpu::Device& device)
     : m_group(
@@ -57,4 +57,4 @@ const VkDescriptorSetLayout& FrameGlobals::setLayout() const noexcept {
   return m_group.setLayout();
 }
 
-}  // namespace dunya::renderer
+}

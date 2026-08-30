@@ -22,4 +22,4 @@ void fitToPrimitives(
   std::span<const dunya::field::Primitive> primitives
 );
 
-}  // namespace dunya::objectmodel
+}

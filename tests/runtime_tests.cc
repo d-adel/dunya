@@ -78,7 +78,7 @@ float bodyMass(Runtime& runtime, Entity entity) {
   return 1.0f / lock.GetBody().GetMotionProperties()->GetInverseMass();
 }
 
-}  // namespace
+}
 
 TEST_CASE("a mass override survives a rebake as a density", "[runtime]") {
   JoltLibrary library;
@@ -202,7 +202,7 @@ std::vector<float> fieldDrop(
   return heights;
 }
 
-}  // namespace
+}
 
 TEST_CASE(
   "the same initial conditions reproduce the same trajectory over a field",
@@ -268,7 +268,7 @@ const JPH::Shape* bodyShape(Runtime& runtime, Entity entity) {
   return runtime.physics().bodies().GetShape(JPH::BodyID(body.id));
 }
 
-}  // namespace
+}
 
 TEST_CASE("objects on one lattice get one collision shape", "[runtime]") {
   JoltLibrary library;

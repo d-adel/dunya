@@ -21,4 +21,4 @@ private:
   VkSurfaceKHR m_surface = VK_NULL_HANDLE;
 };
 
-}  // namespace dunya::gpu
+}
