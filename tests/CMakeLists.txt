@@ -19,6 +19,7 @@ add_executable(unit_tests
     field_tests.cc
     glmmeta_tests.cc
     worldmeta_tests.cc
+    materialfile_tests.cc
     worldfile_tests.cc
     fieldshape_tests.cc
     impact_tests.cc

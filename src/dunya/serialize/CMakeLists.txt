@@ -2,6 +2,7 @@ add_library(dunya_serialize STATIC
     editorstate/editorstate.cc
     project/project.cc
     textfile/textfile.cc
+    materialfile/materialfile.cc
     worldfile/worldfile.cc
 )
 add_library(dunya::serialize ALIAS dunya_serialize)

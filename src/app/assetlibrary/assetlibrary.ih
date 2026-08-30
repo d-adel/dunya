@@ -3,5 +3,9 @@
 #include <dunya/core/asset/assetids.h>
 #include <dunya/core/config/config.h>
 #include <dunya/objectmodel/component/renderpose/renderpose.h>
+#include <dunya/serialize/project/project.h>
+#include <dunya/serialize/textfile/textfile.h>
 
+#include <optional>
 #include <stdexcept>
+#include <string>

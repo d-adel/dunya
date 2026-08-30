@@ -1,6 +1,7 @@
 #pragma once
 
 #include <dunya/core/asset/assetdatabase.h>
+#include <dunya/serialize/materialfile/materialfile.h>
 #include <dunya/gpu/context/context.h>
 #include <dunya/gpu/sampler/sampler.h>
 #include <dunya/gpu/texture/texture.h>
@@ -10,11 +11,15 @@
 #include <dunya/renderer/meshbuffers/meshbuffers.h>
 #include <dunya/renderer/meshrecord/meshrecord.h>
 
+#include <filesystem>
 #include <vector>
 
 class AssetLibrary {
 public:
-  explicit AssetLibrary(const dunya::gpu::Context& context);
+  AssetLibrary(
+    const dunya::gpu::Context& context,
+    const std::filesystem::path& projectRoot
+  );
 
   AssetLibrary(const AssetLibrary&) = delete;
   AssetLibrary& operator=(const AssetLibrary&) = delete;
@@ -38,7 +43,14 @@ public:
   [[nodiscard]] const dunya::core::AssetDatabase& assets() const noexcept;
 
   [[nodiscard]] uint32_t materialIndex(dunya::core::AssetId id) const;
+  [[nodiscard]] uint32_t textureIndex(dunya::core::AssetId id) const;
   [[nodiscard]] uint32_t meshIndex(dunya::core::AssetId id) const;
+
+private:
+  void loadProject(
+    const dunya::gpu::Device& device,
+    const std::filesystem::path& projectRoot
+  );
 
   uint32_t loadMesh(
     const dunya::gpu::Device& device,
@@ -46,8 +58,16 @@ public:
     const char* path
   );
 
-private:
-  std::vector<dunya::renderer::MaterialRecord> createMaterials();
+  uint32_t loadTexture(
+    const dunya::gpu::Device& device,
+    dunya::core::AssetId id,
+    const char* path
+  );
+
+  uint32_t addMaterial(
+    dunya::core::AssetId id,
+    const dunya::serialize::StoredMaterial& stored
+  );
 
   static std::vector<dunya::gpu::Texture> createTextures(
     const dunya::gpu::Device& device

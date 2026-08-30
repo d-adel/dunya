@@ -55,8 +55,6 @@ set(SHADER_INCLUDE_FLAG "-I${SHADER_SOURCE_DIR}")
 
 file(GLOB SHADER_INCLUDES CONFIGURE_DEPENDS "${SHADER_SOURCE_DIR}/*.glsl")
 string(JOIN " " SHADER_DEFINES_ARGS ${SHADER_DEFINES})
-set(TEXTURE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/textures")
-set(MODEL_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/models")
 FetchContent_Declare(
   glm
   GIT_REPOSITORY https://github.com/g-truc/glm
@@ -267,20 +265,6 @@ foreach(DUNYA_APP DunyaEditor DunyaRuntime)
         COMMAND ${CMAKE_COMMAND} -E copy_directory
                 ${SHADER_OUTPUT_DIR} $<TARGET_FILE_DIR:${DUNYA_APP}>/shaders
         COMMENT "Copying shaders"
-        VERBATIM
-    )
-    add_custom_command(
-        TARGET ${DUNYA_APP} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-                ${TEXTURE_SOURCE_DIR} $<TARGET_FILE_DIR:${DUNYA_APP}>/textures
-        COMMENT "Copying textures"
-        VERBATIM
-    )
-    add_custom_command(
-        TARGET ${DUNYA_APP} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-                ${MODEL_SOURCE_DIR} $<TARGET_FILE_DIR:${DUNYA_APP}>/models
-        COMMENT "Copying models"
         VERBATIM
     )
     add_custom_command(

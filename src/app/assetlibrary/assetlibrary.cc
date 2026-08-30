@@ -1,9 +1,145 @@
 #include "assetlibrary.ih"
 
-AssetLibrary::AssetLibrary(const dunya::gpu::Context& context)
-    : m_materials(createMaterials()),
-      m_samplers(createSamplers(context.device())),
-      m_textures(createTextures(context.device())) {}
+AssetLibrary::AssetLibrary(
+  const dunya::gpu::Context& context,
+  const std::filesystem::path& projectRoot
+)
+    : m_samplers(createSamplers(context.device())),
+      m_textures(createTextures(context.device())) {
+  loadProject(context.device(), projectRoot);
+}
+
+void AssetLibrary::loadProject(
+  const dunya::gpu::Device& device,
+  const std::filesystem::path& projectRoot
+) {
+  std::optional<dunya::serialize::Project> project =
+    dunya::serialize::Project::open(projectRoot);
+
+  if (!project.has_value()) {
+    throw std::runtime_error(
+      "AssetLibrary: no project at " + projectRoot.string()
+    );
+  }
+
+  for (const dunya::serialize::AssetEntry* entry : project->ofType("texture")) {
+    const std::string path = (project->root() / entry->path).string();
+
+    static_cast<void>(loadTexture(device, entry->id, path.c_str()));
+  }
+
+  for (const dunya::serialize::AssetEntry* entry :
+       project->ofType("material")) {
+    const std::optional<std::string> text =
+      dunya::serialize::readText(project->root() / entry->path);
+
+    if (!text.has_value()) {
+      throw std::runtime_error("AssetLibrary: cannot read " + entry->path);
+    }
+
+    dunya::serialize::StoredMaterial stored{};
+
+    if (!dunya::serialize::readMaterial(*text, stored)) {
+      throw std::runtime_error("AssetLibrary: cannot parse " + entry->path);
+    }
+
+    static_cast<void>(addMaterial(entry->id, stored));
+  }
+
+  for (const dunya::serialize::AssetEntry* entry : project->ofType("mesh")) {
+    const std::string path = (project->root() / entry->path).string();
+
+    static_cast<void>(loadMesh(device, entry->id, path.c_str()));
+  }
+}
+
+uint32_t AssetLibrary::loadTexture(
+  const dunya::gpu::Device& device,
+  dunya::core::AssetId id,
+  const char* path
+) {
+  const uint32_t index = static_cast<uint32_t>(m_textures.size());
+
+  m_assets.bind<dunya::gpu::Texture>(id, index);
+
+  m_textures.emplace_back(dunya::gpu::Texture(device, path));
+
+  return index;
+}
+
+uint32_t AssetLibrary::addMaterial(
+  dunya::core::AssetId id,
+  const dunya::serialize::StoredMaterial& stored
+) {
+  const auto slot =
+    [this](const dunya::serialize::StoredTextureSlot& held, uint32_t fallback) {
+      if (held.texture == dunya::core::INVALID_ASSET) {
+        return fallback;
+      }
+
+      const uint32_t index = m_assets.index<dunya::gpu::Texture>(held.texture);
+
+      if (index == dunya::core::UNBOUND_ASSET) {
+        throw std::runtime_error(
+          "AssetLibrary: a material names a texture the project has not bound"
+        );
+      }
+
+      return index;
+    };
+
+  dunya::renderer::MaterialRecord record{};
+
+  record.baseColor = stored.baseColor;
+  record.emissive = stored.emissive;
+
+  record.metallic = stored.metallic;
+  record.roughness = stored.roughness;
+  record.normalScale = stored.normalScale;
+  record.occlusionStrength = stored.occlusionStrength;
+  record.alphaCutoff = stored.alphaCutoff;
+  record.flags = stored.flags;
+
+  record.baseColorTexture =
+    slot(stored.baseColorTexture, dunya::core::TEXTURE_WHITE);
+  record.baseColorSampler = stored.baseColorTexture.sampler;
+
+  record.metallicRoughnessTexture =
+    slot(stored.metallicRoughnessTexture, dunya::core::TEXTURE_WHITE);
+  record.metallicRoughnessSampler = stored.metallicRoughnessTexture.sampler;
+
+  record.normalTexture =
+    slot(stored.normalTexture, dunya::core::TEXTURE_FLAT_NORMAL);
+  record.normalSampler = stored.normalTexture.sampler;
+
+  record.occlusionTexture =
+    slot(stored.occlusionTexture, dunya::core::TEXTURE_WHITE);
+  record.occlusionSampler = stored.occlusionTexture.sampler;
+
+  record.emissiveTexture =
+    slot(stored.emissiveTexture, dunya::core::TEXTURE_BLACK);
+  record.emissiveSampler = stored.emissiveTexture.sampler;
+
+  const uint32_t index = static_cast<uint32_t>(m_materials.size());
+
+  m_assets.bind<dunya::objectmodel::Material>(id, index);
+
+  m_materials.push_back(record);
+
+  return index;
+}
+
+uint32_t AssetLibrary::textureIndex(dunya::core::AssetId id) const {
+  const uint32_t index = m_assets.index<dunya::gpu::Texture>(id);
+
+  if (index == dunya::core::UNBOUND_ASSET) {
+    throw std::runtime_error(
+      "AssetLibrary: no texture is bound under that asset id"
+    );
+  }
+
+  return index;
+}
 
 uint32_t AssetLibrary::loadMesh(
   const dunya::gpu::Device& device,
@@ -95,7 +231,7 @@ std::vector<dunya::gpu::Texture> AssetLibrary::createTextures(
   const std::array<uint8_t, 4> black{0, 0, 0, 255};
 
   std::vector<dunya::gpu::Texture> textures;
-  textures.reserve(dunya::core::RESERVED_TEXTURES + 2);
+  textures.reserve(dunya::core::RESERVED_TEXTURES);
 
   textures.emplace_back(device, 1, 1, VK_FORMAT_R8G8B8A8_UNORM, white.data());
   textures.emplace_back(
@@ -107,70 +243,7 @@ std::vector<dunya::gpu::Texture> AssetLibrary::createTextures(
   );
   textures.emplace_back(device, 1, 1, VK_FORMAT_R8G8B8A8_UNORM, black.data());
 
-  textures.emplace_back(device, "textures/viking_room.png");
-  textures.emplace_back(device, "textures/texture.jpg");
-
   return textures;
-}
-
-std::vector<dunya::renderer::MaterialRecord> AssetLibrary::createMaterials() {
-  dunya::renderer::MaterialRecord neutral{};
-  neutral.baseColor = glm::vec4(1.0f);
-  neutral.emissive = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-  neutral.metallic = 0.0f;
-  neutral.roughness = 1.0f;
-  neutral.normalScale = 1.0f;
-  neutral.occlusionStrength = 1.0f;
-  neutral.alphaCutoff = 0.5f;
-  neutral.flags = 0;
-  neutral.baseColorTexture = dunya::core::TEXTURE_WHITE;
-  neutral.baseColorSampler = dunya::core::SAMPLER_LINEAR_REPEAT;
-  neutral.metallicRoughnessTexture = dunya::core::TEXTURE_WHITE;
-  neutral.metallicRoughnessSampler = dunya::core::SAMPLER_LINEAR_REPEAT;
-  neutral.normalTexture = dunya::core::TEXTURE_FLAT_NORMAL;
-  neutral.normalSampler = dunya::core::SAMPLER_LINEAR_REPEAT;
-  neutral.occlusionTexture = dunya::core::TEXTURE_WHITE;
-  neutral.occlusionSampler = dunya::core::SAMPLER_LINEAR_REPEAT;
-  neutral.emissiveTexture = dunya::core::TEXTURE_BLACK;
-  neutral.emissiveSampler = dunya::core::SAMPLER_LINEAR_REPEAT;
-
-  dunya::renderer::MaterialRecord fieldSphere = neutral;
-  fieldSphere.baseColor = glm::vec4(0.5f, 0.0f, 0.3f, 1.0f);
-
-  dunya::renderer::MaterialRecord fieldPlane = neutral;
-  fieldPlane.baseColor = glm::vec4(0.7f, 0.6f, 0.3f, 1.0f);
-
-  dunya::renderer::MaterialRecord vikingRoom = neutral;
-  vikingRoom.baseColorTexture = dunya::core::RESERVED_TEXTURES;
-
-  dunya::renderer::MaterialRecord checker = neutral;
-  checker.baseColorTexture = dunya::core::RESERVED_TEXTURES + 1;
-
-  dunya::renderer::MaterialRecord projectile = neutral;
-  projectile.baseColor = glm::vec4(0.15f, 0.65f, 0.75f, 1.0f);
-
-  m_assets.bind<dunya::objectmodel::Material>(
-    dunya::core::MATERIAL_FIELD_SPHERE,
-    0u
-  );
-  m_assets.bind<dunya::objectmodel::Material>(
-    dunya::core::MATERIAL_FIELD_PLANE,
-    1u
-  );
-  m_assets.bind<dunya::objectmodel::Material>(
-    dunya::core::MATERIAL_VIKING_ROOM,
-    2u
-  );
-  m_assets.bind<dunya::objectmodel::Material>(
-    dunya::core::MATERIAL_CHECKER,
-    3u
-  );
-  m_assets.bind<dunya::objectmodel::Material>(
-    dunya::core::MATERIAL_PROJECTILE,
-    4u
-  );
-
-  return {fieldSphere, fieldPlane, vikingRoom, checker, projectile};
 }
 
 uint32_t AssetLibrary::materialIndex(dunya::core::AssetId id) const {

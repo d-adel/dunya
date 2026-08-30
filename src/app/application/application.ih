@@ -16,7 +16,9 @@
 #include <dunya/objectmodel/component/pose/pose.h>
 #include <dunya/objectmodel/world/world.h>
 #include <dunya/physics/fieldshape/fieldshape.h>
+#include <dunya/serialize/materialfile/materialfile.h>
 #include <dunya/serialize/project/project.h>
+#include <dunya/serialize/textfile/textfile.h>
 
 #include <algorithm>
 #include <array>

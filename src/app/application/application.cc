@@ -36,7 +36,7 @@ Application::Application(const StartupOptions& options, DebugUiFactory tools)
     : m_input(m_context.window().handle()),
       m_flyController(m_input, m_context.window()),
       m_swapChain(m_context),
-      m_assetLibrary(m_context),
+      m_assetLibrary(m_context, options.project),
       m_uploader(m_context.device()),
       m_frameGlobals(m_context.device()),
       m_resourceTable(
@@ -122,14 +122,6 @@ void Application::loadWorld(const StartupOptions& options) {
     throw std::runtime_error("No project at " + options.project);
   }
 
-  for (const dunya::serialize::AssetEntry* entry : project->ofType("mesh")) {
-    const std::string path = (project->root() / entry->path).string();
-
-    static_cast<void>(
-      m_assetLibrary.loadMesh(m_context.device(), entry->id, path.c_str())
-    );
-  }
-
   dunya::serialize::StoredWorld stored;
 
   if (!project->loadWorld(options.world, stored)) {
@@ -187,30 +179,15 @@ glm::vec3 Application::groundPoint(float u, float v) const {
 
 int Application::exportProject(const StartupOptions& options) {
   std::optional<dunya::serialize::Project> project =
-    dunya::serialize::Project::create(options.exportProject, "dunya");
+    dunya::serialize::Project::open(options.exportProject);
 
   if (!project.has_value()) {
-    std::cerr << "Could not create a project at " << options.exportProject
-              << '\n';
-
-    return 1;
+    project = dunya::serialize::Project::create(options.exportProject, "dunya");
   }
 
-  if (
-    project->importAsset(
-      "models/viking_room.obj",
-      "mesh",
-      dunya::core::MESH_VIKING_ROOM
-    )
-    == dunya::core::INVALID_ASSET
-  ) {
-    std::cerr << "Could not import the room mesh\n";
-
-    return 1;
-  }
-
-  if (!project->save()) {
-    std::cerr << "Could not write the project manifest\n";
+  if (!project.has_value()) {
+    std::cerr << "Could not open or create a project at "
+              << options.exportProject << '\n';
 
     return 1;
   }

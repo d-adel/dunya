@@ -2,6 +2,34 @@
   "version": 1,
   "name": "dunya",
   "assets": [{
+    "id": 10106623619205674910,
+    "type": "texture",
+    "path": "assets/viking_room.png"
+  }, {
+    "id": 4502233869655348980,
+    "type": "texture",
+    "path": "assets/texture.jpg"
+  }, {
+    "id": 11469614539487796753,
+    "type": "material",
+    "path": "assets/field-sphere.mat.json"
+  }, {
+    "id": 5444297618490564435,
+    "type": "material",
+    "path": "assets/field-plane.mat.json"
+  }, {
+    "id": 16364492891285643480,
+    "type": "material",
+    "path": "assets/viking-room.mat.json"
+  }, {
+    "id": 9011530130721050940,
+    "type": "material",
+    "path": "assets/checker.mat.json"
+  }, {
+    "id": 3056980637089549575,
+    "type": "material",
+    "path": "assets/projectile.mat.json"
+  }, {
     "id": 14245873093005299565,
     "type": "mesh",
     "path": "assets/viking_room.obj"
