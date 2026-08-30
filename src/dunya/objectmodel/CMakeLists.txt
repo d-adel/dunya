@@ -7,7 +7,7 @@ add_library(dunya_objectmodel STATIC
 )
 add_library(dunya::objectmodel ALIAS dunya_objectmodel)
 target_include_directories(dunya_objectmodel PUBLIC "${PROJECT_SOURCE_DIR}/src")
-target_compile_features(dunya_objectmodel PUBLIC cxx_std_20)
+target_compile_features(dunya_objectmodel PUBLIC cxx_std_23)
 target_link_libraries(dunya_objectmodel PUBLIC
     dunya::core
     dunya::field

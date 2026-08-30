@@ -3,9 +3,10 @@ cmake_minimum_required(VERSION 3.28)
 project(Dunya VERSION 0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 if (MSVC)
     set(CMAKE_CXX_FLAGS_DEBUG "/O2 /Ob2")
+    add_compile_options(/Zc:preprocessor)
 endif()
 include(FetchContent)
 FetchContent_Declare(
@@ -93,7 +94,12 @@ FetchContent_Declare(
     GIT_REPOSITORY  https://github.com/skypjack/entt
     GIT_TAG         v4.0.0
 )
-FetchContent_MakeAvailable(glfw glm stb tinyobjloader imgui JoltPhysics EnTT)
+FetchContent_Declare(
+    glaze
+    GIT_REPOSITORY  https://github.com/stephenberry/glaze
+    GIT_TAG         v8.3.0
+)
+FetchContent_MakeAvailable(glfw glm stb tinyobjloader imgui JoltPhysics EnTT glaze)
 find_package(Vulkan REQUIRED)
 
 add_library(imgui STATIC
@@ -116,6 +122,7 @@ add_subdirectory(src/dunya/editor)
 add_subdirectory(src/dunya/platform)
 add_subdirectory(src/dunya/field)
 add_subdirectory(src/dunya/physics)
+add_subdirectory(src/dunya/serialize)
 add_subdirectory(src/dunya/runtime)
 add_subdirectory(src/dunya/imagecompare)
 enable_testing()

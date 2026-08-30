@@ -34,6 +34,8 @@ PhysicsWorld::PhysicsWorld()
     m_objectLayerPairFilter
   );
 
+  m_system.SetGravity(JPH::Vec3(0.0f, -GRAVITY, 0.0f));
+
   m_system.SetContactListener(&m_impacts);
 }
 

@@ -6,7 +6,7 @@ add_library(dunya_core STATIC
 )
 add_library(dunya::core ALIAS dunya_core)
 target_include_directories(dunya_core PUBLIC "${PROJECT_SOURCE_DIR}/src")
-target_compile_features(dunya_core PUBLIC cxx_std_20)
+target_compile_features(dunya_core PUBLIC cxx_std_23)
 target_compile_definitions(dunya_core PUBLIC
     DUNYA_MAX_FIELD_PRIMITIVES=${DUNYA_MAX_FIELD_PRIMITIVES}
     DUNYA_MAX_TEXTURES=${DUNYA_MAX_TEXTURES}

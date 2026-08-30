@@ -14,6 +14,8 @@ class PhysicsWorld {
 public:
   static constexpr float TIME_STEP = 1.0f / 60.0f;
 
+  static constexpr float GRAVITY = 9.81f;
+
   PhysicsWorld();
   ~PhysicsWorld();
 

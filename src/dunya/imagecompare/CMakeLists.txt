@@ -5,7 +5,7 @@ add_library(dunya_imagecompare STATIC
 add_library(dunya::imagecompare ALIAS dunya_imagecompare)
 target_include_directories(dunya_imagecompare PUBLIC "${PROJECT_SOURCE_DIR}/src")
 target_include_directories(dunya_imagecompare PRIVATE "${stb_SOURCE_DIR}")
-target_compile_features(dunya_imagecompare PUBLIC cxx_std_20)
+target_compile_features(dunya_imagecompare PUBLIC cxx_std_23)
 if (MSVC)
     target_compile_options(dunya_imagecompare PRIVATE /W4 /WX /w15038 /Zc:__cplusplus)
 else()

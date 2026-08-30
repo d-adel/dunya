@@ -15,6 +15,7 @@ add_executable(unit_tests
     deform_tests.cc
     entt_tests.cc
     field_tests.cc
+    glmmeta_tests.cc
     fieldshape_tests.cc
     impact_tests.cc
     instantiateworld_tests.cc
@@ -32,7 +33,7 @@ add_executable(unit_tests
 
 target_include_directories(unit_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 
-target_link_libraries(unit_tests PRIVATE dunya::core dunya::editor dunya::field dunya::objectmodel dunya::physics dunya::runtime Catch2::Catch2WithMain)
+target_link_libraries(unit_tests PRIVATE dunya::core dunya::editor dunya::field dunya::objectmodel dunya::physics dunya::runtime dunya::serialize Catch2::Catch2WithMain)
 
 if (MSVC)
     target_compile_options(unit_tests PRIVATE /W4 /WX /w15038 /Zc:__cplusplus)

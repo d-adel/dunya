@@ -130,6 +130,8 @@ Scene::Scene(
   const float groundHalfWidth =
     std::max(10.0f, 0.5f * std::max(wallSpan.x, wallSpan.z) + GROUND_MARGIN);
 
+  m_groundHalfWidth = groundHalfWidth;
+
   addPrimitive(
     planeEntity,
     dunya::field::makeBox(
@@ -438,6 +440,18 @@ glm::vec3 Scene::wallPoint(float u, float v) const {
     m_wallMinimum.x + span.x * glm::mix(INSET, 1.0f - INSET, u),
     m_wallMinimum.y + span.y * glm::mix(INSET, 1.0f - INSET, v),
     0.0f
+  );
+}
+
+glm::vec3 Scene::groundPoint(float u, float v) const {
+  constexpr float COVERAGE = 0.85f;
+
+  const float reach = m_groundHalfWidth * COVERAGE;
+
+  return glm::vec3(
+    glm::mix(-reach, reach, u),
+    GROUND_Y,
+    glm::mix(-0.5f * reach, reach, v)
   );
 }
 

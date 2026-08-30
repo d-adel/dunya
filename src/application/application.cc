@@ -234,7 +234,7 @@ int Application::start(const StartupOptions& options) {
       if (m_demo.fires(m_frameIndex)) {
         const glm::vec2 at = m_demo.target();
 
-        fire(aimAtPoint(m_scene.wallPoint(at.x, at.y)));
+        fire(aimAtPoint(m_scene.groundPoint(at.x, at.y)));
       }
 
       m_telemetry.set(m_telemetry.key("frame"), double(realDt) * 1000.0);

@@ -5,7 +5,7 @@ add_library(dunya_platform STATIC
 )
 add_library(dunya::platform ALIAS dunya_platform)
 target_include_directories(dunya_platform PUBLIC "${PROJECT_SOURCE_DIR}/src")
-target_compile_features(dunya_platform PUBLIC cxx_std_20)
+target_compile_features(dunya_platform PUBLIC cxx_std_23)
 target_link_libraries(dunya_platform PUBLIC
     dunya::core
     glfw

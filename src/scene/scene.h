@@ -63,6 +63,8 @@ public:
 
   glm::vec3 wallPoint(float u, float v) const;
 
+  glm::vec3 groundPoint(float u, float v) const;
+
   [[nodiscard]]
   dunya::objectmodel::Entity deformable() const noexcept;
 
@@ -100,6 +102,8 @@ private:
   std::vector<dunya::renderer::MeshRecord> m_meshRecords;
 
   dunya::objectmodel::Entity m_deformable = dunya::objectmodel::INVALID_ENTITY;
+
+  float m_groundHalfWidth = 0.0f;
 
   glm::vec3 m_wallMinimum{0.0f};
   glm::vec3 m_wallMaximum{0.0f};

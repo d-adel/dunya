@@ -5,7 +5,7 @@ add_library(dunya_runtime STATIC
 add_library(dunya::runtime ALIAS dunya_runtime)
 target_include_directories(dunya_runtime PUBLIC "${PROJECT_SOURCE_DIR}/src")
 
-target_compile_features(dunya_runtime PUBLIC cxx_std_20)
+target_compile_features(dunya_runtime PUBLIC cxx_std_23)
 
 target_link_libraries(dunya_runtime PUBLIC
     dunya::core
