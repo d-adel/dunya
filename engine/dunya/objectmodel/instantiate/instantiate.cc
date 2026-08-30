@@ -33,8 +33,8 @@ void instantiateWorld(const World& source, World& destination) {
       carry<T>(registry, destination, entity);
     });
 
-    if (const auto* held = registry.try_get<SharedField>(entity)) {
-      destination.adoptSampledField(entity, *held);
+    if (const auto* held = registry.try_get<SharedSdf>(entity)) {
+      destination.adoptSampledSdf(entity, *held);
     }
 
     if (registry.all_of<Deformed>(entity)) {

@@ -1,7 +1,9 @@
 using System;
 using System.Runtime.InteropServices;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Platform;
+using Avalonia.Threading;
 
 namespace Dunya.Editor;
 
@@ -32,6 +34,13 @@ public sealed class ViewportHost : NativeControlHost
 
     public IntPtr Handle { get; private set; }
 
+    public string ProjectRoot { get; set; } = "projects/demo";
+
+    public string World { get; set; } = "main";
+
+    private IntPtr m_session;
+    private DispatcherTimer? m_frames;
+    private bool m_renderFailed;
     private IntPtr m_previous;
     private WindowProc? m_hook;
     private int m_moves;
@@ -51,11 +60,22 @@ public sealed class ViewportHost : NativeControlHost
 
         Report($"child window created  hwnd=0x{Handle:X}  descriptor={handle.HandleDescriptor}");
 
+        StartSession();
+
         return handle;
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        StopSession();
+
+        base.OnDetachedFromVisualTree(e);
     }
 
     protected override void DestroyNativeControlCore(IPlatformHandle control)
     {
+        StopSession();
+
         if (m_previous != IntPtr.Zero)
         {
             SetWindowLongPtr(Handle, GWLP_WNDPROC, m_previous);
@@ -68,14 +88,93 @@ public sealed class ViewportHost : NativeControlHost
         base.DestroyNativeControlCore(control);
     }
 
+    private void StartSession()
+    {
+        m_session = DunyaNative.dunya_session_create(Handle, ProjectRoot, World);
+
+        if (m_session == IntPtr.Zero)
+        {
+            Report($"session create FAILED: {DunyaNative.LastError()}");
+
+            return;
+        }
+
+        Report($"session created    handle=0x{m_session:X}   {Extent()}");
+
+        StartRendering();
+    }
+
+    private void StopSession()
+    {
+        if (m_session == IntPtr.Zero)
+        {
+            return;
+        }
+
+        m_frames?.Stop();
+        m_frames = null;
+
+        DunyaNative.dunya_session_destroy(m_session);
+        m_session = IntPtr.Zero;
+
+        Report("session destroyed");
+    }
+
+    private void StartRendering()
+    {
+        m_frames = new DispatcherTimer(DispatcherPriority.Render)
+        {
+            Interval = TimeSpan.FromMilliseconds(16)
+        };
+
+        m_frames.Tick += (_, _) => RenderOnce();
+        m_frames.Start();
+    }
+
+    private void RenderOnce()
+    {
+        if (m_session == IntPtr.Zero || m_renderFailed)
+        {
+            return;
+        }
+
+        if (DunyaNative.dunya_session_render(m_session) != 0)
+        {
+            m_renderFailed = true;
+
+            Report($"render FAILED: {DunyaNative.LastError()}");
+        }
+    }
+
+    private string Extent()
+    {
+        if (m_session == IntPtr.Zero)
+        {
+            return "no session";
+        }
+
+        if (DunyaNative.dunya_session_extent(m_session, out uint width, out uint height) != 0)
+        {
+            return $"extent FAILED: {DunyaNative.LastError()}";
+        }
+
+        return $"swapchain {width} x {height}";
+    }
+
     private IntPtr Intercept(IntPtr window, uint message, IntPtr wParam, IntPtr lParam)
     {
         switch (message)
         {
             case WM_SIZE:
+                if (m_session != IntPtr.Zero
+                    && DunyaNative.dunya_session_resize(m_session) != 0)
+                {
+                    Report($"resize FAILED: {DunyaNative.LastError()}");
+                }
+
                 Report(
                     $"WM_SIZE          client {Low(lParam)} x {High(lParam)}"
-                    + $"   avalonia bounds {Bounds.Width:F0} x {Bounds.Height:F0}"
+                    + $"   {Extent()}"
                     + $"   scale {(TopLevel.GetTopLevel(this)?.RenderScaling ?? 0.0):F2}"
                 );
                 break;

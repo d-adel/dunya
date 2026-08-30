@@ -33,22 +33,29 @@ public partial class MainWindow : Window
         {
             Append($"window opened   top level hwnd=0x{TryGetPlatformHandle()?.Handle ?? IntPtr.Zero:X}");
 
+            int seconds = AutoCloseSeconds();
+
+            if (seconds <= 0)
+            {
+                return;
+            }
+
             DispatcherTimer.RunOnce(
                 () =>
                 {
                     Append("spike over");
                     Close();
                 },
-                TimeSpan.FromSeconds(Seconds())
+                TimeSpan.FromSeconds(seconds)
             );
         };
     }
 
-    private static int Seconds()
+    private static int AutoCloseSeconds()
     {
         string? given = Environment.GetEnvironmentVariable("DUNYA_SPIKE_SECONDS");
 
-        return int.TryParse(given, out int seconds) ? seconds : 14;
+        return int.TryParse(given, out int seconds) ? seconds : 0;
     }
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);

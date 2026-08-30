@@ -45,7 +45,7 @@ bool World::createAuthoredAt(Entity hint) {
   return true;
 }
 
-Entity World::createField(const Pose& pose, const SdfGrid& grid) {
+Entity World::createSdfGrid(const Pose& pose, const SdfGrid& grid) {
   const Entity entity = m_registry.create();
 
   m_registry.emplace<Pose>(entity, pose);
@@ -54,7 +54,11 @@ Entity World::createField(const Pose& pose, const SdfGrid& grid) {
   return entity;
 }
 
-bool World::createFieldAt(Entity hint, const Pose& pose, const SdfGrid& grid) {
+bool World::createSdfGridAt(
+  Entity hint,
+  const Pose& pose,
+  const SdfGrid& grid
+) {
   const Entity entity = m_registry.create(hint);
 
   if (entity != hint) {
@@ -68,7 +72,7 @@ bool World::createFieldAt(Entity hint, const Pose& pose, const SdfGrid& grid) {
   return true;
 }
 
-bool World::destroyField(Entity entity) {
+bool World::destroySdfGrid(Entity entity) {
   if (!m_registry.valid(entity) || !m_registry.all_of<SdfGrid>(entity)) {
     return false;
   }
@@ -79,6 +83,10 @@ bool World::destroyField(Entity entity) {
 }
 
 std::span<const Entity> World::fields() const noexcept {
+  return sdfGrids();
+}
+
+std::span<const Entity> World::sdfGrids() const noexcept {
   const auto* storage = m_registry.storage<SdfGrid>();
 
   if (storage == nullptr) {
@@ -141,10 +149,10 @@ void World::setRigidBody(Entity entity, uint32_t index) {
   m_registry.emplace_or_replace<RigidBody>(entity, index);
 }
 
-void World::setSampledField(Entity entity, dunya::field::SampledField field) {
-  m_registry.emplace_or_replace<SharedField>(
+void World::setSampledSdf(Entity entity, dunya::field::SampledSdf field) {
+  m_registry.emplace_or_replace<SharedSdf>(
     entity,
-    std::make_shared<dunya::field::SampledField>(std::move(field))
+    std::make_shared<dunya::field::SampledSdf>(std::move(field))
   );
 
   m_registry.storage<entt::reactive>(RESAMPLE_QUEUE).remove(entity);
@@ -152,38 +160,38 @@ void World::setSampledField(Entity entity, dunya::field::SampledField field) {
   m_registry.remove<Deformed>(entity);
 }
 
-void World::shareSampledField(Entity donor, Entity taker) {
-  const auto* held = m_registry.try_get<SharedField>(donor);
+void World::shareSampledSdf(Entity donor, Entity taker) {
+  const auto* held = m_registry.try_get<SharedSdf>(donor);
 
   if (held == nullptr) {
     throw std::runtime_error("Sharing a lattice from an object without one");
   }
 
-  adoptSampledField(taker, SharedField{held->field});
+  adoptSampledSdf(taker, SharedSdf{held->field});
 }
 
-void World::adoptSampledField(Entity entity, const SharedField& held) {
+void World::adoptSampledSdf(Entity entity, const SharedSdf& held) {
   if (held.field == nullptr) {
     throw std::runtime_error("Adopting an empty lattice handle");
   }
 
-  m_registry.emplace_or_replace<SharedField>(entity, held);
+  m_registry.emplace_or_replace<SharedSdf>(entity, held);
 
   m_registry.storage<entt::reactive>(RESAMPLE_QUEUE).remove(entity);
 }
 
-const dunya::field::SampledField* World::sampledField(Entity entity) const {
-  const auto* held = m_registry.try_get<SharedField>(entity);
+const dunya::field::SampledSdf* World::sampledSdf(Entity entity) const {
+  const auto* held = m_registry.try_get<SharedSdf>(entity);
 
   return held == nullptr ? nullptr : held->field.get();
 }
 
-bool World::hasSampledField(Entity entity) const noexcept {
-  return m_registry.all_of<SharedField>(entity);
+bool World::hasSampledSdf(Entity entity) const noexcept {
+  return m_registry.all_of<SharedSdf>(entity);
 }
 
-long World::sampledFieldUsers(Entity entity) const noexcept {
-  const auto* held = m_registry.try_get<SharedField>(entity);
+long World::sampledSdfUsers(Entity entity) const noexcept {
+  const auto* held = m_registry.try_get<SharedSdf>(entity);
 
   return held == nullptr ? 0 : held->field.use_count();
 }

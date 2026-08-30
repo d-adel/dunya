@@ -3,7 +3,7 @@
 
 #include <dunya/field/analytic/analytic.h>
 #include <dunya/field/field.h>
-#include <dunya/field/sampled/sampled.h>
+#include <dunya/field/sampledsdf/sampledsdf.h>
 
 #include "tolerances.h"
 
@@ -16,7 +16,7 @@
 using Catch::Matchers::WithinAbs;
 using dunya::field::AnalyticSample;
 using dunya::field::Primitive;
-using dunya::field::SampledField;
+using dunya::field::SampledSdf;
 
 namespace {
 
@@ -54,7 +54,7 @@ TEST_CASE(
   const glm::vec3 maximum(2.0f);
   const glm::uvec3 resolution(17u);
 
-  const SampledField field =
+  const SampledSdf field =
     dunya::field::bake(primitives, minimum, maximum, resolution);
 
   for (uint32_t z = 0; z < resolution.z; ++z) {
@@ -81,7 +81,7 @@ TEST_CASE(
 ) {
   const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
 
-  const SampledField field = dunya::field::bake(
+  const SampledSdf field = dunya::field::bake(
     primitives,
     glm::vec3(-2.0f),
     glm::vec3(2.0f),
@@ -109,7 +109,7 @@ TEST_CASE(
 TEST_CASE("interpolation overestimates, so a march must not trust it") {
   const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
 
-  const SampledField field = dunya::field::bake(
+  const SampledSdf field = dunya::field::bake(
     primitives,
     glm::vec3(-2.0f),
     glm::vec3(2.0f),
@@ -138,7 +138,7 @@ TEST_CASE("interpolation overestimates, so a march must not trust it") {
 TEST_CASE("outside the grid the distance is a lower bound", "[sampled]") {
   const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
 
-  const SampledField field = dunya::field::bake(
+  const SampledSdf field = dunya::field::bake(
     primitives,
     glm::vec3(-2.0f),
     glm::vec3(2.0f),
@@ -169,7 +169,7 @@ TEST_CASE("material ids are never interpolated", "[sampled]") {
     makeSphere(glm::vec3(0.5f, 0.0f, 0.0f), 0.8f, 9)
   };
 
-  const SampledField field = dunya::field::bake(
+  const SampledSdf field = dunya::field::bake(
     primitives,
     glm::vec3(-2.0f),
     glm::vec3(2.0f),
@@ -187,7 +187,7 @@ TEST_CASE("material ids are never interpolated", "[sampled]") {
 TEST_CASE("the global bound is the largest brick bound", "[sampled][bound]") {
   const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
 
-  const SampledField field = dunya::field::bake(
+  const SampledSdf field = dunya::field::bake(
     primitives,
     glm::vec3(-2.0f),
     glm::vec3(2.0f),
@@ -215,7 +215,7 @@ TEST_CASE(
 ) {
   const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
 
-  const SampledField field = dunya::field::bake(
+  const SampledSdf field = dunya::field::bake(
     primitives,
     glm::vec3(-2.0f),
     glm::vec3(2.0f),
@@ -240,7 +240,7 @@ TEST_CASE(
 TEST_CASE("a stepBound step never crosses the surface", "[sampled][bound]") {
   const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
 
-  const SampledField field = dunya::field::bake(
+  const SampledSdf field = dunya::field::bake(
     primitives,
     glm::vec3(-2.0f),
     glm::vec3(2.0f),
@@ -301,7 +301,7 @@ TEST_CASE(
 ) {
   const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
 
-  SampledField field = dunya::field::bake(
+  SampledSdf field = dunya::field::bake(
     primitives,
     glm::vec3(-2.0f),
     glm::vec3(2.0f),
@@ -338,7 +338,7 @@ TEST_CASE(
 ) {
   const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
 
-  const SampledField field = dunya::field::bake(
+  const SampledSdf field = dunya::field::bake(
     primitives,
     glm::vec3(-2.0f),
     glm::vec3(2.0f),
@@ -364,7 +364,7 @@ TEST_CASE(
 ) {
   const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
 
-  SampledField field = dunya::field::bake(
+  SampledSdf field = dunya::field::bake(
     primitives,
     glm::vec3(-2.0f),
     glm::vec3(2.0f),
@@ -402,7 +402,7 @@ TEST_CASE(
 ) {
   const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
 
-  SampledField field = dunya::field::bake(
+  SampledSdf field = dunya::field::bake(
     primitives,
     glm::vec3(-2.0f),
     glm::vec3(2.0f),
@@ -439,13 +439,13 @@ TEST_CASE(
 
 namespace {
 
-uint32_t bricksPerAxis(const SampledField& field) {
+uint32_t bricksPerAxis(const SampledSdf& field) {
   const uint32_t cells = field.resolution.x - 1u;
 
   return (cells + dunya::field::BRICK_CELLS - 1u) / dunya::field::BRICK_CELLS;
 }
 
-uint32_t brickAt(const SampledField& field, const glm::vec3& point) {
+uint32_t brickAt(const SampledSdf& field, const glm::vec3& point) {
   const glm::vec3 cell = (point - field.origin) / field.voxelSize;
   const glm::uvec3 brick =
     glm::uvec3(glm::floor(cell)) / glm::uvec3(dunya::field::BRICK_CELLS);
@@ -459,7 +459,7 @@ uint32_t brickAt(const SampledField& field, const glm::vec3& point) {
 TEST_CASE("every brick the surface crosses reports it", "[sampled][bound]") {
   const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
 
-  const SampledField field = dunya::field::bake(
+  const SampledSdf field = dunya::field::bake(
     primitives,
     glm::vec3(-2.0f),
     glm::vec3(2.0f),
@@ -494,7 +494,7 @@ TEST_CASE("every brick the surface crosses reports it", "[sampled][bound]") {
 TEST_CASE("a brick clear of the surface holds none", "[sampled][bound]") {
   const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
 
-  const SampledField field = dunya::field::bake(
+  const SampledSdf field = dunya::field::bake(
     primitives,
     glm::vec3(-2.0f),
     glm::vec3(2.0f),
@@ -508,7 +508,7 @@ TEST_CASE("a brick clear of the surface holds none", "[sampled][bound]") {
 TEST_CASE("an edit refreshes the value range", "[sampled][bound]") {
   const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
 
-  SampledField field = dunya::field::bake(
+  SampledSdf field = dunya::field::bake(
     primitives,
     glm::vec3(-2.0f),
     glm::vec3(2.0f),
@@ -531,7 +531,7 @@ TEST_CASE("an edit refreshes the value range", "[sampled][bound]") {
 TEST_CASE("a probe agrees with the field inside the grid", "[sampled][probe]") {
   const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
 
-  const SampledField field = dunya::field::bake(
+  const SampledSdf field = dunya::field::bake(
     primitives,
     glm::vec3(-2.0f),
     glm::vec3(2.0f),
@@ -564,7 +564,7 @@ TEST_CASE(
 ) {
   const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
 
-  const SampledField field = dunya::field::bake(
+  const SampledSdf field = dunya::field::bake(
     primitives,
     glm::vec3(-2.0f),
     glm::vec3(2.0f),
@@ -588,7 +588,7 @@ TEST_CASE(
 TEST_CASE("a probe always names a direction", "[sampled][probe]") {
   const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
 
-  const SampledField field = dunya::field::bake(
+  const SampledSdf field = dunya::field::bake(
     primitives,
     glm::vec3(-2.0f),
     glm::vec3(2.0f),
@@ -612,7 +612,7 @@ TEST_CASE("a probe always names a direction", "[sampled][probe]") {
 namespace {
 
 void trueBrickRange(
-  const SampledField& field,
+  const SampledSdf& field,
   const glm::uvec3& brick,
   float& lowest,
   float& highest
@@ -645,7 +645,7 @@ void trueBrickRange(
 TEST_CASE("a write reports exactly the bricks it moved", "[sampled][write]") {
   const std::vector<Primitive> primitives{makeSphere(glm::vec3(0.0f), 1.0f, 3)};
 
-  SampledField field = dunya::field::bake(
+  SampledSdf field = dunya::field::bake(
     primitives,
     glm::vec3(-2.0f),
     glm::vec3(2.0f),

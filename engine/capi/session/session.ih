@@ -1,0 +1,13 @@
+#include "session.h"
+
+#include <dunya/objectmodel/component/lens/lens.h>
+#include <dunya/objectmodel/worldquery/worldquery.h>
+#include <dunya/renderer/vertex/vertex.h>
+#include <dunya/serialize/project/project.h>
+#include <dunya/serialize/worldfile/worldfile.h>
+
+#include <glm/gtc/matrix_transform.hpp>
+
+#include <stdexcept>
+#include <utility>
+#include <vector>

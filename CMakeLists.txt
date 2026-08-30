@@ -19,12 +19,12 @@ set(GLFW_BUILD_TESTS OFF)
 set(GLFW_BUILD_EXAMPLES OFF)
 set(SHADER_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/shaders")
 set(SHADER_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/shaders")
-set(DUNYA_MAX_FIELD_PRIMITIVES 128)
+set(DUNYA_MAX_SDF_PRIMITIVES 128)
 set(DUNYA_MAX_TEXTURES 16)
 set(DUNYA_MAX_SAMPLERS 8)
 set(DUNYA_MAX_MATERIALS 64)
-set(DUNYA_MAX_FIELD_RECORDS 1280)
-set(DUNYA_MAX_FIELD_VOLUMES 1280)
+set(DUNYA_MAX_SDF_RECORDS 1280)
+set(DUNYA_MAX_SDF_VOLUMES 1280)
 
 set(DUNYA_MAX_PRIMITIVE_POOL 8192)
 set(DUNYA_BRICK_CELLS 8)
@@ -40,12 +40,12 @@ set(DUNYA_SAMPLER_LINEAR_REPEAT 0)
 set(DUNYA_SAMPLER_LINEAR_CLAMP 1)
 set(DUNYA_SAMPLER_NEAREST_CLAMP 2)
 set(SHADER_DEFINES
-    "-DDUNYA_MAX_FIELD_PRIMITIVES=${DUNYA_MAX_FIELD_PRIMITIVES}"
+    "-DDUNYA_MAX_SDF_PRIMITIVES=${DUNYA_MAX_SDF_PRIMITIVES}"
     "-DDUNYA_MAX_TEXTURES=${DUNYA_MAX_TEXTURES}"
     "-DDUNYA_MAX_SAMPLERS=${DUNYA_MAX_SAMPLERS}"
     "-DDUNYA_MAX_MATERIALS=${DUNYA_MAX_MATERIALS}"
-    "-DDUNYA_MAX_FIELD_RECORDS=${DUNYA_MAX_FIELD_RECORDS}"
-    "-DDUNYA_MAX_FIELD_VOLUMES=${DUNYA_MAX_FIELD_VOLUMES}"
+    "-DDUNYA_MAX_SDF_RECORDS=${DUNYA_MAX_SDF_RECORDS}"
+    "-DDUNYA_MAX_SDF_VOLUMES=${DUNYA_MAX_SDF_VOLUMES}"
     "-DDUNYA_BRICK_CELLS=${DUNYA_BRICK_CELLS}"
     "-DDUNYA_SAMPLER_LINEAR_REPEAT=${DUNYA_SAMPLER_LINEAR_REPEAT}"
     "-DDUNYA_SAMPLER_LINEAR_CLAMP=${DUNYA_SAMPLER_LINEAR_CLAMP}"
@@ -135,11 +135,10 @@ add_executable(DunyaDevHost
     engine/app/demodriver/demodriver.cc
 
     engine/app/flycamera/flycamera.cc
+    engine/app/glfwwindowsystem/glfwwindowsystem.cc
     engine/app/projectile/projectile.cc
-    engine/app/worldquery/worldquery.cc
     engine/app/flycontroller/flycontroller.cc
     engine/app/application/application.cc
-    engine/app/assetlibrary/assetlibrary.cc
 )
 find_program(
     GLSLC_EXECUTABLE
@@ -151,6 +150,8 @@ find_program(
 )
 add_subdirectory(engine/dunya/gpu)
 add_subdirectory(engine/dunya/renderer)
+add_subdirectory(engine/dunya/assets)
+add_subdirectory(engine/capi)
 target_compile_definitions(DunyaDevHost PRIVATE
     SHADER_SOURCE_DIR=\"${SHADER_SOURCE_DIR}\"
     GLSLC_PATH=\"${GLSLC_EXECUTABLE}\"
@@ -205,11 +206,10 @@ add_executable(DunyaRuntime
     engine/app/framecheck/framecheck.cc
     engine/app/demodriver/demodriver.cc
     engine/app/flycamera/flycamera.cc
+    engine/app/glfwwindowsystem/glfwwindowsystem.cc
     engine/app/projectile/projectile.cc
-    engine/app/worldquery/worldquery.cc
     engine/app/flycontroller/flycontroller.cc
     engine/app/application/application.cc
-    engine/app/assetlibrary/assetlibrary.cc
 )
 add_dependencies(DunyaRuntime SHADER_TARGET)
 if (MSVC)
@@ -218,6 +218,7 @@ else()
     target_compile_options(DunyaRuntime PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
 target_link_libraries(DunyaRuntime PRIVATE
+    dunya::assets
     dunya::serialize
     glfw
     Vulkan::Vulkan
@@ -240,6 +241,7 @@ else()
     target_compile_options(DunyaDevHost PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
 target_link_libraries(DunyaDevHost PRIVATE
+    dunya::assets
     dunya::serialize
     glfw
     Vulkan::Vulkan
@@ -258,20 +260,13 @@ target_link_libraries(DunyaDevHost PRIVATE
 )
 target_include_directories(DunyaDevHost PRIVATE engine ${stb_SOURCE_DIR} ${tinyobjloader_SOURCE_DIR})
 
-foreach(DUNYA_APP DunyaDevHost DunyaRuntime)
-    add_custom_command(
-        TARGET ${DUNYA_APP} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-                ${SHADER_OUTPUT_DIR} $<TARGET_FILE_DIR:${DUNYA_APP}>/shaders
-        COMMENT "Copying shaders"
-        VERBATIM
-    )
-    add_custom_command(
-        TARGET ${DUNYA_APP} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-                ${PROJECT_SOURCE_DIR}/projects $<TARGET_FILE_DIR:${DUNYA_APP}>/projects
-        COMMENT "Copying projects"
-        VERBATIM
-    )
-endforeach()
+add_custom_target(DUNYA_CONTENT ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${SHADER_OUTPUT_DIR} $<TARGET_FILE_DIR:DunyaDevHost>/shaders
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${PROJECT_SOURCE_DIR}/projects $<TARGET_FILE_DIR:DunyaDevHost>/projects
+    COMMENT "Copying shaders and projects"
+    VERBATIM
+)
+add_dependencies(DUNYA_CONTENT DunyaDevHost DunyaRuntime SHADER_TARGET)
 add_subdirectory(tests)

@@ -10,10 +10,31 @@
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <DunyaNativeDir Condition="'$(DunyaNativeDir)' == ''">$(MSBuildProjectDirectory)\..\..\build-dev\engine\capi</DunyaNativeDir>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.1" />
     <PackageReference Include="Avalonia.Desktop" Version="12.1.1" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.1" />
+  </ItemGroup>
+
+  <Target Name="DunyaRequireNative" BeforeTargets="BeforeBuild">
+    <Error
+      Condition="!Exists('$(DunyaNativeDir)\dunya_c.dll')"
+      Text="dunya_c.dll was not found in $(DunyaNativeDir). Build the engine first (cmake --build --preset dev), or point DunyaNativeDir elsewhere with -p:DunyaNativeDir=..." />
+  </Target>
+
+  <ItemGroup>
+    <None Include="$(DunyaNativeDir)\dunya_c.dll" Condition="Exists('$(DunyaNativeDir)\dunya_c.dll')">
+      <Link>dunya_c.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="$(DunyaNativeDir)\dunya_c.pdb" Condition="Exists('$(DunyaNativeDir)\dunya_c.pdb')">
+      <Link>dunya_c.pdb</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

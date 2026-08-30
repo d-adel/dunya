@@ -6,14 +6,14 @@ namespace {
 
 constexpr uint32_t INTERSECTION = 2u;
 
-uint32_t latticeIndex(const SampledField& field, const glm::uvec3& at) {
+uint32_t latticeIndex(const SampledSdf& field, const glm::uvec3& at) {
   return at.x + field.resolution.x * (at.y + field.resolution.y * at.z);
 }
 
 }
 
 SampleBox affectedBox(
-  const SampledField& field,
+  const SampledSdf& field,
   const Primitive& primitive,
   uint32_t marginVoxels
 ) {
@@ -53,7 +53,7 @@ SampleBox affectedBox(
   return {first, beyond - first};
 }
 
-WriteReport deform(SampledField& field, const Primitive& primitive) {
+WriteReport deform(SampledSdf& field, const Primitive& primitive) {
   const SampleBox box = affectedBox(field, primitive, DEFORM_BAND_VOXELS);
 
   const size_t count =
@@ -96,7 +96,7 @@ WriteReport deform(SampledField& field, const Primitive& primitive) {
 }
 
 DeformReport deformAndRepair(
-  SampledField& field,
+  SampledSdf& field,
   const Primitive& primitive,
   uint32_t sweeps
 ) {

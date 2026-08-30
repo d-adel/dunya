@@ -2,83 +2,35 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Dev host (Dev)",
+      "name": "Editor",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "editor: build",
+      "program": "${workspaceFolder}/editor/Dunya.Editor/bin/Debug/net10.0/Dunya.Editor.exe",
+      "args": [],
+      "cwd": "${workspaceFolder}/build-dev",
+      "console": "internalConsole",
+      "stopAtEntry": false
+    },
+    {
+      "name": "Dev host",
       "type": "cppvsdbg",
       "request": "launch",
+      "preLaunchTask": "engine: build (dev)",
       "program": "${workspaceFolder}/build-dev/DunyaDevHost.exe",
       "args": [],
       "cwd": "${workspaceFolder}/build-dev",
-      "console": "integratedTerminal",
-      "preLaunchTask": "build dev"
+      "console": "integratedTerminal"
     },
     {
-      "name": "Dev host (Release)",
+      "name": "Runtime",
       "type": "cppvsdbg",
       "request": "launch",
-      "program": "${workspaceFolder}/build-release/DunyaDevHost.exe",
-      "args": [],
-      "cwd": "${workspaceFolder}/build-release",
-      "console": "integratedTerminal",
-      "preLaunchTask": "build release"
-    },
-    {
-      "name": "Runtime (Dev)",
-      "type": "cppvsdbg",
-      "request": "launch",
+      "preLaunchTask": "engine: build (dev)",
       "program": "${workspaceFolder}/build-dev/DunyaRuntime.exe",
       "args": [],
       "cwd": "${workspaceFolder}/build-dev",
-      "console": "integratedTerminal",
-      "preLaunchTask": "build dev"
-    },
-    {
-      "name": "Runtime (Release)",
-      "type": "cppvsdbg",
-      "request": "launch",
-      "program": "${workspaceFolder}/build-release/DunyaRuntime.exe",
-      "args": [],
-      "cwd": "${workspaceFolder}/build-release",
-      "console": "integratedTerminal",
-      "preLaunchTask": "build release"
-    },
-    {
-      "name": "Dev host (Release, big wall)",
-      "type": "cppvsdbg",
-      "request": "launch",
-      "program": "${workspaceFolder}/build-release/DunyaDevHost.exe",
-      "args": ["--world", "wall-big", "--demo", "100000", "--demo-rate", "6"],
-      "cwd": "${workspaceFolder}/build-release",
-      "console": "integratedTerminal",
-      "preLaunchTask": "build release"
-    },
-    {
-      "name": "Dev host (Release, record)",
-      "type": "cppvsdbg",
-      "request": "launch",
-      "program": "${workspaceFolder}/build-release/DunyaDevHost.exe",
-      "args": [
-        "--world",
-        "wall-big",
-        "--demo",
-        "620",
-        "--demo-rate",
-        "6",
-        "--capture",
-        "reel"
-      ],
-      "cwd": "${workspaceFolder}/build-release",
-      "console": "integratedTerminal",
-      "preLaunchTask": "build release"
-    },
-    {
-      "name": "Unit tests (Dev)",
-      "type": "cppvsdbg",
-      "request": "launch",
-      "program": "${workspaceFolder}/build-dev/tests/unit_tests.exe",
-      "args": [],
-      "cwd": "${workspaceFolder}/build-dev",
-      "console": "integratedTerminal",
-      "preLaunchTask": "build dev"
+      "console": "integratedTerminal"
     }
   ]
 }

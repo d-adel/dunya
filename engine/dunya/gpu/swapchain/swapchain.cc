@@ -187,12 +187,7 @@ void SwapChain::createImageViews() {
 }
 
 void SwapChain::recreate() {
-  int width = 0, height = 0;
-  glfwGetFramebufferSize(m_context.window().handle(), &width, &height);
-  while (width == 0 || height == 0) {
-    glfwGetFramebufferSize(m_context.window().handle(), &width, &height);
-    glfwWaitEvents();
-  }
+  m_context.windowSystem().waitForNonZeroExtent();
 
   vkDeviceWaitIdle(m_context.device().vkDevice());
 
@@ -242,13 +237,7 @@ VkExtent2D SwapChain::chooseSwapExtent(
   ) {
     return capabilities.currentExtent;
   } else {
-    int width, height;
-    glfwGetFramebufferSize(m_context.window().handle(), &width, &height);
-
-    VkExtent2D actualExtent = {
-      static_cast<uint32_t>(width),
-      static_cast<uint32_t>(height)
-    };
+    VkExtent2D actualExtent = m_context.windowSystem().framebufferExtent();
 
     actualExtent.width = std::clamp(
       actualExtent.width,

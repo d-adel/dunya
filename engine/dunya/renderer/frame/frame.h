@@ -21,7 +21,7 @@ struct Frame {
   std::span<const MeshRecord> meshRecords = {};
   std::span<const MeshBuffers> meshes = {};
 
-  uint32_t fieldRecordCount = 0;
+  uint32_t sdfRecordCount = 0;
   std::span<const dunya::field::Primitive> primitives = {};
 
   dunya::gpu::PipelineType mode = dunya::gpu::PipelineType::Both;

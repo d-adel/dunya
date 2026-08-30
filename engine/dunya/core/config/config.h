@@ -9,9 +9,9 @@ constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
 constexpr uint32_t MAX_TEXTURES = DUNYA_MAX_TEXTURES;
 constexpr uint32_t MAX_SAMPLERS = DUNYA_MAX_SAMPLERS;
 constexpr uint32_t MAX_MATERIALS = DUNYA_MAX_MATERIALS;
-constexpr uint32_t MAX_FIELD_RECORDS = DUNYA_MAX_FIELD_RECORDS;
-constexpr uint32_t MAX_FIELD_VOLUMES = DUNYA_MAX_FIELD_VOLUMES;
-constexpr uint32_t MAX_FIELD_PRIMITIVES = DUNYA_MAX_FIELD_PRIMITIVES;
+constexpr uint32_t MAX_SDF_RECORDS = DUNYA_MAX_SDF_RECORDS;
+constexpr uint32_t MAX_SDF_VOLUMES = DUNYA_MAX_SDF_VOLUMES;
+constexpr uint32_t MAX_SDF_PRIMITIVES = DUNYA_MAX_SDF_PRIMITIVES;
 constexpr size_t MAX_PRIMITIVE_POOL = DUNYA_MAX_PRIMITIVE_POOL;
 
 static_assert(
@@ -60,7 +60,7 @@ constexpr uint32_t MAX_BRICKS_PER_OBJECT =
 constexpr uint32_t BRICK_TABLE_STRIDE = 1u + MAX_BRICKS_PER_OBJECT;
 
 static_assert(
-  static_cast<uint64_t>(MAX_FIELD_VOLUMES) * BRICK_TABLE_STRIDE < (1ull << 24),
+  static_cast<uint64_t>(MAX_SDF_VOLUMES) * BRICK_TABLE_STRIDE < (1ull << 24),
   "The bound table's largest index must stay exact in a float"
 );
 constexpr float FIELD_GRID_MARGIN = 0.5f;

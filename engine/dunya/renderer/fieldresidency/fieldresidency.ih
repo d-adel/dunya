@@ -1,6 +1,0 @@
-#include "fieldresidency.h"
-
-#include <dunya/objectmodel/component/bakedvolume/bakedvolume.h>
-#include <dunya/objectmodel/component/sharedfield/sharedfield.h>
-
-#include <algorithm>

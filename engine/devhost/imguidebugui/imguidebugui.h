@@ -12,6 +12,7 @@
 class ImGuiDebugUi final : public DebugUi {
 public:
   ImGuiDebugUi(
+    const dunya::platform::Window& window,
     const dunya::gpu::Context& context,
     const dunya::gpu::SwapChain& swapChain
   );

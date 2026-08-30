@@ -5,7 +5,7 @@
 #include <dunya/field/analytic/analytic.h>
 #include <dunya/field/deform/deform.h>
 #include <dunya/field/field.h>
-#include <dunya/field/sampled/sampled.h>
+#include <dunya/field/sampledsdf/sampledsdf.h>
 
 #include <glm/glm.hpp>
 
@@ -14,7 +14,7 @@
 
 using Catch::Matchers::WithinAbs;
 using dunya::field::Primitive;
-using dunya::field::SampledField;
+using dunya::field::SampledSdf;
 
 namespace {
 
@@ -35,7 +35,7 @@ Primitive carver(const glm::vec3& centre, float radius) {
   return cutter;
 }
 
-SampledField unitSphere() {
+SampledSdf unitSphere() {
   const std::vector<Primitive> primitives{
     dunya::field::makeSphere(glm::vec3(0.0f), 1.0f, 3u)
   };
@@ -48,7 +48,7 @@ SampledField unitSphere() {
   );
 }
 
-std::optional<float> crossingAlongX(const SampledField& field, float until) {
+std::optional<float> crossingAlongX(const SampledSdf& field, float until) {
   float previous = dunya::field::distance(field, glm::vec3(0.0f));
 
   for (uint32_t step = 1u; step <= 4096u; ++step) {
@@ -71,7 +71,7 @@ TEST_CASE(
   "a subtraction moves the surface to the cutter's near wall",
   "[deform]"
 ) {
-  SampledField field = unitSphere();
+  SampledSdf field = unitSphere();
 
   const std::optional<float> before = crossingAlongX(field, 1.5f);
 
@@ -90,9 +90,9 @@ TEST_CASE(
   "a subtraction agrees with max(old, -cutter) inside the band",
   "[deform]"
 ) {
-  SampledField field = unitSphere();
+  SampledSdf field = unitSphere();
 
-  const SampledField before = field;
+  const SampledSdf before = field;
 
   const glm::vec3 centre(1.0f, 0.0f, 0.0f);
   const float radius = 0.35f;
@@ -138,9 +138,9 @@ TEST_CASE(
 }
 
 TEST_CASE("a deformation that misses the grid writes nothing", "[deform]") {
-  SampledField field = unitSphere();
+  SampledSdf field = unitSphere();
 
-  const SampledField before = field;
+  const SampledSdf before = field;
 
   const dunya::field::WriteReport report =
     dunya::field::deform(field, carver(glm::vec3(100.0f, 0.0f, 0.0f), 0.35f));
@@ -155,7 +155,7 @@ TEST_CASE("a deformation that misses the grid writes nothing", "[deform]") {
 }
 
 TEST_CASE("a deformation over the lattice edge clamps", "[deform]") {
-  SampledField field = unitSphere();
+  SampledSdf field = unitSphere();
 
   REQUIRE_NOTHROW(dunya::field::deform(field, carver(glm::vec3(-SPAN), 0.5f)));
 
@@ -169,9 +169,9 @@ TEST_CASE("a deformation over the lattice edge clamps", "[deform]") {
 }
 
 TEST_CASE("subtraction exposes material, it does not paint it", "[deform]") {
-  SampledField field = unitSphere();
+  SampledSdf field = unitSphere();
 
-  const SampledField before = field;
+  const SampledSdf before = field;
 
   dunya::field::deform(field, carver(glm::vec3(1.0f, 0.0f, 0.0f), 0.35f));
 
@@ -189,9 +189,9 @@ TEST_CASE("subtraction exposes material, it does not paint it", "[deform]") {
 }
 
 TEST_CASE("a union brings its own material with it", "[deform]") {
-  SampledField field = unitSphere();
+  SampledSdf field = unitSphere();
 
-  const SampledField before = field;
+  const SampledSdf before = field;
 
   Primitive blob = dunya::field::makeSphere(
     glm::vec3(1.0f, 0.0f, 0.0f),
@@ -220,7 +220,7 @@ TEST_CASE("a union brings its own material with it", "[deform]") {
 }
 
 TEST_CASE("a union welds material on, at the far wall", "[deform]") {
-  SampledField field = unitSphere();
+  SampledSdf field = unitSphere();
 
   const std::optional<float> before = crossingAlongX(field, 2.5f);
 
@@ -244,7 +244,7 @@ TEST_CASE("a union welds material on, at the far wall", "[deform]") {
 }
 
 TEST_CASE("an operation only the general form can express", "[deform]") {
-  SampledField field = unitSphere();
+  SampledSdf field = unitSphere();
 
   Primitive chisel = dunya::field::makeBox(
     glm::vec3(1.0f, 0.0f, 0.0f),

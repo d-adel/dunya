@@ -1,6 +1,7 @@
 #pragma once
 
 #include <dunya/gpu/context/context.h>
+#include <dunya/platform/window/window.h>
 #include <dunya/gpu/swapchain/swapchain.h>
 #include <dunya/core/panels/panels.h>
 
@@ -23,5 +24,8 @@ public:
   virtual void record(VkCommandBuffer commandBuffer) const = 0;
 };
 
-using DebugUiFactory = std::function<std::unique_ptr<
-  DebugUi>(const dunya::gpu::Context&, const dunya::gpu::SwapChain&)>;
+using DebugUiFactory = std::function<std::unique_ptr<DebugUi>(
+  const dunya::platform::Window&,
+  const dunya::gpu::Context&,
+  const dunya::gpu::SwapChain&
+)>;

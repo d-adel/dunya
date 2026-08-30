@@ -1,7 +1,0 @@
-#include "sampled.h"
-#include <dunya/field/analytic/analytic.h>
-
-#include <algorithm>
-#include <cmath>
-#include <limits>
-#include <stdexcept>

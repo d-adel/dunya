@@ -2,7 +2,7 @@
 
 namespace dunya::renderer {
 
-using dunya::field::SampledField;
+using dunya::field::SampledSdf;
 
 namespace {
 
@@ -42,10 +42,10 @@ VolumeKey volumeKey(
 }
 
 VolumePool::VolumePool(const dunya::gpu::Device& device) : m_device(device) {
-  m_freeIndices.reserve(dunya::core::MAX_FIELD_VOLUMES);
+  m_freeIndices.reserve(dunya::core::MAX_SDF_VOLUMES);
 
-  for (uint32_t i = 0; i < dunya::core::MAX_FIELD_VOLUMES; ++i) {
-    m_freeIndices.push_back(dunya::core::MAX_FIELD_VOLUMES - 1 - i);
+  for (uint32_t i = 0; i < dunya::core::MAX_SDF_VOLUMES; ++i) {
+    m_freeIndices.push_back(dunya::core::MAX_SDF_VOLUMES - 1 - i);
   }
 }
 
@@ -71,7 +71,7 @@ uint32_t VolumePool::acquire(const VolumeKey& key) {
   return UINT32_MAX;
 }
 
-uint32_t VolumePool::fill(const SampledField& grid, VolumeKey key) {
+uint32_t VolumePool::fill(const SampledSdf& grid, VolumeKey key) {
   if (m_freeIndices.empty()) {
     return UINT32_MAX;
   }
@@ -91,11 +91,11 @@ uint32_t VolumePool::fill(const SampledField& grid, VolumeKey key) {
   return index;
 }
 
-uint32_t VolumePool::allocate(const SampledField& grid) {
+uint32_t VolumePool::allocate(const SampledSdf& grid) {
   return fill(grid, VolumeKey{});
 }
 
-uint32_t VolumePool::allocate(const SampledField& grid, const VolumeKey& key) {
+uint32_t VolumePool::allocate(const SampledSdf& grid, const VolumeKey& key) {
   const uint32_t shared = acquire(key);
 
   if (shared != UINT32_MAX) {
@@ -114,7 +114,7 @@ uint32_t VolumePool::allocate(const SampledField& grid, const VolumeKey& key) {
 uint32_t VolumePool::makeUnique(
   dunya::gpu::Uploader& uploader,
   uint32_t index,
-  const SampledField& grid
+  const SampledSdf& grid
 ) {
   if (index >= m_volumes.size() || !m_volumes[index].has_value()) {
     throw std::runtime_error("Splitting a volume slot that is not allocated");
@@ -213,7 +213,7 @@ uint32_t VolumePool::users(uint32_t index) const {
 }
 
 uint32_t VolumePool::allocated() const {
-  return dunya::core::MAX_FIELD_VOLUMES
+  return dunya::core::MAX_SDF_VOLUMES
          - static_cast<uint32_t>(m_freeIndices.size());
 }
 
@@ -221,7 +221,7 @@ namespace {
 
 template<typename T, typename Source>
 std::vector<T> gather(
-  const SampledField& grid,
+  const SampledSdf& grid,
   const dunya::field::SampleBox& box,
   const std::vector<Source>& from
 ) {
@@ -308,7 +308,7 @@ void stageInto(
 void VolumePool::writeInto(
   dunya::gpu::Uploader& uploader,
   uint32_t index,
-  const SampledField& grid,
+  const SampledSdf& grid,
   const dunya::field::SampleBox& box,
   VkImageLayout from
 ) {
@@ -358,7 +358,7 @@ void VolumePool::writeInto(
 void VolumePool::upload(
   dunya::gpu::Uploader& uploader,
   uint32_t index,
-  const SampledField& grid,
+  const SampledSdf& grid,
   const dunya::field::SampleBox& box
 ) {
   writeInto(
@@ -382,7 +382,7 @@ VolumeImages VolumePool::images(uint32_t index) const {
 
 dunya::gpu::Texture VolumePool::makeDistanceVolume(
   const dunya::gpu::Device& device,
-  const SampledField& grid
+  const SampledSdf& grid
 ) {
   return dunya::gpu::Texture(
     device,
@@ -398,7 +398,7 @@ dunya::gpu::Texture VolumePool::makeDistanceVolume(
 
 dunya::gpu::Texture VolumePool::makeMaterialVolume(
   const dunya::gpu::Device& device,
-  const SampledField& grid
+  const SampledSdf& grid
 ) {
   return dunya::gpu::Texture(
     device,

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <app/worldquery/worldquery.h>
+#include <dunya/objectmodel/worldquery/worldquery.h>
 #include <dunya/field/field.h>
-#include <dunya/field/sampled/sampled.h>
+#include <dunya/field/sampledsdf/sampledsdf.h>
 #include <dunya/objectmodel/component/sdfgrid/sdfgrid.h>
 
 #include <cstdint>
@@ -23,7 +23,7 @@ struct Projectile {
 
 [[nodiscard]] Projectile makeProjectile(
   uint32_t material,
-  const WorldExtent& target
+  const dunya::objectmodel::WorldExtent& target
 );
 
-[[nodiscard]] dunya::field::SampledField bakeProjectile(const Projectile& shot);
+[[nodiscard]] dunya::field::SampledSdf bakeProjectile(const Projectile& shot);

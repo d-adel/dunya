@@ -49,7 +49,7 @@ void Deformation::carve(
 
   field::WriteReport report{};
 
-  world.patchSampledField(entity, [&](field::SampledField& field) {
+  world.patchSampledSdf(entity, [&](field::SampledSdf& field) {
     report = field::deformAndRepair(field, cutter).write;
   });
 
@@ -81,7 +81,7 @@ void Deformation::applyImpacts(Runtime& runtime, core::Telemetry& telemetry) {
 
     if (
       !registry.valid(entity)
-      || !registry.all_of<objectmodel::Deformable, objectmodel::SharedField>(
+      || !registry.all_of<objectmodel::Deformable, objectmodel::SharedSdf>(
         entity
       )
     ) {
@@ -126,7 +126,7 @@ void Deformation::applyImpacts(Runtime& runtime, core::Telemetry& telemetry) {
 
     if (
       !registry.valid(entity)
-      || !registry.all_of<objectmodel::Deformable, objectmodel::SharedField>(
+      || !registry.all_of<objectmodel::Deformable, objectmodel::SharedSdf>(
         entity
       )
     ) {

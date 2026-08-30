@@ -1,8 +1,10 @@
 add_library(dunya_objectmodel STATIC
     instantiate/instantiate.cc
+    component/renderpose/renderpose.cc
     component/sdfgrid/sdfgrid.cc
     sdfprimitivestore/sdfprimitivestore.cc
     world/world.cc
+    worldquery/worldquery.cc
 )
 add_library(dunya::objectmodel ALIAS dunya_objectmodel)
 target_include_directories(dunya_objectmodel PUBLIC "${PROJECT_SOURCE_DIR}/engine")

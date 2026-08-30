@@ -1,7 +1,7 @@
 #pragma once
 
 #include <dunya/gpu/instance/instance.h>
-#include <dunya/platform/window/window.h>
+#include <dunya/gpu/windowsystem/windowsystem.h>
 #include <dunya/gpu/surface/surface.h>
 #include <dunya/gpu/device/device.h>
 
@@ -13,7 +13,7 @@ const std::vector<char const*> validationLayers = {
 
 class Context {
 public:
-  explicit Context(dunya::platform::Window& window);
+  explicit Context(const WindowSystem& windowSystem);
   ~Context() = default;
 
   Context(const Context&) = delete;
@@ -21,8 +21,7 @@ public:
   Context(Context&&) = delete;
   Context& operator=(Context&&) = delete;
 
-  const dunya::platform::Window& window() const noexcept;
-  dunya::platform::Window& window();
+  const WindowSystem& windowSystem() const noexcept;
 
   const Instance& instance() const noexcept;
   const Surface& surface() const noexcept;
@@ -30,7 +29,7 @@ public:
   Device& device();
 
 private:
-  dunya::platform::Window& m_window;
+  const WindowSystem& m_windowSystem;
   Instance m_instance;
   Surface m_surface;
   Device m_device;

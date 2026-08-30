@@ -1,0 +1,6 @@
+#include "meshrecordpacker.h"
+
+#include <dunya/objectmodel/component/material/material.h>
+#include <dunya/objectmodel/component/mesh/mesh.h>
+#include <dunya/objectmodel/component/pose/pose.h>
+#include <dunya/objectmodel/component/renderpose/renderpose.h>

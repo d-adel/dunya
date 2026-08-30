@@ -25,12 +25,10 @@ target_compile_features(dunya_gpu PUBLIC cxx_std_23)
 
 target_link_libraries(dunya_gpu PUBLIC
     dunya::core
-    dunya::platform
     Vulkan::Vulkan
     glm::glm
     dunya::imagecompare
 )
-target_compile_definitions(dunya_gpu PUBLIC GLFW_INCLUDE_VULKAN)
 target_compile_definitions(dunya_gpu PRIVATE
     SHADER_SOURCE_DIR="${SHADER_SOURCE_DIR}"
     GLSLC_PATH="${GLSLC_EXECUTABLE}"

@@ -61,11 +61,11 @@ bool CommandHistory::apply(Command& command, dunya::objectmodel::World& world) {
 
       if constexpr (std::is_same_v<T, CreateFieldCommand>) {
         if (cmd.entity == dunya::objectmodel::INVALID_ENTITY) {
-          cmd.entity = world.createField(cmd.pose, cmd.grid);
+          cmd.entity = world.createSdfGrid(cmd.pose, cmd.grid);
           return cmd.entity != dunya::objectmodel::INVALID_ENTITY;
         }
 
-        return world.createFieldAt(cmd.entity, cmd.pose, cmd.grid);
+        return world.createSdfGridAt(cmd.entity, cmd.pose, cmd.grid);
       }
 
       else if constexpr (std::is_same_v<T, DestroyFieldCommand>) {
@@ -84,7 +84,7 @@ bool CommandHistory::apply(Command& command, dunya::objectmodel::World& world) {
           cmd.primitives.assign(primitives.begin(), primitives.end());
         }
 
-        return world.destroyField(cmd.entity);
+        return world.destroySdfGrid(cmd.entity);
       }
 
       else if constexpr (std::is_same_v<T, TransformFieldCommand>) {
@@ -132,7 +132,7 @@ bool CommandHistory::revert(
       using T = std::decay_t<decltype(cmd)>;
 
       if constexpr (std::is_same_v<T, CreateFieldCommand>) {
-        return world.destroyField(cmd.entity);
+        return world.destroySdfGrid(cmd.entity);
       }
 
       else if constexpr (std::is_same_v<T, DestroyFieldCommand>) {
@@ -140,7 +140,7 @@ bool CommandHistory::revert(
           return false;
         }
 
-        if (!world.createFieldAt(cmd.entity, *cmd.pose, *cmd.grid)) {
+        if (!world.createSdfGridAt(cmd.entity, *cmd.pose, *cmd.grid)) {
           return false;
         }
 

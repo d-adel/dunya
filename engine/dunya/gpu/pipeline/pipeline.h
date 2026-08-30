@@ -27,7 +27,7 @@ static_assert(
 
 enum class PipelineType {
   Mesh,
-  Field,
+  Sdf,
   Both,
   Count
 };

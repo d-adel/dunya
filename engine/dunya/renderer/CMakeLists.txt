@@ -1,8 +1,11 @@
 add_library(dunya_renderer STATIC
     renderer.cc
-    fieldbaker/fieldbaker.cc
-    fieldrecordtable/fieldrecordtable.cc
-    fieldrecord/fieldrecord.cc
+    sdfbaker/sdfbaker.cc
+    sdfrecordpacker/sdfrecordpacker.cc
+    framepacker/framepacker.cc
+    meshrecordpacker/meshrecordpacker.cc
+    sdfrecordtable/sdfrecordtable.cc
+    sdfrecord/sdfrecord.cc
     frame/frame.cc
     frameglobals/frameglobals.cc
     meshbuffers/meshbuffers.cc
@@ -10,7 +13,7 @@ add_library(dunya_renderer STATIC
     resourcetable/resourcetable.cc
     vertex/vertex.cc
     shadowgrid/shadowgrid.cc
-    fieldresidency/fieldresidency.cc
+    sdfresidency/sdfresidency.cc
     volumepool/volumepool.cc
 )
 add_library(dunya::renderer ALIAS dunya_renderer)

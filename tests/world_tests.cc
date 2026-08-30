@@ -64,15 +64,15 @@ uint32_t liveEntityCount(const World& world) {
 TEST_CASE("a created field is live and listed", "[world]") {
   World world;
 
-  const Entity entity = world.createField(Pose{}, blank());
+  const Entity entity = world.createSdfGrid(Pose{}, blank());
 
   REQUIRE(world.needsBake(entity));
 
   REQUIRE(world.registry().valid(entity));
   REQUIRE(world.registry().all_of<SdfGrid>(entity));
 
-  REQUIRE(world.fields().size() == 1);
-  REQUIRE(world.fields()[0] == entity);
+  REQUIRE(world.sdfGrids().size() == 1);
+  REQUIRE(world.sdfGrids()[0] == entity);
 }
 
 TEST_CASE("the registry is reachable read-only", "[world]") {
@@ -92,14 +92,14 @@ TEST_CASE("placing at a hint restores the exact identity", "[world]") {
   Pose marked{};
   marked.position.x = 10.0f;
 
-  const Entity entity = world.createField(marked, blank());
+  const Entity entity = world.createSdfGrid(marked, blank());
 
-  REQUIRE(world.destroyField(entity));
+  REQUIRE(world.destroySdfGrid(entity));
   REQUIRE_FALSE(world.registry().valid(entity));
 
   marked.position.x = 11.0f;
 
-  REQUIRE(world.createFieldAt(entity, marked, blank()));
+  REQUIRE(world.createSdfGridAt(entity, marked, blank()));
 
   REQUIRE(world.registry().valid(entity));
   REQUIRE_THAT(
@@ -111,25 +111,25 @@ TEST_CASE("placing at a hint restores the exact identity", "[world]") {
 TEST_CASE("a taken hint is refused and leaves nothing behind", "[world]") {
   World world;
 
-  const Entity first = world.createField(Pose{}, blank());
+  const Entity first = world.createSdfGrid(Pose{}, blank());
 
-  REQUIRE(world.destroyField(first));
+  REQUIRE(world.destroySdfGrid(first));
 
-  const Entity recycled = world.createField(Pose{}, blank());
+  const Entity recycled = world.createSdfGrid(Pose{}, blank());
 
   const uint32_t before = liveEntityCount(world);
 
-  REQUIRE_FALSE(world.createFieldAt(first, Pose{}, blank()));
+  REQUIRE_FALSE(world.createSdfGridAt(first, Pose{}, blank()));
 
-  REQUIRE(world.fields().size() == 1);
-  REQUIRE(world.fields()[0] == recycled);
+  REQUIRE(world.sdfGrids().size() == 1);
+  REQUIRE(world.sdfGrids()[0] == recycled);
   REQUIRE(liveEntityCount(world) == before);
 }
 
 TEST_CASE("destroying a field returns its primitives to the pool", "[world]") {
   World world;
 
-  const Entity entity = world.createField(Pose{}, blank());
+  const Entity entity = world.createSdfGrid(Pose{}, blank());
 
   REQUIRE(world.addPrimitive(entity, marker(1)));
   REQUIRE(world.addPrimitive(entity, marker(2)));
@@ -139,11 +139,11 @@ TEST_CASE("destroying a field returns its primitives to the pool", "[world]") {
 
   REQUIRE(used > 0);
 
-  REQUIRE(world.destroyField(entity));
+  REQUIRE(world.destroySdfGrid(entity));
 
   REQUIRE(world.pool().empty());
 
-  const Entity next = world.createField(Pose{}, blank());
+  const Entity next = world.createSdfGrid(Pose{}, blank());
 
   REQUIRE(world.addPrimitive(next, marker(4)));
   REQUIRE(world.addPrimitive(next, marker(5)));
@@ -155,11 +155,11 @@ TEST_CASE("destroying a field returns its primitives to the pool", "[world]") {
 TEST_CASE("destroying an entity that carries no field is refused", "[world]") {
   World world;
 
-  const Entity entity = world.createField(Pose{}, blank());
+  const Entity entity = world.createSdfGrid(Pose{}, blank());
 
-  REQUIRE(world.destroyField(entity));
+  REQUIRE(world.destroySdfGrid(entity));
 
-  REQUIRE_FALSE(world.destroyField(entity));
+  REQUIRE_FALSE(world.destroySdfGrid(entity));
 }
 
 TEST_CASE(
@@ -168,7 +168,7 @@ TEST_CASE(
 ) {
   World world;
 
-  const Entity entity = world.createField(Pose{}, blank());
+  const Entity entity = world.createSdfGrid(Pose{}, blank());
 
   REQUIRE(world.addPrimitive(entity, marker(1)));
   REQUIRE(world.addPrimitive(entity, marker(3)));
@@ -194,7 +194,7 @@ TEST_CASE(
 ) {
   World world;
 
-  const Entity entity = world.createField(Pose{}, blank());
+  const Entity entity = world.createSdfGrid(Pose{}, blank());
 
   world.markBaked(entity);
 
@@ -215,7 +215,7 @@ TEST_CASE(
 TEST_CASE("replace writes the whole pose", "[world]") {
   World world;
 
-  const Entity entity = world.createField(Pose{}, blank());
+  const Entity entity = world.createSdfGrid(Pose{}, blank());
 
   const glm::vec3 position(1.0f, 2.0f, 3.0f);
 
@@ -236,7 +236,7 @@ TEST_CASE("replace writes the whole pose", "[world]") {
 TEST_CASE("the component setters reach the object", "[world]") {
   World world;
 
-  const Entity entity = world.createField(Pose{}, blank());
+  const Entity entity = world.createSdfGrid(Pose{}, blank());
 
   REQUIRE_FALSE(world.registry().all_of<BakedVolume>(entity));
 
@@ -252,7 +252,7 @@ TEST_CASE(
 ) {
   World world;
 
-  const Entity entity = world.createField(Pose{}, blank());
+  const Entity entity = world.createSdfGrid(Pose{}, blank());
 
   world.setBakedVolume(entity, 3);
   world.setBakedVolume(entity, 7);
@@ -263,15 +263,15 @@ TEST_CASE(
 TEST_CASE("the field span follows creates and destroys", "[world]") {
   World world;
 
-  const Entity first = world.createField(Pose{}, blank());
-  const Entity second = world.createField(Pose{}, blank());
-  const Entity third = world.createField(Pose{}, blank());
+  const Entity first = world.createSdfGrid(Pose{}, blank());
+  const Entity second = world.createSdfGrid(Pose{}, blank());
+  const Entity third = world.createSdfGrid(Pose{}, blank());
 
-  REQUIRE(world.fields().size() == 3);
+  REQUIRE(world.sdfGrids().size() == 3);
 
-  REQUIRE(world.destroyField(second));
+  REQUIRE(world.destroySdfGrid(second));
 
-  const std::span<const Entity> remaining = world.fields();
+  const std::span<const Entity> remaining = world.sdfGrids();
 
   REQUIRE(remaining.size() == 2);
 
@@ -319,7 +319,7 @@ TEST_CASE("patch writes only what it touches", "[world]") {
     glm::angleAxis(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
   const Entity entity =
-    world.createField(Pose{glm::vec3(0.0f), rotation}, blank());
+    world.createSdfGrid(Pose{glm::vec3(0.0f), rotation}, blank());
 
   world.patch<Pose>(entity, [](Pose& pose) { pose.position.x = 5.0f; });
 
@@ -341,20 +341,20 @@ TEST_CASE(
 TEST_CASE("the CPU field is stored and read back", "[world]") {
   World world;
 
-  const Entity entity = world.createField(Pose{}, blank());
+  const Entity entity = world.createSdfGrid(Pose{}, blank());
 
-  dunya::field::SampledField field;
+  dunya::field::SampledSdf field;
   field.origin = glm::vec3(-1.0f, -2.0f, -3.0f);
   field.voxelSize = glm::vec3(0.25f);
   field.resolution = glm::uvec3(3u);
   field.distances.assign(27u, 0.5f);
   field.distances[13] = -0.75f;
 
-  world.setSampledField(entity, std::move(field));
+  world.setSampledSdf(entity, std::move(field));
 
-  REQUIRE(world.hasSampledField(entity));
+  REQUIRE(world.hasSampledSdf(entity));
 
-  const dunya::field::SampledField& stored = *world.sampledField(entity);
+  const dunya::field::SampledSdf& stored = *world.sampledSdf(entity);
 
   REQUIRE(stored.resolution == glm::uvec3(3u));
   REQUIRE(stored.distances.size() == 27u);
@@ -362,7 +362,7 @@ TEST_CASE("the CPU field is stored and read back", "[world]") {
   REQUIRE_THAT(stored.origin.y, WithinAbs(-2.0f, ANALYTIC_TOLERANCE));
 
   static_assert(
-    !dunya::objectmodel::selfContained<dunya::field::SampledField>,
+    !dunya::objectmodel::selfContained<dunya::field::SampledSdf>,
     "a sampled field is derived, so only the bake may write it"
   );
 }
@@ -370,25 +370,25 @@ TEST_CASE("the CPU field is stored and read back", "[world]") {
 TEST_CASE("a stored field keeps its address when another goes", "[world]") {
   World world;
 
-  const Entity first = world.createField(Pose{}, blank());
-  const Entity second = world.createField(Pose{}, blank());
+  const Entity first = world.createSdfGrid(Pose{}, blank());
+  const Entity second = world.createSdfGrid(Pose{}, blank());
 
-  dunya::field::SampledField a;
+  dunya::field::SampledSdf a;
   a.resolution = glm::uvec3(2u);
   a.distances.assign(8u, 1.0f);
 
-  dunya::field::SampledField b;
+  dunya::field::SampledSdf b;
   b.resolution = glm::uvec3(2u);
   b.distances.assign(8u, -2.0f);
 
-  world.setSampledField(first, std::move(a));
-  world.setSampledField(second, std::move(b));
+  world.setSampledSdf(first, std::move(a));
+  world.setSampledSdf(second, std::move(b));
 
-  const dunya::field::SampledField* held = world.sampledField(second);
+  const dunya::field::SampledSdf* held = world.sampledSdf(second);
 
-  REQUIRE(world.destroyField(first));
+  REQUIRE(world.destroySdfGrid(first));
 
-  REQUIRE(held == world.sampledField(second));
+  REQUIRE(held == world.sampledSdf(second));
   REQUIRE(held->distances.size() == 8u);
   REQUIRE_THAT(held->distances[0], WithinAbs(-2.0f, ANALYTIC_TOLERANCE));
 }
@@ -396,23 +396,23 @@ TEST_CASE("a stored field keeps its address when another goes", "[world]") {
 TEST_CASE("a shared lattice is one lattice, not two", "[world]") {
   World world;
 
-  const Entity donor = world.createField(Pose{}, blank());
-  const Entity taker = world.createField(Pose{}, blank());
+  const Entity donor = world.createSdfGrid(Pose{}, blank());
+  const Entity taker = world.createSdfGrid(Pose{}, blank());
 
-  dunya::field::SampledField field;
+  dunya::field::SampledSdf field;
   field.resolution = glm::uvec3(2u);
   field.distances.assign(8u, 1.0f);
   field.materials.assign(8u, 0u);
 
-  world.setSampledField(donor, std::move(field));
+  world.setSampledSdf(donor, std::move(field));
 
-  REQUIRE(world.sampledFieldUsers(donor) == 1);
+  REQUIRE(world.sampledSdfUsers(donor) == 1);
 
-  world.shareSampledField(donor, taker);
+  world.shareSampledSdf(donor, taker);
 
-  REQUIRE(world.sampledField(taker) == world.sampledField(donor));
-  REQUIRE(world.sampledFieldUsers(donor) == 2);
-  REQUIRE(world.sampledFieldUsers(taker) == 2);
+  REQUIRE(world.sampledSdf(taker) == world.sampledSdf(donor));
+  REQUIRE(world.sampledSdfUsers(donor) == 2);
+  REQUIRE(world.sampledSdfUsers(taker) == 2);
 
   REQUIRE_FALSE(world.needsResample(taker));
 }
@@ -420,8 +420,8 @@ TEST_CASE("a shared lattice is one lattice, not two", "[world]") {
 TEST_CASE("a dent on a shared lattice takes a private copy", "[world]") {
   World world;
 
-  const Entity donor = world.createField(Pose{}, blank());
-  const Entity taker = world.createField(Pose{}, blank());
+  const Entity donor = world.createSdfGrid(Pose{}, blank());
+  const Entity taker = world.createSdfGrid(Pose{}, blank());
 
   for (const Entity entity : {donor, taker}) {
     world.emplaceOrReplace<dunya::objectmodel::Deformable>(
@@ -430,83 +430,83 @@ TEST_CASE("a dent on a shared lattice takes a private copy", "[world]") {
     );
   }
 
-  dunya::field::SampledField field;
+  dunya::field::SampledSdf field;
   field.resolution = glm::uvec3(2u);
   field.distances.assign(8u, 1.0f);
   field.materials.assign(8u, 0u);
 
-  world.setSampledField(donor, std::move(field));
-  world.shareSampledField(donor, taker);
+  world.setSampledSdf(donor, std::move(field));
+  world.shareSampledSdf(donor, taker);
 
-  const dunya::field::SampledField* before = world.sampledField(donor);
+  const dunya::field::SampledSdf* before = world.sampledSdf(donor);
 
-  world.patchSampledField(taker, [](dunya::field::SampledField& lattice) {
+  world.patchSampledSdf(taker, [](dunya::field::SampledSdf& lattice) {
     lattice.distances[0] = -5.0f;
   });
 
-  REQUIRE(world.sampledField(taker) != before);
-  REQUIRE(world.sampledField(donor) == before);
+  REQUIRE(world.sampledSdf(taker) != before);
+  REQUIRE(world.sampledSdf(donor) == before);
 
   REQUIRE_THAT(
-    world.sampledField(taker)->distances[0],
+    world.sampledSdf(taker)->distances[0],
     WithinAbs(-5.0f, ANALYTIC_TOLERANCE)
   );
 
   REQUIRE_THAT(
-    world.sampledField(donor)->distances[0],
+    world.sampledSdf(donor)->distances[0],
     WithinAbs(1.0f, ANALYTIC_TOLERANCE)
   );
 
-  REQUIRE(world.sampledFieldUsers(donor) == 1);
-  REQUIRE(world.sampledFieldUsers(taker) == 1);
+  REQUIRE(world.sampledSdfUsers(donor) == 1);
+  REQUIRE(world.sampledSdfUsers(taker) == 1);
 }
 
 TEST_CASE("a dent on an unshared lattice copies nothing", "[world]") {
   World world;
 
-  const Entity entity = world.createField(Pose{}, blank());
+  const Entity entity = world.createSdfGrid(Pose{}, blank());
 
   world.emplaceOrReplace<dunya::objectmodel::Deformable>(
     entity,
     dunya::objectmodel::Deformable{}
   );
 
-  dunya::field::SampledField field;
+  dunya::field::SampledSdf field;
   field.resolution = glm::uvec3(2u);
   field.distances.assign(8u, 1.0f);
   field.materials.assign(8u, 0u);
 
-  world.setSampledField(entity, std::move(field));
+  world.setSampledSdf(entity, std::move(field));
 
-  const dunya::field::SampledField* before = world.sampledField(entity);
+  const dunya::field::SampledSdf* before = world.sampledSdf(entity);
 
-  world.patchSampledField(entity, [](dunya::field::SampledField& lattice) {
+  world.patchSampledSdf(entity, [](dunya::field::SampledSdf& lattice) {
     lattice.distances[0] = -5.0f;
   });
 
-  REQUIRE(world.sampledField(entity) == before);
+  REQUIRE(world.sampledSdf(entity) == before);
 }
 
 TEST_CASE("a dent records that the lattice left its primitives", "[world]") {
   World world;
 
-  const Entity entity = world.createField(Pose{}, blank());
+  const Entity entity = world.createSdfGrid(Pose{}, blank());
 
   world.emplaceOrReplace<dunya::objectmodel::Deformable>(
     entity,
     dunya::objectmodel::Deformable{}
   );
 
-  dunya::field::SampledField field;
+  dunya::field::SampledSdf field;
   field.resolution = glm::uvec3(2u);
   field.distances.assign(8u, 1.0f);
   field.materials.assign(8u, 0u);
 
-  world.setSampledField(entity, std::move(field));
+  world.setSampledSdf(entity, std::move(field));
 
   REQUIRE_FALSE(world.registry().all_of<dunya::objectmodel::Deformed>(entity));
 
-  world.patchSampledField(entity, [](dunya::field::SampledField& lattice) {
+  world.patchSampledSdf(entity, [](dunya::field::SampledSdf& lattice) {
     lattice.distances[0] = -1.0f;
   });
 
@@ -516,27 +516,27 @@ TEST_CASE("a dent records that the lattice left its primitives", "[world]") {
 TEST_CASE("a fresh bake puts the lattice back on its primitives", "[world]") {
   World world;
 
-  const Entity entity = world.createField(Pose{}, blank());
+  const Entity entity = world.createSdfGrid(Pose{}, blank());
 
   world.emplaceOrReplace<dunya::objectmodel::Deformable>(
     entity,
     dunya::objectmodel::Deformable{}
   );
 
-  dunya::field::SampledField field;
+  dunya::field::SampledSdf field;
   field.resolution = glm::uvec3(2u);
   field.distances.assign(8u, 1.0f);
   field.materials.assign(8u, 0u);
 
-  world.setSampledField(entity, field);
+  world.setSampledSdf(entity, field);
 
-  world.patchSampledField(entity, [](dunya::field::SampledField& lattice) {
+  world.patchSampledSdf(entity, [](dunya::field::SampledSdf& lattice) {
     lattice.distances[0] = -1.0f;
   });
 
   REQUIRE(world.registry().all_of<dunya::objectmodel::Deformed>(entity));
 
-  world.setSampledField(entity, field);
+  world.setSampledSdf(entity, field);
 
   REQUIRE_FALSE(world.registry().all_of<dunya::objectmodel::Deformed>(entity));
 }
@@ -549,7 +549,7 @@ TEST_CASE("clearing a world releases its entities and arena", "[world]") {
 
   for (int i = 0; i != 3; ++i) {
     const dunya::objectmodel::Entity entity =
-      world.createField(dunya::objectmodel::Pose{}, grid);
+      world.createSdfGrid(dunya::objectmodel::Pose{}, grid);
 
     REQUIRE(world.addPrimitive(
       entity,
@@ -557,26 +557,26 @@ TEST_CASE("clearing a world releases its entities and arena", "[world]") {
     ));
   }
 
-  REQUIRE(world.fields().size() == 3);
+  REQUIRE(world.sdfGrids().size() == 3);
 
   const size_t held = world.pool().size();
 
   world.clear();
 
-  REQUIRE(world.fields().empty());
+  REQUIRE(world.sdfGrids().empty());
 
   const auto* poses = world.registry().storage<dunya::objectmodel::Pose>();
 
   REQUIRE((poses == nullptr || poses->empty()));
 
   const dunya::objectmodel::Entity fresh =
-    world.createField(dunya::objectmodel::Pose{}, grid);
+    world.createSdfGrid(dunya::objectmodel::Pose{}, grid);
 
   REQUIRE(world.addPrimitive(
     fresh,
     dunya::field::makeBox(glm::vec3(0.0f), glm::vec3(0.5f))
   ));
 
-  REQUIRE(world.fields().size() == 1);
+  REQUIRE(world.sdfGrids().size() == 1);
   REQUIRE(world.pool().size() <= held);
 }

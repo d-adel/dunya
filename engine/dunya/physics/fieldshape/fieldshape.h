@@ -4,7 +4,7 @@
 
 #include <Jolt/Physics/Collision/Shape/Shape.h>
 
-#include <dunya/field/sampled/sampled.h>
+#include <dunya/field/sampledsdf/sampledsdf.h>
 
 #include <glm/glm.hpp>
 
@@ -27,16 +27,16 @@ struct SolidIntegral {
 
 class FieldShape final : public JPH::Shape {
 public:
-  explicit FieldShape(const dunya::field::SampledField& field);
+  explicit FieldShape(const dunya::field::SampledSdf& field);
 
   FieldShape(
-    const dunya::field::SampledField& field,
+    const dunya::field::SampledSdf& field,
     const FieldShape& previous,
     const glm::uvec3& changedBegin,
     const glm::uvec3& changedEnd
   );
 
-  const dunya::field::SampledField& field() const noexcept;
+  const dunya::field::SampledSdf& field() const noexcept;
 
   const glm::vec3& centerOfMass() const noexcept;
 
@@ -130,13 +130,13 @@ public:
 
 private:
   FieldShape(
-    const dunya::field::SampledField& field,
+    const dunya::field::SampledSdf& field,
     const FieldShape* previous,
     const glm::uvec3& changedBegin,
     const glm::uvec3& changedEnd
   );
 
-  const dunya::field::SampledField* m_field;
+  const dunya::field::SampledSdf* m_field;
 
   std::vector<SolidIntegral> m_brickIntegral;
   std::vector<FieldSeed> m_brickSeed;

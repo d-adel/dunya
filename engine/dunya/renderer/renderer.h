@@ -6,9 +6,9 @@
 #include <dunya/renderer/resourcetable/resourcetable.h>
 #include <dunya/renderer/frameglobals/frameglobals.h>
 #include <dunya/renderer/frame/frame.h>
-#include <dunya/renderer/fieldrecordtable/fieldrecordtable.h>
+#include <dunya/renderer/sdfrecordtable/sdfrecordtable.h>
 #include <dunya/renderer/volumepool/volumepool.h>
-#include <dunya/renderer/fieldbaker/fieldbaker.h>
+#include <dunya/renderer/sdfbaker/sdfbaker.h>
 
 #include <dunya/core/config/config.h>
 
@@ -21,12 +21,12 @@ class Renderer {
 public:
   Renderer(
     const dunya::gpu::Device& device,
-    FieldRecordTable& fieldRecordTable,
-    const FieldBaker& fieldBaker,
+    SdfRecordTable& sdfRecordTable,
+    const SdfBaker& sdfBaker,
     const VolumePool& volumePool,
     FrameGlobals& frameGlobals,
     const dunya::gpu::Pipeline& meshPipeline,
-    const dunya::gpu::Pipeline& fieldPipeline,
+    const dunya::gpu::Pipeline& sdfPipeline,
     const ResourceTable& resourceTable,
     const VkSurfaceKHR& surface,
     uint32_t imageCount
@@ -70,10 +70,10 @@ private:
   uint32_t m_currentFrame = 0;
 
   const dunya::gpu::Pipeline& m_meshPipeline;
-  const dunya::gpu::Pipeline& m_fieldPipeline;
+  const dunya::gpu::Pipeline& m_sdfPipeline;
   const ResourceTable& m_resourceTable;
-  FieldRecordTable& m_recordTable;
-  const FieldBaker& m_fieldBaker;
+  SdfRecordTable& m_recordTable;
+  const SdfBaker& m_sdfBaker;
   const VolumePool& m_volumePool;
   FrameGlobals& m_frameGlobals;
 };

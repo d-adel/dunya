@@ -4,12 +4,12 @@ namespace dunya::renderer {
 
 Renderer::Renderer(
   const dunya::gpu::Device& device,
-  FieldRecordTable& fieldRecordTable,
-  const FieldBaker& fieldBaker,
+  SdfRecordTable& sdfRecordTable,
+  const SdfBaker& sdfBaker,
   const VolumePool& volumePool,
   FrameGlobals& frameGlobals,
   const dunya::gpu::Pipeline& meshPipeline,
-  const dunya::gpu::Pipeline& fieldPipeline,
+  const dunya::gpu::Pipeline& sdfPipeline,
   const ResourceTable& resourceTable,
   const VkSurfaceKHR& surface,
   uint32_t imageCount
@@ -18,10 +18,10 @@ Renderer::Renderer(
       m_presentQueue(device.presentQueue()),
       m_device(device.vkDevice()),
       m_meshPipeline(meshPipeline),
-      m_fieldPipeline(fieldPipeline),
+      m_sdfPipeline(sdfPipeline),
       m_resourceTable(resourceTable),
-      m_recordTable(fieldRecordTable),
-      m_fieldBaker(fieldBaker),
+      m_recordTable(sdfRecordTable),
+      m_sdfBaker(sdfBaker),
       m_volumePool(volumePool),
       m_frameGlobals(frameGlobals) {
   createCommandPool(device.physicalDevice(), surface);
@@ -221,8 +221,8 @@ void Renderer::recordCommandBuffer(
 
   bool drawMeshes = frameContext.mode == dunya::gpu::PipelineType::Mesh
                     || frameContext.mode == dunya::gpu::PipelineType::Both;
-  bool drawField = frameContext.mode == dunya::gpu::PipelineType::Field
-                   || frameContext.mode == dunya::gpu::PipelineType::Both;
+  bool drawSdf = frameContext.mode == dunya::gpu::PipelineType::Sdf
+                 || frameContext.mode == dunya::gpu::PipelineType::Both;
 
   const std::array<VkDescriptorSet, 2> sharedSets = {
     m_frameGlobals.descriptorSet(m_currentFrame),
@@ -297,34 +297,34 @@ void Renderer::recordCommandBuffer(
     }
   }
 
-  if (drawField) {
+  if (drawSdf) {
     m_recordTable.update(
       m_currentFrame,
-      frameContext.fieldRecordCount,
+      frameContext.sdfRecordCount,
       dunya::objectmodel::toLight(frameContext.light)
     );
     m_recordTable.updatePrimitives(m_currentFrame, frameContext.primitives);
 
     for (uint32_t slot : m_recordTable.bakeList()) {
-      const FieldRecord& gpu = m_recordTable.record(slot);
+      const SdfRecord& gpu = m_recordTable.record(slot);
 
       const uint32_t volumeIndex = gpu.resolutionVolumeIndex.w;
 
       VolumeImages images = m_volumePool.images(volumeIndex);
 
-      m_fieldBaker.bake(gpu, m_currentFrame, images);
+      m_sdfBaker.bake(gpu, m_currentFrame, images);
     }
 
     vkCmdBindPipeline(
       m_commandBuffers[m_currentFrame],
       VK_PIPELINE_BIND_POINT_GRAPHICS,
-      m_fieldPipeline.pipeline()
+      m_sdfPipeline.pipeline()
     );
 
     vkCmdBindDescriptorSets(
       m_commandBuffers[m_currentFrame],
       VK_PIPELINE_BIND_POINT_GRAPHICS,
-      m_fieldPipeline.pipelineLayout(),
+      m_sdfPipeline.pipelineLayout(),
       2,
       1,
       &m_recordTable.descriptorSet(m_currentFrame),
@@ -332,12 +332,12 @@ void Renderer::recordCommandBuffer(
       nullptr
     );
 
-    for (uint32_t slot = 0; slot != frameContext.fieldRecordCount; ++slot) {
+    for (uint32_t slot = 0; slot != frameContext.sdfRecordCount; ++slot) {
       const dunya::gpu::PushConstants pushConstants{0, 0, slot};
 
       vkCmdPushConstants(
         m_commandBuffers[m_currentFrame],
-        m_fieldPipeline.pipelineLayout(),
+        m_sdfPipeline.pipelineLayout(),
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         0,
         offsetof(dunya::gpu::PushConstants, recordIndex)
@@ -441,7 +441,7 @@ bool Renderer::drawFrame(
     frameContext.cameraPos
   };
 
-  const SceneCounts counts{frameContext.fieldRecordCount};
+  const SceneCounts counts{frameContext.sdfRecordCount};
 
   const LightUniform light{glm::vec4(
     dunya::objectmodel::toLight(frameContext.light),

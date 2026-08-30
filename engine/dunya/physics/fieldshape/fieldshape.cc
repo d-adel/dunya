@@ -4,7 +4,7 @@ namespace dunya::physics {
 
 namespace {
 
-using dunya::field::SampledField;
+using dunya::field::SampledSdf;
 
 constexpr float DENSITY = 1000.0f;
 
@@ -21,21 +21,21 @@ JPH::Vec3 toJph(const glm::vec3& v) {
   return JPH::Vec3(v.x, v.y, v.z);
 }
 
-glm::vec3 gridMaximum(const SampledField& field) {
+glm::vec3 gridMaximum(const SampledSdf& field) {
   return field.origin
          + field.voxelSize * glm::vec3(field.resolution - glm::uvec3(1u));
 }
 
-glm::vec3 brickOrigin(const SampledField& field, const glm::uvec3& brick) {
+glm::vec3 brickOrigin(const SampledSdf& field, const glm::uvec3& brick) {
   return field.origin
          + field.voxelSize * glm::vec3(brick * dunya::field::BRICK_CELLS);
 }
 
-float coarsestVoxel(const SampledField& field) {
+float coarsestVoxel(const SampledSdf& field) {
   return std::max({field.voxelSize.x, field.voxelSize.y, field.voxelSize.z});
 }
 
-glm::vec3 ontoSurface(const SampledField& field, glm::vec3 point) {
+glm::vec3 ontoSurface(const SampledSdf& field, glm::vec3 point) {
   for (uint32_t step = 0; step != SURFACE_STEPS; ++step) {
     const dunya::field::FieldProbe hit = dunya::field::probe(field, point);
 
@@ -69,7 +69,7 @@ AxisSums axisSums(float origin, float voxel, uint32_t begin, uint32_t end) {
   return sums;
 }
 
-SolidIntegral integrateBrick(const SampledField& field, uint32_t brick) {
+SolidIntegral integrateBrick(const SampledSdf& field, uint32_t brick) {
   SolidIntegral solid;
 
   if (field.brickMinimum[brick] > 0.0f) {
@@ -408,11 +408,11 @@ void castFieldVsField(
 
 }
 
-FieldShape::FieldShape(const dunya::field::SampledField& field)
+FieldShape::FieldShape(const dunya::field::SampledSdf& field)
     : FieldShape(field, nullptr, glm::uvec3(0u), glm::uvec3(0u)) {}
 
 FieldShape::FieldShape(
-  const dunya::field::SampledField& field,
+  const dunya::field::SampledSdf& field,
   const FieldShape& previous,
   const glm::uvec3& changedBegin,
   const glm::uvec3& changedEnd
@@ -420,7 +420,7 @@ FieldShape::FieldShape(
     : FieldShape(field, &previous, changedBegin, changedEnd) {}
 
 FieldShape::FieldShape(
-  const dunya::field::SampledField& field,
+  const dunya::field::SampledSdf& field,
   const FieldShape* previous,
   const glm::uvec3& changedBegin,
   const glm::uvec3& changedEnd
@@ -556,7 +556,7 @@ FieldShape::FieldShape(
   );
 }
 
-const dunya::field::SampledField& FieldShape::field() const noexcept {
+const dunya::field::SampledSdf& FieldShape::field() const noexcept {
   return *m_field;
 }
 

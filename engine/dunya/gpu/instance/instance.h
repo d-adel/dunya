@@ -13,7 +13,10 @@ constexpr bool enableValidationLayers = true;
 
 class Instance {
 public:
-  explicit Instance(const std::vector<char const*>& validationLayers);
+  Instance(
+    const std::vector<char const*>& validationLayers,
+    const std::vector<const char*>& windowExtensions
+  );
   Instance(Instance const&) = delete;
   Instance& operator=(Instance const&) = delete;
   ~Instance();
@@ -21,8 +24,14 @@ public:
   const VkInstance& handle() const noexcept;
 
 private:
-  void setup(const std::vector<char const*>& validationLayers);
-  void createVkInstance(const std::vector<char const*>& validationLayers);
+  void setup(
+    const std::vector<char const*>& validationLayers,
+    const std::vector<const char*>& windowExtensions
+  );
+  void createVkInstance(
+    const std::vector<char const*>& validationLayers,
+    const std::vector<const char*>& windowExtensions
+  );
   void setupDebugMessenger();
 
   std::vector<VkLayerProperties> enumerateInstanceLayerProperties();

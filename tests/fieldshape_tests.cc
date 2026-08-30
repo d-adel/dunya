@@ -7,7 +7,7 @@
 #include <dunya/field/analytic/analytic.h>
 #include <dunya/field/deform/deform.h>
 #include <dunya/field/field.h>
-#include <dunya/field/sampled/sampled.h>
+#include <dunya/field/sampledsdf/sampledsdf.h>
 #include <dunya/physics/fieldshape/fieldshape.h>
 #include <dunya/physics/joltlibrary/joltlibrary.h>
 
@@ -27,7 +27,7 @@
 using Catch::Matchers::WithinAbs;
 using Catch::Matchers::WithinRel;
 using dunya::field::Primitive;
-using dunya::field::SampledField;
+using dunya::field::SampledSdf;
 using dunya::physics::FieldShape;
 using dunya::physics::JoltLibrary;
 
@@ -35,7 +35,7 @@ namespace {
 
 constexpr float DENSITY = 1000.0f;
 
-SampledField bakeSphere(
+SampledSdf bakeSphere(
   float radius,
   uint32_t resolution,
   const glm::vec3& centre = glm::vec3(0.0f)
@@ -59,7 +59,7 @@ float sphereMass(float radius) {
 TEST_CASE("the local bounds are the solid, not the grid", "[fieldshape]") {
   JoltLibrary library;
 
-  const SampledField field = bakeSphere(1.0f, 65u);
+  const SampledSdf field = bakeSphere(1.0f, 65u);
   const FieldShape shape(field);
 
   const JPH::AABox bounds = shape.GetLocalBounds();
@@ -81,7 +81,7 @@ TEST_CASE(
 
   const glm::vec3 offset(0.0f, 3.0f, 0.0f);
 
-  const SampledField field = bakeSphere(1.0f, 65u, offset);
+  const SampledSdf field = bakeSphere(1.0f, 65u, offset);
   const FieldShape shape(field);
 
   const JPH::Vec3 centre = shape.GetCenterOfMass();
@@ -94,7 +94,7 @@ TEST_CASE(
 TEST_CASE("an offset solid is bounded about its own centre", "[fieldshape]") {
   JoltLibrary library;
 
-  const SampledField field = bakeSphere(1.0f, 65u, glm::vec3(0.0f, 3.0f, 0.0f));
+  const SampledSdf field = bakeSphere(1.0f, 65u, glm::vec3(0.0f, 3.0f, 0.0f));
   const FieldShape shape(field);
 
   const JPH::AABox bounds = shape.GetLocalBounds();
@@ -113,9 +113,8 @@ TEST_CASE(
 ) {
   JoltLibrary library;
 
-  const SampledField centred = bakeSphere(1.0f, 65u);
-  const SampledField offset =
-    bakeSphere(1.0f, 65u, glm::vec3(0.0f, 3.0f, 0.0f));
+  const SampledSdf centred = bakeSphere(1.0f, 65u);
+  const SampledSdf offset = bakeSphere(1.0f, 65u, glm::vec3(0.0f, 3.0f, 0.0f));
 
   const JPH::MassProperties here = FieldShape(centred).GetMassProperties();
   const JPH::MassProperties there = FieldShape(offset).GetMassProperties();
@@ -133,7 +132,7 @@ TEST_CASE(
 TEST_CASE("an offset solid is asked about in the right space", "[fieldshape]") {
   JoltLibrary library;
 
-  const SampledField field = bakeSphere(1.0f, 65u, glm::vec3(0.0f, 3.0f, 0.0f));
+  const SampledSdf field = bakeSphere(1.0f, 65u, glm::vec3(0.0f, 3.0f, 0.0f));
   const FieldShape shape(field);
 
   JPH::AllHitCollisionCollector<JPH::CollidePointCollector> inside;
@@ -155,7 +154,7 @@ TEST_CASE("an offset solid is asked about in the right space", "[fieldshape]") {
 TEST_CASE("an empty grid answers for its whole box", "[fieldshape]") {
   JoltLibrary library;
 
-  const SampledField field = dunya::field::bake(
+  const SampledSdf field = dunya::field::bake(
     std::vector<Primitive>{fixture::sphere(glm::vec3(10.0f), 0.5f)},
     glm::vec3(-1.0f),
     glm::vec3(1.0f),
@@ -184,7 +183,7 @@ TEST_CASE(
 ) {
   JoltLibrary library;
 
-  const SampledField field = bakeSphere(1.0f, 65u);
+  const SampledSdf field = bakeSphere(1.0f, 65u);
   const FieldShape shape(field);
 
   const glm::uvec3 counts = dunya::field::brickCounts(field);
@@ -219,7 +218,7 @@ TEST_CASE(
 TEST_CASE("the inner radius is the deepest point inside", "[fieldshape]") {
   JoltLibrary library;
 
-  const SampledField field = bakeSphere(1.0f, 33u);
+  const SampledSdf field = bakeSphere(1.0f, 33u);
   const FieldShape shape(field);
 
   REQUIRE_THAT(shape.GetInnerRadius(), WithinAbs(1.0f, field.voxelSize.x));
@@ -228,7 +227,7 @@ TEST_CASE("the inner radius is the deepest point inside", "[fieldshape]") {
 TEST_CASE("an empty grid still reports a usable inner radius", "[fieldshape]") {
   JoltLibrary library;
 
-  const SampledField field = dunya::field::bake(
+  const SampledSdf field = dunya::field::bake(
     std::vector<Primitive>{fixture::sphere(glm::vec3(10.0f), 0.5f)},
     glm::vec3(-1.0f),
     glm::vec3(1.0f),
@@ -243,7 +242,7 @@ TEST_CASE("an empty grid still reports a usable inner radius", "[fieldshape]") {
 TEST_CASE("the mass is the solid's, not the grid box's", "[fieldshape]") {
   JoltLibrary library;
 
-  const SampledField field = bakeSphere(1.0f, 65u);
+  const SampledSdf field = bakeSphere(1.0f, 65u);
   const FieldShape shape(field);
 
   REQUIRE_THAT(
@@ -255,7 +254,7 @@ TEST_CASE("the mass is the solid's, not the grid box's", "[fieldshape]") {
 TEST_CASE("the inertia is the solid's, about its own axes", "[fieldshape]") {
   JoltLibrary library;
 
-  const SampledField field = bakeSphere(1.0f, 65u);
+  const SampledSdf field = bakeSphere(1.0f, 65u);
   const FieldShape shape(field);
 
   const JPH::MassProperties properties = shape.GetMassProperties();
@@ -276,8 +275,8 @@ TEST_CASE(
 ) {
   JoltLibrary library;
 
-  const SampledField small = bakeSphere(0.5f, 65u);
-  const SampledField large = bakeSphere(1.0f, 65u);
+  const SampledSdf small = bakeSphere(0.5f, 65u);
+  const SampledSdf large = bakeSphere(1.0f, 65u);
 
   const FieldShape smallShape(small);
   const FieldShape largeShape(large);
@@ -304,7 +303,7 @@ TEST_CASE("a solid box weighs and turns like a solid box", "[fieldshape]") {
   box.shapeConfig = glm::uvec4(1u, 1u, dunya::core::FIELD_OP_UNION, 0u);
   dunya::field::updateBounds(box);
 
-  const SampledField field = dunya::field::bake(
+  const SampledSdf field = dunya::field::bake(
     std::vector<Primitive>{box},
     -half - glm::vec3(0.25f),
     half + glm::vec3(0.25f),
@@ -349,9 +348,9 @@ TEST_CASE("a solid box weighs and turns like a solid box", "[fieldshape]") {
 TEST_CASE("carving the solid takes mass with it", "[fieldshape]") {
   JoltLibrary library;
 
-  const SampledField whole = bakeSphere(1.0f, 65u);
+  const SampledSdf whole = bakeSphere(1.0f, 65u);
 
-  const SampledField carved = dunya::field::bake(
+  const SampledSdf carved = dunya::field::bake(
     std::vector<Primitive>{
       fixture::sphere(glm::vec3(0.0f), 1.0f),
       fixture::sphere(
@@ -375,7 +374,7 @@ TEST_CASE("carving the solid takes mass with it", "[fieldshape]") {
 TEST_CASE("every brick has a sub shape id of its own", "[fieldshape]") {
   JoltLibrary library;
 
-  const SampledField field = bakeSphere(1.0f, 33u);
+  const SampledSdf field = bakeSphere(1.0f, 33u);
   const FieldShape shape(field);
 
   const glm::uvec3 bricks = dunya::field::brickCounts(field);
@@ -388,7 +387,7 @@ TEST_CASE("every brick has a sub shape id of its own", "[fieldshape]") {
 TEST_CASE("the surface normal points out of the solid", "[fieldshape]") {
   JoltLibrary library;
 
-  const SampledField field = bakeSphere(1.0f, 33u);
+  const SampledSdf field = bakeSphere(1.0f, 33u);
   const FieldShape shape(field);
 
   const JPH::Vec3 normal =
@@ -402,7 +401,7 @@ TEST_CASE("the surface normal points out of the solid", "[fieldshape]") {
 TEST_CASE("a point inside collides and one outside does not", "[fieldshape]") {
   JoltLibrary library;
 
-  const SampledField field = bakeSphere(1.0f, 33u);
+  const SampledSdf field = bakeSphere(1.0f, 33u);
   const FieldShape shape(field);
 
   const JPH::TransformedShape context{};
@@ -437,7 +436,7 @@ TEST_CASE(
 ) {
   JoltLibrary library;
 
-  const SampledField field = bakeSphere(1.0f, 17u);
+  const SampledSdf field = bakeSphere(1.0f, 17u);
   const FieldShape shape(field);
 
   REQUIRE(&shape.field() == &field);
@@ -445,7 +444,7 @@ TEST_CASE(
 
 namespace {
 
-SampledField bakeSlab(uint32_t resolution) {
+SampledSdf bakeSlab(uint32_t resolution) {
   Primitive slab{};
   slab.inverseModel =
     glm::inverse(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f)));
@@ -499,8 +498,8 @@ TEST_CASE(
 ) {
   JoltLibrary library;
 
-  const SampledField slab = bakeSlab(33u);
-  const SampledField ball = bakeSphere(0.5f, 65u);
+  const SampledSdf slab = bakeSlab(33u);
+  const SampledSdf ball = bakeSphere(0.5f, 65u);
 
   REQUIRE(slab.voxelSize.x > ball.voxelSize.x * 4.0f);
 
@@ -522,7 +521,7 @@ TEST_CASE(
 TEST_CASE("a degenerate gradient still names a direction", "[fieldshape]") {
   JoltLibrary library;
 
-  SampledField flat = bakeSphere(1.0f, 17u);
+  SampledSdf flat = bakeSphere(1.0f, 17u);
 
   std::fill(flat.distances.begin(), flat.distances.end(), -1.0f);
 
@@ -550,7 +549,7 @@ TEST_CASE(
     fixture::sphere(glm::vec3(0.0f), 1.0f)
   };
 
-  SampledField field = dunya::field::bake(
+  SampledSdf field = dunya::field::bake(
     primitives,
     glm::vec3(-1.6f),
     glm::vec3(1.6f),

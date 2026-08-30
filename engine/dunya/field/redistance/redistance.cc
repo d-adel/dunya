@@ -8,7 +8,7 @@ constexpr uint32_t BAND_VOXELS = 8u;
 
 constexpr float FAR = std::numeric_limits<float>::max();
 
-uint32_t latticeIndex(const SampledField& field, const glm::uvec3& at) {
+uint32_t latticeIndex(const SampledSdf& field, const glm::uvec3& at) {
   return at.x + field.resolution.x * (at.y + field.resolution.y * at.z);
 }
 
@@ -110,7 +110,7 @@ float godunov(float a, float b, float c, const glm::vec3& h) {
 }
 
 float redistance(
-  SampledField& field,
+  SampledSdf& field,
   const SampleBox& box,
   std::span<const uint8_t> damaged,
   std::span<float> values,
@@ -326,7 +326,7 @@ float redistance(
 }
 
 float redistance(
-  SampledField& field,
+  SampledSdf& field,
   const SampleBox& box,
   std::span<const uint8_t> damaged,
   uint32_t sweeps
@@ -334,7 +334,7 @@ float redistance(
   return redistance(field, box, damaged, std::span<float>(), sweeps);
 }
 
-float redistance(SampledField& field, const SampleBox& box) {
+float redistance(SampledSdf& field, const SampleBox& box) {
   const std::vector<uint8_t> everywhere(
     static_cast<size_t>(box.extent.x) * box.extent.y * box.extent.z,
     1u

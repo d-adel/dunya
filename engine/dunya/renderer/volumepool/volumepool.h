@@ -4,7 +4,7 @@
 #include <dunya/gpu/uploader/uploader.h>
 #include <dunya/core/config/config.h>
 #include <dunya/gpu/device/device.h>
-#include <dunya/field/sampled/sampled.h>
+#include <dunya/field/sampledsdf/sampledsdf.h>
 
 #include <vulkan/vulkan.h>
 #include <optional>
@@ -44,17 +44,17 @@ public:
 
   [[nodiscard]] uint32_t acquire(const VolumeKey& key);
 
-  [[nodiscard]] uint32_t allocate(const dunya::field::SampledField& grid);
+  [[nodiscard]] uint32_t allocate(const dunya::field::SampledSdf& grid);
 
   [[nodiscard]] uint32_t allocate(
-    const dunya::field::SampledField& grid,
+    const dunya::field::SampledSdf& grid,
     const VolumeKey& key
   );
 
   [[nodiscard]] uint32_t makeUnique(
     dunya::gpu::Uploader& uploader,
     uint32_t index,
-    const dunya::field::SampledField& grid
+    const dunya::field::SampledSdf& grid
   );
 
   void retain(uint32_t index);
@@ -68,7 +68,7 @@ public:
   void upload(
     dunya::gpu::Uploader& uploader,
     uint32_t index,
-    const dunya::field::SampledField& grid,
+    const dunya::field::SampledSdf& grid,
     const dunya::field::SampleBox& box
   );
 
@@ -83,30 +83,30 @@ private:
   };
 
   [[nodiscard]] uint32_t fill(
-    const dunya::field::SampledField& grid,
+    const dunya::field::SampledSdf& grid,
     VolumeKey key
   );
 
   void writeInto(
     dunya::gpu::Uploader& uploader,
     uint32_t index,
-    const dunya::field::SampledField& grid,
+    const dunya::field::SampledSdf& grid,
     const dunya::field::SampleBox& box,
     VkImageLayout from
   );
 
   dunya::gpu::Texture makeDistanceVolume(
     const dunya::gpu::Device& device,
-    const dunya::field::SampledField& grid
+    const dunya::field::SampledSdf& grid
   );
   dunya::gpu::Texture makeMaterialVolume(
     const dunya::gpu::Device& device,
-    const dunya::field::SampledField& grid
+    const dunya::field::SampledSdf& grid
   );
 
   const dunya::gpu::Device& m_device;
 
-  std::array<std::optional<Volume>, dunya::core::MAX_FIELD_VOLUMES> m_volumes;
+  std::array<std::optional<Volume>, dunya::core::MAX_SDF_VOLUMES> m_volumes;
   std::vector<uint32_t> m_freeIndices;
   std::unordered_map<size_t, std::vector<uint32_t>> m_shared;
 };

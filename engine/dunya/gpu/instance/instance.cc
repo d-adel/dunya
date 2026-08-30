@@ -2,8 +2,11 @@
 
 namespace dunya::gpu {
 
-Instance::Instance(const std::vector<char const*>& validationLayers) {
-  setup(validationLayers);
+Instance::Instance(
+  const std::vector<char const*>& validationLayers,
+  const std::vector<const char*>& windowExtensions
+) {
+  setup(validationLayers, windowExtensions);
 }
 
 Instance::~Instance() {
@@ -62,8 +65,11 @@ std::vector<VkLayerProperties> Instance::enumerateInstanceLayerProperties() {
   return layerProperties;
 }
 
-void Instance::setup(const std::vector<char const*>& validationLayers) {
-  createVkInstance(validationLayers);
+void Instance::setup(
+  const std::vector<char const*>& validationLayers,
+  const std::vector<const char*>& windowExtensions
+) {
+  createVkInstance(validationLayers, windowExtensions);
 
   if (enableValidationLayers) {
     setupDebugMessenger();
@@ -71,7 +77,8 @@ void Instance::setup(const std::vector<char const*>& validationLayers) {
 }
 
 void Instance::createVkInstance(
-  const std::vector<char const*>& validationLayers
+  const std::vector<char const*>& validationLayers,
+  const std::vector<const char*>& windowExtensions
 ) {
   VkApplicationInfo appInfo{};
   appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -108,18 +115,13 @@ void Instance::createVkInstance(
     );
   }
 
-  uint32_t glfwExtensionCount = 0;
-  const char** glfwExtensions =
-    glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-  if (glfwExtensions == nullptr) {
-    throw std::runtime_error("Failed to get required GLFW extensions");
+  if (windowExtensions.empty()) {
+    throw std::runtime_error(
+      "The window system required no instance extensions"
+    );
   }
 
-  std::vector<const char*> requiredExtensions(
-    glfwExtensions,
-    glfwExtensions + glfwExtensionCount
-  );
+  std::vector<const char*> requiredExtensions(windowExtensions);
 
   if (enableValidationLayers) {
     requiredExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);

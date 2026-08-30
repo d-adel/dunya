@@ -24,7 +24,7 @@ dunya::objectmodel::Entity makeObject(
   object.resolution = glm::uvec3(dunya::core::FIELD_GRID_RESOLUTION);
 
   const dunya::objectmodel::Entity id =
-    world.createField(dunya::objectmodel::Pose{}, object);
+    world.createSdfGrid(dunya::objectmodel::Pose{}, object);
 
   for (uint32_t i = 0; i != primitives; ++i) {
     REQUIRE(world.addPrimitive(
@@ -230,7 +230,7 @@ TEST_CASE(
 
   history.undo(world);
 
-  REQUIRE(world.destroyField(id));
+  REQUIRE(world.destroySdfGrid(id));
 
   history.redo(world);
 
@@ -251,7 +251,7 @@ TEST_CASE(
     history.execute(dunya::editor::AddPrimitiveCommand{id, 1, marker(9)}, world)
   );
 
-  REQUIRE(world.destroyField(id));
+  REQUIRE(world.destroySdfGrid(id));
 
   history.undo(world);
 

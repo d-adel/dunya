@@ -17,23 +17,11 @@ const std::vector<VkVertexInputBindingDescription> MESH_BINDINGS{
 const auto MESH_ATTRIBUTES =
   dunya::renderer::Vertex::getAttributeDescriptions();
 
-const dunya::objectmodel::Pose& drawnPose(
-  const entt::registry& registry,
-  dunya::objectmodel::Entity entity
-) {
-  if (
-    const auto* drawn = registry.try_get<dunya::objectmodel::RenderPose>(entity)
-  ) {
-    return drawn->pose;
-  }
-
-  return registry.get<dunya::objectmodel::Pose>(entity);
-}
-
 }
 
 Application::Application(const StartupOptions& options, DebugUiFactory tools)
-    : m_context(m_window),
+    : m_windowSystem(m_window),
+      m_context(m_windowSystem),
       m_input(m_window.handle()),
       m_flyController(m_input, m_window),
       m_swapChain(m_context),
@@ -47,9 +35,10 @@ Application::Application(const StartupOptions& options, DebugUiFactory tools)
         m_assetLibrary.materials()
       ),
       m_recordTable(m_context.device()),
-      m_fieldBaker(m_context.device(), m_recordTable),
+      m_sdfBaker(m_context.device(), m_recordTable),
       m_volumePool(m_context.device()),
       m_residency(m_volumePool, m_recordTable, m_uploader),
+      m_framePacker(m_volumePool, m_residency, m_recordTable),
       m_meshPipeline(
         dunya::gpu::PipelineType::Mesh,
         m_context.device().vkDevice(),
@@ -62,8 +51,8 @@ Application::Application(const StartupOptions& options, DebugUiFactory tools)
         MESH_BINDINGS,
         MESH_ATTRIBUTES
       ),
-      m_fieldPipeline(
-        dunya::gpu::PipelineType::Field,
+      m_sdfPipeline(
+        dunya::gpu::PipelineType::Sdf,
         m_context.device().vkDevice(),
         std::vector<VkDescriptorSetLayout>{
           m_frameGlobals.setLayout(),
@@ -75,11 +64,11 @@ Application::Application(const StartupOptions& options, DebugUiFactory tools)
       m_renderer(
         m_context.device(),
         m_recordTable,
-        m_fieldBaker,
+        m_sdfBaker,
         m_volumePool,
         m_frameGlobals,
         m_meshPipeline,
-        m_fieldPipeline,
+        m_sdfPipeline,
         m_resourceTable,
         m_context.surface().handle(),
         m_swapChain.imageCount()
@@ -89,7 +78,7 @@ Application::Application(const StartupOptions& options, DebugUiFactory tools)
   loadWorld(options);
 
   if (tools) {
-    m_debugUi = tools(m_context, m_swapChain);
+    m_debugUi = tools(m_window, m_context, m_swapChain);
   }
 
   m_keySubscription = dunya::core::EventDispatcher::instance()
@@ -139,27 +128,17 @@ void Application::loadWorld(const StartupOptions& options) {
 }
 
 void Application::frameCamera() {
-  const WorldExtent target = dynamicExtent(m_authoredWorld);
+  const dunya::objectmodel::WorldExtent target =
+    dunya::objectmodel::dynamicExtent(m_authoredWorld);
 
   if (target.empty) {
     return;
   }
 
-  const glm::vec3 span = target.span();
+  const dunya::objectmodel::Framing framing =
+    dunya::objectmodel::frameExtent(target);
 
-  constexpr float HALF_FOV = glm::radians(35.0f);
-
-  const float reach = 0.5f * std::max(span.x, span.y) / std::tan(HALF_FOV);
-
-  const float distance = reach + 3.0f;
-
-  constexpr float PITCH = glm::radians(-20.0f);
-
-  m_flyController.camera().place(
-    glm::vec3(0.0f, target.centre().y + distance * -std::sin(PITCH), distance),
-    0.0f,
-    PITCH
-  );
+  m_flyController.camera().place(framing.position, framing.yaw, framing.pitch);
 }
 
 glm::vec3 Application::groundPoint(float u, float v) const {
@@ -236,13 +215,15 @@ int Application::start(const StartupOptions& options) {
 
   m_shotSettings = makeProjectile(
     m_assetLibrary.materialIndex(dunya::core::MATERIAL_PROJECTILE),
-    dynamicExtent(m_authoredWorld)
+    dunya::objectmodel::dynamicExtent(m_authoredWorld)
   );
 
   m_projectileField = bakeProjectile(m_shotSettings);
 
-  m_groundExtent =
-    entityExtent(m_authoredWorld, firstDeformable(m_authoredWorld));
+  m_groundExtent = dunya::objectmodel::entityExtent(
+    m_authoredWorld,
+    dunya::objectmodel::firstDeformable(m_authoredWorld)
+  );
 
   frameCamera();
 
@@ -265,8 +246,6 @@ int Application::start(const StartupOptions& options) {
   }
 
   bool bakeCheckPending = options.verifyBake;
-  bool tableFullReported = false;
-  bool volumePoolFullReported = false;
 
   FrameCheck frameCheck(m_context, m_swapChain, options);
 
@@ -445,15 +424,15 @@ int Application::start(const StartupOptions& options) {
         m_reloadRequested = false;
         m_context.device().waitIdle();
         m_meshPipeline.reload();
-        m_fieldPipeline.reload();
+        m_sdfPipeline.reload();
       } else {
         if (m_meshPipeline.sourcesChanged()) {
           m_context.device().waitIdle();
           m_meshPipeline.reload();
         }
-        if (m_fieldPipeline.sourcesChanged()) {
+        if (m_sdfPipeline.sourcesChanged()) {
           m_context.device().waitIdle();
-          m_fieldPipeline.reload();
+          m_sdfPipeline.reload();
         }
       }
     }
@@ -463,7 +442,6 @@ int Application::start(const StartupOptions& options) {
     float aspect = static_cast<float>(m_swapChain.extent().width)
                    / static_cast<float>(m_swapChain.extent().height);
 
-    m_recordTable.newFrame();
     lookThrough(aspect);
 
     const bool announcing = m_stall == Stall::Announced;
@@ -489,162 +467,19 @@ int Application::start(const StartupOptions& options) {
 
     dunya::objectmodel::World& world = activeWorld();
     const entt::registry& registry = world.registry();
-
-    m_residency.reclaim(world);
-
-    uint32_t recordIndex = 0;
-
-    m_recordEntities.clear();
-
-    const std::span<const dunya::objectmodel::Entity> visiting =
+    m_framePacker.pack(
+      m_frameContext,
+      world,
       announcing ? std::span<const dunya::objectmodel::Entity>()
-                 : world.fields();
-
-    for (const dunya::objectmodel::Entity entity : visiting) {
-      if (recordIndex == dunya::core::MAX_FIELD_RECORDS) {
-        if (!tableFullReported) {
-          tableFullReported = true;
-          std::cout << "Field record table full, the rest are not drawn\n";
-        }
-
-        break;
-      }
-
-      const dunya::objectmodel::SdfGrid& grid =
-        registry.get<dunya::objectmodel::SdfGrid>(entity);
-
-      if (!registry.all_of<dunya::objectmodel::BakedVolume>(entity)) {
-        std::span<const dunya::field::Primitive> primitives =
-          world.primitives(entity);
-
-        const dunya::field::SampledField* carried = world.sampledField(entity);
-
-        const bool reusable =
-          carried != nullptr && !world.needsResample(entity);
-
-        const dunya::renderer::VolumeKey key =
-          registry.all_of<dunya::objectmodel::Deformed>(entity)
-            ? dunya::renderer::VolumeKey{}
-            : dunya::renderer::volumeKey(primitives, grid.resolution);
-
-        uint32_t index = reusable ? UINT32_MAX : m_volumePool.acquire(key);
-
-        const dunya::objectmodel::Entity donor =
-          index == UINT32_MAX ? dunya::objectmodel::INVALID_ENTITY
-                              : m_residency.fieldOnSlot(world, index);
-
-        if (
-          index != UINT32_MAX && donor == dunya::objectmodel::INVALID_ENTITY
-        ) {
-          m_volumePool.release(index);
-
-          index = UINT32_MAX;
-        }
-
-        dunya::field::SampledField baked;
-
-        if (!reusable && donor == dunya::objectmodel::INVALID_ENTITY) {
-          const dunya::field::Aabb box =
-            dunya::objectmodel::gridBox(primitives);
-
-          baked = dunya::field::bake(
-            primitives,
-            box.minimum,
-            box.maximum,
-            grid.resolution
-          );
-        }
-
-        if (index == UINT32_MAX) {
-          index = m_volumePool.allocate(reusable ? *carried : baked, key);
-        }
-
-        if (index == UINT32_MAX) {
-          if (!volumePoolFullReported) {
-            volumePoolFullReported = true;
-            std::cout << "Volume pool full, object not drawn\n";
-          }
-
-          continue;
-        }
-
-        auto images = m_volumePool.images(index);
-
-        m_recordTable.registerVolume(
-          images.distance.imageView(),
-          images.material.imageView(),
-          index
-        );
-
-        m_residency.hold(entity, index);
-
-        world.setBakedVolume(entity, index);
-
-        if (donor != dunya::objectmodel::INVALID_ENTITY) {
-          world.shareSampledField(donor, entity);
-        } else if (!reusable) {
-          world.setSampledField(entity, std::move(baked));
-        }
-
-        if (registry.all_of<dunya::objectmodel::Deformable>(entity)) {
-          m_recordTable.uploadBounds(index, *world.sampledField(entity));
-        }
-
-        if (m_runtime) {
-          m_runtime->refreshBody(entity);
-        }
-      }
-
-      const auto* range =
-        registry.try_get<dunya::objectmodel::SdfPrimitiveRange>(entity);
-
-      const uint32_t primitiveOffset = range == nullptr ? 0u : range->offset;
-
-      const uint32_t primitiveCount = range == nullptr ? 0u : range->count;
-
-      m_recordTable.setRecord(
-        recordIndex,
-        primitiveOffset,
-        primitiveCount,
-        drawnPose(registry, entity),
-        grid,
-        registry.get<dunya::objectmodel::BakedVolume>(entity),
-        m_frameContext.fieldRepresentation
-      );
-
-      if (world.needsBake(entity)) {
-        if (registry.all_of<dunya::objectmodel::Deformable>(entity)) {
-          world.markBaked(entity);
-        } else {
-          m_recordTable.appendToBakeList(recordIndex);
-
-          if (
-            m_runtime && world.needsResample(entity)
-            && registry.all_of<
-               dunya::objectmodel::RigidBody,
-               dunya::objectmodel::SharedField>(entity)
-          ) {
-            const dunya::field::Aabb refit =
-              dunya::objectmodel::gridBox(world.primitives(entity));
-
-            world.setSampledField(
-              entity,
-              dunya::field::bake(
-                world.primitives(entity),
-                refit.minimum,
-                refit.maximum,
-                grid.resolution
-              )
-            );
-
-            m_runtime->refreshBody(entity);
-          }
-        }
-      }
-
-      m_recordEntities.push_back(entity);
-      ++recordIndex;
-    }
+                 : world.sdfGrids(),
+      m_assetLibrary.meshBuffers(),
+      m_runtime ? std::function<void(dunya::objectmodel::Entity)>(
+                    [this](dunya::objectmodel::Entity entity) {
+                      m_runtime->refreshBody(entity);
+                    }
+                  )
+                : std::function<void(dunya::objectmodel::Entity)>()
+    );
 
     if (m_pendingDents > 0 && !announcing) {
       constexpr uint32_t DENTS_PER_FRAME = 1u;
@@ -676,9 +511,6 @@ int Application::start(const StartupOptions& options) {
       );
     }
 
-    m_frameContext.fieldRecordCount = recordIndex;
-    m_assetLibrary.augmentFrameContext(m_frameContext, world);
-
     std::function<void(VkCommandBuffer)> afterScene;
 
     if (m_debugUi && !captureHook) {
@@ -699,7 +531,7 @@ int Application::start(const StartupOptions& options) {
 
     if (!swapChainStale) {
       for (uint32_t idx : m_recordTable.bakeList()) {
-        world.markBaked(m_recordEntities[idx]);
+        world.markBaked(m_framePacker.sdfRecordEntities()[idx]);
       }
     } else {
       m_swapChain.recreate();
@@ -709,7 +541,7 @@ int Application::start(const StartupOptions& options) {
 
       uint32_t checked = 0;
 
-      for (dunya::objectmodel::Entity entity : world.fields()) {
+      for (dunya::objectmodel::Entity entity : world.sdfGrids()) {
         const dunya::objectmodel::SdfGrid& grid =
           registry.get<dunya::objectmodel::SdfGrid>(entity);
         const auto* volume =
@@ -723,7 +555,7 @@ int Application::start(const StartupOptions& options) {
           world.primitives(entity);
         dunya::renderer::VolumeImages images =
           m_volumePool.images(volume->index);
-        m_fieldBaker.verifyBake(grid, volume->index, primitives, images);
+        m_sdfBaker.verifyBake(grid, volume->index, primitives, images);
 
         ++checked;
       }
@@ -845,10 +677,10 @@ void Application::fire(const glm::vec3& aim) {
   dunya::objectmodel::Pose pose{};
   pose.position = muzzle + aim * MUZZLE_DISTANCE;
 
-  const dunya::objectmodel::Entity ball = world.createField(pose, shot.grid);
+  const dunya::objectmodel::Entity ball = world.createSdfGrid(pose, shot.grid);
 
   if (!world.addPrimitive(ball, shot.shape)) {
-    static_cast<void>(world.destroyField(ball));
+    static_cast<void>(world.destroySdfGrid(ball));
     std::cout << "Primitive arena full, no ball fired\n";
 
     return;
@@ -894,9 +726,10 @@ void Application::play() {
 
 void Application::dent(uint32_t count) {
   dunya::objectmodel::World& world = activeWorld();
-  const dunya::objectmodel::Entity target = firstDeformable(activeWorld());
+  const dunya::objectmodel::Entity target =
+    dunya::objectmodel::firstDeformable(activeWorld());
 
-  if (!world.registry().valid(target) || !world.hasSampledField(target)) {
+  if (!world.registry().valid(target) || !world.hasSampledSdf(target)) {
     std::cout << "Nothing deformable to dent yet\n";
     return;
   }
@@ -926,7 +759,7 @@ void Application::dent(uint32_t count) {
     }
   }
 
-  world.patchSampledField(target, [&](dunya::field::SampledField& field) {
+  world.patchSampledSdf(target, [&](dunya::field::SampledSdf& field) {
     for (uint32_t i = 0; i < count; ++i) {
       const glm::vec2 at = glm::fract(
         static_cast<float>(m_dentsApplied + i)
@@ -1016,12 +849,12 @@ void Application::dent(uint32_t count) {
 void Application::recordSceneTelemetry() {
   const dunya::objectmodel::World& world = activeWorld();
 
-  std::unordered_set<const dunya::field::SampledField*> lattices;
+  std::unordered_set<const dunya::field::SampledSdf*> lattices;
 
   size_t residentBytes = 0;
 
-  for (const dunya::objectmodel::Entity entity : world.fields()) {
-    if (const auto* field = world.sampledField(entity)) {
+  for (const dunya::objectmodel::Entity entity : world.sdfGrids()) {
+    if (const auto* field = world.sampledSdf(entity)) {
       if (lattices.insert(field).second) {
         residentBytes += field->distances.size() * sizeof(float)
                          + field->materials.size() * sizeof(uint8_t);
@@ -1032,7 +865,7 @@ void Application::recordSceneTelemetry() {
   m_telemetry.set(m_telemetry.key("volumes"), double(m_volumePool.allocated()));
   m_telemetry.set(
     m_telemetry.key("volumeCapacity"),
-    double(dunya::core::MAX_FIELD_VOLUMES)
+    double(dunya::core::MAX_SDF_VOLUMES)
   );
   m_telemetry.set(m_telemetry.key("lattices"), double(lattices.size()));
   m_telemetry.set(m_telemetry.key("objects"), double(world.fields().size()));

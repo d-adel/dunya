@@ -1,13 +1,13 @@
 #pragma once
 
-#include <dunya/field/sampled/sampled.h>
+#include <dunya/field/sampledsdf/sampledsdf.h>
 
 #include <memory>
 
 namespace dunya::objectmodel {
 
-struct SharedField {
-  std::shared_ptr<dunya::field::SampledField> field;
+struct SharedSdf {
+  std::shared_ptr<dunya::field::SampledSdf> field;
 };
 
 }

@@ -44,7 +44,7 @@ bool SdfPrimitiveStore::insert(
 
   SdfPrimitiveRange& range = registry.get_or_emplace<SdfPrimitiveRange>(entity);
 
-  if (index > range.count || range.count >= dunya::core::MAX_FIELD_PRIMITIVES) {
+  if (index > range.count || range.count >= dunya::core::MAX_SDF_PRIMITIVES) {
     return false;
   }
 
@@ -53,7 +53,7 @@ bool SdfPrimitiveStore::insert(
       {range.offset, range.capacity},
       range.count,
       range.count + 1,
-      dunya::core::MAX_FIELD_PRIMITIVES
+      dunya::core::MAX_SDF_PRIMITIVES
     );
 
     if (!grown) {

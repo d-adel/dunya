@@ -50,13 +50,13 @@ uint32_t materialAt(const World& world, Entity entity, uint32_t index) {
 TEST_CASE("every object arrives at the id it had", "[instantiate]") {
   World authored;
 
-  const Entity first = authored.createField(marked(10.0f), blank());
-  const Entity second = authored.createField(marked(11.0f), blank());
+  const Entity first = authored.createSdfGrid(marked(10.0f), blank());
+  const Entity second = authored.createSdfGrid(marked(11.0f), blank());
 
   World runtime;
   dunya::objectmodel::instantiateWorld(authored, runtime);
 
-  REQUIRE(runtime.fields().size() == 2);
+  REQUIRE(runtime.sdfGrids().size() == 2);
   REQUIRE(runtime.registry().all_of<SdfGrid>(first));
   REQUIRE(runtime.registry().all_of<SdfGrid>(second));
   REQUIRE(markerAt(runtime, first) == 10.0f);
@@ -69,8 +69,8 @@ TEST_CASE("ids with holes in them are preserved", "[instantiate]") {
   const Entity zero{0};
   const Entity five{5};
 
-  REQUIRE(authored.createFieldAt(zero, marked(10.0f), blank()));
-  REQUIRE(authored.createFieldAt(five, marked(15.0f), blank()));
+  REQUIRE(authored.createSdfGridAt(zero, marked(10.0f), blank()));
+  REQUIRE(authored.createSdfGridAt(five, marked(15.0f), blank()));
 
   World runtime;
   dunya::objectmodel::instantiateWorld(authored, runtime);
@@ -84,7 +84,7 @@ TEST_CASE("ids with holes in them are preserved", "[instantiate]") {
 TEST_CASE("primitives arrive in csg order", "[instantiate]") {
   World authored;
 
-  const Entity id = authored.createField(marked(10.0f), blank());
+  const Entity id = authored.createSdfGrid(marked(10.0f), blank());
 
   REQUIRE(authored.addPrimitive(id, marker(1)));
   REQUIRE(authored.addPrimitive(id, marker(2)));
@@ -102,7 +102,7 @@ TEST_CASE("primitives arrive in csg order", "[instantiate]") {
 TEST_CASE("a baked volume does not cross the boundary", "[instantiate]") {
   World authored;
 
-  const Entity id = authored.createField(marked(10.0f), blank());
+  const Entity id = authored.createSdfGrid(marked(10.0f), blank());
   authored.setBakedVolume(id, 3);
 
   World runtime;
@@ -133,14 +133,14 @@ TEST_CASE("mesh entities arrive in order", "[instantiate]") {
 TEST_CASE("instantiating leaves the authored world alone", "[instantiate]") {
   World authored;
 
-  const Entity id = authored.createField(marked(10.0f), blank());
+  const Entity id = authored.createSdfGrid(marked(10.0f), blank());
   REQUIRE(authored.addPrimitive(id, marker(1)));
   authored.createMesh(Pose{}, Mesh{0}, Material{0});
 
   World runtime;
   dunya::objectmodel::instantiateWorld(authored, runtime);
 
-  REQUIRE(authored.fields().size() == 1);
+  REQUIRE(authored.sdfGrids().size() == 1);
   REQUIRE(authored.primitiveCount(id) == 1);
   REQUIRE(authored.meshes().size() == 1);
   REQUIRE(markerAt(authored, id) == 10.0f);
@@ -152,7 +152,7 @@ TEST_CASE(
 ) {
   World authored;
 
-  const Entity id = authored.createField(marked(10.0f), blank());
+  const Entity id = authored.createSdfGrid(marked(10.0f), blank());
   REQUIRE(authored.addPrimitive(id, marker(1)));
 
   World runtime;
@@ -192,8 +192,8 @@ TEST_CASE("mesh entities arrive at the ids they had", "[instantiate]") {
 TEST_CASE("a static body stays static across instantiation", "[instantiate]") {
   World authored;
 
-  const Entity ground = authored.createField(marked(10.0f), blank());
-  const Entity faller = authored.createField(marked(11.0f), blank());
+  const Entity ground = authored.createSdfGrid(marked(10.0f), blank());
+  const Entity faller = authored.createSdfGrid(marked(11.0f), blank());
 
   authored.addStaticBody(ground);
 
@@ -217,8 +217,8 @@ TEST_CASE(
 
   World authored;
 
-  const Entity dented = authored.createField(marked(12.0f), blank());
-  const Entity rigid = authored.createField(marked(13.0f), blank());
+  const Entity dented = authored.createSdfGrid(marked(12.0f), blank());
+  const Entity rigid = authored.createSdfGrid(marked(13.0f), blank());
 
   authored.emplaceOrReplace<dunya::objectmodel::Deformable>(
     dented,
@@ -245,8 +245,8 @@ TEST_CASE(
 
   World authored;
 
-  const Entity dented = authored.createField(marked(14.0f), blank());
-  const Entity pristine = authored.createField(marked(15.0f), blank());
+  const Entity dented = authored.createSdfGrid(marked(14.0f), blank());
+  const Entity pristine = authored.createSdfGrid(marked(15.0f), blank());
 
   for (const Entity entity : {dented, pristine}) {
     authored.emplaceOrReplace<dunya::objectmodel::Deformable>(
@@ -254,15 +254,15 @@ TEST_CASE(
       dunya::objectmodel::Deformable{}
     );
 
-    dunya::field::SampledField field;
+    dunya::field::SampledSdf field;
     field.resolution = glm::uvec3(2u);
     field.distances.assign(8u, 1.0f);
     field.materials.assign(8u, 0u);
 
-    authored.setSampledField(entity, std::move(field));
+    authored.setSampledSdf(entity, std::move(field));
   }
 
-  authored.patchSampledField(dented, [](dunya::field::SampledField& lattice) {
+  authored.patchSampledSdf(dented, [](dunya::field::SampledSdf& lattice) {
     lattice.distances[0] = -1.0f;
   });
 
@@ -278,18 +278,18 @@ TEST_CASE(
 TEST_CASE("the runtime shares the authored lattice", "[instantiate]") {
   World authored;
 
-  const Entity entity = authored.createField(marked(16.0f), blank());
+  const Entity entity = authored.createSdfGrid(marked(16.0f), blank());
 
-  dunya::field::SampledField field;
+  dunya::field::SampledSdf field;
   field.resolution = glm::uvec3(2u);
   field.distances.assign(8u, 1.0f);
   field.materials.assign(8u, 0u);
 
-  authored.setSampledField(entity, std::move(field));
+  authored.setSampledSdf(entity, std::move(field));
 
   World runtime;
   dunya::objectmodel::instantiateWorld(authored, runtime);
 
-  REQUIRE(runtime.sampledField(entity) == authored.sampledField(entity));
-  REQUIRE(authored.sampledFieldUsers(entity) == 2);
+  REQUIRE(runtime.sampledSdf(entity) == authored.sampledSdf(entity));
+  REQUIRE(authored.sampledSdfUsers(entity) == 2);
 }

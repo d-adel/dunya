@@ -1,0 +1,6 @@
+#include "sdfbaker.h"
+#include <dunya/gpu/oneshot/oneshotcommand.h>
+#include <dunya/field/sampledsdf/sampledsdf.h>
+
+#include <chrono>
+#include <iostream>

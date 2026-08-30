@@ -49,7 +49,7 @@ dunya::objectmodel::Entity authorBox(World& world, uint32_t material) {
   dunya::objectmodel::Pose pose{};
   pose.position = glm::vec3(1.0f, 2.0f, 3.0f);
 
-  const dunya::objectmodel::Entity entity = world.createField(pose, grid);
+  const dunya::objectmodel::Entity entity = world.createSdfGrid(pose, grid);
 
   REQUIRE(world.addPrimitive(
     entity,
@@ -79,7 +79,8 @@ TEST_CASE("entities keep the order they were authored in", "[worldfile]") {
     dunya::objectmodel::Pose pose{};
     pose.position = glm::vec3(0.0f, float(index), 0.0f);
 
-    const dunya::objectmodel::Entity entity = authored.createField(pose, grid);
+    const dunya::objectmodel::Entity entity =
+      authored.createSdfGrid(pose, grid);
 
     REQUIRE(authored.addPrimitive(
       entity,
@@ -136,9 +137,9 @@ TEST_CASE("a world survives a round trip through text", "[worldfile]") {
   World loaded;
   REQUIRE(restoreWorld(stored, loaded, assets));
 
-  REQUIRE(loaded.fields().size() == 1);
+  REQUIRE(loaded.sdfGrids().size() == 1);
 
-  const dunya::objectmodel::Entity back = loaded.fields()[0];
+  const dunya::objectmodel::Entity back = loaded.sdfGrids()[0];
   const entt::registry& registry = loaded.registry();
 
   REQUIRE(registry.get<dunya::objectmodel::Pose>(back).position.y == 2.0f);
@@ -164,7 +165,7 @@ TEST_CASE(
   World loaded;
   REQUIRE(restoreWorld(stored, loaded, readingBack));
 
-  const dunya::objectmodel::Entity back = loaded.fields()[0];
+  const dunya::objectmodel::Entity back = loaded.sdfGrids()[0];
 
   REQUIRE(loaded.primitives(back)[0].shapeConfig[1] == 1u);
 }
@@ -213,7 +214,7 @@ TEST_CASE("the grid is refitted on load, not read", "[worldfile]") {
   World loaded;
   REQUIRE(restoreWorld(stored, loaded, assets));
 
-  const dunya::objectmodel::Entity back = loaded.fields()[0];
+  const dunya::objectmodel::Entity back = loaded.sdfGrids()[0];
 
   const dunya::objectmodel::SdfGrid& grid =
     loaded.registry().get<dunya::objectmodel::SdfGrid>(back);
@@ -246,7 +247,7 @@ TEST_CASE("a mesh and a field share one entity list", "[worldfile]") {
   World loaded;
   REQUIRE(restoreWorld(stored, loaded, assets));
 
-  REQUIRE(loaded.fields().size() == 1);
+  REQUIRE(loaded.sdfGrids().size() == 1);
   REQUIRE(loaded.meshes().size() == 1);
 
   const dunya::objectmodel::Entity mesh = loaded.meshes()[0];
@@ -306,9 +307,9 @@ TEST_CASE("one entity can be both a field and a mesh", "[worldfile]") {
   World loaded;
   REQUIRE(restoreWorld(stored, loaded, assets));
 
-  REQUIRE(loaded.fields().size() == 1);
+  REQUIRE(loaded.sdfGrids().size() == 1);
   REQUIRE(loaded.meshes().size() == 1);
-  REQUIRE(loaded.fields()[0] == loaded.meshes()[0]);
+  REQUIRE(loaded.sdfGrids()[0] == loaded.meshes()[0]);
 }
 
 TEST_CASE("a file written by an older build still loads", "[worldfile]") {
@@ -323,7 +324,7 @@ TEST_CASE("a file written by an older build still loads", "[worldfile]") {
 
   World loaded;
   REQUIRE(restoreWorld(stored, loaded, assets));
-  REQUIRE(loaded.fields().size() == 1);
+  REQUIRE(loaded.sdfGrids().size() == 1);
 }
 
 TEST_CASE("a key this build never heard of is skipped", "[worldfile]") {
@@ -344,7 +345,7 @@ TEST_CASE("a key this build never heard of is skipped", "[worldfile]") {
   const AssetDatabase assets = inOrder();
 
   REQUIRE(restoreWorld(stored, loaded, assets));
-  REQUIRE(loaded.fields().size() == 1);
+  REQUIRE(loaded.sdfGrids().size() == 1);
 }
 
 TEST_CASE("a camera is a pose and a lens", "[worldfile]") {

@@ -3,7 +3,7 @@ add_library(dunya_field STATIC
     deform/deform.cc
     raycast/raycast.cc
     redistance/redistance.cc
-    sampled/sampled.cc
+    sampledsdf/sampledsdf.cc
     primitive.cc
 )
 add_library(dunya::field ALIAS dunya_field)

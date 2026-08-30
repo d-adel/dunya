@@ -1,6 +1,6 @@
 #pragma once
 
-#include <dunya/field/sampled/sampled.h>
+#include <dunya/field/sampledsdf/sampledsdf.h>
 
 #include <glm/glm.hpp>
 
@@ -10,7 +10,7 @@
 namespace dunya::field {
 
 float redistance(
-  SampledField& field,
+  SampledSdf& field,
   const SampleBox& box,
   std::span<const uint8_t> damaged,
   std::span<float> values,
@@ -18,13 +18,13 @@ float redistance(
 );
 
 float redistance(
-  SampledField& field,
+  SampledSdf& field,
   const SampleBox& box,
   std::span<const uint8_t> damaged,
   uint32_t sweeps = 8u
 );
 
-float redistance(SampledField& field, const SampleBox& box);
+float redistance(SampledSdf& field, const SampleBox& box);
 
 float godunov(float a, float b, float c, const glm::vec3& h);
 

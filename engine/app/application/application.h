@@ -12,9 +12,10 @@
 #include <dunya/gpu/swapchain/swapchain.h>
 #include <dunya/gpu/uploader/uploader.h>
 #include <app/projectile/projectile.h>
-#include <app/worldquery/worldquery.h>
+#include <dunya/objectmodel/worldquery/worldquery.h>
 #include <dunya/renderer/renderer.h>
 #include <app/flycamera/flycamera.h>
+#include <app/glfwwindowsystem/glfwwindowsystem.h>
 #include <dunya/platform/glfwlibrary/glfwlibrary.h>
 #include <dunya/platform/input/input.h>
 #include <dunya/platform/window/window.h>
@@ -25,14 +26,15 @@
 #include <app/flycontroller/flycontroller.h>
 #include <app/demodriver/demodriver.h>
 #include <app/framecheck/framecheck.h>
-#include <app/assetlibrary/assetlibrary.h>
+#include <dunya/assets/assetlibrary/assetlibrary.h>
 #include <app/debugui/debugui.h>
 #include <dunya/core/panels/panels.h>
 #include <app/startupoptions/startupoptions.h>
-#include <dunya/renderer/fieldrecordtable/fieldrecordtable.h>
-#include <dunya/renderer/fieldresidency/fieldresidency.h>
+#include <dunya/renderer/sdfrecordtable/sdfrecordtable.h>
+#include <dunya/renderer/framepacker/framepacker.h>
+#include <dunya/renderer/sdfresidency/sdfresidency.h>
 #include <dunya/renderer/volumepool/volumepool.h>
-#include <dunya/renderer/fieldbaker/fieldbaker.h>
+#include <dunya/renderer/sdfbaker/sdfbaker.h>
 
 #include <array>
 #include <deque>
@@ -110,6 +112,7 @@ private:
 
   dunya::platform::GLFWLibrary m_glfwLibrary;
   dunya::platform::Window m_window;
+  GlfwWindowSystem m_windowSystem;
 
   dunya::gpu::Context m_context;
 
@@ -119,7 +122,7 @@ private:
   dunya::gpu::SwapChain m_swapChain;
   dunya::objectmodel::World m_authoredWorld;
 
-  AssetLibrary m_assetLibrary;
+  dunya::assets::AssetLibrary m_assetLibrary;
 
   std::optional<dunya::runtime::Runtime> m_runtime;
 
@@ -127,16 +130,18 @@ private:
 
   dunya::renderer::FrameGlobals m_frameGlobals;
   dunya::renderer::ResourceTable m_resourceTable;
-  dunya::renderer::FieldRecordTable m_recordTable;
-  dunya::renderer::FieldBaker m_fieldBaker;
+  dunya::renderer::SdfRecordTable m_recordTable;
+  dunya::renderer::SdfBaker m_sdfBaker;
   dunya::renderer::VolumePool m_volumePool;
 
-  dunya::renderer::FieldResidency m_residency;
+  dunya::renderer::SdfResidency m_residency;
+
+  dunya::renderer::FramePacker m_framePacker;
 
   bool m_splitFailureReported = false;
 
   dunya::gpu::Pipeline m_meshPipeline;
-  dunya::gpu::Pipeline m_fieldPipeline;
+  dunya::gpu::Pipeline m_sdfPipeline;
   dunya::renderer::Renderer m_renderer;
 
   std::unique_ptr<DebugUi> m_debugUi;
@@ -150,9 +155,9 @@ private:
 
   Projectile m_shotSettings;
 
-  dunya::field::SampledField m_projectileField;
+  dunya::field::SampledSdf m_projectileField;
 
-  WorldExtent m_groundExtent;
+  dunya::objectmodel::WorldExtent m_groundExtent;
 
   uint32_t m_ballVolume = UINT32_MAX;
 
@@ -164,8 +169,6 @@ private:
   double m_lastFrameMs = 0.0;
 
   dunya::core::Telemetry m_telemetry;
-
-  std::vector<dunya::objectmodel::Entity> m_recordEntities;
 
   dunya::runtime::Deformation m_deformation;
 
@@ -186,7 +189,7 @@ constexpr const char* modeName(dunya::gpu::PipelineType type) noexcept {
   switch (type) {
     case dunya::gpu::PipelineType::Mesh:
       return "mesh ";
-    case dunya::gpu::PipelineType::Field:
+    case dunya::gpu::PipelineType::Sdf:
       return "field";
     case dunya::gpu::PipelineType::Both:
       return "both ";

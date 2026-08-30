@@ -1,0 +1,8 @@
+#include "dunya_c.h"
+
+#include <capi/session/session.h>
+#include <capi/win32windowsystem/win32windowsystem.h>
+
+#include <exception>
+#include <memory>
+#include <string>

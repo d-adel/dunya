@@ -55,14 +55,14 @@ private:
   void applyMassScale(objectmodel::Entity entity);
 
   struct SharedShape {
-    std::weak_ptr<dunya::field::SampledField> lattice;
+    std::weak_ptr<dunya::field::SampledSdf> lattice;
     JPH::ShapeRefC shape;
   };
 
-  [[nodiscard]] JPH::ShapeRefC shapeFor(const objectmodel::SharedField& held);
+  [[nodiscard]] JPH::ShapeRefC shapeFor(const objectmodel::SharedSdf& held);
 
   void rememberShape(
-    const objectmodel::SharedField& held,
+    const objectmodel::SharedSdf& held,
     const JPH::ShapeRefC& shape
   );
 
@@ -75,7 +75,7 @@ private:
 
   std::unordered_map<uint32_t, objectmodel::Pose> m_previousPoses;
 
-  std::unordered_map<const dunya::field::SampledField*, SharedShape> m_shapes;
+  std::unordered_map<const dunya::field::SampledSdf*, SharedShape> m_shapes;
 
   bool m_masslessReported = false;
 

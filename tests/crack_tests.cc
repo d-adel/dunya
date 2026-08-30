@@ -6,7 +6,7 @@
 #include <dunya/field/analytic/analytic.h>
 #include <dunya/field/deform/deform.h>
 #include <dunya/field/field.h>
-#include <dunya/field/sampled/sampled.h>
+#include <dunya/field/sampledsdf/sampledsdf.h>
 #include <dunya/objectmodel/component/sdfgrid/sdfgrid.h>
 #include <dunya/physics/fieldshape/fieldshape.h>
 #include <dunya/physics/joltlibrary/joltlibrary.h>
@@ -25,7 +25,7 @@
 #include <vector>
 
 using dunya::field::Primitive;
-using dunya::field::SampledField;
+using dunya::field::SampledSdf;
 using dunya::physics::FieldSeed;
 using dunya::physics::FieldShape;
 using dunya::physics::JoltLibrary;
@@ -88,7 +88,7 @@ struct Components {
   std::vector<uint32_t> population;
 };
 
-Components solidComponents(const SampledField& field) {
+Components solidComponents(const SampledSdf& field) {
   const glm::uvec3 resolution = field.resolution;
 
   const uint32_t alongY = resolution.x;
@@ -204,7 +204,7 @@ CrackReport measureCrack(uint32_t resolution, float crackVoxels) {
 
   const dunya::field::Aabb box = dunya::objectmodel::gridBox(primitives);
 
-  SampledField field = dunya::field::bake(
+  SampledSdf field = dunya::field::bake(
     primitives,
     box.minimum,
     box.maximum,

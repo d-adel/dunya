@@ -30,16 +30,16 @@ struct MarchParams {
 
 static_assert(
   sizeof(MarchParams) == 28,
-  "MarchParams must match its std140 block in field-shader.frag"
+  "MarchParams must match its std140 block in sdf-shader.frag"
 );
 
 struct SceneCounts {
-  uint32_t fieldRecords;
+  uint32_t sdfRecords;
 };
 
 static_assert(
   sizeof(SceneCounts) == 4,
-  "SceneCounts must match its std140 block in field-shader.frag"
+  "SceneCounts must match its std140 block in sdf-shader.frag"
 );
 
 struct LightUniform {

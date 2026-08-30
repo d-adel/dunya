@@ -49,7 +49,7 @@ dunya::objectmodel::Entity authorBox(World& world) {
   dunya::objectmodel::Pose pose{};
   pose.position = glm::vec3(4.0f, 5.0f, 6.0f);
 
-  const dunya::objectmodel::Entity entity = world.createField(pose, grid);
+  const dunya::objectmodel::Entity entity = world.createSdfGrid(pose, grid);
 
   REQUIRE(world.addPrimitive(
     entity,
@@ -209,10 +209,10 @@ TEST_CASE("a world saves into a project and loads back", "[project]") {
 
   World loaded;
   REQUIRE(restoreWorld(stored, loaded, assets));
-  REQUIRE(loaded.fields().size() == 1);
+  REQUIRE(loaded.sdfGrids().size() == 1);
   REQUIRE(
     loaded.registry()
-      .get<dunya::objectmodel::Pose>(loaded.fields()[0])
+      .get<dunya::objectmodel::Pose>(loaded.sdfGrids()[0])
       .position.x
     == 4.0f
   );

@@ -69,10 +69,10 @@ void Pipeline::makeConfig() {
 
   switch (m_type) {
     case PipelineType::Mesh: {
-      m_config.vert = SHADER_SOURCE_DIR "/shader.vert";
-      m_config.frag = SHADER_SOURCE_DIR "/shader.frag";
-      m_config.vertexShader = "shaders/shader.vert.spv";
-      m_config.fragmentShader = "shaders/shader.frag.spv";
+      m_config.vert = SHADER_SOURCE_DIR "/mesh-shader.vert";
+      m_config.frag = SHADER_SOURCE_DIR "/mesh-shader.frag";
+      m_config.vertexShader = "shaders/mesh-shader.vert.spv";
+      m_config.fragmentShader = "shaders/mesh-shader.frag.spv";
       m_config.bindingDescriptions = m_bindingDescriptions;
       m_config.attributeDescriptions = m_attributeDescriptions;
       m_config.cullMode = VK_CULL_MODE_BACK_BIT;
@@ -89,11 +89,11 @@ void Pipeline::makeConfig() {
       m_config.pushConstantRanges.push_back(pushConstant);
       break;
     }
-    case PipelineType::Field:
-      m_config.vert = SHADER_SOURCE_DIR "/field-shader.vert";
-      m_config.frag = SHADER_SOURCE_DIR "/field-shader.frag";
-      m_config.vertexShader = "shaders/field-shader.vert.spv";
-      m_config.fragmentShader = "shaders/field-shader.frag.spv";
+    case PipelineType::Sdf:
+      m_config.vert = SHADER_SOURCE_DIR "/sdf-shader.vert";
+      m_config.frag = SHADER_SOURCE_DIR "/sdf-shader.frag";
+      m_config.vertexShader = "shaders/sdf-shader.vert.spv";
+      m_config.fragmentShader = "shaders/sdf-shader.frag.spv";
       m_config.cullMode = VK_CULL_MODE_FRONT_BIT;
       m_config.depthTestEnable = VK_TRUE;
       m_config.depthWriteEnable = VK_TRUE;

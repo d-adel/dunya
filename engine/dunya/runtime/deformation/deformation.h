@@ -1,6 +1,6 @@
 #pragma once
 
-#include <dunya/field/sampled/sampled.h>
+#include <dunya/field/sampledsdf/sampledsdf.h>
 #include <dunya/objectmodel/entity/entity.h>
 #include <dunya/core/telemetry/telemetry.h>
 #include <dunya/physics/impact/impact.h>

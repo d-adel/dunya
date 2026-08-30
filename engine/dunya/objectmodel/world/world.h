@@ -1,6 +1,6 @@
 #pragma once
 
-#include <dunya/field/sampled/sampled.h>
+#include <dunya/field/sampledsdf/sampledsdf.h>
 
 #include <dunya/objectmodel/component/material/material.h>
 #include <dunya/objectmodel/component/mesh/mesh.h>
@@ -57,15 +57,17 @@ public:
     }
   }
 
-  Entity createField(const Pose& pose, const SdfGrid& grid);
+  Entity createSdfGrid(const Pose& pose, const SdfGrid& grid);
 
   [[nodiscard]]
-  bool createFieldAt(Entity hint, const Pose& pose, const SdfGrid& grid);
+  bool createSdfGridAt(Entity hint, const Pose& pose, const SdfGrid& grid);
 
   [[nodiscard]]
-  bool destroyField(Entity entity);
+  bool destroySdfGrid(Entity entity);
 
-  std::span<const Entity> fields() const noexcept;
+  [[nodiscard]] std::span<const Entity> fields() const noexcept;
+
+  [[nodiscard]] std::span<const Entity> sdfGrids() const noexcept;
 
   [[nodiscard]]
   bool addPrimitive(Entity entity, const dunya::field::Primitive& primitive);
@@ -101,17 +103,17 @@ public:
   }
 
   template<typename Fn>
-  void patchSampledField(Entity entity, Fn&& fn) {
+  void patchSampledSdf(Entity entity, Fn&& fn) {
     if (!m_registry.all_of<Deformable>(entity)) {
       throw std::runtime_error(
         "Only a deformable's lattice may be written in place"
       );
     }
 
-    SharedField& held = m_registry.get<SharedField>(entity);
+    SharedSdf& held = m_registry.get<SharedSdf>(entity);
 
     if (held.field.use_count() > 1) {
-      held.field = std::make_shared<dunya::field::SampledField>(*held.field);
+      held.field = std::make_shared<dunya::field::SampledSdf>(*held.field);
     }
 
     fn(*held.field);
@@ -140,20 +142,20 @@ public:
 
   void setRigidBody(Entity entity, uint32_t index);
 
-  void setSampledField(Entity entity, dunya::field::SampledField field);
+  void setSampledSdf(Entity entity, dunya::field::SampledSdf field);
 
-  void shareSampledField(Entity donor, Entity taker);
+  void shareSampledSdf(Entity donor, Entity taker);
 
-  void adoptSampledField(Entity entity, const SharedField& held);
-
-  [[nodiscard]]
-  const dunya::field::SampledField* sampledField(Entity entity) const;
+  void adoptSampledSdf(Entity entity, const SharedSdf& held);
 
   [[nodiscard]]
-  bool hasSampledField(Entity entity) const noexcept;
+  const dunya::field::SampledSdf* sampledSdf(Entity entity) const;
 
   [[nodiscard]]
-  long sampledFieldUsers(Entity entity) const noexcept;
+  bool hasSampledSdf(Entity entity) const noexcept;
+
+  [[nodiscard]]
+  long sampledSdfUsers(Entity entity) const noexcept;
 
   void clearBakedVolume(Entity entity);
 

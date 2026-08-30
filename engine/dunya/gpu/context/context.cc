@@ -2,18 +2,14 @@
 
 namespace dunya::gpu {
 
-Context::Context(dunya::platform::Window& window)
-    : m_window(window),
-      m_instance(validationLayers),
-      m_surface(m_instance.handle(), m_window.handle()),
+Context::Context(const WindowSystem& windowSystem)
+    : m_windowSystem(windowSystem),
+      m_instance(validationLayers, m_windowSystem.instanceExtensions()),
+      m_surface(m_instance.handle(), m_windowSystem),
       m_device(m_instance.handle(), m_surface.handle()) {}
 
-const dunya::platform::Window& Context::window() const noexcept {
-  return m_window;
-}
-
-dunya::platform::Window& Context::window() {
-  return m_window;
+const WindowSystem& Context::windowSystem() const noexcept {
+  return m_windowSystem;
 }
 
 const Instance& Context::instance() const noexcept {

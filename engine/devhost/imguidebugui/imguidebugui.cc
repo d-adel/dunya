@@ -28,6 +28,7 @@ VkDescriptorPool createPool(VkDevice device) {
 }
 
 ImGuiDebugUi::ImGuiDebugUi(
+  const dunya::platform::Window& window,
   const dunya::gpu::Context& context,
   const dunya::gpu::SwapChain& swapChain
 )
@@ -36,7 +37,7 @@ ImGuiDebugUi::ImGuiDebugUi(
   ImGui::CreateContext();
   ImGui::StyleColorsDark();
 
-  if (!ImGui_ImplGlfw_InitForVulkan(m_context.window().handle(), true)) {
+  if (!ImGui_ImplGlfw_InitForVulkan(window.handle(), true)) {
     throw std::runtime_error("Failed to attach the debug UI to the window");
   }
 
@@ -255,9 +256,10 @@ bool ImGuiDebugUi::wantsKeyboard() const {
 
 DebugUiFactory ImGuiDebugUi::factory() {
   return [](
+           const dunya::platform::Window& window,
            const dunya::gpu::Context& context,
            const dunya::gpu::SwapChain& swapChain
          ) -> std::unique_ptr<DebugUi> {
-    return std::make_unique<ImGuiDebugUi>(context, swapChain);
+    return std::make_unique<ImGuiDebugUi>(window, context, swapChain);
   };
 }

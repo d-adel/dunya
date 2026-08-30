@@ -12,7 +12,10 @@ constexpr float PROJECTILE_MASS = 600.0f;
 
 }
 
-Projectile makeProjectile(uint32_t material, const WorldExtent& target) {
+Projectile makeProjectile(
+  uint32_t material,
+  const dunya::objectmodel::WorldExtent& target
+) {
   Projectile shot;
 
   shot.grid.resolution = glm::uvec3(PROJECTILE_RESOLUTION);
@@ -32,7 +35,7 @@ Projectile makeProjectile(uint32_t material, const WorldExtent& target) {
   return shot;
 }
 
-dunya::field::SampledField bakeProjectile(const Projectile& shot) {
+dunya::field::SampledSdf bakeProjectile(const Projectile& shot) {
   const dunya::field::Aabb box = dunya::objectmodel::gridBox({&shot.shape, 1});
 
   return dunya::field::bake(

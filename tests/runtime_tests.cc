@@ -5,7 +5,7 @@
 
 #include <dunya/core/config/config.h>
 #include <dunya/field/field.h>
-#include <dunya/field/sampled/sampled.h>
+#include <dunya/field/sampledsdf/sampledsdf.h>
 #include <dunya/objectmodel/component/deformable/deformable.h>
 #include <dunya/objectmodel/component/massscale/massscale.h>
 #include <dunya/objectmodel/component/pose/pose.h>
@@ -41,7 +41,7 @@ void rebake(World& world, Entity entity) {
   const dunya::field::Aabb box =
     dunya::objectmodel::gridBox(world.primitives(entity));
 
-  world.setSampledField(
+  world.setSampledSdf(
     entity,
     dunya::field::bake(
       world.primitives(entity),
@@ -56,7 +56,7 @@ Entity sphereEntity(World& world, float radius) {
   dunya::objectmodel::SdfGrid grid{};
   grid.resolution = glm::uvec3(RESOLUTION);
 
-  const Entity entity = world.createField(dunya::objectmodel::Pose{}, grid);
+  const Entity entity = world.createSdfGrid(dunya::objectmodel::Pose{}, grid);
 
   REQUIRE(world.addPrimitive(entity, fixture::sphere(glm::vec3(0.0f), radius)));
   rebake(world, entity);
@@ -141,7 +141,7 @@ void fillFieldWorld(dunya::objectmodel::World& world) {
   dunya::objectmodel::Pose floorPose{};
   floorPose.position = glm::vec3(0.0f, -1.0f, 0.0f);
 
-  const dunya::objectmodel::Entity floor = world.createField(floorPose, grid);
+  const dunya::objectmodel::Entity floor = world.createSdfGrid(floorPose, grid);
 
   REQUIRE(world.addPrimitive(
     floor,
@@ -152,17 +152,17 @@ void fillFieldWorld(dunya::objectmodel::World& world) {
   dunya::objectmodel::Pose ballPose{};
   ballPose.position = glm::vec3(0.13f, 1.7f, 0.07f);
 
-  const dunya::objectmodel::Entity ball = world.createField(ballPose, grid);
+  const dunya::objectmodel::Entity ball = world.createSdfGrid(ballPose, grid);
 
   REQUIRE(world.addPrimitive(ball, fixture::sphere(glm::vec3(0.0f), 0.4f)));
 
-  for (const dunya::objectmodel::Entity entity : world.fields()) {
+  for (const dunya::objectmodel::Entity entity : world.sdfGrids()) {
     const dunya::objectmodel::SdfGrid& fitted =
       world.registry().get<dunya::objectmodel::SdfGrid>(entity);
     const dunya::field::Aabb box =
       dunya::objectmodel::gridBox(world.primitives(entity));
 
-    world.setSampledField(
+    world.setSampledSdf(
       entity,
       dunya::field::bake(
         world.primitives(entity),
@@ -181,7 +181,7 @@ std::vector<float> fieldDrop(
 ) {
   dunya::runtime::Runtime runtime(source, library);
 
-  for (const dunya::objectmodel::Entity entity : runtime.world().fields()) {
+  for (const dunya::objectmodel::Entity entity : runtime.world().sdfGrids()) {
     runtime.refreshBody(entity);
   }
 
@@ -191,7 +191,7 @@ std::vector<float> fieldDrop(
     runtime.step();
     runtime.syncPoses(1.0f);
 
-    for (const dunya::objectmodel::Entity entity : runtime.world().fields()) {
+    for (const dunya::objectmodel::Entity entity : runtime.world().sdfGrids()) {
       heights.push_back(runtime.world()
                           .registry()
                           .get<dunya::objectmodel::Pose>(entity)
@@ -236,9 +236,9 @@ TEST_CASE("a field with nothing solid in it gets no body", "[runtime]") {
   dunya::objectmodel::SdfGrid grid{};
   grid.resolution = glm::uvec3(17u);
 
-  const Entity entity = source.createField(dunya::objectmodel::Pose{}, grid);
+  const Entity entity = source.createSdfGrid(dunya::objectmodel::Pose{}, grid);
 
-  source.setSampledField(
+  source.setSampledSdf(
     entity,
     dunya::field::bake(
       std::vector<dunya::field::Primitive>{
@@ -278,12 +278,12 @@ TEST_CASE("objects on one lattice get one collision shape", "[runtime]") {
   const Entity first = sphereEntity(source, 1.0f);
   const Entity second = sphereEntity(source, 1.0f);
 
-  source.shareSampledField(first, second);
+  source.shareSampledSdf(first, second);
 
   Runtime runtime(source, library);
   World& live = runtime.world();
 
-  REQUIRE(live.sampledField(first) == live.sampledField(second));
+  REQUIRE(live.sampledSdf(first) == live.sampledSdf(second));
 
   runtime.refreshBody(first);
   runtime.refreshBody(second);
@@ -300,7 +300,7 @@ TEST_CASE("a dent takes the object off the shared shape", "[runtime]") {
   const Entity first = sphereEntity(source, 1.0f);
   const Entity second = sphereEntity(source, 1.0f);
 
-  source.shareSampledField(first, second);
+  source.shareSampledSdf(first, second);
 
   for (const Entity entity : {first, second}) {
     source.emplaceOrReplace<dunya::objectmodel::Deformable>(
@@ -317,11 +317,11 @@ TEST_CASE("a dent takes the object off the shared shape", "[runtime]") {
 
   REQUIRE(bodyShape(runtime, first) == bodyShape(runtime, second));
 
-  live.patchSampledField(second, [](dunya::field::SampledField& lattice) {
+  live.patchSampledSdf(second, [](dunya::field::SampledSdf& lattice) {
     lattice.distances[0] = -1.0f;
   });
 
-  REQUIRE(live.sampledField(first) != live.sampledField(second));
+  REQUIRE(live.sampledSdf(first) != live.sampledSdf(second));
 
   runtime.refreshBody(second);
 
@@ -345,23 +345,23 @@ TEST_CASE("a rebuilt shape replaces the one the cache hands out", "[runtime]") {
 
   runtime.refreshBody(entity);
 
-  REQUIRE(live.sampledFieldUsers(entity) == 2);
+  REQUIRE(live.sampledSdfUsers(entity) == 2);
 
-  live.patchSampledField(entity, [](dunya::field::SampledField& grid) {
+  live.patchSampledSdf(entity, [](dunya::field::SampledSdf& grid) {
     grid.distances[0] = -1.0f;
   });
 
   runtime.refreshBody(entity);
 
-  const dunya::field::SampledField* lattice = live.sampledField(entity);
+  const dunya::field::SampledSdf* lattice = live.sampledSdf(entity);
 
-  REQUIRE(live.sampledFieldUsers(entity) == 1);
+  REQUIRE(live.sampledSdfUsers(entity) == 1);
 
-  live.patchSampledField(entity, [](dunya::field::SampledField& grid) {
+  live.patchSampledSdf(entity, [](dunya::field::SampledSdf& grid) {
     grid.distances[1] = -1.0f;
   });
 
-  REQUIRE(live.sampledField(entity) == lattice);
+  REQUIRE(live.sampledSdf(entity) == lattice);
 
   const glm::uvec3 bricks = dunya::field::brickCounts(*lattice);
 

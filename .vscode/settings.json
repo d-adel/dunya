@@ -31,7 +31,7 @@
   // be listed here too or glm/glfw/stb resolve to nothing.
   // The build passes -std:c++20; without this the fallback parses at cpptools'
   // own default, which is how a header can show errors the compiler does not.
-  "C_Cpp.default.cppStandard": "c++20",
+  "C_Cpp.default.cppStandard": "c++23",
   "C_Cpp.default.includePath": [
     "${workspaceFolder}/engine",
     "${env:VULKAN_SDK}/Include",
@@ -56,11 +56,12 @@
     "${workspaceFolder}/shaders"
   ],
   "shader-validator.defines": {
-    "DUNYA_MAX_PRIMITIVES": "128",
+    "DUNYA_MAX_SDF_PRIMITIVES": "128",
     "DUNYA_MAX_TEXTURES": "16",
     "DUNYA_MAX_SAMPLERS": "8",
     "DUNYA_MAX_MATERIALS": "64",
-    "DUNYA_MAX_FIELD_OBJECTS": "64",
+    "DUNYA_MAX_FIELD_RECORDS": "1280",
+    "DUNYA_MAX_FIELD_VOLUMES": "1280",
     "DUNYA_BRICK_CELLS": "8",
     "DUNYA_SAMPLER_LINEAR_REPEAT": "0",
     "DUNYA_SAMPLER_LINEAR_CLAMP": "1",
@@ -128,8 +129,14 @@
   "editor.tabSize": 2,
   "editor.renderWhitespace": "trailing",
   "editor.guides.bracketPairs": "active",
+  "dotnet.defaultSolution": "editor/Dunya.slnx",
+  "terminal.integrated.env.windows": {
+    "PATH": "${env:ProgramFiles}\\dotnet;${env:PATH}"
+  },
   "files.exclude": {
     "**/.vs": true,
-    "**/out": true
+    "**/out": true,
+    "editor/**/bin": true,
+    "editor/**/obj": true
   }
 }

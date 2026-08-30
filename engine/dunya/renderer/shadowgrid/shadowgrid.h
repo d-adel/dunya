@@ -1,6 +1,6 @@
 #pragma once
 
-#include <dunya/renderer/fieldrecord/fieldrecord.h>
+#include <dunya/renderer/sdfrecord/sdfrecord.h>
 
 #include <glm/glm.hpp>
 
@@ -22,7 +22,7 @@ struct ShadowGridUniform {
 
 static_assert(
   sizeof(ShadowGridUniform) == 48,
-  "ShadowGridUniform must match its std140 block in field-shader.frag"
+  "ShadowGridUniform must match its std140 block in sdf-shader.frag"
 );
 
 struct ShadowCell {

@@ -4,7 +4,7 @@
 #include <dunya/field/analytic/analytic.h>
 #include <dunya/field/field.h>
 #include <dunya/field/redistance/redistance.h>
-#include <dunya/field/sampled/sampled.h>
+#include <dunya/field/sampledsdf/sampledsdf.h>
 
 #include <glm/glm.hpp>
 
@@ -14,17 +14,17 @@
 
 using Catch::Matchers::WithinAbs;
 using dunya::field::Primitive;
-using dunya::field::SampledField;
+using dunya::field::SampledSdf;
 
 namespace {
 
 constexpr float FAR = std::numeric_limits<float>::max();
 
-dunya::field::SampleBox whole(const SampledField& field) {
+dunya::field::SampleBox whole(const SampledSdf& field) {
   return {glm::uvec3(0u), field.resolution};
 }
 
-std::vector<uint8_t> damagedEverywhere(const SampledField& field) {
+std::vector<uint8_t> damagedEverywhere(const SampledSdf& field) {
   return std::vector<uint8_t>(
     static_cast<size_t>(field.resolution.x) * field.resolution.y
       * field.resolution.z,
@@ -32,7 +32,7 @@ std::vector<uint8_t> damagedEverywhere(const SampledField& field) {
   );
 }
 
-void flatten(SampledField& field, float factor) {
+void flatten(SampledSdf& field, float factor) {
   const float keep =
     1.5f * std::min({field.voxelSize.x, field.voxelSize.y, field.voxelSize.z});
 
@@ -88,7 +88,7 @@ TEST_CASE("a flattened sphere is repaired inside the band", "[redistance]") {
     dunya::field::makeSphere(glm::vec3(0.0f), 1.0f, 3u)
   };
 
-  SampledField field = dunya::field::bake(
+  SampledSdf field = dunya::field::bake(
     primitives,
     glm::vec3(-2.0f),
     glm::vec3(2.0f),
@@ -167,7 +167,7 @@ TEST_CASE("the repair uses each axis' own spacing", "[redistance]") {
     dunya::field::makeBox(glm::vec3(0.0f), glm::vec3(4.0f, 0.1f, 4.0f))
   };
 
-  SampledField field = dunya::field::bake(
+  SampledSdf field = dunya::field::bake(
     primitives,
     glm::vec3(-2.0f, -0.25f, -2.0f),
     glm::vec3(2.0f, 0.25f, 2.0f),
@@ -200,7 +200,7 @@ TEST_CASE("the repair uses each axis' own spacing", "[redistance]") {
   REQUIRE(worst < 0.25f * field.voxelSize.y);
 }
 
-float crossingAlongY(const SampledField& field, float from, float until) {
+float crossingAlongY(const SampledSdf& field, float from, float until) {
   float low = from;
   float high = until;
 
@@ -222,7 +222,7 @@ TEST_CASE("the repair leaves the zero set where it was", "[redistance]") {
     dunya::field::makeSphere(glm::vec3(0.0f), 1.0f, 3u)
   };
 
-  SampledField field = dunya::field::bake(
+  SampledSdf field = dunya::field::bake(
     primitives,
     glm::vec3(-2.0f),
     glm::vec3(2.0f),
@@ -250,7 +250,7 @@ TEST_CASE("repairing a repaired field changes almost nothing", "[redistance]") {
     dunya::field::makeSphere(glm::vec3(0.0f), 1.0f, 3u)
   };
 
-  SampledField field = dunya::field::bake(
+  SampledSdf field = dunya::field::bake(
     primitives,
     glm::vec3(-2.0f),
     glm::vec3(2.0f),

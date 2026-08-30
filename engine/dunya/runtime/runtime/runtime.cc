@@ -18,8 +18,8 @@ physics::PhysicsWorld& Runtime::physics() noexcept {
   return m_physicsWorld;
 }
 
-JPH::ShapeRefC Runtime::shapeFor(const objectmodel::SharedField& held) {
-  const dunya::field::SampledField* key = held.field.get();
+JPH::ShapeRefC Runtime::shapeFor(const objectmodel::SharedSdf& held) {
+  const dunya::field::SampledSdf* key = held.field.get();
 
   const auto found = m_shapes.find(key);
 
@@ -39,7 +39,7 @@ JPH::ShapeRefC Runtime::shapeFor(const objectmodel::SharedField& held) {
 }
 
 void Runtime::rememberShape(
-  const objectmodel::SharedField& held,
+  const objectmodel::SharedSdf& held,
   const JPH::ShapeRefC& shape
 ) {
   std::erase_if(m_shapes, [](const auto& entry) {
@@ -50,8 +50,7 @@ void Runtime::rememberShape(
 }
 
 void Runtime::refreshBody(objectmodel::Entity entity) {
-  const auto* held =
-    m_world.registry().try_get<objectmodel::SharedField>(entity);
+  const auto* held = m_world.registry().try_get<objectmodel::SharedSdf>(entity);
 
   if (held == nullptr) {
     return;
@@ -67,14 +66,14 @@ void Runtime::reshapeAfterDeform(
 ) {
   const entt::registry& registry = m_world.registry();
 
-  const auto* held = registry.try_get<objectmodel::SharedField>(entity);
+  const auto* held = registry.try_get<objectmodel::SharedSdf>(entity);
   const auto* body = registry.try_get<objectmodel::RigidBody>(entity);
 
   if (held == nullptr || body == nullptr) {
     return;
   }
 
-  const dunya::field::SampledField* field = held->field.get();
+  const dunya::field::SampledSdf* field = held->field.get();
 
   const JPH::Shape* current =
     m_physicsWorld.bodies().GetShape(JPH::BodyID(body->id));
@@ -264,7 +263,7 @@ bool Runtime::despawn(objectmodel::Entity entity) {
     m_physicsWorld.bodies().DestroyBody(id);
   }
 
-  return m_world.destroyField(entity);
+  return m_world.destroySdfGrid(entity);
 }
 
 void Runtime::step() {
