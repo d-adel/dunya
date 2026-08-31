@@ -11,6 +11,7 @@
     </ResourceDictionary>
   </Application.Resources>
   <Application.Styles>
+    <FluentTheme />
     <semi:SemiTheme />
     <StyleInclude Source="avares://Dock.Avalonia.Themes.Fluent/DockFluentTheme.axaml" />
     <StyleInclude Source="avares://Avalonia.Controls.TreeDataGrid/Themes/Fluent.axaml" />

@@ -1,4 +1,5 @@
 add_library(dunya_serialize STATIC
+    gamemanifest/gamemanifest.cc
     editorstate/editorstate.cc
     project/project.cc
     textfile/textfile.cc

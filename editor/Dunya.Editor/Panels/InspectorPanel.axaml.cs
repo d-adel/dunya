@@ -9,28 +9,78 @@ namespace Dunya.Editor.Panels;
 
 public partial class InspectorPanel : UserControl
 {
-    public InspectorPanel() => InitializeComponent();
+    private WorldArchetype? m_archetype;
+
+    private int m_at;
+
+    public InspectorPanel()
+    {
+        InitializeComponent();
+
+        this.FindControl<Button>("Previous")!.Click += (_, _) => Step(-1);
+        this.FindControl<Button>("Next")!.Click += (_, _) => Step(1);
+    }
 
     public Func<uint, string, string?>? Reader { get; set; }
 
-    public void Show(WorldEntity? entity)
+    public event Action<uint?>? Focused;
+
+    public void Show(WorldArchetype? archetype, uint? focus)
+    {
+        m_archetype = archetype;
+
+        m_at = archetype is null || focus is null
+            ? 0
+            : Math.Max(0, Array.IndexOf(archetype.Entities, focus.Value));
+
+        Refresh();
+    }
+
+    private void Step(int by)
+    {
+        if (m_archetype is null || m_archetype.Count == 0)
+        {
+            return;
+        }
+
+        m_at = (m_at + by + m_archetype.Count) % m_archetype.Count;
+
+        Refresh();
+    }
+
+    private void Refresh()
     {
         StackPanel cards = this.FindControl<StackPanel>("Cards")!;
 
         cards.Children.Clear();
 
-        this.FindControl<TextBlock>("Subject")!.Text =
-            entity is null ? "nothing selected" : $"entity {entity.Id}";
+        StackPanel stepper = this.FindControl<StackPanel>("Stepper")!;
 
-        if (entity is null)
+        if (m_archetype is null || m_archetype.Count == 0)
         {
+            this.FindControl<TextBlock>("Subject")!.Text = "nothing selected";
+            stepper.IsVisible = false;
+
+            Focused?.Invoke(null);
+
             return;
         }
 
-        foreach (string component in entity.Components)
+        uint entity = m_archetype.Entities[m_at];
+
+        this.FindControl<TextBlock>("Subject")!.Text = m_archetype.Alias;
+
+        stepper.IsVisible = true;
+
+        this.FindControl<TextBlock>("Which")!.Text =
+            $"entity {entity}   {m_at + 1} of {m_archetype.Count}";
+
+        foreach (string component in m_archetype.Components)
         {
-            cards.Children.Add(Card(entity.Id, component));
+            cards.Children.Add(Card(entity, component));
         }
+
+        Focused?.Invoke(entity);
     }
 
     private ComponentCard Card(uint entity, string component)

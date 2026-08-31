@@ -11,6 +11,7 @@ target_compile_features(dunya_c PUBLIC cxx_std_23)
 target_link_libraries(dunya_c PRIVATE
     dunya::assets
     dunya::core
+    dunya::editor
     dunya::field
     dunya::gpu
     dunya::objectmodel

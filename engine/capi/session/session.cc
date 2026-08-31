@@ -104,9 +104,9 @@ Session::Session(
         m_context.surface().handle(),
         m_swapChain.imageCount()
       ) {
-  m_renderer.useTarget(&m_sceneTarget);
+  m_storage.residency().attach(m_world);
 
-  m_frame.environment = dunya::objectmodel::Environment{};
+  m_renderer.useTarget(&m_sceneTarget);
 
   loadWorld(projectRoot, world);
 }
@@ -148,6 +148,26 @@ void Session::loadWorld(
 }
 
 void Session::lookAtWorld(float aspect) {
+  if (m_viewsThroughScene) {
+    const std::optional<dunya::objectmodel::CameraView> scene =
+      dunya::objectmodel::activeCamera(activeWorld(), aspect);
+
+    if (scene.has_value()) {
+      m_frame.proj = scene->projection;
+      m_frame.view = scene->view;
+      m_frame.cameraPos = glm::vec4(scene->position, scene->nearPlane);
+      m_frame.mode = dunya::renderer::DrawMode::Both;
+
+      return;
+    }
+
+    m_frame.mode = dunya::renderer::DrawMode::Nothing;
+
+    return;
+  }
+
+  m_frame.mode = dunya::renderer::DrawMode::Both;
+
   if (!m_camera.placed()) {
     frameCameraOnWorld();
   }
@@ -155,6 +175,31 @@ void Session::lookAtWorld(float aspect) {
   m_frame.proj = dunya::objectmodel::projection(m_camera.lens(), aspect);
   m_frame.view = m_camera.viewMatrix();
   m_frame.cameraPos = glm::vec4(m_camera.eye(), m_camera.lens().nearPlane);
+}
+
+bool Session::viewsThroughScene() const noexcept {
+  return m_viewsThroughScene;
+}
+
+bool Session::package(
+  const std::string& runtimeExecutable,
+  const std::string& output,
+  const std::vector<std::string>& worlds,
+  std::string& result
+) const {
+  dunya::editor::PackageSpec spec{};
+  spec.runtimeExecutable = runtimeExecutable;
+  spec.projectRoot = m_projectRoot;
+  spec.output = output;
+  spec.worlds = worlds.empty() ? std::vector<std::string>{m_worldName} : worlds;
+
+  if (!dunya::editor::packageProject(spec, result)) {
+    return false;
+  }
+
+  result = dunya::editor::packagedExecutable(spec).string();
+
+  return true;
 }
 
 void Session::frameCameraOnWorld() {
@@ -292,6 +337,8 @@ void Session::render() {
 
   m_storage.residency().flush(activeWorld(), ignored);
 
+  m_frame.environment.reset();
+
   m_storage.framePacker().pack(
     m_frame,
     activeWorld(),
@@ -304,18 +351,23 @@ void Session::render() {
     }
   );
 
-  m_grid.update(m_camera.eye());
+  std::vector<dunya::renderer::ScenePass> passes;
 
-  const std::array<dunya::renderer::ScenePass, 2> passes{
-    dunya::renderer::ScenePass{
-      dunya::renderer::PassOrder::BeforeScene,
-      [this](VkCommandBuffer commands) { drawSky(commands); }
-    },
-    dunya::renderer::ScenePass{
-      dunya::renderer::PassOrder::AfterScene,
-      [this](VkCommandBuffer commands) { drawGrid(commands); }
-    }
-  };
+  if (m_frame.environment.has_value()) {
+    passes.push_back(
+      {dunya::renderer::PassOrder::BeforeScene,
+       [this](VkCommandBuffer commands) { drawSky(commands); }}
+    );
+  }
+
+  if (!m_viewsThroughScene) {
+    m_grid.update(m_camera.eye());
+
+    passes.push_back(
+      {dunya::renderer::PassOrder::AfterScene,
+       [this](VkCommandBuffer commands) { drawGrid(commands); }}
+    );
+  }
 
   if (m_renderer.drawFrame(m_swapChain, m_frame, passes)) {
     m_swapChain.recreate();
@@ -420,7 +472,11 @@ void Session::play() {
 
   m_runtime.emplace(m_world, m_jolt);
 
+  m_storage.residency().attach(m_runtime->world());
+
   m_deformScope = dunya::script::SdfDeformScope(&Session::onDeform, this);
+
+  m_viewsThroughScene = true;
 }
 
 void Session::stop() {
@@ -431,6 +487,8 @@ void Session::stop() {
   m_storage.residency().releaseAll(m_runtime->world());
 
   m_deformScope = {};
+
+  m_viewsThroughScene = false;
 
   m_runtime.reset();
 }
@@ -445,6 +503,36 @@ dunya::objectmodel::World& Session::activeWorld() noexcept {
 
 const dunya::objectmodel::World& Session::activeWorld() const noexcept {
   return m_runtime ? m_runtime->world() : m_world;
+}
+
+dunya::objectmodel::Entity Session::createLight() {
+  const dunya::objectmodel::Entity entity = m_world.createAuthored();
+
+  m_world.emplaceOrReplace<dunya::objectmodel::Pose>(
+    entity,
+    dunya::objectmodel::Pose{}
+  );
+  m_world.emplaceOrReplace<dunya::objectmodel::DirectionalLight>(
+    entity,
+    dunya::objectmodel::DirectionalLight{}
+  );
+
+  return entity;
+}
+
+dunya::objectmodel::Entity Session::createEnvironment() {
+  const dunya::objectmodel::Entity entity = m_world.createAuthored();
+
+  m_world.emplaceOrReplace<dunya::objectmodel::Pose>(
+    entity,
+    dunya::objectmodel::Pose{}
+  );
+  m_world.emplaceOrReplace<dunya::objectmodel::Environment>(
+    entity,
+    dunya::objectmodel::Environment{}
+  );
+
+  return entity;
 }
 
 dunya::objectmodel::Entity Session::createCamera(
@@ -573,7 +661,14 @@ bool Session::newWorld(const std::string& name) {
     return false;
   }
 
-  if (!project->saveWorld(name, dunya::serialize::StoredWorld{})) {
+  dunya::objectmodel::World fresh;
+
+  dunya::objectmodel::addDefaultEntities(fresh);
+
+  if (!project->saveWorld(
+        name,
+        dunya::serialize::captureWorld(fresh, m_assetLibrary.assets())
+      )) {
     return false;
   }
 

@@ -93,7 +93,20 @@ public:
 
   void alignToSceneCamera();
 
+  [[nodiscard]] bool viewsThroughScene() const noexcept;
+
+  [[nodiscard]] bool package(
+    const std::string& runtimeExecutable,
+    const std::string& output,
+    const std::vector<std::string>& worlds,
+    std::string& result
+  ) const;
+
   [[nodiscard]] dunya::objectmodel::Entity pick(float x, float y);
+
+  [[nodiscard]] dunya::objectmodel::Entity createLight();
+
+  [[nodiscard]] dunya::objectmodel::Entity createEnvironment();
 
   [[nodiscard]] dunya::objectmodel::Entity createCamera(
     const glm::vec3& position,
@@ -188,6 +201,8 @@ private:
   dunya::systems::Schedule m_schedule;
 
   dunya::viewport::Camera m_camera;
+
+  bool m_viewsThroughScene = false;
 
   uint32_t m_frameIndex = 0;
 

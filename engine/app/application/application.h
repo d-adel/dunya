@@ -28,7 +28,6 @@
 #include <dunya/renderer/frameglobals/frameglobals.h>
 #include <dunya/field/field.h>
 #include <app/flycontroller/flycontroller.h>
-#include <app/demodriver/demodriver.h>
 #include <app/framecheck/framecheck.h>
 #include <dunya/assets/assetlibrary/assetlibrary.h>
 #include <dunya/debugui/debugui.h>
@@ -81,8 +80,6 @@ private:
 
   void placeViewportCamera();
 
-  glm::vec3 groundPoint(float u, float v) const;
-
   void carveForMeasurement(uint32_t count);
 
   void handleKeyEvent(const dunya::platform::KeyEvent& event);
@@ -123,8 +120,6 @@ private:
   void stop();
 
   void dent(uint32_t count);
-
-  void recordSceneTelemetry();
 
   void uploadDentedVolumes();
 
@@ -167,6 +162,8 @@ private:
   ViewSource m_viewSource = ViewSource::SceneCamera;
 
   bool m_reportedMissingCamera = false;
+
+  dunya::renderer::DrawMode m_drawMode = dunya::renderer::DrawMode::Both;
   dunya::renderer::Renderer m_renderer;
 
   std::unique_ptr<DebugUi> m_debugUi;
@@ -186,8 +183,6 @@ private:
 
   dunya::field::SampledSdf m_projectileField;
 
-  dunya::objectmodel::WorldExtent m_groundExtent;
-
   uint32_t m_ballVolume = UINT32_MAX;
 
   JPH::ShapeRefC m_ballShape;
@@ -200,8 +195,6 @@ private:
   dunya::core::Telemetry m_telemetry;
 
   dunya::runtime::Deformation m_deformation;
-
-  DemoDriver m_demo;
 
   uint32_t m_frameIndex = 0;
   bool m_canFire = true;

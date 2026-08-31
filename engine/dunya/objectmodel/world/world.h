@@ -23,6 +23,7 @@
 
 #include <type_traits>
 #include <cstddef>
+#include <functional>
 #include <stdexcept>
 #include <cstdint>
 #include <span>
@@ -170,6 +171,10 @@ public:
 
   void clearBakedVolume(Entity entity);
 
+  void clearBakedVolumes();
+
+  void onBakedVolumeReleased(std::function<void(uint32_t)> release);
+
   bool needsBake(Entity entity) const noexcept;
   void markBaked(Entity entity);
 
@@ -192,6 +197,10 @@ public:
   std::span<const Entity> meshes() const noexcept;
 
 private:
+  void bakedVolumeDestroyed(entt::registry& registry, Entity entity);
+
+  std::function<void(uint32_t)> m_onBakedVolumeReleased;
+
   SdfPrimitiveStore m_primitiveStore;
 
   DynamicComponents m_dynamic;

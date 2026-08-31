@@ -2,6 +2,7 @@ add_library(dunya_editor STATIC
     command/command.cc
     commandhistory/commandhistory.cc
     fieldeditor/fieldeditor.cc
+    package/package.cc
 )
 
 add_library(dunya::editor ALIAS dunya_editor)

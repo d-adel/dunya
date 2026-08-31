@@ -22,6 +22,7 @@
 #include <span>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include "tolerances.h"
 
@@ -705,4 +706,67 @@ TEST_CASE("dirty sdf regions merge per entity", "[world]") {
   world.clearSdfDirty();
 
   REQUIRE(world.sdfDirty().empty());
+}
+
+TEST_CASE("a released baked volume reports its slot once", "[world]") {
+  World world;
+
+  std::vector<uint32_t> released;
+
+  world.onBakedVolumeReleased([&released](uint32_t slot) {
+    released.push_back(slot);
+  });
+
+  const Entity entity = world.createSdfGrid(Pose{}, blank());
+
+  world.setBakedVolume(entity, 7);
+
+  REQUIRE(released.empty());
+
+  REQUIRE(world.destroy(entity));
+
+  REQUIRE(released == std::vector<uint32_t>{7});
+}
+
+TEST_CASE("replacing a baked volume releases the slot it held", "[world]") {
+  World world;
+
+  std::vector<uint32_t> released;
+
+  world.onBakedVolumeReleased([&released](uint32_t slot) {
+    released.push_back(slot);
+  });
+
+  const Entity entity = world.createSdfGrid(Pose{}, blank());
+
+  world.setBakedVolume(entity, 3);
+  world.setBakedVolume(entity, 9);
+
+  REQUIRE(released == std::vector<uint32_t>{3});
+
+  REQUIRE(world.registry().get<BakedVolume>(entity).index == 9);
+}
+
+TEST_CASE("clearing the baked volumes releases every slot", "[world]") {
+  World world;
+
+  std::vector<uint32_t> released;
+
+  world.onBakedVolumeReleased([&released](uint32_t slot) {
+    released.push_back(slot);
+  });
+
+  const Entity first = world.createSdfGrid(Pose{}, blank());
+  const Entity second = world.createSdfGrid(Pose{}, blank());
+
+  world.setBakedVolume(first, 1);
+  world.setBakedVolume(second, 2);
+
+  world.clearBakedVolumes();
+
+  std::sort(released.begin(), released.end());
+
+  REQUIRE(released == std::vector<uint32_t>{1, 2});
+  REQUIRE_FALSE(world.registry().all_of<BakedVolume>(first));
+  REQUIRE_FALSE(world.registry().all_of<BakedVolume>(second));
 }

@@ -14,10 +14,6 @@ struct StartupOptions {
 
   std::string dentLog;
 
-  uint32_t demo = 0;
-
-  float demoRate = 0.0f;
-
   std::string capture;
 
   bool analytic = false;
@@ -33,6 +29,8 @@ struct StartupOptions {
   std::string project = "projects/demo";
 
   std::string world = "main";
+
+  bool packaged = false;
 
   std::string exportProject;
 };

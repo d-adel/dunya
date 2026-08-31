@@ -1,11 +1,24 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Dunya.Editor.Panels.ConsolePanel">
-  <ScrollViewer Name="Scroller" Background="{DynamicResource EditorPanelBackground}" Padding="8">
-    <SelectableTextBlock Name="Text"
-                         FontFamily="{DynamicResource EditorMonoFont}"
-                         FontSize="{DynamicResource EditorFontSizeSmall}"
-                         Foreground="{DynamicResource EditorSubtleText}"
-                         Text="waiting for the child window..." />
-  </ScrollViewer>
+  <TabControl Name="Tabs" Background="{DynamicResource EditorPanelBackground}">
+    <TabItem Header="Editor" FontSize="{DynamicResource EditorFontSizeSmall}">
+      <ScrollViewer Name="EditorScroller" Padding="8">
+        <SelectableTextBlock Name="EditorText"
+                             FontFamily="{DynamicResource EditorMonoFont}"
+                             FontSize="{DynamicResource EditorFontSizeSmall}"
+                             Foreground="{DynamicResource EditorSubtleText}"
+                             Text="waiting for the child window..." />
+      </ScrollViewer>
+    </TabItem>
+    <TabItem Header="Game" FontSize="{DynamicResource EditorFontSizeSmall}">
+      <ScrollViewer Name="GameScroller" Padding="8">
+        <SelectableTextBlock Name="GameText"
+                             FontFamily="{DynamicResource EditorMonoFont}"
+                             FontSize="{DynamicResource EditorFontSizeSmall}"
+                             Foreground="{DynamicResource EditorSubtleText}"
+                             Text="press play to run the game" />
+      </ScrollViewer>
+    </TabItem>
+  </TabControl>
 </UserControl>

@@ -1,4 +1,6 @@
 using System;
+using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 
 namespace Dunya.Editor;
@@ -42,6 +44,12 @@ public sealed class Authoring
             margin
         );
     }
+
+    public uint CreateLight()
+        => DunyaNative.dunya_session_create_light(m_session);
+
+    public uint CreateEnvironment()
+        => DunyaNative.dunya_session_create_environment(m_session);
 
     public void AlignToSceneCamera()
         => DunyaNative.dunya_session_align_to_scene_camera(m_session);
@@ -120,6 +128,19 @@ public sealed class Authoring
 
     public ulong ImportAsset(string file, string type)
         => DunyaNative.dunya_session_import_asset(m_session, file, type);
+
+    public static string RuntimeExecutable()
+    {
+        string beside = Path.Combine(
+            AppContext.BaseDirectory, "DunyaRuntime.exe");
+
+        return File.Exists(beside)
+            ? beside
+            : Path.Combine(Directory.GetCurrentDirectory(), "DunyaRuntime.exe");
+    }
+
+    public string Package(string output, string[] worlds)
+        => DunyaNative.Package(m_session, RuntimeExecutable(), output, worlds);
 
     public bool Play() => DunyaNative.dunya_session_play(m_session) == 0;
 

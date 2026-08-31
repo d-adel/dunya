@@ -94,6 +94,10 @@ DUNYA_C_API void dunya_session_align_to_scene_camera(DunyaSession* session);
 DUNYA_C_API uint32_t
 dunya_session_pick(DunyaSession* session, float x, float y);
 
+DUNYA_C_API uint32_t dunya_session_create_light(DunyaSession* session);
+
+DUNYA_C_API uint32_t dunya_session_create_environment(DunyaSession* session);
+
 DUNYA_C_API uint32_t dunya_session_create_camera(
   DunyaSession* session,
   const float* position,
@@ -163,6 +167,16 @@ dunya_session_new_world(DunyaSession* session, const char* name);
 
 DUNYA_C_API int32_t
 dunya_session_save_as(DunyaSession* session, const char* name);
+
+DUNYA_C_API int32_t dunya_session_package(
+  DunyaSession* session,
+  const char* runtimeExecutable,
+  const char* output,
+  const char* worlds,
+  char* executable,
+  uint32_t capacity,
+  uint32_t* length
+);
 
 DUNYA_C_API int32_t dunya_session_worlds(
   const DunyaSession* session,

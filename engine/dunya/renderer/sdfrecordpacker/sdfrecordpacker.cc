@@ -19,8 +19,6 @@ uint32_t SdfRecordPacker::pack(
 ) {
   const entt::registry& registry = world.registry();
 
-  m_residency.reclaim(world);
-
   uint32_t recordIndex = 0;
 
   m_recordEntities.clear();
@@ -97,8 +95,6 @@ uint32_t SdfRecordPacker::pack(
         images.material.imageView(),
         index
       );
-
-      m_residency.hold(entity, index);
 
       world.setBakedVolume(entity, index);
 

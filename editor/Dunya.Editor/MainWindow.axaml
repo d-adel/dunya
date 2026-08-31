@@ -8,7 +8,7 @@
 
   <DockPanel>
     <Menu DockPanel.Dock="Top">
-      <MenuItem Header="_File">
+      <MenuItem Name="FileMenu" Header="_File">
         <MenuItem Name="NewProjectItem" Header="_New Project..." />
         <MenuItem Name="OpenProjectItem" Header="_Open Project..." />
         <Separator />
@@ -20,7 +20,7 @@
         <Separator />
         <MenuItem Name="ExitItem" Header="E_xit" />
       </MenuItem>
-      <MenuItem Header="_Entity">
+      <MenuItem Name="EntityMenu" Header="_Entity">
         <MenuItem Name="AddBoxItem" Header="Add _Box" />
         <MenuItem Name="AddSphereItem" Header="Add _Sphere" />
         <Separator />
@@ -30,8 +30,10 @@
         <MenuItem Name="MakeDeformableItem" Header="Make _Deformable" />
       </MenuItem>
       <MenuItem Header="_Run">
-        <MenuItem Name="PlayItem" Header="_Play" />
+        <MenuItem Name="PlayItem" Header="_Play" HotKey="Ctrl+P" InputGesture="Ctrl+P" />
         <MenuItem Name="StopItem" Header="_Stop" />
+        <Separator />
+        <MenuItem Name="BuildItem" Header="_Build Game" HotKey="Ctrl+B" InputGesture="Ctrl+B" />
       </MenuItem>
       <MenuItem Header="_View">
         <MenuItem Name="ShowGridItem" Header="Show _Grid" />

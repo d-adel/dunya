@@ -175,8 +175,10 @@ void Pipeline::create() {
     throw std::runtime_error("Failed to create pipeline");
   }
 
-  m_vertTime = std::filesystem::last_write_time(m_config.vert);
-  m_fragTime = std::filesystem::last_write_time(m_config.frag);
+  std::error_code sources;
+
+  m_vertTime = std::filesystem::last_write_time(m_config.vert, sources);
+  m_fragTime = std::filesystem::last_write_time(m_config.frag, sources);
   m_includeTime = newestIncludeTime();
 }
 

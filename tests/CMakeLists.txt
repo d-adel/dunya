@@ -93,11 +93,28 @@ catch_discover_tests(image_tests)
 catch_discover_tests(spirv_tests)
 
 set(GOLDEN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/golden")
+set(GOLDEN_GAME_DIR "${CMAKE_BINARY_DIR}/builds/demo")
+
+add_test(
+    NAME "package demo"
+    COMMAND DunyaPackager
+            $<TARGET_FILE:DunyaRuntime>
+            "${CMAKE_BINARY_DIR}/projects/demo"
+            "${GOLDEN_GAME_DIR}"
+            main
+            wall-big
+)
+set_tests_properties("package demo" PROPERTIES FIXTURES_SETUP packaged_demo)
+
 function(add_golden_test name)
     add_test(
         NAME "golden ${name}"
-        COMMAND DunyaDevHost --golden "${GOLDEN_DIR}/${name}.png" ${ARGN}
-        WORKING_DIRECTORY $<TARGET_FILE_DIR:DunyaDevHost>
+        COMMAND "${GOLDEN_GAME_DIR}/demo.exe"
+                --golden "${GOLDEN_DIR}/${name}.png" ${ARGN}
+        WORKING_DIRECTORY "${GOLDEN_GAME_DIR}"
+    )
+    set_tests_properties(
+        "golden ${name}" PROPERTIES FIXTURES_REQUIRED packaged_demo
     )
 endfunction()
 add_golden_test(field-sampled --carves 6)

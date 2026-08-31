@@ -167,7 +167,6 @@ add_executable(DunyaDevHost
     engine/devhost/imguidebugui/imguidebugui.cc
     engine/app/startupoptions/startupoptions.cc
     engine/app/framecheck/framecheck.cc
-    engine/app/demodriver/demodriver.cc
 
     engine/app/glfwwindowsystem/glfwwindowsystem.cc
     engine/app/projectile/projectile.cc
@@ -239,7 +238,6 @@ add_executable(DunyaRuntime
     engine/app/capture/capture.cc
     engine/app/startupoptions/startupoptions.cc
     engine/app/framecheck/framecheck.cc
-    engine/app/demodriver/demodriver.cc
     engine/app/glfwwindowsystem/glfwwindowsystem.cc
     engine/app/projectile/projectile.cc
     engine/app/flycontroller/flycontroller.cc
@@ -313,6 +311,17 @@ add_custom_target(DUNYA_CONTENT ALL
 add_dependencies(DUNYA_CONTENT DunyaDevHost DunyaRuntime SHADER_TARGET)
 dunya_module(imgui Developer)
 dunya_module(DunyaDevHost Editor)
+add_executable(DunyaPackager
+    engine/tools/packager/main.cc
+)
+target_link_libraries(DunyaPackager PRIVATE dunya::editor)
+if (MSVC)
+    target_compile_options(DunyaPackager PRIVATE /W4 /WX /w15038 /w14062 /Zc:__cplusplus)
+else()
+    target_compile_options(DunyaPackager PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
+
+dunya_module(DunyaPackager Editor)
 dunya_module(DunyaRuntime Developer)
 
 add_subdirectory(tests)

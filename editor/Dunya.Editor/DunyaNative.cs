@@ -33,6 +33,39 @@ internal static class DunyaNative
         [MarshalAs(UnmanagedType.LPUTF8Str)] string type);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int dunya_session_package(
+        IntPtr session,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string runtimeExecutable,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string output,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string worlds,
+        [Out] byte[]? executable,
+        uint capacity,
+        out uint length);
+
+    internal static string Package(
+        IntPtr session, string runtimeExecutable, string output, string[] worlds)
+    {
+        string joined = string.Join("\n", worlds);
+
+        if (dunya_session_package(
+                session, runtimeExecutable, output, joined, null, 0, out uint length) != 0)
+        {
+            throw new InvalidOperationException(LastError());
+        }
+
+        byte[] buffer = new byte[length + 1];
+
+        if (dunya_session_package(
+                session, runtimeExecutable, output, joined,
+                buffer, (uint)buffer.Length, out _) != 0)
+        {
+            throw new InvalidOperationException(LastError());
+        }
+
+        return Encoding.UTF8.GetString(buffer, 0, (int)length);
+    }
+
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
     private static extern int dunya_session_worlds(
         IntPtr session, [Out] byte[]? buffer, uint capacity, out uint length);
 
@@ -180,6 +213,12 @@ internal static class DunyaNative
     internal static extern ulong dunya_session_add_material(
         IntPtr session, float[] baseColor, float metallic, float roughness
     );
+
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern uint dunya_session_create_light(IntPtr session);
+
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern uint dunya_session_create_environment(IntPtr session);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
     internal static extern IntPtr dunya_session_schedule(IntPtr session);

@@ -17,11 +17,13 @@ std::vector<const char*> GlfwWindowSystem::instanceExtensions() const {
 VkSurfaceKHR GlfwWindowSystem::createSurface(VkInstance instance) const {
   VkSurfaceKHR surface = VK_NULL_HANDLE;
 
-  if (
-    glfwCreateWindowSurface(instance, m_window.handle(), nullptr, &surface)
-    != VK_SUCCESS
-  ) {
-    return VK_NULL_HANDLE;
+  const VkResult result =
+    glfwCreateWindowSurface(instance, m_window.handle(), nullptr, &surface);
+
+  if (result != VK_SUCCESS) {
+    throw std::runtime_error(
+      std::string("glfwCreateWindowSurface failed: ") + string_VkResult(result)
+    );
   }
 
   return surface;

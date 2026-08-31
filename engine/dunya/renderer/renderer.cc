@@ -2,6 +2,17 @@
 
 namespace dunya::renderer {
 
+namespace {
+
+glm::vec3 lightDirection(
+  const std::optional<dunya::objectmodel::DirectionalLight>& light
+) {
+  return light.has_value() ? dunya::objectmodel::toLight(*light)
+                           : glm::vec3(0.0f);
+}
+
+}
+
 Renderer::Renderer(
   const dunya::gpu::Device& device,
   SdfRecordTable& sdfRecordTable,
@@ -318,7 +329,7 @@ void Renderer::recordCommandBuffer(
     m_recordTable.update(
       m_currentFrame,
       frameContext.sdfRecordCount,
-      dunya::objectmodel::toLight(frameContext.light)
+      lightDirection(frameContext.light)
     );
     m_recordTable.updatePrimitives(m_currentFrame, frameContext.primitives);
 
@@ -512,10 +523,13 @@ bool Renderer::drawFrame(
   const SceneCounts counts{frameContext.sdfRecordCount};
 
   LightUniform light{};
-  light.direction = glm::vec4(
-    dunya::objectmodel::toLight(frameContext.light),
-    frameContext.light.ambient
-  );
+
+  if (frameContext.light.has_value()) {
+    light.direction = glm::vec4(
+      dunya::objectmodel::toLight(*frameContext.light),
+      frameContext.light->ambient
+    );
+  }
 
   if (frameContext.environment.has_value()) {
     const dunya::objectmodel::Environment& environment =

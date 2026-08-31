@@ -76,6 +76,20 @@ Application::Application(
       m_reloadRequested(false) {
   m_viewSource = viewSource;
 
+  m_storage.residency().attach(m_authoredWorld);
+
+  m_skyPipeline.emplace(
+    dunya::gpu::PipelineType::Sky,
+    m_context.device().vkDevice(),
+    dunya::renderer::pipelineSetLayouts(
+      dunya::gpu::PipelineType::Sky,
+      m_storage.frameGlobals(),
+      m_storage.resourceTable(),
+      m_storage.recordTable()
+    ),
+    m_swapChain
+  );
+
   loadWorld(options);
 
   if (options.grid) {
@@ -95,21 +109,7 @@ Application::Application(
       dunya::viewport::GridVertex::attributeDescriptions()
     );
 
-    m_skyPipeline.emplace(
-      dunya::gpu::PipelineType::Sky,
-      m_context.device().vkDevice(),
-      dunya::renderer::pipelineSetLayouts(
-        dunya::gpu::PipelineType::Sky,
-        m_storage.frameGlobals(),
-        m_storage.resourceTable(),
-        m_storage.recordTable()
-      ),
-      m_swapChain
-    );
-
     m_grid.emplace(m_context.device());
-
-    m_frameContext.environment = dunya::objectmodel::Environment{};
   }
 
   if (tools) {
@@ -260,22 +260,6 @@ void Application::placeViewportCamera() {
   m_flyController.camera().place(framing.position, framing.yaw, framing.pitch);
 }
 
-glm::vec3 Application::groundPoint(float u, float v) const {
-  constexpr float COVERAGE = 0.85f;
-
-  if (m_groundExtent.empty) {
-    return glm::vec3(0.0f);
-  }
-
-  const float reach = 0.5f * m_groundExtent.span().x * COVERAGE;
-
-  return glm::vec3(
-    glm::mix(-reach, reach, u),
-    m_groundExtent.maximum.y,
-    glm::mix(-0.5f * reach, reach, v)
-  );
-}
-
 int Application::exportProject(const StartupOptions& options) {
   std::optional<dunya::serialize::Project> project =
     dunya::serialize::Project::open(options.exportProject);
@@ -344,8 +328,6 @@ int Application::start(const StartupOptions& options) {
     );
   }
 
-  m_demo = DemoDriver(options.demo, options.demoRate);
-
   if (options.analytic) {
     m_frameContext.fieldRepresentation = dunya::core::FIELD_ANALYTIC;
     std::cout << "Field representation: analytic\n";
@@ -368,11 +350,6 @@ int Application::start(const StartupOptions& options) {
   );
 
   m_projectileField = bakeProjectile(m_shotSettings);
-
-  m_groundExtent = dunya::objectmodel::entityExtent(
-    m_authoredWorld,
-    dunya::objectmodel::firstDeformable(m_authoredWorld)
-  );
 
   placeViewportCamera();
 
@@ -445,33 +422,13 @@ int Application::start(const StartupOptions& options) {
 
     const bool measuring = frameCheck.wanted() || m_pendingDents > 0;
 
-    const bool simulatesOnItsOwn = m_debugUi == nullptr || m_demo.active();
+    const bool simulatesOnItsOwn = m_debugUi == nullptr;
 
     if (
       m_frameIndex == FIRST_PLAY_FRAME && simulatesOnItsOwn && !measuring
       && !m_runtime
     ) {
       play();
-    }
-
-    if (m_demo.active()) {
-      if (m_demo.fires(m_frameIndex)) {
-        const glm::vec2 at = m_demo.target();
-
-        fire(aimAtPoint(groundPoint(at.x, at.y)));
-      }
-
-      m_telemetry.set(m_telemetry.key("frame"), double(realDt) * 1000.0);
-
-      m_demo.record(m_frameIndex, m_telemetry);
-
-      m_telemetry.clear();
-
-      if (m_demo.finished(m_frameIndex)) {
-        recordSceneTelemetry();
-        m_demo.report(m_telemetry);
-        glfwSetWindowShouldClose(m_window.handle(), GLFW_TRUE);
-      }
     }
 
     if (m_runtime) {
@@ -511,15 +468,6 @@ int Application::start(const StartupOptions& options) {
 
         m_deformation.applyImpacts(*m_runtime, m_telemetry);
 
-        if (m_demo.active()) {
-          for (const auto& crater : m_deformation.cratersThisFrame()) {
-            std::cout << "  crater on " << static_cast<uint32_t>(crater.entity)
-                      << "  impulse " << crater.impulse << "  depth "
-                      << crater.depth << "  radius " << crater.radius
-                      << std::endl;
-          }
-        }
-
         m_telemetry.set(
           m_telemetry.key("carve"),
           std::chrono::duration<double, std::milli>(
@@ -532,10 +480,6 @@ int Application::start(const StartupOptions& options) {
       m_runtime->syncPoses(
         float(physicsAccumulator / dunya::physics::PhysicsWorld::TIME_STEP)
       );
-
-      if (m_demo.active()) {
-        m_demo.measureMotion(activeWorld().registry(), m_telemetry);
-      }
     }
 
     ++statFrames;
@@ -624,6 +568,10 @@ int Application::start(const StartupOptions& options) {
     refreshSystemsPanel();
 
     const entt::registry& registry = world.registry();
+
+    m_frameContext.environment.reset();
+    m_frameContext.light.reset();
+
     m_storage.framePacker().pack(
       m_frameContext,
       world,
@@ -670,13 +618,15 @@ int Application::start(const StartupOptions& options) {
 
     std::vector<dunya::renderer::ScenePass> passes;
 
-    if (m_grid) {
-      m_grid->update(glm::vec3(m_frameContext.cameraPos));
-
+    if (m_frameContext.environment.has_value()) {
       passes.push_back(
         {dunya::renderer::PassOrder::BeforeScene,
          [this](VkCommandBuffer commandBuffer) { drawSky(commandBuffer); }}
       );
+    }
+
+    if (m_grid) {
+      m_grid->update(glm::vec3(m_frameContext.cameraPos));
 
       passes.push_back(
         {dunya::renderer::PassOrder::AfterScene,
@@ -861,8 +811,6 @@ void Application::fire(const glm::vec3& aim) {
 
   if (m_ballVolume != UINT32_MAX) {
     m_storage.volumePool().retain(m_ballVolume);
-    m_storage.residency().hold(ball, m_ballVolume);
-
     world.setBakedVolume(ball, m_ballVolume);
     world.markBaked(ball);
   }
@@ -987,8 +935,7 @@ void Application::play() {
 
   m_runtime.emplace(m_authoredWorld, m_joltLibrary);
 
-  if (m_debugUi) {
-  }
+  m_storage.residency().attach(m_runtime->world());
 
   std::cout << "Play" << std::endl;
 }
@@ -1115,42 +1062,6 @@ void Application::dent(uint32_t count) {
   activeWorld().markSdfDirty(target, touched);
 }
 
-void Application::recordSceneTelemetry() {
-  const dunya::objectmodel::World& world = activeWorld();
-
-  std::unordered_set<const dunya::field::SampledSdf*> lattices;
-
-  size_t residentBytes = 0;
-
-  for (const dunya::objectmodel::Entity entity : world.sdfGrids()) {
-    if (const auto* field = world.sampledSdf(entity)) {
-      if (lattices.insert(field).second) {
-        residentBytes += field->distances.size() * sizeof(float)
-                         + field->materials.size() * sizeof(uint8_t);
-      }
-    }
-  }
-
-  m_telemetry.set(
-    m_telemetry.key("volumes"),
-    double(m_storage.volumePool().allocated())
-  );
-  m_telemetry.set(
-    m_telemetry.key("volumeCapacity"),
-    double(dunya::core::MAX_SDF_VOLUMES)
-  );
-  m_telemetry.set(m_telemetry.key("lattices"), double(lattices.size()));
-  m_telemetry.set(m_telemetry.key("objects"), double(world.fields().size()));
-  m_telemetry.set(
-    m_telemetry.key("residentMB"),
-    double(residentBytes / (1024 * 1024))
-  );
-  m_telemetry.set(
-    m_telemetry.key("shapes"),
-    double(m_runtime ? m_runtime->shapeCount() : 0u)
-  );
-}
-
 void Application::uploadDentedVolumes() {
   m_storage.residency().flush(activeWorld(), m_telemetry);
 
@@ -1175,9 +1086,6 @@ void Application::stop() {
 
   m_runtime.reset();
 
-  if (m_debugUi) {
-  }
-
   std::cout << "Stop" << std::endl;
 }
 
@@ -1201,7 +1109,8 @@ void Application::handleKeyEvent(const dunya::platform::KeyEvent& event) {
     event.key == GLFW_KEY_P
     && event.type == dunya::platform::KeyEventType::SinglePressed
   ) {
-    m_frameContext.mode = dunya::renderer::nextDrawMode(m_frameContext.mode);
+    m_drawMode = dunya::renderer::nextDrawMode(m_drawMode);
+    m_frameContext.mode = m_drawMode;
     std::cout << "Draw mode switched to: "
               << dunya::renderer::drawModeName(m_frameContext.mode) << '\n';
   }
@@ -1210,8 +1119,6 @@ void Application::handleKeyEvent(const dunya::platform::KeyEvent& event) {
     event.key == GLFW_KEY_B
     && event.type == dunya::platform::KeyEventType::SinglePressed
   ) {
-    if (m_debugUi) {
-    }
     return;
   }
 
@@ -1282,8 +1189,6 @@ void Application::handleKeyEvent(const dunya::platform::KeyEvent& event) {
     && event.type == dunya::platform::KeyEventType::Pressed
   ) {
     if (m_input.isDown(GLFW_KEY_LEFT_CONTROL)) {
-      if (m_debugUi) {
-      }
     }
   }
 
@@ -1292,8 +1197,6 @@ void Application::handleKeyEvent(const dunya::platform::KeyEvent& event) {
     && event.type == dunya::platform::KeyEventType::Pressed
   ) {
     if (m_input.isDown(GLFW_KEY_LEFT_CONTROL)) {
-      if (m_debugUi) {
-      }
     }
   }
   static_cast<void>(m_flyController.handleKey(event, acceptsInput()));
@@ -1352,6 +1255,8 @@ void Application::takeView(const dunya::objectmodel::CameraView& camera) {
 
 void Application::lookThrough(float aspect) {
   if (m_viewSource == ViewSource::ViewportCamera) {
+    m_frameContext.mode = m_drawMode;
+
     m_frameContext.proj = m_flyController.camera().projectionMatrix(aspect);
     m_frameContext.view = m_flyController.camera().viewMatrix();
     m_frameContext.cameraPos = m_flyController.camera().position();
@@ -1365,14 +1270,16 @@ void Application::lookThrough(float aspect) {
   if (scene.has_value()) {
     takeView(*scene);
 
+    m_frameContext.mode = m_drawMode;
+
     return;
   }
 
   if (!m_reportedMissingCamera) {
     m_reportedMissingCamera = true;
 
-    std::cout << "no camera in this world, framing it instead\n";
+    std::cout << "no camera in this world, so it draws nothing\n";
   }
 
-  takeView(dunya::objectmodel::framingCamera(activeWorld(), aspect));
+  m_frameContext.mode = dunya::renderer::DrawMode::Nothing;
 }

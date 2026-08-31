@@ -1,7 +1,7 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Controls.Models.TreeDataGrid;
 using Avalonia.Markup.Xaml;
@@ -10,12 +10,12 @@ namespace Dunya.Editor.Panels;
 
 public sealed class ProjectItem
 {
-    public ProjectItem(string name, string detail, string kind, string? payload)
+    public ProjectItem(string name, string detail, string kind, string? path)
     {
         Name = name;
         Detail = detail;
         Kind = kind;
-        Payload = payload;
+        Path = path;
     }
 
     public string Name { get; }
@@ -24,14 +24,18 @@ public sealed class ProjectItem
 
     public string Kind { get; }
 
-    public string? Payload { get; }
+    public string? Path { get; }
 
     public ObservableCollection<ProjectItem> Children { get; } = new();
 }
 
 public partial class ProjectPanel : UserControl
 {
+    private const string WorldSuffix = ".world.json";
+
     private readonly ObservableCollection<ProjectItem> m_roots = new();
+
+    private readonly HierarchicalTreeDataGridSource<ProjectItem> m_source;
 
     public ProjectPanel()
     {
@@ -56,11 +60,17 @@ public partial class ProjectPanel : UserControl
 
         grid.DoubleTapped += (_, _) =>
         {
-            if (m_source.RowSelection?.SelectedItem is ProjectItem item
-                && item.Kind == "world"
-                && item.Payload != null)
+            if (m_source.RowSelection?.SelectedItem is not ProjectItem item)
             {
-                OpenWorld?.Invoke(item.Payload);
+                return;
+            }
+
+            if (item.Kind == "world" && item.Path != null)
+            {
+                OpenWorld?.Invoke(
+                    System.IO.Path.GetFileName(item.Path)
+                        .Replace(WorldSuffix, string.Empty)
+                );
             }
         };
 
@@ -69,7 +79,6 @@ public partial class ProjectPanel : UserControl
         this.FindControl<Button>("ImportButton")!.Click += (_, _) => Import?.Invoke();
     }
 
-    private readonly HierarchicalTreeDataGridSource<ProjectItem> m_source;
     public event Action<string>? OpenWorld;
 
     public event Action? Refresh;
@@ -78,50 +87,87 @@ public partial class ProjectPanel : UserControl
 
     public event Action? Import;
 
-    public void Show(
-        string projectRoot,
-        string currentWorld,
-        IReadOnlyList<string> worlds,
-        IReadOnlyList<string> assetLines
-    )
+    public void Show(string projectRoot, string currentWorld)
     {
-        this.FindControl<TextBlock>("Root")!.Text = projectRoot;
+        this.FindControl<TextBlock>("Root")!.Text =
+            System.IO.Path.GetFullPath(projectRoot);
 
         m_roots.Clear();
         m_source.Items = m_roots;
 
-        var worldGroup = new ProjectItem("Worlds", worlds.Count + " open by double-click", "group", null);
-
-        foreach (string world in worlds)
+        if (!Directory.Exists(projectRoot))
         {
-            worldGroup.Children.Add(
-                new ProjectItem(world, world == currentWorld ? "open" : string.Empty, "world", world)
-            );
+            m_roots.Add(new ProjectItem(projectRoot, "missing", "folder", null));
+
+            return;
         }
 
-        m_roots.Add(worldGroup);
-
-        var byType = new Dictionary<string, ProjectItem>();
-
-        foreach (string line in assetLines)
+        foreach (ProjectItem item in Walk(projectRoot, currentWorld))
         {
-            string[] parts = line.Split('\t');
-
-            if (parts.Length != 3)
-            {
-                continue;
-            }
-
-            if (!byType.TryGetValue(parts[1], out ProjectItem? group))
-            {
-                group = new ProjectItem(parts[1], string.Empty, "group", null);
-                byType[parts[1]] = group;
-                m_roots.Add(group);
-            }
-
-            group.Children.Add(
-                new ProjectItem(Path.GetFileName(parts[2]), parts[0], "asset", parts[2])
-            );
+            m_roots.Add(item);
         }
+    }
+
+    private static ProjectItem[] Walk(string folder, string currentWorld)
+    {
+        DirectoryInfo directory = new(folder);
+
+        ProjectItem[] folders = directory
+            .EnumerateDirectories()
+            .OrderBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(entry =>
+            {
+                ProjectItem item = new(entry.Name, string.Empty, "folder", entry.FullName);
+
+                foreach (ProjectItem child in Walk(entry.FullName, currentWorld))
+                {
+                    item.Children.Add(child);
+                }
+
+                return item;
+            })
+            .ToArray();
+
+        ProjectItem[] files = directory
+            .EnumerateFiles()
+            .OrderBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(entry => Describe(entry, currentWorld))
+            .ToArray();
+
+        return folders.Concat(files).ToArray();
+    }
+
+    private static ProjectItem Describe(FileInfo file, string currentWorld)
+    {
+        bool world = file.Name.EndsWith(WorldSuffix, StringComparison.OrdinalIgnoreCase);
+
+        string name = world
+            ? file.Name[..^WorldSuffix.Length]
+            : file.Name;
+
+        string kind = world
+            ? "world"
+            : file.Extension.TrimStart('.').ToLowerInvariant();
+
+        string detail = world && name == currentWorld
+            ? "open"
+            : Size(file.Length);
+
+        return new ProjectItem(name, detail, kind, file.FullName);
+    }
+
+    private static string Size(long bytes)
+    {
+        if (bytes < 1024)
+        {
+            return bytes + " B";
+        }
+
+        if (bytes < 1024 * 1024)
+        {
+            return (bytes / 1024) + " KB";
+        }
+
+        return (bytes / (1024 * 1024)) + " MB";
     }
 }

@@ -3,6 +3,7 @@
 namespace dunya::renderer {
 
 enum class DrawMode {
+  Nothing,
   Mesh,
   Sdf,
   Both
@@ -18,6 +19,8 @@ enum class DrawMode {
 
 [[nodiscard]] constexpr DrawMode nextDrawMode(DrawMode current) noexcept {
   switch (current) {
+    case DrawMode::Nothing:
+      return DrawMode::Mesh;
     case DrawMode::Mesh:
       return DrawMode::Sdf;
     case DrawMode::Sdf:
@@ -31,6 +34,8 @@ enum class DrawMode {
 
 [[nodiscard]] constexpr const char* drawModeName(DrawMode mode) noexcept {
   switch (mode) {
+    case DrawMode::Nothing:
+      return "none ";
     case DrawMode::Mesh:
       return "mesh ";
     case DrawMode::Sdf:

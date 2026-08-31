@@ -30,11 +30,13 @@ VkSurfaceKHR Win32WindowSystem::createSurface(VkInstance instance) const {
 
   VkSurfaceKHR surface = VK_NULL_HANDLE;
 
-  if (
-    vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr, &surface)
-    != VK_SUCCESS
-  ) {
-    return VK_NULL_HANDLE;
+  const VkResult result =
+    vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr, &surface);
+
+  if (result != VK_SUCCESS) {
+    throw std::runtime_error(
+      std::string("vkCreateWin32SurfaceKHR failed: ") + string_VkResult(result)
+    );
   }
 
   return surface;

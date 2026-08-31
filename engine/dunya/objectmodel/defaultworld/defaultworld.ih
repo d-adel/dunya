@@ -1,0 +1,9 @@
+#include "defaultworld.h"
+
+#include <dunya/objectmodel/component/directionallight/directionallight.h>
+#include <dunya/objectmodel/component/environment/environment.h>
+#include <dunya/objectmodel/component/lens/lens.h>
+#include <dunya/objectmodel/component/pose/pose.h>
+
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>

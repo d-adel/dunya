@@ -6,11 +6,27 @@
             BorderBrush="{DynamicResource EditorBorder}"
             BorderThickness="0,0,0,1"
             Padding="8,5">
-      <TextBlock Name="Subject"
-                 Text="nothing selected"
-                 FontSize="{DynamicResource EditorFontSizeSmall}"
-                 FontFamily="{DynamicResource EditorMonoFont}"
-                 Foreground="{DynamicResource EditorSubtleText}" />
+      <StackPanel Spacing="6">
+        <TextBlock Name="Subject"
+                   Text="nothing selected"
+                   TextWrapping="Wrap"
+                   FontSize="{DynamicResource EditorFontSizeSmall}"
+                   FontFamily="{DynamicResource EditorMonoFont}"
+                   Foreground="{DynamicResource EditorSubtleText}" />
+      <StackPanel Name="Stepper"
+                    Orientation="Horizontal"
+                    Spacing="6"
+                    IsVisible="False">
+          <Button Name="Previous" Content="&#x25C0;" Padding="8,2" />
+          <TextBlock Name="Which"
+                     VerticalAlignment="Center"
+                     MinWidth="130"
+                     TextAlignment="Center"
+                     FontSize="{DynamicResource EditorFontSizeSmall}"
+                     FontFamily="{DynamicResource EditorMonoFont}" />
+          <Button Name="Next" Content="&#x25B6;" Padding="8,2" />
+        </StackPanel>
+      </StackPanel>
     </Border>
     <ScrollViewer Padding="8">
       <StackPanel Name="Cards" />

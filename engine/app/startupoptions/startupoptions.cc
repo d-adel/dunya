@@ -1,6 +1,10 @@
 #include "startupoptions.h"
 
+#include <dunya/serialize/gamemanifest/gamemanifest.h>
+
 #include <algorithm>
+#include <filesystem>
+#include <optional>
 #include <stdexcept>
 #include <vector>
 
@@ -21,6 +25,19 @@ std::string valueFor(
 }
 
 StartupOptions::StartupOptions(std::span<char*> arguments) {
+  if (!arguments.empty()) {
+    const std::optional<dunya::serialize::GameManifest> game =
+      dunya::serialize::readGameManifest(
+        std::filesystem::path(arguments[0]).parent_path()
+      );
+
+    if (game.has_value()) {
+      project = game->project;
+      world = game->worlds.front();
+      packaged = true;
+    }
+  }
+
   for (size_t i = 1; i < arguments.size(); ++i) {
     const std::string argument = arguments[i];
 
@@ -62,24 +79,13 @@ StartupOptions::StartupOptions(std::span<char*> arguments) {
       }
 
       carves = static_cast<uint32_t>(std::stoul(count));
-    } else if (argument == "--demo") {
-      const std::string count = valueFor(arguments, i, argument);
-
-      if (count.find_first_not_of("0123456789") != std::string::npos) {
-        throw std::runtime_error("--demo needs a frame count, got: " + count);
-      }
-
-      demo = static_cast<uint32_t>(std::stoul(count));
     } else if (argument == "--capture") {
       capture = valueFor(arguments, i, argument);
-    } else if (argument == "--demo-rate") {
-      demoRate = std::stof(valueFor(arguments, i, argument));
     } else {
       throw std::runtime_error(
         "Unknown argument: " + argument
         + "\nUsage: dunya [--analytic] [--carves N] [--verify-bake]"
           " [--screenshot PATH] [--golden PATH] [--dents N] [--dent-log PATH]"
-          " [--demo FRAMES] [--demo-rate PER_SEC]"
           " [--capture DIR] [--project DIR] [--world NAME]"
           " [--export-project DIR] [-- ARGS FOR THE SCRIPTS]"
       );

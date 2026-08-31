@@ -7,6 +7,7 @@
             BorderThickness="0,0,0,1"
             Padding="8,5">
       <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Name="Add" Content="+" Padding="10,2" ToolTip.Tip="Create entity" />
         <TextBox Name="Filter" Width="150" PlaceholderText="filter" />
         <TextBlock Name="Count"
                    VerticalAlignment="Center"

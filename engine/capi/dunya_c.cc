@@ -37,6 +37,32 @@ const dunya::capi::Session* asSession(const DunyaSession* session) {
   return reinterpret_cast<const dunya::capi::Session*>(session);
 }
 
+std::vector<std::string> splitLines(const char* text) {
+  std::vector<std::string> lines;
+
+  std::string current;
+
+  for (const char* at = text; *at != 0; ++at) {
+    if (*at == 0x0a) {
+      if (!current.empty()) {
+        lines.push_back(current);
+      }
+
+      current.clear();
+
+      continue;
+    }
+
+    current.push_back(*at);
+  }
+
+  if (!current.empty()) {
+    lines.push_back(current);
+  }
+
+  return lines;
+}
+
 void fill(
   const std::string& text,
   char* buffer,
@@ -445,6 +471,26 @@ uint32_t dunya_session_pick(DunyaSession* session, float x, float y) {
            : static_cast<uint32_t>(entt::to_integral(found));
 }
 
+uint32_t dunya_session_create_light(DunyaSession* session) {
+  if (session == nullptr) {
+    return UINT32_MAX;
+  }
+
+  return static_cast<uint32_t>(
+    entt::to_integral(asSession(session)->createLight())
+  );
+}
+
+uint32_t dunya_session_create_environment(DunyaSession* session) {
+  if (session == nullptr) {
+    return UINT32_MAX;
+  }
+
+  return static_cast<uint32_t>(
+    entt::to_integral(asSession(session)->createEnvironment())
+  );
+}
+
 uint32_t dunya_session_create_camera(
   DunyaSession* session,
   const float* position,
@@ -689,6 +735,50 @@ int32_t dunya_session_save_as(DunyaSession* session, const char* name) {
       throw std::runtime_error(std::string("Could not save as ") + name);
     }
   });
+}
+
+int32_t dunya_session_package(
+  DunyaSession* session,
+  const char* runtimeExecutable,
+  const char* output,
+  const char* worlds,
+  char* executable,
+  uint32_t capacity,
+  uint32_t* length
+) {
+  clearError();
+
+  if (
+    session == nullptr || runtimeExecutable == nullptr || output == nullptr
+    || worlds == nullptr || length == nullptr
+  ) {
+    recordError("dunya_session_package was given a null argument");
+
+    return 1;
+  }
+
+  try {
+    std::string packaged;
+
+    if (!asSession(session)->package(
+          runtimeExecutable,
+          output,
+          splitLines(worlds),
+          packaged
+        )) {
+      recordError(packaged.c_str());
+
+      return 1;
+    }
+
+    fill(packaged, executable, capacity, length);
+
+    return 0;
+  } catch (const std::exception& error) {
+    recordError(error.what());
+
+    return 1;
+  }
 }
 
 int32_t dunya_session_worlds(

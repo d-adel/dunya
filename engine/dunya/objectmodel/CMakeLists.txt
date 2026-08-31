@@ -1,5 +1,6 @@
 add_library(dunya_objectmodel STATIC
     instantiate/instantiate.cc
+    defaultworld/defaultworld.cc
     component/renderpose/renderpose.cc
     component/sdfgrid/sdfgrid.cc
     sdfprimitivestore/sdfprimitivestore.cc

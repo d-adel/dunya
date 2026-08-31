@@ -6,4 +6,7 @@
 
 #include "win32windowsystem.h"
 
+#include <vulkan/vk_enum_string_helper.h>
+
 #include <stdexcept>
+#include <string>

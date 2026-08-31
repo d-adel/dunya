@@ -2,6 +2,8 @@
 
 #include <dunya/objectmodel/component/lens/lens.h>
 #include <dunya/objectmodel/worldquery/worldquery.h>
+#include <dunya/editor/package/package.h>
+#include <dunya/objectmodel/defaultworld/defaultworld.h>
 #include <dunya/renderer/bindgroups/bindgroups.h>
 #include <dunya/renderer/vertex/vertex.h>
 #include <dunya/core/telemetry/telemetry.h>

@@ -13,6 +13,10 @@ constexpr entt::id_type RESAMPLE_QUEUE = entt::hashed_string{"resample"};
 World::World() {
   m_primitiveStore.connect(m_registry);
 
+  m_registry.on_destroy<BakedVolume>().connect<&World::bakedVolumeDestroyed>(
+    *this
+  );
+
   m_registry.storage<entt::reactive>(BAKE_QUEUE)
     .on_construct<SdfGrid>()
     .on_update<SdfGrid>();
@@ -154,7 +158,8 @@ std::span<const dunya::field::Primitive> World::pool() const noexcept {
 }
 
 void World::setBakedVolume(Entity entity, uint32_t index) {
-  m_registry.emplace_or_replace<BakedVolume>(entity, index);
+  m_registry.remove<BakedVolume>(entity);
+  m_registry.emplace<BakedVolume>(entity, index);
 }
 
 void World::setRigidBody(Entity entity, uint32_t index) {
@@ -210,6 +215,25 @@ long World::sampledSdfUsers(Entity entity) const noexcept {
 
 void World::clearBakedVolume(Entity entity) {
   m_registry.remove<BakedVolume>(entity);
+}
+
+void World::clearBakedVolumes() {
+  for (const Entity entity : std::vector<Entity>(
+         m_registry.view<BakedVolume>().begin(),
+         m_registry.view<BakedVolume>().end()
+       )) {
+    m_registry.remove<BakedVolume>(entity);
+  }
+}
+
+void World::onBakedVolumeReleased(std::function<void(uint32_t)> release) {
+  m_onBakedVolumeReleased = std::move(release);
+}
+
+void World::bakedVolumeDestroyed(entt::registry& registry, Entity entity) {
+  if (m_onBakedVolumeReleased) {
+    m_onBakedVolumeReleased(registry.get<BakedVolume>(entity).index);
+  }
 }
 
 bool World::needsBake(Entity entity) const noexcept {

@@ -37,27 +37,37 @@ public sealed class EditorLayout
         Control viewport,
         Control inspector,
         Control console,
-        Control create,
         Control project)
     {
         Tool entitiesTool = Panel("Entities", entities);
         Tool viewportTool = Panel("Viewport", viewport);
         Tool inspectorTool = Panel("Inspector", inspector);
         Tool consoleTool = Panel("Console", console);
-        Tool createTool = Panel("Create", create);
         Tool projectTool = Panel("Project", project);
 
 
-        ToolDock left = Holder(factory, "EntitiesDock", Alignment.Left, 0.18, entitiesTool);
+        ToolDock left = Holder(factory, "HierarchyDock", Alignment.Unset, double.NaN, entitiesTool);
         ToolDock centre = Holder(factory, "ViewportDock", Alignment.Unset, double.NaN, viewportTool);
+        ToolDock right =
+            Holder(factory, "InspectorDock", Alignment.Unset, double.NaN, inspectorTool);
         ToolDock bottom =
-            Holder(factory, "ConsoleDock", Alignment.Bottom, 0.28, consoleTool, projectTool);
-        ToolDock right = Holder(factory, "InspectorDock", Alignment.Right, 0.22, inspectorTool, createTool);
+            Holder(factory, "ProjectDock", Alignment.Unset, double.NaN, projectTool, consoleTool);
 
-        var middle = new ProportionalDock
+        var leftColumn = new ProportionalDock
         {
-            Id = "MiddleColumn",
-            Title = "MiddleColumn",
+            Id = "LeftColumn",
+            Title = "LeftColumn",
+            Orientation = Orientation.Vertical,
+            VisibleDockables = factory.CreateList<IDockable>(
+                left,
+                new ProportionalDockSplitter(),
+                right)
+        };
+
+        var centreColumn = new ProportionalDock
+        {
+            Id = "CentreColumn",
+            Title = "CentreColumn",
             Orientation = Orientation.Vertical,
             VisibleDockables = factory.CreateList<IDockable>(
                 centre,
@@ -71,11 +81,9 @@ public sealed class EditorLayout
             Title = "MainLayout",
             Orientation = Orientation.Horizontal,
             VisibleDockables = factory.CreateList<IDockable>(
-                left,
+                leftColumn,
                 new ProportionalDockSplitter(),
-                middle,
-                new ProportionalDockSplitter(),
-                right)
+                centreColumn)
         };
 
         var root = new RootDock

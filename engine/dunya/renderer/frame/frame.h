@@ -31,7 +31,7 @@ struct Frame {
 
   uint32_t fieldRepresentation = dunya::core::FIELD_SAMPLED;
 
-  dunya::objectmodel::DirectionalLight light{};
+  std::optional<dunya::objectmodel::DirectionalLight> light{};
 
   std::optional<dunya::objectmodel::Environment> environment{};
 

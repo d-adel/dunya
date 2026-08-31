@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.IO;
 using Avalonia.Controls;
@@ -23,7 +24,6 @@ public partial class MainWindow : Window
         World = Program.World
     };
     private readonly EntitiesPanel m_entities = new();
-    private readonly CreatePanel m_create = new();
     private readonly InspectorPanel m_inspector = new();
     private readonly ConsolePanel m_console = new();
     private readonly ProjectPanel m_project = new();
@@ -75,79 +75,29 @@ public partial class MainWindow : Window
 
         this.FindControl<MenuItem>("ResetLayoutItem")!.Click += (_, _) => BuildLayout();
 
-        m_entities.Picked += entity => m_selected = entity;
+        m_inspector.Focused += id => m_selected = id;
 
         m_viewport.Picked += id => Dispatcher.UIThread.Post(() => m_entities.Select(id));
 
         m_viewport.FocusRequested += () => Dispatcher.UIThread.Post(
-            () => Author()?.FocusCamera(m_selected?.Id)
+            () => Author()?.FocusCamera(m_selected)
         );
 
-        m_create.Create += request =>
+        m_entities.AddRequested += async () =>
         {
-            Authoring? authoring = Author();
+            string? kind = await CreateDialog.Ask(this);
 
-            if (authoring == null)
+            if (kind != null)
             {
-                return;
-            }
-
-            List<uint> made = Stamp(
-                authoring, request, MaterialAt(authoring, m_create.SelectedMaterial())
-            );
-
-            Append($"created {made.Count} entit{(made.Count == 1 ? "y" : "ies")}");
-
-            ShowContents();
-
-            if (Program.AutoPlay)
-            {
-                Append(Author()?.Play() == true ? "playing" : "play FAILED");
+                CreateEntity(kind);
             }
         };
-
-        m_create.CreateMaterial += request =>
-        {
-            Authoring? authoring = Author();
-
-            if (authoring == null)
-            {
-                return;
-            }
-
-            ulong minted = authoring.AddMaterial(
-                request.R, request.G, request.B, request.Metallic, request.Roughness
-            );
-
-            Append(
-                minted == 0
-                    ? "the material was refused: " + DunyaNative.LastError()
-                    : $"created material {minted}"
-            );
-
-            ShowMaterials(authoring);
-        };
-
-        m_create.AddShape += (request, subtract) => OnSelected(
-            authoring => authoring.AddPrimitive(
-                m_selected!.Id,
-                request.Kind,
-                subtract ? Authoring.Subtract : Authoring.Union,
-                MaterialAt(authoring, m_create.SelectedMaterial()),
-                request.X,
-                request.Y,
-                request.Z,
-                request.SizeX,
-                request.SizeY,
-                request.SizeZ
-            )
-        );
 
         Wire("AddBoxItem", () => AddSolid(Authoring.Box));
         Wire("AddSphereItem", () => AddSolid(Authoring.Sphere));
         Wire("SubtractSphereItem", SubtractFromSelected);
-        Wire("MakeStaticItem", () => OnSelected(a => a.SetStatic(m_selected!.Id)));
-        Wire("MakeDeformableItem", () => OnSelected(a => a.SetDeformable(m_selected!.Id)));
+        Wire("MakeStaticItem", () => OnSelected(a => a.SetStatic(m_selected!.Value)));
+        Wire("MakeDeformableItem", () => OnSelected(a => a.SetDeformable(m_selected!.Value)));
         m_project.Refresh += ShowProject;
 
         m_project.OpenWorld += name =>
@@ -191,8 +141,9 @@ public partial class MainWindow : Window
         };
 
         Wire("SaveWorldItem", () => Report(Author()?.Save() == true ? "world saved" : "world NOT saved"));
-        Wire("PlayItem", () => Report(Author()?.Play() == true ? "playing" : "play FAILED"));
-        Wire("StopItem", () => Report(Author()?.Stop() == true ? "stopped" : "stop FAILED"));
+        Wire("BuildItem", () => Build());
+        Wire("PlayItem", () => Play());
+        Wire("StopItem", () => Stop());
 
         Closing += (_, _) => m_viewport.Shutdown();
 
@@ -226,7 +177,6 @@ public partial class MainWindow : Window
             m_viewport,
             m_inspector,
             m_console,
-            m_create,
             m_project
         );
 
@@ -236,6 +186,7 @@ public partial class MainWindow : Window
         dock.InitializeFactory = true;
         dock.InitializeLayout = true;
         dock.Layout = m_layout.Root;
+
     }
 
     private static ulong MaterialAt(Authoring authoring, uint index)
@@ -256,7 +207,6 @@ public partial class MainWindow : Window
             names.Add("material " + index);
         }
 
-        m_create.ShowMaterials(names, Math.Max(names.Count - 1, 0));
     }
 
     private List<uint> Stamp(Authoring authoring, ShapeRequest request, ulong material)
@@ -465,12 +415,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        m_project.Show(
-            Program.ProjectRoot,
-            authoring.CurrentWorld(),
-            authoring.Worlds(),
-            authoring.Assets()
-        );
+        m_project.Show(Program.ProjectRoot, authoring.CurrentWorld());
     }
 
     private async void AskNewWorld()
@@ -574,7 +519,7 @@ public partial class MainWindow : Window
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
 
 
-    private WorldEntity? m_selected;
+    private uint? m_selected;
 
 
     private void Wire(string name, Action action)
@@ -648,7 +593,7 @@ public partial class MainWindow : Window
     private void SubtractFromSelected()
     {
         OnSelected(authoring => authoring.AddPrimitive(
-            m_selected!.Id,
+            m_selected!.Value,
             Authoring.Sphere,
             Authoring.Subtract,
             authoring.DefaultMaterial(),
@@ -659,6 +604,164 @@ public partial class MainWindow : Window
             0.3f,
             0.3f
         ));
+    }
+
+    private string? Build()
+    {
+        Authoring? author = Author();
+
+        if (author == null)
+        {
+            return null;
+        }
+
+        string output = Path.Combine(
+            Directory.GetCurrentDirectory(),
+            "builds",
+            Path.GetFileName(Path.TrimEndingDirectorySeparator(Program.ProjectRoot)));
+
+        try
+        {
+            string game = author.Package(output, author.Worlds());
+
+            Report($"built {game}");
+
+            return game;
+        }
+        catch (Exception error)
+        {
+            Report($"build FAILED: {error.Message}");
+
+            return null;
+        }
+    }
+
+    private void Play()
+    {
+        Authoring? author = Author();
+
+        if (author == null)
+        {
+            return;
+        }
+
+        m_console.ClearGame();
+
+        if (!author.Play())
+        {
+            Report($"play FAILED: {DunyaNative.LastError()}");
+
+            return;
+        }
+
+        EnterPlayMode(true);
+
+        m_console.AppendGame("playing");
+    }
+
+    private void Stop()
+    {
+        Authoring? author = Author();
+
+        if (author == null)
+        {
+            return;
+        }
+
+        if (!author.Stop())
+        {
+            Report($"stop FAILED: {DunyaNative.LastError()}");
+
+            return;
+        }
+
+        EnterPlayMode(false);
+
+        Report("stopped");
+    }
+
+    private void EnterPlayMode(bool playing)
+    {
+        m_console.ShowGame(playing);
+
+        m_entities.IsEnabled = !playing;
+        m_inspector.IsEnabled = !playing;
+
+        foreach (string name in new[] { "FileMenu", "EntityMenu" })
+        {
+            MenuItem? menu = this.FindControl<MenuItem>(name);
+
+            if (menu != null)
+            {
+                menu.IsEnabled = !playing;
+            }
+        }
+    }
+
+    private void CreateEntity(string kind)
+    {
+        Authoring? authoring = Author();
+
+        if (authoring == null)
+        {
+            return;
+        }
+
+        uint made = kind switch
+        {
+            "Camera" => authoring.CreateCamera(0, 2, 6, 0, 0, 0, 70.0f),
+            "Light" => authoring.CreateLight(),
+            "Environment" => authoring.CreateEnvironment(),
+            _ => CreateSolid(authoring, kind)
+        };
+
+        if (made == uint.MaxValue)
+        {
+            Report($"{kind} was refused: {DunyaNative.LastError()}");
+
+            return;
+        }
+
+        Report($"created {kind} as entity {made}");
+
+        ShowContents();
+        ShowProject();
+    }
+
+    private uint CreateSolid(Authoring authoring, string kind)
+    {
+        uint shape = kind switch
+        {
+            "Sphere" => Authoring.Sphere,
+            "Cylinder" => Authoring.Cylinder,
+            _ => Authoring.Box
+        };
+
+        uint entity = authoring.CreateSdf(0.0f, 0.0f, 0.0f, 65u, 0.5f);
+
+        if (entity == uint.MaxValue)
+        {
+            return entity;
+        }
+
+        if (!authoring.AddPrimitive(
+                entity,
+                shape,
+                Authoring.Union,
+                authoring.DefaultMaterial(),
+                0.0f,
+                0.0f,
+                0.0f,
+                0.5f,
+                0.5f,
+                0.5f))
+        {
+            return uint.MaxValue;
+        }
+
+        authoring.SetDeformable(entity);
+
+        return entity;
     }
 
     private void Report(string line) => Append(line);

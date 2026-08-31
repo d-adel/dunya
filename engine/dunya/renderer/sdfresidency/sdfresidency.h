@@ -28,14 +28,12 @@ public:
   SdfResidency(SdfResidency&&) = delete;
   SdfResidency& operator=(SdfResidency&&) = delete;
 
-  void reclaim(const objectmodel::World& world);
+  void attach(objectmodel::World& world);
 
   [[nodiscard]] objectmodel::Entity sdfOnSlot(
     const objectmodel::World& world,
     uint32_t slot
   ) const;
-
-  void hold(objectmodel::Entity entity, uint32_t slot);
 
   void releaseAll(objectmodel::World& world);
 
@@ -51,8 +49,6 @@ private:
   VolumePool& m_pool;
   SdfRecordTable& m_table;
   gpu::Uploader& m_uploader;
-
-  std::vector<std::pair<objectmodel::Entity, uint32_t>> m_holders;
 };
 
 }

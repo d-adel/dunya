@@ -459,5 +459,42 @@
     "mesh": 14245873093005299565,
     "material": 16364492891285643480,
     "primitives": []
+  }, {
+    "pose": {
+      "position": [0, 0, 0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "directionalLight": {
+      "direction": [0.4, 1, 0.6],
+      "ambient": 0.06
+    },
+    "primitives": []
+  }, {
+    "pose": {
+      "position": [0, 2.40485382, 6.24189568],
+      "rotation": [0.98480773, -0.173648179, 0, 0]
+    },
+    "lens": {
+      "verticalFov": 70,
+      "nearPlane": 0.1,
+      "farPlane": 10000
+    },
+    "primitives": []
+  }, {
+    "pose": {
+      "position": [0, 0, 0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "environment": {
+      "skyTop": [0.385, 0.454, 0.55],
+      "skyHorizon": [0.6463, 0.6558, 0.6708],
+      "groundBottom": [0.2, 0.169, 0.133],
+      "skyCurve": 4,
+      "groundCurve": 30,
+      "ambientEnergy": 0.55,
+      "occlusionStrength": 1.4,
+      "exposure": 1
+    },
+    "primitives": []
   }]
 }
