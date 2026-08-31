@@ -1,5 +1,7 @@
 #pragma once
 
+#include <dunya/objectmodel/trait/transient/transient.h>
+
 #include <dunya/objectmodel/component/pose/pose.h>
 #include <dunya/objectmodel/entity/entity.h>
 #include <dunya/objectmodel/trait/selfcontained/selfcontained.h>
@@ -19,5 +21,8 @@ inline constexpr bool selfContained<RenderPose> = true;
   const entt::registry& registry,
   Entity entity
 );
+
+template<>
+inline constexpr bool transient<RenderPose> = true;
 
 }

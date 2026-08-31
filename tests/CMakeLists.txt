@@ -11,10 +11,12 @@ add_executable(unit_tests
     asset_tests.cc
     assetdatabase_tests.cc
     boundedextent_tests.cc
+    capi_tests.cc
     commandhistory_tests.cc
     crack_tests.cc
     panels_tests.cc
     deform_tests.cc
+    dynamiccomponents_tests.cc
     entt_tests.cc
     field_tests.cc
     glmmeta_tests.cc
@@ -24,6 +26,7 @@ add_executable(unit_tests
     fieldshape_tests.cc
     impact_tests.cc
     lens_tests.cc
+    componentcoverage_tests.cc
     instantiateworld_tests.cc
     pose_tests.cc
     physics_tests.cc
@@ -32,6 +35,9 @@ add_executable(unit_tests
     raycast_tests.cc
     redistance_tests.cc
     runtime_tests.cc
+    schedule_tests.cc
+    scriptbridge_tests.cc
+    scripthost_tests.cc
     sdfprimitivestore_tests.cc
     telemetry_tests.cc
     sampled_tests.cc
@@ -42,20 +48,40 @@ add_executable(unit_tests
 
 target_include_directories(unit_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 
-target_link_libraries(unit_tests PRIVATE dunya::core dunya::editor dunya::field dunya::objectmodel dunya::physics dunya::runtime dunya::serialize Catch2::Catch2WithMain)
+target_link_libraries(unit_tests PRIVATE dunya::debugui dunya::script dunya::core dunya::editor dunya::field dunya::objectmodel dunya::physics dunya::runtime dunya::serialize dunya::systems Catch2::Catch2WithMain)
 
 if (MSVC)
-    target_compile_options(unit_tests PRIVATE /W4 /WX /w15038 /Zc:__cplusplus)
+    target_compile_options(unit_tests PRIVATE /W4 /WX /w15038 /w14062 /Zc:__cplusplus)
 else()
     target_compile_options(unit_tests PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
+
+add_library(spirv_reflect STATIC
+    "$ENV{VULKAN_SDK}/Source/SPIRV-Reflect/spirv_reflect.c"
+)
+target_include_directories(spirv_reflect SYSTEM PUBLIC "$ENV{VULKAN_SDK}/Source/SPIRV-Reflect")
+dunya_module(spirv_reflect Developer)
+
+add_executable(spirv_tests
+    spirv_tests.cc
+)
+target_include_directories(spirv_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(spirv_tests PRIVATE spirv_reflect dunya::renderer dunya::viewport dunya::field dunya::gpu Catch2::Catch2WithMain)
+target_compile_definitions(spirv_tests PRIVATE DUNYA_SPIRV_DIR="${CMAKE_BINARY_DIR}/shaders")
+add_dependencies(spirv_tests SHADER_TARGET)
+if (MSVC)
+    target_compile_options(spirv_tests PRIVATE /W4 /WX /w15038 /w14062 /Zc:__cplusplus)
+else()
+    target_compile_options(spirv_tests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
+dunya_module(spirv_tests Editor)
 
 add_executable(image_tests
     image_tests.cc
 )
 target_link_libraries(image_tests PRIVATE dunya::imagecompare Catch2::Catch2WithMain)
 if (MSVC)
-    target_compile_options(image_tests PRIVATE /W4 /WX /w15038 /Zc:__cplusplus)
+    target_compile_options(image_tests PRIVATE /W4 /WX /w15038 /w14062 /Zc:__cplusplus)
 else()
     target_compile_options(image_tests PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
@@ -64,6 +90,7 @@ include(Catch)
 
 catch_discover_tests(unit_tests)
 catch_discover_tests(image_tests)
+catch_discover_tests(spirv_tests)
 
 set(GOLDEN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/golden")
 function(add_golden_test name)
@@ -75,3 +102,9 @@ function(add_golden_test name)
 endfunction()
 add_golden_test(field-sampled --carves 6)
 add_golden_test(field-analytic --carves 6 --analytic)
+
+add_dependencies(unit_tests DUNYA_MANAGED DUNYA_SCRIPTS_puzzle)
+target_compile_definitions(unit_tests PRIVATE DUNYA_CAPI_DIR="${PROJECT_SOURCE_DIR}/engine/capi" DUNYA_MANAGED_DIR="${CMAKE_BINARY_DIR}/managed" DUNYA_SCRIPTS_DIR="${CMAKE_BINARY_DIR}/projects/puzzle/scripts")
+
+dunya_module(unit_tests Editor)
+dunya_module(image_tests Developer)

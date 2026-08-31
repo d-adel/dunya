@@ -25,6 +25,8 @@ struct Aabb {
 
 std::optional<Aabb> boundedExtent(std::span<const Primitive> primitives);
 
+std::optional<Aabb> primitiveBox(const Primitive& primitive);
+
 struct AnalyticSample {
   float distance = 0.0f;
   uint32_t material = 0;

@@ -1,6 +1,11 @@
 /build-dev
 /build-release
+build/
+build-*/
+out/
+.vs/
 
-# C# editor
-/editor/**/bin/
-/editor/**/obj/
+bin/
+obj/
+
+*.user

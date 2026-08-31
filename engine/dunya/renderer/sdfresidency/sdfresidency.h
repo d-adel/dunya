@@ -45,6 +45,8 @@ public:
     core::Telemetry& telemetry
   );
 
+  void flush(objectmodel::World& world, core::Telemetry& telemetry);
+
 private:
   VolumePool& m_pool;
   SdfRecordTable& m_table;

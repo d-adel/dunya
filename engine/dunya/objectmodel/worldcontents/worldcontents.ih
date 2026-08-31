@@ -1,3 +1,6 @@
 #include <dunya/objectmodel/worldcontents/worldcontents.h>
 
+#include <dunya/objectmodel/trait/authoredcomponents/authoredcomponents.h>
+#include <dunya/objectmodel/trait/transientcomponents/transientcomponents.h>
+
 #include <algorithm>

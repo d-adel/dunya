@@ -8,6 +8,7 @@
 
 #include <glm/glm.hpp>
 
+#include <cstddef>
 #include <cstdint>
 #include <span>
 
@@ -22,9 +23,34 @@ struct BakeParams {
 };
 
 static_assert(
+  offsetof(BakeParams, origin) == 0,
+  "BakeParams must match its push constant block in sdf-bake.comp"
+);
+static_assert(
+  offsetof(BakeParams, voxelSize) == 16,
+  "BakeParams must match its push constant block in sdf-bake.comp"
+);
+static_assert(
+  offsetof(BakeParams, resolution) == 32,
+  "BakeParams must match its push constant block in sdf-bake.comp"
+);
+static_assert(
+  offsetof(BakeParams, volume) == 48,
+  "BakeParams must match its push constant block in sdf-bake.comp"
+);
+static_assert(
   sizeof(BakeParams) == 64,
   "BakeParams must match its push constant block in sdf-bake.comp"
 );
+
+struct BakeShaders {
+  const char* distanceSpirv;
+  const char* lipschitzSpirv;
+};
+
+[[nodiscard]] BakeShaders bakeShaders();
+
+[[nodiscard]] VkPushConstantRange bakePushConstantRange();
 
 class SdfBaker {
 public:

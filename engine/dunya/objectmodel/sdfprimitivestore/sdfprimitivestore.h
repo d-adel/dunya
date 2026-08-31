@@ -1,5 +1,7 @@
 #pragma once
 
+#include <dunya/objectmodel/trait/transient/transient.h>
+
 #include <dunya/field/field.h>
 #include <dunya/objectmodel/entity/entity.h>
 #include <dunya/objectmodel/rangestore/rangestore.h>
@@ -73,5 +75,8 @@ private:
 
   RangeStore<dunya::field::Primitive> m_primitives;
 };
+
+template<>
+inline constexpr bool transient<SdfPrimitiveRange> = true;
 
 }

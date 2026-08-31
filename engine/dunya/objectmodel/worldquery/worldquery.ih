@@ -1,5 +1,7 @@
 #include "worldquery.h"
 
+#include <dunya/objectmodel/component/lens/lens.h>
+
 #include <dunya/field/analytic/analytic.h>
 #include <dunya/objectmodel/component/deformable/deformable.h>
 #include <dunya/objectmodel/component/pose/pose.h>

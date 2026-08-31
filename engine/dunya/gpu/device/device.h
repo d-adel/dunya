@@ -1,6 +1,8 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+
+#include <optional>
 #include <optional>
 #include <vector>
 
@@ -29,6 +31,11 @@ QueueFamilyIndices findQueueFamilies(
   VkPhysicalDevice device,
   VkSurfaceKHR surface
 );
+std::optional<SwapChainSupportDetails> trySwapChainSupport(
+  VkPhysicalDevice device,
+  VkSurfaceKHR surface
+);
+
 SwapChainSupportDetails querySwapChainSupport(
   VkPhysicalDevice device,
   VkSurfaceKHR surface

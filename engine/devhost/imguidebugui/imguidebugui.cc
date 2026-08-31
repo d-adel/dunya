@@ -87,25 +87,25 @@ void ImGuiDebugUi::begin() {
 
 namespace {
 
-void drawWidget(const dunya::core::Widget& widget) {
+void drawWidget(const dunya::debugui::Widget& widget) {
   switch (widget.kind) {
-    case dunya::core::WidgetKind::Separator:
+    case dunya::debugui::WidgetKind::Separator:
       ImGui::Separator();
       return;
 
-    case dunya::core::WidgetKind::Button:
+    case dunya::debugui::WidgetKind::Button:
       if (ImGui::Button(widget.name.c_str()) && widget.press) {
         widget.press();
       }
       return;
 
-    case dunya::core::WidgetKind::Text:
+    case dunya::debugui::WidgetKind::Text:
       if (widget.text) {
         ImGui::Text("%s  %s", widget.name.c_str(), widget.text().c_str());
       }
       return;
 
-    case dunya::core::WidgetKind::Toggle: {
+    case dunya::debugui::WidgetKind::Toggle: {
       if (!widget.read) {
         return;
       }
@@ -119,7 +119,7 @@ void drawWidget(const dunya::core::Widget& widget) {
       return;
     }
 
-    case dunya::core::WidgetKind::Slider: {
+    case dunya::debugui::WidgetKind::Slider: {
       if (!widget.read) {
         return;
       }
@@ -145,7 +145,7 @@ void drawWidget(const dunya::core::Widget& widget) {
       return;
     }
 
-    case dunya::core::WidgetKind::Value:
+    case dunya::debugui::WidgetKind::Value:
       if (widget.read) {
         ImGui::Text(
           "%-18s %10.3f %s",
@@ -161,12 +161,12 @@ void drawWidget(const dunya::core::Widget& widget) {
 
 }
 
-void ImGuiDebugUi::build(dunya::core::Panels& registry) {
+void ImGuiDebugUi::build(dunya::debugui::Panels& registry) {
   begin();
 
   if (ImGui::BeginMainMenuBar()) {
     if (ImGui::BeginMenu("Panels")) {
-      for (dunya::core::Panel& panel : registry.panels()) {
+      for (dunya::debugui::Panel& panel : registry.panels()) {
         bool on = panel.visible();
 
         if (ImGui::MenuItem(panel.name().c_str(), nullptr, &on)) {
@@ -180,7 +180,7 @@ void ImGuiDebugUi::build(dunya::core::Panels& registry) {
     ImGui::EndMainMenuBar();
   }
 
-  for (dunya::core::Panel& panel : registry.panels()) {
+  for (dunya::debugui::Panel& panel : registry.panels()) {
     if (!panel.visible()) {
       continue;
     }
@@ -188,7 +188,7 @@ void ImGuiDebugUi::build(dunya::core::Panels& registry) {
     bool open = true;
 
     if (ImGui::Begin(panel.name().c_str(), &open)) {
-      for (const dunya::core::Widget& widget : panel.widgets()) {
+      for (const dunya::debugui::Widget& widget : panel.widgets()) {
         drawWidget(widget);
       }
     }

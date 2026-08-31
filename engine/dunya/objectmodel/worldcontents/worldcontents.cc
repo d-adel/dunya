@@ -50,7 +50,55 @@ std::vector<std::string> componentNames(const World& world, Entity entity) {
     names.emplace_back(componentName(storage.info()));
   }
 
+  const DynamicComponents& dynamic = world.dynamic();
+
+  for (ComponentType type = 0u; type < dynamic.types(); ++type) {
+    if (dynamic.contains(type, entity)) {
+      names.emplace_back(dynamic.spec(type)->name);
+    }
+  }
+
   std::sort(names.begin(), names.end());
+
+  return names;
+}
+
+std::vector<std::string> registeredComponentNames(const World& world) {
+  std::vector<std::string> names;
+
+  for (const auto [id, storage] : world.registry().storage()) {
+    if (id != storage.info().hash()) {
+      continue;
+    }
+
+    names.emplace_back(componentName(storage.info()));
+  }
+
+  const DynamicComponents& dynamic = world.dynamic();
+
+  for (ComponentType type = 0u; type < dynamic.types(); ++type) {
+    names.emplace_back(dynamic.spec(type)->name);
+  }
+
+  return names;
+}
+
+std::vector<std::string> authoredComponentNames() {
+  std::vector<std::string> names;
+
+  AuthoredComponents::each([&]<typename T>() {
+    names.emplace_back(componentName<T>());
+  });
+
+  return names;
+}
+
+std::vector<std::string> transientComponentNames() {
+  std::vector<std::string> names;
+
+  TransientComponents::each([&]<typename T>() {
+    names.emplace_back(componentName<T>());
+  });
 
   return names;
 }

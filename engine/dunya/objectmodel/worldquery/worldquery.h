@@ -1,8 +1,14 @@
 #pragma once
 
+#include <dunya/field/raycast/raycast.h>
 #include <dunya/objectmodel/world/world.h>
 
+#include <dunya/objectmodel/component/lens/lens.h>
+#include <dunya/objectmodel/component/pose/pose.h>
+
 #include <glm/glm.hpp>
+
+#include <optional>
 
 namespace dunya::objectmodel {
 
@@ -23,8 +29,44 @@ struct WorldExtent {
   dunya::objectmodel::Entity entity
 );
 
+template<typename... Ts>
+[[nodiscard]] dunya::objectmodel::Entity firstWith(
+  const dunya::objectmodel::World& world
+) {
+  const entt::registry& registry = world.registry();
+
+  dunya::objectmodel::Entity found = dunya::objectmodel::INVALID_ENTITY;
+
+  for (const dunya::objectmodel::Entity entity : registry.view<const Ts...>()) {
+    if (
+      found == dunya::objectmodel::INVALID_ENTITY
+      || entt::to_entity(entity) < entt::to_entity(found)
+    ) {
+      found = entity;
+    }
+  }
+
+  return found;
+}
+
+[[nodiscard]] dunya::objectmodel::Entity firstLens(
+  const dunya::objectmodel::World& world
+);
+
 [[nodiscard]] dunya::objectmodel::Entity firstDeformable(
   const dunya::objectmodel::World& world
+);
+
+struct WorldHit {
+  dunya::objectmodel::Entity entity = dunya::objectmodel::INVALID_ENTITY;
+  glm::vec3 position{0.0f};
+  float travelled = 0.0f;
+  uint32_t material = 0u;
+};
+
+[[nodiscard]] WorldHit raycastWorld(
+  const dunya::objectmodel::World& world,
+  const dunya::field::Ray& ray
 );
 
 struct Framing {
@@ -34,5 +76,30 @@ struct Framing {
 };
 
 [[nodiscard]] Framing frameExtent(const WorldExtent& extent);
+
+[[nodiscard]] Pose framingPose(const Framing& framing);
+
+struct CameraView {
+  glm::mat4 view{1.0f};
+  glm::mat4 projection{1.0f};
+  glm::vec3 position{0.0f};
+  float nearPlane = 0.1f;
+};
+
+[[nodiscard]] CameraView cameraView(
+  const Pose& pose,
+  const Lens& lens,
+  float aspect
+);
+
+[[nodiscard]] std::optional<CameraView> activeCamera(
+  const dunya::objectmodel::World& world,
+  float aspect
+);
+
+[[nodiscard]] CameraView framingCamera(
+  const dunya::objectmodel::World& world,
+  float aspect
+);
 
 }

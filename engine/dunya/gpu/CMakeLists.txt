@@ -24,10 +24,10 @@ target_include_directories(dunya_gpu PRIVATE "${stb_SOURCE_DIR}")
 target_compile_features(dunya_gpu PUBLIC cxx_std_23)
 
 target_link_libraries(dunya_gpu PUBLIC
+    dunya::stb
     dunya::core
     Vulkan::Vulkan
     glm::glm
-    dunya::imagecompare
 )
 target_compile_definitions(dunya_gpu PRIVATE
     SHADER_SOURCE_DIR="${SHADER_SOURCE_DIR}"
@@ -37,7 +37,9 @@ target_compile_definitions(dunya_gpu PRIVATE
 )
 
 if (MSVC)
-    target_compile_options(dunya_gpu PRIVATE /W4 /WX /w15038 /Zc:__cplusplus)
+    target_compile_options(dunya_gpu PRIVATE /W4 /WX /w15038 /w14062 /Zc:__cplusplus)
 else()
     target_compile_options(dunya_gpu PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
+
+dunya_module(dunya_gpu Runtime)

@@ -127,10 +127,18 @@ void Renderer::createSyncObjects(uint32_t imageCount) {
   }
 }
 
+void Renderer::runPasses(std::span<const ScenePass> passes, PassOrder order) {
+  for (const ScenePass& pass : passes) {
+    if (pass.order == order && pass.draw) {
+      pass.draw(m_commandBuffers[m_currentFrame]);
+    }
+  }
+}
+
 void Renderer::recordCommandBuffer(
   const dunya::gpu::SwapChain& swapChain,
   const Frame& frameContext,
-  const std::function<void(VkCommandBuffer)>& onAfterScene
+  std::span<const ScenePass> passes
 ) {
   VkCommandBufferBeginInfo beginInfo{};
   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -150,7 +158,8 @@ void Renderer::recordCommandBuffer(
   imageBarrier.srcAccessMask = 0;
   imageBarrier.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
   imageBarrier.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
-  imageBarrier.image = swapChain.image(m_imageIndex);
+  imageBarrier.image = m_target == nullptr ? swapChain.image(m_imageIndex)
+                                           : m_target->colourImage();
   imageBarrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
   imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
   imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -166,7 +175,8 @@ void Renderer::recordCommandBuffer(
                               | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
   depthBarrier.dstAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT
                                | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-  depthBarrier.image = swapChain.depthImage().vkImage();
+  depthBarrier.image = m_target == nullptr ? swapChain.depthImage().vkImage()
+                                           : m_target->depthImage();
   depthBarrier.subresourceRange = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1};
   depthBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
   depthBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -181,7 +191,9 @@ void Renderer::recordCommandBuffer(
 
   VkRenderingAttachmentInfo attachmentInfo{};
   attachmentInfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-  attachmentInfo.imageView = swapChain.imageView(m_imageIndex);
+  attachmentInfo.imageView = m_target == nullptr
+                               ? swapChain.imageView(m_imageIndex)
+                               : m_target->colourView();
   attachmentInfo.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
   attachmentInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
   attachmentInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -189,7 +201,9 @@ void Renderer::recordCommandBuffer(
 
   VkRenderingAttachmentInfo depthAttachmentInfo{};
   depthAttachmentInfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-  depthAttachmentInfo.imageView = swapChain.depthImage().image().imageView();
+  depthAttachmentInfo.imageView = m_target == nullptr
+                                    ? swapChain.depthImage().image().imageView()
+                                    : m_target->depthView();
   depthAttachmentInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
   depthAttachmentInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
   depthAttachmentInfo.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -197,7 +211,10 @@ void Renderer::recordCommandBuffer(
 
   VkRenderingInfo renderingInfo{};
   renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-  renderingInfo.renderArea = {{0, 0}, swapChain.extent()};
+  const VkExtent2D sceneExtent =
+    m_target == nullptr ? swapChain.extent() : m_target->extent();
+
+  renderingInfo.renderArea = {{0, 0}, sceneExtent};
   renderingInfo.layerCount = 1;
   renderingInfo.colorAttachmentCount = 1;
   renderingInfo.pColorAttachments = &attachmentInfo;
@@ -208,21 +225,21 @@ void Renderer::recordCommandBuffer(
   VkViewport viewport{};
   viewport.x = 0.0f;
   viewport.y = 0.0f;
-  viewport.width = (float)swapChain.extent().width;
-  viewport.height = (float)swapChain.extent().height;
+  viewport.width = (float)sceneExtent.width;
+  viewport.height = (float)sceneExtent.height;
   viewport.minDepth = 0.0f;
   viewport.maxDepth = 1.0f;
   vkCmdSetViewport(m_commandBuffers[m_currentFrame], 0, 1, &viewport);
 
   VkRect2D scissor{};
   scissor.offset = {0, 0};
-  scissor.extent = swapChain.extent();
+  scissor.extent = sceneExtent;
   vkCmdSetScissor(m_commandBuffers[m_currentFrame], 0, 1, &scissor);
 
-  bool drawMeshes = frameContext.mode == dunya::gpu::PipelineType::Mesh
-                    || frameContext.mode == dunya::gpu::PipelineType::Both;
-  bool drawSdf = frameContext.mode == dunya::gpu::PipelineType::Sdf
-                 || frameContext.mode == dunya::gpu::PipelineType::Both;
+  runPasses(passes, PassOrder::BeforeScene);
+
+  const bool drawMeshes = drawsMeshes(frameContext.mode);
+  const bool drawSdf = drawsSdf(frameContext.mode);
 
   const std::array<VkDescriptorSet, 2> sharedSets = {
     m_frameGlobals.descriptorSet(m_currentFrame),
@@ -349,21 +366,64 @@ void Renderer::recordCommandBuffer(
     }
   }
 
-  if (onAfterScene) {
-    onAfterScene(m_commandBuffers[m_currentFrame]);
-  }
+  runPasses(passes, PassOrder::AfterScene);
 
   vkCmdEndRendering(m_commandBuffers[m_currentFrame]);
+
+  if (m_target != nullptr) {
+    std::array<VkImageMemoryBarrier2, 2> toTransfer{};
+
+    toTransfer[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+    toTransfer[0].oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    toTransfer[0].newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    toTransfer[0].srcStageMask =
+      VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+    toTransfer[0].srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+    toTransfer[0].dstStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT;
+    toTransfer[0].dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+    toTransfer[0].image = m_target->colourImage();
+    toTransfer[0].subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    toTransfer[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    toTransfer[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+    toTransfer[1].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+    toTransfer[1].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    toTransfer[1].newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    toTransfer[1].srcStageMask = VK_PIPELINE_STAGE_2_NONE;
+    toTransfer[1].srcAccessMask = 0;
+    toTransfer[1].dstStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT;
+    toTransfer[1].dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+    toTransfer[1].image = swapChain.image(m_imageIndex);
+    toTransfer[1].subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    toTransfer[1].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    toTransfer[1].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+    VkDependencyInfo intoBlit{};
+    intoBlit.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    intoBlit.imageMemoryBarrierCount = 2;
+    intoBlit.pImageMemoryBarriers = toTransfer.data();
+
+    vkCmdPipelineBarrier2(m_commandBuffers[m_currentFrame], &intoBlit);
+
+    m_target->blitTo(
+      m_commandBuffers[m_currentFrame],
+      swapChain.image(m_imageIndex),
+      swapChain.extent()
+    );
+  }
 
   VkImageMemoryBarrier2 imageMemoryBarrier2Present{};
   imageMemoryBarrier2Present.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
   imageMemoryBarrier2Present.oldLayout =
-    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    m_target == nullptr ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+                        : VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
   imageMemoryBarrier2Present.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
   imageMemoryBarrier2Present.srcStageMask =
-    VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+    m_target == nullptr ? VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT
+                        : VK_PIPELINE_STAGE_2_BLIT_BIT;
   imageMemoryBarrier2Present.srcAccessMask =
-    VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+    m_target == nullptr ? VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT
+                        : VK_ACCESS_2_TRANSFER_WRITE_BIT;
   imageMemoryBarrier2Present.dstStageMask = VK_PIPELINE_STAGE_2_NONE;
   imageMemoryBarrier2Present.dstAccessMask = 0;
   imageMemoryBarrier2Present.image = swapChain.image(m_imageIndex);
@@ -387,10 +447,18 @@ void Renderer::recordCommandBuffer(
   }
 }
 
+uint32_t Renderer::currentFrame() const noexcept {
+  return m_currentFrame;
+}
+
+void Renderer::useTarget(SceneTarget* target) noexcept {
+  m_target = target;
+}
+
 bool Renderer::drawFrame(
   const dunya::gpu::SwapChain& swapChain,
   const Frame& frameContext,
-  const std::function<void(VkCommandBuffer)>& onAfterScene,
+  std::span<const ScenePass> passes,
   const std::function<void(VkImage)>& onFrameReady
 ) {
   if (
@@ -443,10 +511,27 @@ bool Renderer::drawFrame(
 
   const SceneCounts counts{frameContext.sdfRecordCount};
 
-  const LightUniform light{glm::vec4(
+  LightUniform light{};
+  light.direction = glm::vec4(
     dunya::objectmodel::toLight(frameContext.light),
     frameContext.light.ambient
-  )};
+  );
+
+  if (frameContext.environment.has_value()) {
+    const dunya::objectmodel::Environment& environment =
+      *frameContext.environment;
+
+    light.skyTop = glm::vec4(environment.skyTop, environment.skyCurve);
+    light.skyHorizon =
+      glm::vec4(environment.skyHorizon, environment.groundCurve);
+    light.groundBottom = glm::vec4(environment.groundBottom, 0.0f);
+    light.shading = glm::vec4(
+      environment.ambientEnergy,
+      environment.occlusionStrength,
+      environment.exposure,
+      1.0f
+    );
+  }
 
   m_frameGlobals.update(
     m_currentFrame,
@@ -456,7 +541,7 @@ bool Renderer::drawFrame(
     light
   );
 
-  recordCommandBuffer(swapChain, frameContext, onAfterScene);
+  recordCommandBuffer(swapChain, frameContext, passes);
 
   VkSubmitInfo2 submitInfo2{};
   submitInfo2.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;

@@ -25,4 +25,12 @@ template<typename T>
   Entity entity
 );
 
+[[nodiscard]] std::vector<std::string> registeredComponentNames(
+  const World& world
+);
+
+[[nodiscard]] std::vector<std::string> authoredComponentNames();
+
+[[nodiscard]] std::vector<std::string> transientComponentNames();
+
 }

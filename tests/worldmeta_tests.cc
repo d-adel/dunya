@@ -42,13 +42,14 @@ TEST_CASE("a primitive round trips every value it carries", "[worldmeta]") {
 TEST_CASE("a grid stores only what an author chose", "[worldmeta]") {
   dunya::objectmodel::SdfGrid grid{};
   grid.resolution = glm::uvec3(65u, 66u, 67u);
+  grid.margin = 0.25f;
   grid.voxelSize = glm::vec3(0.125f);
   grid.origin = glm::vec4(9.0f);
 
   std::string out;
   REQUIRE(!glz::write_json(grid, out));
 
-  REQUIRE(out == R"({"resolution":[65,66,67]})");
+  REQUIRE(out == R"({"resolution":[65,66,67],"margin":0.25})");
 }
 
 TEST_CASE("a grid read back leaves the derived halves default", "[worldmeta]") {
@@ -57,6 +58,7 @@ TEST_CASE("a grid read back leaves the derived halves default", "[worldmeta]") {
 
   REQUIRE(back.has_value());
   REQUIRE(back->resolution == glm::uvec3(65u));
+  REQUIRE(back->margin == dunya::core::FIELD_GRID_MARGIN);
   REQUIRE(back->origin == glm::vec4(0.0f));
 }
 

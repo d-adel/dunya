@@ -1,81 +1,18 @@
 #version 450
 #extension GL_GOOGLE_include_directive : require
 
-const int MAX_MATERIALS = DUNYA_MAX_MATERIALS;
 const int MAX_SDF_RECORDS = DUNYA_MAX_SDF_RECORDS;
 const int MAX_SDF_VOLUMES = DUNYA_MAX_SDF_VOLUMES;
 const uint BRICK_CELLS = DUNYA_BRICK_CELLS;
 const float bias = 0.01;
 
-layout(std140, set = 0, binding = 1) uniform MarchParams {
-  float epsilon;
-  float maxDistance;
-  float omega;
-
-  float gradientEpsilon;
-  float shadowMaxDistance;
-  float shadowSharpness;
-  uint maxIterations;
-} params;
-
-layout(std140, set = 0, binding = 3) uniform SceneLight {
-  vec4 direction;
-} light;
-
-layout(std140, set = 0, binding = 2) uniform SceneCounts {
-  uint sdfRecords;
-} counts;
-
-#include "sdf-types.glsl"
-
-struct Material {
-  vec4 baseColor;
-  vec4 emissive;
-
-  float metallic;
-  float roughness;
-  float normalScale;
-  float occlusionStrength;
-
-  float alphaCutoff;
-  uint flags;
-  uint baseColorTexture;
-  uint baseColorSampler;
-
-  uint metallicRoughnessTexture;
-  uint metallicRoughnessSampler;
-  uint normalTexture;
-  uint normalSampler;
-
-  uint occlusionTexture;
-  uint occlusionSampler;
-  uint emissiveTexture;
-  uint emissiveSampler;
-};
-
-layout(std140, set = 1, binding = 0) uniform MaterialTable {
-  Material materials[MAX_MATERIALS];
-} materialTable;
-
-layout(std140, set = 0, binding = 0) uniform CameraUniform {
-  mat4 view;
-  mat4 proj;
-  mat4 viewProj;
-  mat4 inverseViewProj;
-  vec4 position;
-} camera;
+#include "frame-globals.glsl"
+#include "scene-resources.glsl"
+#include "sdf-records.glsl"
 
 layout(std430, set = 2, binding = 3) readonly buffer FieldScene {
   Primitive primitives[];
 } scene;
-
-layout(std140, set = 2, binding = 0) readonly buffer SdfRecordTable {
-  SdfRecordShared records[];
-} sdfRecordTable;
-
-const int MAX_SAMPLERS = DUNYA_MAX_SAMPLERS;
-
-layout(set = 1, binding = 2) uniform sampler samplers[MAX_SAMPLERS];
 
 layout(set = 2, binding = 1)
   uniform texture3D distanceVolume[MAX_SDF_VOLUMES];
@@ -501,6 +438,56 @@ float lightReaching(vec3 worldOrigin, vec3 worldDirection) {
   return result;
 }
 
+vec3 hemisphere(vec3 normal) {
+  if (light.shading.x <= 0.0) {
+    return vec3(light.direction.w);
+  }
+
+  float up = clamp(normal.y, -1.0, 1.0);
+
+  vec3 sky = mix(light.skyTop.rgb,
+                 light.skyHorizon.rgb,
+                 clamp(pow(1.0 - up, light.skyTop.w), 0.0, 1.0));
+
+  vec3 ground = mix(light.groundBottom.rgb,
+                    light.skyHorizon.rgb,
+                    clamp(pow(1.0 + up, light.skyHorizon.w), 0.0, 1.0));
+
+  return mix(ground, sky, step(0.0, up)) * light.shading.x;
+}
+
+float occlusion(SdfRecordShared record, vec3 point, vec3 normal) {
+  if (light.shading.y <= 0.0) {
+    return 1.0;
+  }
+
+  float occluded = 0.0;
+  float weight = 1.0;
+
+  for (int i = 1; i <= 5; ++i) {
+    float reach = 0.03 * float(i) * float(i);
+
+    float reached = fieldDistance(record, point + normal * reach).x;
+
+    occluded += (reach - reached) * weight;
+    weight *= 0.72;
+  }
+
+  return clamp(1.0 - light.shading.y * occluded, 0.0, 1.0);
+}
+
+vec3 tonemap(vec3 colour) {
+  if (light.shading.z <= 0.0) {
+    return colour;
+  }
+
+  vec3 x = colour * 0.6;
+
+  return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14),
+               vec3(0.0),
+               vec3(1.0));
+}
+
 vec3 albedo(float materialId) {
   return materialTable.materials[uint(materialId + 0.5)].baseColor.rgb;
 }
@@ -567,7 +554,11 @@ void main() {
   float shadowed =
     diffuse > 0.0 ? lightReaching(shadowOrigin, worldLightDir) : 1.0;
 
-  vec3 color = surfaceAlbedo * (light.direction.w + diffuse * shadowed);
+  float ambientOcclusion = occlusion(record, localHitPosition, localNormal);
 
-  outColor = vec4(color, 1.0);
+  vec3 ambient = hemisphere(worldNormal) * ambientOcclusion;
+
+  vec3 color = surfaceAlbedo * (ambient + diffuse * shadowed);
+
+  outColor = vec4(tonemap(color), 1.0);
 }

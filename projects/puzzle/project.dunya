@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "name": "puzzle",
+  "assets": [{
+    "id": 7934708211294929061,
+    "type": "material",
+    "path": "assets/default.mat.json"
+  }, {
+    "id": 11026325827430366039,
+    "type": "material",
+    "path": "assets/material-1.mat.json"
+  }, {
+    "id": 7153776363973389819,
+    "type": "material",
+    "path": "assets/material-2.mat.json"
+  }, {
+    "id": 16391444274774629455,
+    "type": "material",
+    "path": "assets/material-3.mat.json"
+  }]
+}

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
@@ -18,7 +19,25 @@ public sealed class ViewportHost : NativeControlHost
     private const uint WM_MOUSEMOVE = 0x0200;
     private const uint WM_LBUTTONDOWN = 0x0201;
     private const uint WM_RBUTTONDOWN = 0x0204;
+    private const uint WM_LBUTTONUP = 0x0202;
+    private const uint WM_RBUTTONUP = 0x0205;
+    private const uint WM_MBUTTONDOWN = 0x0207;
+    private const uint WM_MBUTTONUP = 0x0208;
     private const uint WM_MOUSEWHEEL = 0x020A;
+
+    private const long MK_ALT_HELD = 0x0020;
+    private const long VK_F = 0x46;
+
+    private const float OrbitRate = 0.008f;
+    private const float PanRate = 0.0016f;
+
+    private enum Drag
+    {
+        None,
+        Select,
+        Orbit,
+        Pan
+    }
 
     private delegate IntPtr WindowProc(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);
 
@@ -31,9 +50,19 @@ public sealed class ViewportHost : NativeControlHost
     [DllImport("user32.dll")]
     private static extern IntPtr SetFocus(IntPtr window);
 
+    [DllImport("user32.dll")]
+    private static extern IntPtr SetCapture(IntPtr window);
+
+    [DllImport("user32.dll")]
+    private static extern bool ReleaseCapture();
+
     public event Action<string>? Reported;
 
     public event Action? WorldOpened;
+
+    public event Action<uint?>? Picked;
+
+    public event Action? FocusRequested;
 
     public IntPtr Handle { get; private set; }
 
@@ -47,7 +76,10 @@ public sealed class ViewportHost : NativeControlHost
     private bool m_renderFailed;
     private IntPtr m_previous;
     private WindowProc? m_hook;
-    private int m_moves;
+    private Drag m_drag = Drag.None;
+    private int m_dragX;
+    private int m_dragY;
+    private bool m_dragged;
 
     protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
     {
@@ -77,7 +109,22 @@ public sealed class ViewportHost : NativeControlHost
     }
 
 
+    public IntPtr SessionHandle => m_session;
+
     public void Shutdown() => StopSession();
+
+    public void Reopen(string projectRoot, string world)
+    {
+        StopSession();
+
+        ProjectRoot = projectRoot;
+        World = world;
+
+        if (Handle != IntPtr.Zero)
+        {
+            StartSession();
+        }
+    }
 
     private void Retarget()
     {
@@ -129,9 +176,46 @@ public sealed class ViewportHost : NativeControlHost
 
         Report($"session created    handle=0x{m_session:X}   {Extent()}");
 
+        StartScripts();
+
         StartRendering();
 
         WorldOpened?.Invoke();
+    }
+
+
+    private readonly Scripts m_scripts = new();
+
+    private void StartScripts()
+    {
+        string managed = Path.Combine(Environment.CurrentDirectory, "managed");
+
+        if (!m_scripts.Load(managed))
+        {
+            Report($"scripts NOT loaded: {m_scripts.Failure}");
+
+            return;
+        }
+
+        ScriptLog.Reported = Report;
+        ScriptLog.Attach();
+
+        IntPtr api = DunyaNative.dunya_api();
+        IntPtr schedule = DunyaNative.dunya_session_schedule(m_session);
+        IntPtr world = DunyaNative.dunya_session_world(m_session);
+
+        string directory = Path.Combine(
+            Environment.CurrentDirectory, ProjectRoot, "scripts"
+        );
+
+        if (!m_scripts.Start(api, schedule, world, directory))
+        {
+            Report($"scripts NOT started: {m_scripts.Failure}");
+
+            return;
+        }
+
+        Report("scripts started");
     }
 
     private void StopSession()
@@ -246,46 +330,116 @@ public sealed class ViewportHost : NativeControlHost
                 {
                     Report($"resize FAILED: {DunyaNative.LastError()}");
                 }
-
-                Report(
-                    $"WM_SIZE          client {Low(lParam)} x {High(lParam)}"
-                    + $"   {Extent()}"
-                    + $"   scale {(TopLevel.GetTopLevel(this)?.RenderScaling ?? 0.0):F2}"
-                );
-                break;
-
-            case WM_SETFOCUS:
-                Report("WM_SETFOCUS      the child window has keyboard focus");
-                break;
-
-            case WM_MOUSEMOVE:
-                if (++m_moves % 30 == 1)
-                {
-                    Report($"WM_MOUSEMOVE     ({Low(lParam)}, {High(lParam)})   [1 of every 30]");
-                }
                 break;
 
             case WM_LBUTTONDOWN:
-                Report($"WM_LBUTTONDOWN   ({Low(lParam)}, {High(lParam)})  -> asking for focus");
                 SetFocus(window);
+                m_dragX = Low(lParam);
+                m_dragY = High(lParam);
+                m_dragged = false;
+
+                if ((wParam.ToInt64() & MK_ALT_HELD) != 0)
+                {
+                    m_drag = Drag.Orbit;
+                    SetCapture(window);
+                }
+                else
+                {
+                    m_drag = Drag.Select;
+                }
                 break;
 
             case WM_RBUTTONDOWN:
-                Report($"WM_RBUTTONDOWN   ({Low(lParam)}, {High(lParam)})");
+                SetFocus(window);
+                m_dragX = Low(lParam);
+                m_dragY = High(lParam);
+                m_drag = Drag.Orbit;
+                SetCapture(window);
+                break;
+
+            case WM_MBUTTONDOWN:
+                SetFocus(window);
+                m_dragX = Low(lParam);
+                m_dragY = High(lParam);
+                m_drag = Drag.Pan;
+                SetCapture(window);
+                break;
+
+            case WM_MOUSEMOVE:
+            {
+                if (m_drag == Drag.None || m_session == IntPtr.Zero)
+                {
+                    break;
+                }
+
+                int x = Low(lParam);
+                int y = High(lParam);
+
+                float dx = x - m_dragX;
+                float dy = y - m_dragY;
+
+                m_dragX = x;
+                m_dragY = y;
+
+                if (dx != 0.0f || dy != 0.0f)
+                {
+                    m_dragged = true;
+                }
+
+                if (m_drag == Drag.Orbit)
+                {
+                    DunyaNative.dunya_session_camera_orbit(
+                        m_session, dx * OrbitRate, -dy * OrbitRate
+                    );
+                }
+                else if (m_drag == Drag.Pan)
+                {
+                    DunyaNative.dunya_session_camera_pan(
+                        m_session, dx * PanRate, dy * PanRate
+                    );
+                }
+                break;
+            }
+
+            case WM_LBUTTONUP:
+            case WM_RBUTTONUP:
+            case WM_MBUTTONUP:
+                if (m_drag == Drag.Select && !m_dragged && m_session != IntPtr.Zero)
+                {
+                    uint hit = DunyaNative.dunya_session_pick(
+                        m_session, Low(lParam), High(lParam)
+                    );
+
+                    Picked?.Invoke(hit == uint.MaxValue ? null : hit);
+                }
+
+                if (m_drag != Drag.None && m_drag != Drag.Select)
+                {
+                    ReleaseCapture();
+                }
+
+                m_drag = Drag.None;
                 break;
 
             case WM_MOUSEWHEEL:
-                Report($"WM_MOUSEWHEEL    delta {(short)(wParam.ToInt64() >> 16)}");
+                if (m_session != IntPtr.Zero)
+                {
+                    DunyaNative.dunya_session_camera_zoom(
+                        m_session, (short)(wParam.ToInt64() >> 16) / 120.0f
+                    );
+                }
                 break;
 
             case WM_KEYDOWN:
-                Report($"WM_KEYDOWN       virtual key {wParam.ToInt64()}");
+                if (m_session != IntPtr.Zero && wParam.ToInt64() == VK_F)
+                {
+                    FocusRequested?.Invoke();
+                }
                 break;
         }
 
         return CallWindowProc(m_previous, window, message, wParam, lParam);
     }
-
     private static int Low(IntPtr value) => (short)(value.ToInt64() & 0xFFFF);
 
     private static int High(IntPtr value) => (short)((value.ToInt64() >> 16) & 0xFFFF);

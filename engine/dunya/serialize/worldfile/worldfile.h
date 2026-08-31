@@ -5,13 +5,16 @@
 #include <dunya/objectmodel/trait/authoredcomponents/authoredcomponents.h>
 #include <dunya/objectmodel/trait/assetbacked/assetbacked.h>
 #include <dunya/objectmodel/component/deformable/deformable.h>
+#include <dunya/objectmodel/component/directionallight/directionallight.h>
 #include <dunya/objectmodel/component/lens/lens.h>
 #include <dunya/objectmodel/component/massscale/massscale.h>
 #include <dunya/objectmodel/component/material/material.h>
 #include <dunya/objectmodel/component/mesh/mesh.h>
 #include <dunya/objectmodel/component/pose/pose.h>
 #include <dunya/objectmodel/component/sdfgrid/sdfgrid.h>
+#include <dunya/objectmodel/component/environment/environment.h>
 #include <dunya/objectmodel/component/staticbody/staticbody.h>
+#include <dunya/objectmodel/dynamiccomponents/dynamiccomponents.h>
 #include <dunya/objectmodel/world/world.h>
 
 #include <optional>
@@ -34,6 +37,23 @@ struct StoredPrimitive {
   dunya::core::AssetId material = dunya::core::INVALID_ASSET;
 };
 
+struct StoredField {
+  std::string name;
+  uint32_t kind = 0u;
+  uint32_t offset = 0u;
+};
+
+struct StoredComponentType {
+  std::string name;
+  uint32_t size = 0u;
+  std::vector<StoredField> fields;
+};
+
+struct StoredDynamic {
+  std::string type;
+  std::vector<double> values;
+};
+
 struct StoredEntity {
   std::optional<dunya::objectmodel::Pose> pose;
   std::optional<dunya::objectmodel::SdfGrid> grid;
@@ -42,10 +62,15 @@ struct StoredEntity {
   std::optional<dunya::objectmodel::StaticBody> staticBody;
   std::optional<dunya::objectmodel::Deformable> deformable;
 
+  std::optional<dunya::objectmodel::DirectionalLight> directionalLight;
+  std::optional<dunya::objectmodel::Environment> environment;
+
   std::optional<dunya::core::AssetId> mesh;
   std::optional<dunya::core::AssetId> material;
 
   std::vector<StoredPrimitive> primitives;
+
+  std::vector<StoredDynamic> dynamic;
 };
 
 template<dunya::objectmodel::Authored T>
@@ -63,7 +88,11 @@ inline constexpr auto PORTABLE_COMPONENTS = std::tuple{
   PortableComponent<dunya::objectmodel::StaticBody>{&StoredEntity::staticBody},
   PortableComponent<dunya::objectmodel::Deformable>{&StoredEntity::deformable},
   PortableComponent<dunya::objectmodel::Mesh>{&StoredEntity::mesh},
-  PortableComponent<dunya::objectmodel::Material>{&StoredEntity::material}
+  PortableComponent<dunya::objectmodel::Material>{&StoredEntity::material},
+  PortableComponent<dunya::objectmodel::DirectionalLight>{
+    &StoredEntity::directionalLight
+  },
+  PortableComponent<dunya::objectmodel::Environment>{&StoredEntity::environment}
 };
 
 template<typename... Ts>
@@ -83,6 +112,8 @@ static_assert(bindsEvery(dunya::objectmodel::AuthoredComponents{}));
 struct StoredWorld {
   uint32_t version = WORLD_VERSION;
   std::vector<StoredEntity> entities;
+
+  std::vector<StoredComponentType> componentTypes;
 };
 
 [[nodiscard]] StoredWorld captureWorld(

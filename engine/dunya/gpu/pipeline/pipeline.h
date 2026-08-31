@@ -21,16 +21,81 @@ struct PushConstants {
 };
 
 static_assert(
+  offsetof(PushConstants, model) == 0,
+  "The push constant block must match its declaration in both mesh shaders"
+);
+static_assert(
+  offsetof(PushConstants, materialIndex) == 64,
+  "The push constant block must match its declaration in both mesh shaders"
+);
+static_assert(
   offsetof(PushConstants, recordIndex) == 68,
   "The push constant block must match its declaration in both mesh shaders"
+);
+
+static_assert(
+  sizeof(PushConstants) == 80,
+  "PushConstants must have one layout in every translation unit; only the "
+  "first 72 bytes are ever pushed"
+);
+
+struct GridPush {
+  glm::vec4 primary;
+  glm::vec4 secondary;
+  glm::vec4 axisColourU;
+  glm::vec4 axisColourV;
+  glm::vec4 normal;
+  glm::vec4 fade;
+};
+
+static_assert(
+  offsetof(GridPush, primary) == 0,
+  "GridPush must match its push constant block in both grid shaders"
+);
+static_assert(
+  offsetof(GridPush, secondary) == 16,
+  "GridPush must match its push constant block in both grid shaders"
+);
+static_assert(
+  offsetof(GridPush, axisColourU) == 32,
+  "GridPush must match its push constant block in both grid shaders"
+);
+static_assert(
+  offsetof(GridPush, axisColourV) == 48,
+  "GridPush must match its push constant block in both grid shaders"
+);
+static_assert(
+  offsetof(GridPush, normal) == 64,
+  "GridPush must match its push constant block in both grid shaders"
+);
+static_assert(
+  offsetof(GridPush, fade) == 80,
+  "GridPush must match its push constant block in both grid shaders"
+);
+static_assert(
+  sizeof(GridPush) == 96,
+  "GridPush must match its push constant block in both grid shaders"
 );
 
 enum class PipelineType {
   Mesh,
   Sdf,
-  Both,
-  Count
+  Grid,
+  Sky
 };
+
+struct PipelineShaders {
+  const char* vertexSource;
+  const char* fragmentSource;
+  const char* vertexSpirv;
+  const char* fragmentSpirv;
+};
+
+[[nodiscard]] PipelineShaders pipelineShaders(PipelineType type);
+
+[[nodiscard]] std::vector<VkPushConstantRange> pushConstantRanges(
+  PipelineType type
+);
 
 struct PipelineConfig {
   std::string vert;
@@ -45,6 +110,9 @@ struct PipelineConfig {
 
   VkBool32 depthTestEnable = VK_TRUE;
   VkBool32 depthWriteEnable = VK_TRUE;
+  VkBool32 blendEnable = VK_FALSE;
+
+  VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
   std::vector<VkDescriptorSetLayout> setLayouts{};
   std::vector<VkPushConstantRange> pushConstantRanges{};

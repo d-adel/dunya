@@ -21,9 +21,11 @@ size_t hashKey(const VolumeKey& key) {
 
 VolumeKey volumeKey(
   std::span<const dunya::field::Primitive> primitives,
-  const glm::uvec3& resolution
+  const glm::uvec3& resolution,
+  float margin
 ) {
-  const uint32_t dimensions[3] = {resolution.x, resolution.y, resolution.z};
+  const uint32_t dimensions[4] =
+    {resolution.x, resolution.y, resolution.z, std::bit_cast<uint32_t>(margin)};
 
   VolumeKey key;
   key.bytes.resize(primitives.size_bytes() + sizeof(dimensions));

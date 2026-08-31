@@ -1,4 +1,6 @@
 #include "analytic.h"
 
+#include <dunya/field/shapekind/shapekind.h>
+
 #include <algorithm>
 #include <cmath>

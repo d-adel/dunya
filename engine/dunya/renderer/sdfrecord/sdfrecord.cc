@@ -47,7 +47,7 @@ SdfRecord makeSdfRecord(
   record.model = dunya::objectmodel::model(pose);
   record.inverseModel = glm::inverse(record.model);
 
-  record.voxelSize = glm::vec4(grid.voxelSize, dunya::core::FIELD_GRID_MARGIN);
+  record.voxelSize = glm::vec4(grid.voxelSize, grid.margin);
 
   record.resolutionVolumeIndex = glm::uvec4(grid.resolution, volume.index);
 

@@ -3,6 +3,7 @@ add_library(dunya_objectmodel STATIC
     component/renderpose/renderpose.cc
     component/sdfgrid/sdfgrid.cc
     sdfprimitivestore/sdfprimitivestore.cc
+    dynamiccomponents/dynamiccomponents.cc
     world/world.cc
     worldcontents/worldcontents.cc
     worldquery/worldquery.cc
@@ -17,7 +18,9 @@ target_link_libraries(dunya_objectmodel PUBLIC
     EnTT::EnTT
 )
 if (MSVC)
-    target_compile_options(dunya_objectmodel PRIVATE /W4 /WX /w15038 /Zc:__cplusplus)
+    target_compile_options(dunya_objectmodel PRIVATE /W4 /WX /w15038 /w14062 /Zc:__cplusplus)
 else()
     target_compile_options(dunya_objectmodel PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
+
+dunya_module(dunya_objectmodel Runtime)

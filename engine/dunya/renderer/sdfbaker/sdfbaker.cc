@@ -353,6 +353,14 @@ std::vector<float> readBounds(
 
 }
 
+BakeShaders bakeShaders() {
+  return {"shaders/sdf-bake.comp.spv", "shaders/sdf-lipschitz.comp.spv"};
+}
+
+VkPushConstantRange bakePushConstantRange() {
+  return {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(BakeParams)};
+}
+
 SdfBaker::SdfBaker(
   const dunya::gpu::Device& device,
   const SdfRecordTable& table
@@ -361,19 +369,15 @@ SdfBaker::SdfBaker(
       m_table(table),
       m_bakePipeline(
         device.vkDevice(),
-        "shaders/sdf-bake.comp.spv",
+        bakeShaders().distanceSpirv,
         std::vector<VkDescriptorSetLayout>{table.setLayout()},
-        std::vector<VkPushConstantRange>{
-          {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(BakeParams)}
-        }
+        std::vector<VkPushConstantRange>{bakePushConstantRange()}
       ),
       m_lipschitzPipeline(
         device.vkDevice(),
-        "shaders/sdf-lipschitz.comp.spv",
+        bakeShaders().lipschitzSpirv,
         std::vector<VkDescriptorSetLayout>{table.setLayout()},
-        std::vector<VkPushConstantRange>{
-          {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(BakeParams)}
-        }
+        std::vector<VkPushConstantRange>{bakePushConstantRange()}
       ) {}
 
 void SdfBaker::verifyBake(
@@ -382,7 +386,8 @@ void SdfBaker::verifyBake(
   std::span<const dunya::field::Primitive> primitives,
   VolumeImages images
 ) const {
-  const dunya::field::Aabb box = dunya::objectmodel::gridBox(primitives);
+  const dunya::field::Aabb box =
+    dunya::objectmodel::gridBox(primitives, grid.margin);
 
   const SampledSdf reference =
     dunya::field::bake(primitives, box.minimum, box.maximum, grid.resolution);

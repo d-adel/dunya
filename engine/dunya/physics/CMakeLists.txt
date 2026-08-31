@@ -15,7 +15,9 @@ target_link_libraries(dunya_physics PUBLIC
     Jolt
 )
 if (MSVC)
-    target_compile_options(dunya_physics PRIVATE /W4 /WX /w15038 /Zc:__cplusplus)
+    target_compile_options(dunya_physics PRIVATE /W4 /WX /w15038 /w14062 /Zc:__cplusplus)
 else()
     target_compile_options(dunya_physics PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
+
+dunya_module(dunya_physics Runtime)

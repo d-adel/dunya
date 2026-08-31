@@ -11,6 +11,7 @@
 #include <dunya/objectmodel/trait/authored/authored.h>
 #include <dunya/objectmodel/component/pose/pose.h>
 #include <dunya/objectmodel/component/sdfgrid/sdfgrid.h>
+#include <dunya/objectmodel/dynamiccomponents/dynamiccomponents.h>
 #include <dunya/objectmodel/sdfprimitivestore/sdfprimitivestore.h>
 #include <dunya/objectmodel/trait/selfcontained/selfcontained.h>
 #include <dunya/objectmodel/component/sharedfield/sharedfield.h>
@@ -41,6 +42,9 @@ public:
 
   const entt::registry& registry() const noexcept;
 
+  [[nodiscard]] DynamicComponents& dynamic() noexcept;
+  [[nodiscard]] const DynamicComponents& dynamic() const noexcept;
+
   void clear();
 
   Entity createAuthored();
@@ -63,7 +67,7 @@ public:
   bool createSdfGridAt(Entity hint, const Pose& pose, const SdfGrid& grid);
 
   [[nodiscard]]
-  bool destroySdfGrid(Entity entity);
+  bool destroy(Entity entity);
 
   [[nodiscard]] std::span<const Entity> fields() const noexcept;
 
@@ -138,6 +142,13 @@ public:
     }
   }
 
+  void markSdfDirty(Entity entity, const dunya::field::SampleBox& box);
+
+  [[nodiscard]] std::span<const std::pair<Entity, dunya::field::SampleBox>>
+  sdfDirty() const noexcept;
+
+  void clearSdfDirty() noexcept;
+
   void setBakedVolume(Entity entity, uint32_t index);
 
   void setRigidBody(Entity entity, uint32_t index);
@@ -182,6 +193,10 @@ public:
 
 private:
   SdfPrimitiveStore m_primitiveStore;
+
+  DynamicComponents m_dynamic;
+
+  std::vector<std::pair<Entity, dunya::field::SampleBox>> m_sdfDirty;
 
   entt::registry m_registry;
 };

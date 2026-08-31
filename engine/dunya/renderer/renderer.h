@@ -6,6 +6,8 @@
 #include <dunya/renderer/resourcetable/resourcetable.h>
 #include <dunya/renderer/frameglobals/frameglobals.h>
 #include <dunya/renderer/frame/frame.h>
+#include <dunya/renderer/scenetarget/scenetarget.h>
+#include <dunya/renderer/scenepass/scenepass.h>
 #include <dunya/renderer/sdfrecordtable/sdfrecordtable.h>
 #include <dunya/renderer/volumepool/volumepool.h>
 #include <dunya/renderer/sdfbaker/sdfbaker.h>
@@ -13,6 +15,7 @@
 #include <dunya/core/config/config.h>
 
 #include <functional>
+#include <span>
 #include <vector>
 
 namespace dunya::renderer {
@@ -35,11 +38,15 @@ public:
   Renderer& operator=(Renderer const&) = delete;
   ~Renderer();
 
+  void useTarget(SceneTarget* target) noexcept;
+
+  [[nodiscard]] uint32_t currentFrame() const noexcept;
+
   [[nodiscard]]
   bool drawFrame(
     const dunya::gpu::SwapChain& swapChain,
     const Frame& frameContext,
-    const std::function<void(VkCommandBuffer)>& onAfterScene = {},
+    std::span<const ScenePass> passes = {},
     const std::function<void(VkImage)>& onFrameReady = {}
   );
 
@@ -54,8 +61,10 @@ private:
   void recordCommandBuffer(
     const dunya::gpu::SwapChain& swapChain,
     const Frame& frameContext,
-    const std::function<void(VkCommandBuffer)>& onAfterScene
+    std::span<const ScenePass> passes
   );
+
+  void runPasses(std::span<const ScenePass> passes, PassOrder order);
 
   VkCommandPool m_commandPool;
   std::vector<VkCommandBuffer> m_commandBuffers;
@@ -68,6 +77,8 @@ private:
   VkDevice m_device;
   uint32_t m_imageIndex = 0;
   uint32_t m_currentFrame = 0;
+
+  SceneTarget* m_target = nullptr;
 
   const dunya::gpu::Pipeline& m_meshPipeline;
   const dunya::gpu::Pipeline& m_sdfPipeline;

@@ -49,14 +49,6 @@ public:
     const field::Primitive& cutter
   );
 
-  void markDirty(objectmodel::Entity entity, const field::SampleBox& box);
-
-  [[nodiscard]] std::span<
-    const std::pair<objectmodel::Entity, field::SampleBox>>
-  dirty() const noexcept;
-
-  void clearDirty() noexcept;
-
   [[nodiscard]] std::span<const Crater> cratersThisFrame() const noexcept;
 
 private:
@@ -73,8 +65,6 @@ private:
 
   std::vector<PendingCrater> m_pending;
   std::vector<Crater> m_carved;
-
-  std::vector<std::pair<objectmodel::Entity, field::SampleBox>> m_dirty;
 };
 
 }

@@ -72,6 +72,10 @@ glm::vec3 WorldExtent::span() const noexcept {
   return maximum - minimum;
 }
 
+dunya::objectmodel::Entity firstLens(const dunya::objectmodel::World& world) {
+  return firstWith<dunya::objectmodel::Lens, dunya::objectmodel::Pose>(world);
+}
+
 WorldExtent dynamicExtent(const dunya::objectmodel::World& world) {
   return extentOf(world);
 }
@@ -115,6 +119,63 @@ dunya::objectmodel::Entity firstDeformable(
   return dunya::objectmodel::INVALID_ENTITY;
 }
 
+WorldHit raycastWorld(
+  const dunya::objectmodel::World& world,
+  const dunya::field::Ray& ray
+) {
+  const entt::registry& registry = world.registry();
+
+  WorldHit nearest{};
+
+  for (const dunya::objectmodel::Entity entity : world.fields()) {
+    const std::span<const dunya::field::Primitive> primitives =
+      world.primitives(entity);
+
+    if (primitives.empty()) {
+      continue;
+    }
+
+    const glm::mat4 inverseModel = glm::inverse(
+      dunya::objectmodel::model(registry.get<dunya::objectmodel::Pose>(entity))
+    );
+
+    const dunya::field::Ray local{
+      glm::vec3(inverseModel * glm::vec4(ray.origin, 1.0f)),
+      glm::vec3(inverseModel * glm::vec4(ray.direction, 0.0f))
+    };
+
+    const dunya::field::Aabb box = dunya::objectmodel::gridBox(
+      primitives,
+      registry.get<dunya::objectmodel::SdfGrid>(entity).margin
+    );
+
+    if (!dunya::field::intersect(box, local).has_value()) {
+      continue;
+    }
+
+    const std::optional<dunya::field::RayHit> hit =
+      dunya::field::raymarch(primitives, local);
+
+    if (!hit.has_value()) {
+      continue;
+    }
+
+    if (
+      nearest.entity != dunya::objectmodel::INVALID_ENTITY
+      && hit->travelled >= nearest.travelled
+    ) {
+      continue;
+    }
+
+    nearest.entity = entity;
+    nearest.travelled = hit->travelled;
+    nearest.material = hit->material;
+    nearest.position = ray.origin + ray.direction * hit->travelled;
+  }
+
+  return nearest;
+}
+
 Framing frameExtent(const WorldExtent& extent) {
   if (extent.empty) {
     return {};
@@ -135,6 +196,58 @@ Framing frameExtent(const WorldExtent& extent) {
     0.0f,
     PITCH
   };
+}
+
+Pose framingPose(const Framing& framing) {
+  const glm::quat yaw =
+    glm::angleAxis(framing.yaw, glm::vec3(0.0f, -1.0f, 0.0f));
+  const glm::quat pitch =
+    glm::angleAxis(framing.pitch, glm::vec3(1.0f, 0.0f, 0.0f));
+
+  Pose pose{};
+  pose.position = framing.position;
+  pose.rotation = glm::normalize(yaw * pitch);
+
+  return pose;
+}
+
+CameraView cameraView(const Pose& pose, const Lens& lens, float aspect) {
+  CameraView resolved{};
+  resolved.view = view(pose);
+  resolved.projection = projection(lens, aspect);
+  resolved.position = pose.position;
+  resolved.nearPlane = lens.nearPlane;
+
+  return resolved;
+}
+
+std::optional<CameraView> activeCamera(
+  const dunya::objectmodel::World& world,
+  float aspect
+) {
+  const dunya::objectmodel::Entity eye = firstLens(world);
+
+  if (eye == dunya::objectmodel::INVALID_ENTITY) {
+    return std::nullopt;
+  }
+
+  const entt::registry& registry = world.registry();
+
+  return cameraView(
+    registry.get<const Pose>(eye),
+    registry.get<const Lens>(eye),
+    aspect
+  );
+}
+
+CameraView framingCamera(const dunya::objectmodel::World& world, float aspect) {
+  const WorldExtent target = dynamicExtent(world);
+
+  if (target.empty) {
+    return cameraView(Pose{}, Lens{}, aspect);
+  }
+
+  return cameraView(framingPose(frameExtent(target)), Lens{}, aspect);
 }
 
 }

@@ -84,7 +84,7 @@ bool CommandHistory::apply(Command& command, dunya::objectmodel::World& world) {
           cmd.primitives.assign(primitives.begin(), primitives.end());
         }
 
-        return world.destroySdfGrid(cmd.entity);
+        return world.destroy(cmd.entity);
       }
 
       else if constexpr (std::is_same_v<T, TransformFieldCommand>) {
@@ -132,7 +132,7 @@ bool CommandHistory::revert(
       using T = std::decay_t<decltype(cmd)>;
 
       if constexpr (std::is_same_v<T, CreateFieldCommand>) {
-        return world.destroySdfGrid(cmd.entity);
+        return world.destroy(cmd.entity);
       }
 
       else if constexpr (std::is_same_v<T, DestroyFieldCommand>) {

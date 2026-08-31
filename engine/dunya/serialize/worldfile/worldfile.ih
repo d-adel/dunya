@@ -1,5 +1,7 @@
 #include "worldfile.h"
 
+#include <cstring>
+
 #include <algorithm>
 
 #include <dunya/serialize/worldmeta/worldmeta.h>

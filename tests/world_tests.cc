@@ -2,7 +2,10 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include <dunya/core/config/config.h>
+#include <dunya/objectmodel/component/directionallight/directionallight.h>
+#include <dunya/objectmodel/component/environment/environment.h>
 #include <dunya/objectmodel/component/sdfgrid/sdfgrid.h>
+#include <dunya/objectmodel/component/lens/lens.h>
 #include <dunya/objectmodel/component/material/material.h>
 #include <dunya/objectmodel/component/mesh/mesh.h>
 #include <dunya/objectmodel/component/pose/pose.h>
@@ -10,6 +13,7 @@
 #include <dunya/objectmodel/trait/selfcontained/selfcontained.h>
 #include <dunya/objectmodel/component/staticbody/staticbody.h>
 #include <dunya/objectmodel/world/world.h>
+#include <dunya/objectmodel/worldquery/worldquery.h>
 
 #include <entt/entity/registry.hpp>
 
@@ -94,7 +98,7 @@ TEST_CASE("placing at a hint restores the exact identity", "[world]") {
 
   const Entity entity = world.createSdfGrid(marked, blank());
 
-  REQUIRE(world.destroySdfGrid(entity));
+  REQUIRE(world.destroy(entity));
   REQUIRE_FALSE(world.registry().valid(entity));
 
   marked.position.x = 11.0f;
@@ -113,7 +117,7 @@ TEST_CASE("a taken hint is refused and leaves nothing behind", "[world]") {
 
   const Entity first = world.createSdfGrid(Pose{}, blank());
 
-  REQUIRE(world.destroySdfGrid(first));
+  REQUIRE(world.destroy(first));
 
   const Entity recycled = world.createSdfGrid(Pose{}, blank());
 
@@ -139,7 +143,7 @@ TEST_CASE("destroying a field returns its primitives to the pool", "[world]") {
 
   REQUIRE(used > 0);
 
-  REQUIRE(world.destroySdfGrid(entity));
+  REQUIRE(world.destroy(entity));
 
   REQUIRE(world.pool().empty());
 
@@ -152,14 +156,30 @@ TEST_CASE("destroying a field returns its primitives to the pool", "[world]") {
   REQUIRE(world.pool().size() == used);
 }
 
-TEST_CASE("destroying an entity that carries no field is refused", "[world]") {
+TEST_CASE("destroying an entity twice is refused", "[world]") {
   World world;
 
   const Entity entity = world.createSdfGrid(Pose{}, blank());
 
-  REQUIRE(world.destroySdfGrid(entity));
+  REQUIRE(world.destroy(entity));
 
-  REQUIRE_FALSE(world.destroySdfGrid(entity));
+  REQUIRE_FALSE(world.destroy(entity));
+}
+
+TEST_CASE("an entity that carries no field is destroyed", "[world]") {
+  World world;
+
+  const Entity entity = world.createAuthored();
+
+  world.emplaceAuthored<Pose>(entity, Pose{});
+  world.emplaceAuthored<dunya::objectmodel::Lens>(
+    entity,
+    dunya::objectmodel::Lens{}
+  );
+
+  REQUIRE(world.destroy(entity));
+
+  REQUIRE_FALSE(world.registry().valid(entity));
 }
 
 TEST_CASE(
@@ -269,7 +289,7 @@ TEST_CASE("the field span follows creates and destroys", "[world]") {
 
   REQUIRE(world.sdfGrids().size() == 3);
 
-  REQUIRE(world.destroySdfGrid(second));
+  REQUIRE(world.destroy(second));
 
   const std::span<const Entity> remaining = world.sdfGrids();
 
@@ -386,7 +406,7 @@ TEST_CASE("a stored field keeps its address when another goes", "[world]") {
 
   const dunya::field::SampledSdf* held = world.sampledSdf(second);
 
-  REQUIRE(world.destroySdfGrid(first));
+  REQUIRE(world.destroy(first));
 
   REQUIRE(held == world.sampledSdf(second));
   REQUIRE(held->distances.size() == 8u);
@@ -579,4 +599,110 @@ TEST_CASE("clearing a world releases its entities and arena", "[world]") {
 
   REQUIRE(world.sdfGrids().size() == 1);
   REQUIRE(world.pool().size() <= held);
+}
+
+TEST_CASE("the world's environment is found by lowest entity", "[worldquery]") {
+  using dunya::objectmodel::DirectionalLight;
+  using dunya::objectmodel::Environment;
+
+  World world;
+
+  REQUIRE(
+    dunya::objectmodel::firstWith<DirectionalLight>(world)
+    == dunya::objectmodel::INVALID_ENTITY
+  );
+  REQUIRE(
+    dunya::objectmodel::firstWith<Environment>(world)
+    == dunya::objectmodel::INVALID_ENTITY
+  );
+
+  const Entity first = world.createAuthored();
+  const Entity second = world.createAuthored();
+
+  world.emplaceAuthored(
+    second,
+    DirectionalLight{glm::vec3(0.0f, 1.0f, 0.0f), 0.5f}
+  );
+  world.emplaceAuthored(
+    first,
+    DirectionalLight{glm::vec3(0.0f, 1.0f, 0.0f), 0.25f}
+  );
+
+  const Entity found = dunya::objectmodel::firstWith<DirectionalLight>(world);
+
+  REQUIRE(found == first);
+  REQUIRE(world.registry().get<DirectionalLight>(found).ambient == 0.25f);
+
+  Environment lit{};
+  lit.exposure = 2.0f;
+
+  world.emplaceAuthored(second, lit);
+
+  REQUIRE(dunya::objectmodel::firstWith<Environment>(world) == second);
+}
+
+TEST_CASE("an authored camera is the world's active camera", "[worldquery]") {
+  using dunya::objectmodel::activeCamera;
+  using dunya::objectmodel::Lens;
+
+  World world;
+
+  REQUIRE_FALSE(activeCamera(world, 1.5f).has_value());
+
+  const Entity eye = world.createAuthored();
+
+  Pose seat{};
+  seat.position = glm::vec3(3.0f, 4.0f, 5.0f);
+
+  Lens lens{};
+  lens.nearPlane = 0.25f;
+
+  world.emplaceAuthored(eye, seat);
+  world.emplaceAuthored(eye, lens);
+
+  const auto resolved = activeCamera(world, 1.5f);
+
+  REQUIRE(resolved.has_value());
+  REQUIRE(resolved->position == seat.position);
+  REQUIRE(resolved->nearPlane == 0.25f);
+  REQUIRE(resolved->view == dunya::objectmodel::view(seat));
+  REQUIRE(resolved->projection == dunya::objectmodel::projection(lens, 1.5f));
+
+  const glm::vec3 eyeInView =
+    glm::vec3(resolved->view * glm::vec4(seat.position, 1.0f));
+
+  REQUIRE_THAT(glm::length(eyeInView), Catch::Matchers::WithinAbs(0.0, 1e-5));
+}
+
+TEST_CASE("dirty sdf regions merge per entity", "[world]") {
+  World world;
+
+  REQUIRE(world.sdfDirty().empty());
+
+  const Entity first = world.createAuthored();
+  const Entity second = world.createAuthored();
+
+  dunya::field::SampleBox low{};
+  low.minimum = glm::uvec3(2u, 2u, 2u);
+  low.extent = glm::uvec3(3u, 3u, 3u);
+
+  dunya::field::SampleBox high{};
+  high.minimum = glm::uvec3(10u, 1u, 4u);
+  high.extent = glm::uvec3(2u, 2u, 2u);
+
+  world.markSdfDirty(first, low);
+  world.markSdfDirty(first, high);
+  world.markSdfDirty(second, low);
+
+  REQUIRE(world.sdfDirty().size() == 2);
+
+  const dunya::field::SampleBox& merged = world.sdfDirty()[0].second;
+
+  REQUIRE(world.sdfDirty()[0].first == first);
+  REQUIRE(merged.minimum == glm::uvec3(2u, 1u, 2u));
+  REQUIRE(merged.minimum.x + merged.extent.x >= 12u);
+
+  world.clearSdfDirty();
+
+  REQUIRE(world.sdfDirty().empty());
 }

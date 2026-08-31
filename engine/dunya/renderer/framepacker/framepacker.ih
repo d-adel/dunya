@@ -1,1 +1,4 @@
 #include "framepacker.h"
+
+#include <dunya/objectmodel/component/environment/environment.h>
+#include <dunya/objectmodel/worldquery/worldquery.h>

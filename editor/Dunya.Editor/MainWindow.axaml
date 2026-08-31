@@ -8,16 +8,45 @@
 
   <DockPanel>
     <Menu DockPanel.Dock="Top">
+      <MenuItem Header="_File">
+        <MenuItem Name="NewProjectItem" Header="_New Project..." />
+        <MenuItem Name="OpenProjectItem" Header="_Open Project..." />
+        <Separator />
+        <MenuItem Name="NewWorldItem" Header="New _World..." />
+        <MenuItem Name="SaveWorldItem" Header="_Save World" />
+        <MenuItem Name="SaveWorldAsItem" Header="Save World _As..." />
+        <Separator />
+        <MenuItem Name="ImportAssetItem" Header="_Import Asset..." />
+        <Separator />
+        <MenuItem Name="ExitItem" Header="E_xit" />
+      </MenuItem>
+      <MenuItem Header="_Entity">
+        <MenuItem Name="AddBoxItem" Header="Add _Box" />
+        <MenuItem Name="AddSphereItem" Header="Add _Sphere" />
+        <Separator />
+        <MenuItem Name="SubtractSphereItem" Header="S_ubtract Sphere" />
+        <Separator />
+        <MenuItem Name="MakeStaticItem" Header="Make S_tatic" />
+        <MenuItem Name="MakeDeformableItem" Header="Make _Deformable" />
+      </MenuItem>
+      <MenuItem Header="_Run">
+        <MenuItem Name="PlayItem" Header="_Play" />
+        <MenuItem Name="StopItem" Header="_Stop" />
+      </MenuItem>
+      <MenuItem Header="_View">
+        <MenuItem Name="ShowGridItem" Header="Show _Grid" />
+        <MenuItem Name="FrameAllItem" Header="_Frame All" />
+        <MenuItem Name="AlignToCameraItem" Header="Align View to _Scene Camera" />
+        <Separator />
+        <MenuItem Header="_Quality">
+          <MenuItem Name="Quality1Item" Header="Off (1x)" />
+          <MenuItem Name="Quality15Item" Header="Good (1.5x)" />
+          <MenuItem Name="Quality2Item" Header="Best (2x)" />
+        </MenuItem>
+      </MenuItem>
       <MenuItem Header="_Window">
         <MenuItem Name="ResetLayoutItem" Header="_Reset Layout" />
       </MenuItem>
-      <MenuItem Header="_File">
-        <MenuItem Header="_Open Project..." />
-        <MenuItem Header="_Save World" />
-        <Separator />
-        <MenuItem Header="E_xit" />
-      </MenuItem>
-
     </Menu>
 
     <dc:DockControl Name="Dock" />

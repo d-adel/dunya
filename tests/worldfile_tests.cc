@@ -10,6 +10,8 @@
 #include <dunya/objectmodel/component/rigidbody/rigidbody.h>
 #include <dunya/objectmodel/component/lens/lens.h>
 
+#include <array>
+#include <cstring>
 #include <vector>
 
 using dunya::core::AssetDatabase;
@@ -389,4 +391,94 @@ TEST_CASE("a camera is a pose and a lens", "[worldfile]") {
     REQUIRE(lens.farPlane == 500.0f);
     REQUIRE(pose.position.z == 12.0f);
   }
+}
+
+TEST_CASE(
+  "a runtime-declared component survives a save and load",
+  "[worldfile]"
+) {
+  dunya::objectmodel::World authored;
+
+  const dunya::objectmodel::ComponentType type = authored.dynamic().declare(
+    dunya::objectmodel::ComponentSpec{
+      "Wager",
+      20u,
+      {dunya::objectmodel::FieldSpec{
+         "count",
+         dunya::objectmodel::FieldKind::UInt,
+         0u
+       },
+       dunya::objectmodel::FieldSpec{
+         "at",
+         dunya::objectmodel::FieldKind::Vec3,
+         4u
+       },
+       dunya::objectmodel::FieldSpec{
+         "ready",
+         dunya::objectmodel::FieldKind::Bool,
+         16u
+       }}
+    }
+  );
+
+  REQUIRE(type != dunya::objectmodel::INVALID_COMPONENT_TYPE);
+
+  const dunya::objectmodel::Entity entity = authored.createSdfGrid({}, {});
+
+  std::array<std::byte, 20> value{};
+
+  const uint32_t count = 7u;
+  const std::array<float, 3> at{1.5f, -2.5f, 3.25f};
+  const uint8_t ready = 1u;
+
+  std::memcpy(value.data(), &count, 4u);
+  std::memcpy(value.data() + 4, at.data(), 12u);
+  std::memcpy(value.data() + 16, &ready, 1u);
+
+  REQUIRE(authored.dynamic().emplace(type, entity, value));
+
+  dunya::core::AssetDatabase assets;
+
+  const dunya::serialize::StoredWorld stored =
+    dunya::serialize::captureWorld(authored, assets);
+
+  REQUIRE(stored.componentTypes.size() == 1u);
+  REQUIRE(stored.componentTypes[0].name == "Wager");
+  REQUIRE(stored.componentTypes[0].fields.size() == 3u);
+  REQUIRE(stored.entities.size() == 1u);
+  REQUIRE(stored.entities[0].dynamic.size() == 1u);
+  REQUIRE(stored.entities[0].dynamic[0].values.size() == 5u);
+
+  const std::string text = dunya::serialize::writeWorld(stored);
+
+  dunya::serialize::StoredWorld read;
+
+  REQUIRE(dunya::serialize::readWorld(text, read));
+
+  dunya::objectmodel::World restored;
+
+  REQUIRE(dunya::serialize::restoreWorld(read, restored, assets));
+
+  const dunya::objectmodel::ComponentType back =
+    restored.dynamic().find("Wager");
+
+  REQUIRE(back != dunya::objectmodel::INVALID_COMPONENT_TYPE);
+  REQUIRE(restored.dynamic().count(back) == 1u);
+
+  const std::byte* stored_at = restored.dynamic().get(back, entity);
+
+  REQUIRE(stored_at != nullptr);
+
+  uint32_t readCount = 0u;
+  std::array<float, 3> readAt{};
+  uint8_t readReady = 0u;
+
+  std::memcpy(&readCount, stored_at, 4u);
+  std::memcpy(readAt.data(), stored_at + 4, 12u);
+  std::memcpy(&readReady, stored_at + 16, 1u);
+
+  REQUIRE(readCount == 7u);
+  REQUIRE(readAt[1] == -2.5f);
+  REQUIRE(readAt[2] == 3.25f);
+  REQUIRE(readReady == 1u);
 }

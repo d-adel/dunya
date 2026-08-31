@@ -10,31 +10,6 @@ const Deformation::Damage& Deformation::damage() const noexcept {
   return m_damage;
 }
 
-void Deformation::markDirty(
-  objectmodel::Entity entity,
-  const field::SampleBox& box
-) {
-  const auto found =
-    std::find_if(m_dirty.begin(), m_dirty.end(), [entity](const auto& entry) {
-      return entry.first == entity;
-    });
-
-  if (found == m_dirty.end()) {
-    m_dirty.emplace_back(entity, box);
-  } else {
-    found->second = field::merge(found->second, box);
-  }
-}
-
-std::span<const std::pair<objectmodel::Entity, field::SampleBox>> Deformation::
-  dirty() const noexcept {
-  return m_dirty;
-}
-
-void Deformation::clearDirty() noexcept {
-  m_dirty.clear();
-}
-
 std::span<const Deformation::Crater> Deformation::
   cratersThisFrame() const noexcept {
   return m_carved;
@@ -65,7 +40,7 @@ void Deformation::carve(
 
   runtime.wake(at - reach, at + reach);
 
-  markDirty(entity, report.samples);
+  world.markSdfDirty(entity, report.samples);
 }
 
 void Deformation::applyImpacts(Runtime& runtime, core::Telemetry& telemetry) {

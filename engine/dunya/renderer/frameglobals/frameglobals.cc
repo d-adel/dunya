@@ -16,19 +16,19 @@ FrameGlobals::FrameGlobals(const dunya::gpu::Device& device)
     : m_group(
         device,
         dunya::core::MAX_FRAMES_IN_FLIGHT,
-        {{0,
+        {{CAMERA,
           sizeof(CameraUniform),
           VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
           dunya::gpu::DescriptorGroup::BufferUpdate::PerFrame},
-         {1,
+         {MARCH,
           MARCH_PARAMS_BLOCK_BYTES,
           VK_SHADER_STAGE_FRAGMENT_BIT,
           dunya::gpu::DescriptorGroup::BufferUpdate::PerFrame},
-         {2,
+         {COUNTS,
           SCENE_COUNTS_BLOCK_BYTES,
           VK_SHADER_STAGE_FRAGMENT_BIT,
           dunya::gpu::DescriptorGroup::BufferUpdate::PerFrame},
-         {3,
+         {LIGHT,
           sizeof(LightUniform),
           VK_SHADER_STAGE_FRAGMENT_BIT,
           dunya::gpu::DescriptorGroup::BufferUpdate::PerFrame}}
@@ -41,10 +41,10 @@ void FrameGlobals::update(
   const SceneCounts& counts,
   const LightUniform& light
 ) {
-  m_group.write(0, frame, &camera, sizeof(camera));
-  m_group.write(1, frame, &march, sizeof(march));
-  m_group.write(2, frame, &counts, sizeof(counts));
-  m_group.write(3, frame, &light, sizeof(light));
+  m_group.write(CAMERA, frame, &camera, sizeof(camera));
+  m_group.write(MARCH, frame, &march, sizeof(march));
+  m_group.write(COUNTS, frame, &counts, sizeof(counts));
+  m_group.write(LIGHT, frame, &light, sizeof(light));
 }
 
 const VkDescriptorSet& FrameGlobals::descriptorSet(

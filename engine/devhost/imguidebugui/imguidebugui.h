@@ -1,7 +1,7 @@
 #pragma once
 
-#include <app/debugui/debugui.h>
-#include <dunya/core/panels/panels.h>
+#include <dunya/debugui/debugui.h>
+#include <dunya/debugui/panels/panels.h>
 #include <dunya/gpu/context/context.h>
 #include <dunya/gpu/swapchain/swapchain.h>
 
@@ -29,7 +29,7 @@ public:
 
   void notice(std::string text) override;
 
-  void build(dunya::core::Panels& registry) override;
+  void build(dunya::debugui::Panels& registry) override;
   void record(VkCommandBuffer commandBuffer) const override;
 
   static DebugUiFactory factory();

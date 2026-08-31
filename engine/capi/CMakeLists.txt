@@ -15,11 +15,18 @@ target_link_libraries(dunya_c PRIVATE
     dunya::gpu
     dunya::objectmodel
     dunya::renderer
+    dunya::physics
+    dunya::runtime
     dunya::serialize
+    dunya::script
+    dunya::systems
+    dunya::viewport
 )
 
 if (MSVC)
-    target_compile_options(dunya_c PRIVATE /W4 /WX /w15038 /Zc:__cplusplus)
+    target_compile_options(dunya_c PRIVATE /W4 /WX /w15038 /w14062 /Zc:__cplusplus)
 else()
     target_compile_options(dunya_c PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
+
+dunya_module(dunya_c Editor)

@@ -33,11 +33,14 @@ public:
     const std::function<void(dunya::objectmodel::Entity)>& onFieldReplaced = {}
   );
 
+  void commitBakes();
+
   [[nodiscard]] std::span<const dunya::objectmodel::Entity>
   sdfRecordEntities() const noexcept;
 
 private:
   SdfRecordTable& m_recordTable;
+  dunya::objectmodel::World* m_packed = nullptr;
   SdfRecordPacker m_sdfRecords;
   MeshRecordPacker m_meshRecords;
 };

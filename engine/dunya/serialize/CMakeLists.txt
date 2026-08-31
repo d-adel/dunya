@@ -16,7 +16,9 @@ target_link_libraries(dunya_serialize PUBLIC
     glaze::glaze
 )
 if (MSVC)
-    target_compile_options(dunya_serialize PRIVATE /W4 /WX /w15038 /Zc:__cplusplus)
+    target_compile_options(dunya_serialize PRIVATE /W4 /WX /w15038 /w14062 /Zc:__cplusplus)
 else()
     target_compile_options(dunya_serialize PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
+
+dunya_module(dunya_serialize Runtime)

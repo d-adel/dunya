@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.28)
 
-project(Dunya VERSION 0.0 LANGUAGES CXX)
+project(Dunya VERSION 0.0 LANGUAGES CXX C)
+
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+include(DunyaModule)
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 23)
@@ -39,6 +42,16 @@ set(DUNYA_SHADOW_SHARPNESS 12.0f)
 set(DUNYA_SAMPLER_LINEAR_REPEAT 0)
 set(DUNYA_SAMPLER_LINEAR_CLAMP 1)
 set(DUNYA_SAMPLER_NEAREST_CLAMP 2)
+
+set(DUNYA_SHAPE_SPHERE 0)
+set(DUNYA_SHAPE_BOX 1)
+set(DUNYA_SHAPE_PLANE 2)
+set(DUNYA_SHAPE_CYLINDER 3)
+set(DUNYA_CSG_UNION 0)
+set(DUNYA_CSG_SMOOTH_UNION 1)
+set(DUNYA_CSG_INTERSECTION 2)
+set(DUNYA_CSG_SUBTRACTION 3)
+set(DUNYA_CSG_SMOOTH_SUBTRACTION 4)
 set(SHADER_DEFINES
     "-DDUNYA_MAX_SDF_PRIMITIVES=${DUNYA_MAX_SDF_PRIMITIVES}"
     "-DDUNYA_MAX_TEXTURES=${DUNYA_MAX_TEXTURES}"
@@ -50,6 +63,15 @@ set(SHADER_DEFINES
     "-DDUNYA_SAMPLER_LINEAR_REPEAT=${DUNYA_SAMPLER_LINEAR_REPEAT}"
     "-DDUNYA_SAMPLER_LINEAR_CLAMP=${DUNYA_SAMPLER_LINEAR_CLAMP}"
     "-DDUNYA_SAMPLER_NEAREST_CLAMP=${DUNYA_SAMPLER_NEAREST_CLAMP}"
+    "-DDUNYA_SHAPE_SPHERE=${DUNYA_SHAPE_SPHERE}"
+    "-DDUNYA_SHAPE_BOX=${DUNYA_SHAPE_BOX}"
+    "-DDUNYA_SHAPE_PLANE=${DUNYA_SHAPE_PLANE}"
+    "-DDUNYA_SHAPE_CYLINDER=${DUNYA_SHAPE_CYLINDER}"
+    "-DDUNYA_CSG_UNION=${DUNYA_CSG_UNION}"
+    "-DDUNYA_CSG_SMOOTH_UNION=${DUNYA_CSG_SMOOTH_UNION}"
+    "-DDUNYA_CSG_INTERSECTION=${DUNYA_CSG_INTERSECTION}"
+    "-DDUNYA_CSG_SUBTRACTION=${DUNYA_CSG_SUBTRACTION}"
+    "-DDUNYA_CSG_SMOOTH_SUBTRACTION=${DUNYA_CSG_SMOOTH_SUBTRACTION}"
 )
 set(SHADER_INCLUDE_FLAG "-I${SHADER_SOURCE_DIR}")
 
@@ -98,6 +120,14 @@ FetchContent_Declare(
     GIT_TAG         v8.3.0
 )
 FetchContent_MakeAvailable(glfw glm stb tinyobjloader imgui JoltPhysics EnTT glaze)
+
+target_compile_definitions(glm INTERFACE
+    GLM_FORCE_RADIANS
+    GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
+    GLM_FORCE_DEPTH_ZERO_TO_ONE
+    GLM_ENABLE_EXPERIMENTAL
+)
+
 find_package(Vulkan REQUIRED)
 
 add_library(imgui STATIC
@@ -119,11 +149,16 @@ target_compile_features(imgui PUBLIC cxx_std_20)
 add_subdirectory(engine/dunya/core)
 add_subdirectory(engine/dunya/objectmodel)
 add_subdirectory(engine/dunya/editor)
+add_subdirectory(engine/dunya/viewport)
 add_subdirectory(engine/dunya/platform)
 add_subdirectory(engine/dunya/field)
 add_subdirectory(engine/dunya/physics)
 add_subdirectory(engine/dunya/serialize)
 add_subdirectory(engine/dunya/runtime)
+add_subdirectory(engine/dunya/systems)
+add_subdirectory(engine/dunya/script)
+add_subdirectory(engine/dunya/stb)
+add_subdirectory(engine/dunya/debugui)
 add_subdirectory(engine/dunya/imagecompare)
 enable_testing()
 add_executable(DunyaDevHost
@@ -134,7 +169,6 @@ add_executable(DunyaDevHost
     engine/app/framecheck/framecheck.cc
     engine/app/demodriver/demodriver.cc
 
-    engine/app/flycamera/flycamera.cc
     engine/app/glfwwindowsystem/glfwwindowsystem.cc
     engine/app/projectile/projectile.cc
     engine/app/flycontroller/flycontroller.cc
@@ -152,6 +186,7 @@ add_subdirectory(engine/dunya/gpu)
 add_subdirectory(engine/dunya/renderer)
 add_subdirectory(engine/dunya/assets)
 add_subdirectory(engine/capi)
+add_subdirectory(editor)
 target_compile_definitions(DunyaDevHost PRIVATE
     SHADER_SOURCE_DIR=\"${SHADER_SOURCE_DIR}\"
     GLSLC_PATH=\"${GLSLC_EXECUTABLE}\"
@@ -205,7 +240,6 @@ add_executable(DunyaRuntime
     engine/app/startupoptions/startupoptions.cc
     engine/app/framecheck/framecheck.cc
     engine/app/demodriver/demodriver.cc
-    engine/app/flycamera/flycamera.cc
     engine/app/glfwwindowsystem/glfwwindowsystem.cc
     engine/app/projectile/projectile.cc
     engine/app/flycontroller/flycontroller.cc
@@ -213,12 +247,14 @@ add_executable(DunyaRuntime
 )
 add_dependencies(DunyaRuntime SHADER_TARGET)
 if (MSVC)
-    target_compile_options(DunyaRuntime PRIVATE /W4 /WX /w15038 /Zc:__cplusplus)
+    target_compile_options(DunyaRuntime PRIVATE /W4 /WX /w15038 /w14062 /Zc:__cplusplus)
 else()
     target_compile_options(DunyaRuntime PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
 target_link_libraries(DunyaRuntime PRIVATE
     dunya::assets
+    dunya::debugui
+    dunya::viewport
     dunya::serialize
     glfw
     Vulkan::Vulkan
@@ -231,17 +267,21 @@ target_link_libraries(DunyaRuntime PRIVATE
     dunya::field
     dunya::physics
     dunya::runtime
+    dunya::script
+    dunya::systems
     dunya::imagecompare
 )
 
 target_include_directories(DunyaRuntime PRIVATE engine ${stb_SOURCE_DIR} ${tinyobjloader_SOURCE_DIR})
 if (MSVC)
-    target_compile_options(DunyaDevHost PRIVATE /W4 /WX /w15038 /Zc:__cplusplus)
+    target_compile_options(DunyaDevHost PRIVATE /W4 /WX /w15038 /w14062 /Zc:__cplusplus)
 else()
     target_compile_options(DunyaDevHost PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
 target_link_libraries(DunyaDevHost PRIVATE
     dunya::assets
+    dunya::debugui
+    dunya::viewport
     dunya::serialize
     glfw
     Vulkan::Vulkan
@@ -255,6 +295,8 @@ target_link_libraries(DunyaDevHost PRIVATE
     dunya::field
     dunya::physics
     dunya::runtime
+    dunya::script
+    dunya::systems
     dunya::imagecompare
     imgui
 )
@@ -269,4 +311,11 @@ add_custom_target(DUNYA_CONTENT ALL
     VERBATIM
 )
 add_dependencies(DUNYA_CONTENT DunyaDevHost DunyaRuntime SHADER_TARGET)
+dunya_module(imgui Developer)
+dunya_module(DunyaDevHost Editor)
+dunya_module(DunyaRuntime Developer)
+
 add_subdirectory(tests)
+
+dunya_require_declared()
+dunya_check_modules()

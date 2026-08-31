@@ -24,7 +24,13 @@ StartupOptions::StartupOptions(std::span<char*> arguments) {
   for (size_t i = 1; i < arguments.size(); ++i) {
     const std::string argument = arguments[i];
 
-    if (argument == "--analytic") {
+    if (argument == "--") {
+      break;
+    }
+
+    if (argument == "--grid") {
+      grid = true;
+    } else if (argument == "--analytic") {
       analytic = true;
     } else if (argument == "--verify-bake") {
       verifyBake = true;
@@ -75,7 +81,7 @@ StartupOptions::StartupOptions(std::span<char*> arguments) {
           " [--screenshot PATH] [--golden PATH] [--dents N] [--dent-log PATH]"
           " [--demo FRAMES] [--demo-rate PER_SEC]"
           " [--capture DIR] [--project DIR] [--world NAME]"
-          " [--export-project DIR]"
+          " [--export-project DIR] [-- ARGS FOR THE SCRIPTS]"
       );
     }
   }

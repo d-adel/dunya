@@ -27,7 +27,17 @@ const entt::registry& World::registry() const noexcept {
 }
 
 void World::clear() {
+  m_sdfDirty.clear();
+  m_dynamic.clearEntities();
   m_registry.clear();
+}
+
+DynamicComponents& World::dynamic() noexcept {
+  return m_dynamic;
+}
+
+const DynamicComponents& World::dynamic() const noexcept {
+  return m_dynamic;
 }
 
 Entity World::createAuthored() {
@@ -72,10 +82,12 @@ bool World::createSdfGridAt(
   return true;
 }
 
-bool World::destroySdfGrid(Entity entity) {
-  if (!m_registry.valid(entity) || !m_registry.all_of<SdfGrid>(entity)) {
+bool World::destroy(Entity entity) {
+  if (!m_registry.valid(entity)) {
     return false;
   }
+
+  m_dynamic.clear(entity);
 
   m_registry.destroy(entity);
 
@@ -258,6 +270,28 @@ std::span<const Entity> World::meshes() const noexcept {
   }
 
   return {storage->data(), storage->size()};
+}
+
+void World::markSdfDirty(Entity entity, const dunya::field::SampleBox& box) {
+  const auto found =
+    std::find_if(m_sdfDirty.begin(), m_sdfDirty.end(), [entity](const auto& e) {
+      return e.first == entity;
+    });
+
+  if (found == m_sdfDirty.end()) {
+    m_sdfDirty.emplace_back(entity, box);
+  } else {
+    found->second = dunya::field::merge(found->second, box);
+  }
+}
+
+std::span<const std::pair<Entity, dunya::field::SampleBox>> World::
+  sdfDirty() const noexcept {
+  return m_sdfDirty;
+}
+
+void World::clearSdfDirty() noexcept {
+  m_sdfDirty.clear();
 }
 
 }

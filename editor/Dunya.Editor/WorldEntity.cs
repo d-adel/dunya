@@ -18,7 +18,7 @@ public sealed class WorldEntity
 
     public string Summary => string.Join("  ", Components);
 
-    private string Kind =>
+    public string Kind =>
         Components.Contains("SdfGrid") ? "SdfGrid"
         : Components.Contains("Mesh") ? "Mesh"
         : "Entity";

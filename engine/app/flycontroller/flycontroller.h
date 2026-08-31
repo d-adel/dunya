@@ -1,7 +1,7 @@
 #pragma once
 
 #include <dunya/field/raycast/raycast.h>
-#include <app/flycamera/flycamera.h>
+#include <dunya/viewport/camera/camera.h>
 #include <dunya/platform/input/input.h>
 #include <dunya/platform/window/window.h>
 
@@ -18,8 +18,8 @@ public:
   FlyController(FlyController&&) = delete;
   FlyController& operator=(FlyController&&) = delete;
 
-  [[nodiscard]] FlyCamera& camera() noexcept;
-  [[nodiscard]] const FlyCamera& camera() const noexcept;
+  [[nodiscard]] dunya::viewport::Camera& camera() noexcept;
+  [[nodiscard]] const dunya::viewport::Camera& camera() const noexcept;
 
   [[nodiscard]] bool looking() const noexcept;
 
@@ -40,8 +40,8 @@ private:
   dunya::platform::Input& m_input;
   dunya::platform::Window& m_window;
 
-  FlyCamera m_camera;
-  FlyInput m_state{};
+  dunya::viewport::Camera m_camera;
+  dunya::viewport::FlyInput m_state{};
 
   bool m_looking = false;
 

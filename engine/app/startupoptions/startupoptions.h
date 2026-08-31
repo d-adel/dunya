@@ -22,6 +22,8 @@ struct StartupOptions {
 
   bool analytic = false;
 
+  bool grid = false;
+
   bool verifyBake = false;
 
   std::string screenshot;

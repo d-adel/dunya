@@ -37,19 +37,27 @@ ResourceTable::ResourceTable(
     : m_group(
         device,
         dunya::core::MAX_FRAMES_IN_FLIGHT,
-        {{0,
+        {{MATERIALS,
           dunya::core::MAX_MATERIALS * sizeof(dunya::renderer::MaterialRecord),
           VK_SHADER_STAGE_FRAGMENT_BIT,
           dunya::gpu::DescriptorGroup::BufferUpdate::Static}},
-        {{1,
+        {{TEXTURES,
           VK_SHADER_STAGE_FRAGMENT_BIT,
           imageViews(textures),
           dunya::core::MAX_TEXTURES}},
-        {{2,
+        {{SAMPLERS,
           VK_SHADER_STAGE_FRAGMENT_BIT,
           samplerHandles(samplers),
           dunya::core::MAX_SAMPLERS}}
-      ) {
+      ),
+      m_textureCount(static_cast<uint32_t>(textures.size())),
+      m_samplerCount(static_cast<uint32_t>(samplers.size())) {
+  refresh(materials);
+}
+
+void ResourceTable::refresh(
+  std::span<const dunya::renderer::MaterialRecord> materials
+) {
   if (materials.size() > dunya::core::MAX_MATERIALS) {
     throw std::runtime_error("More materials than the material table holds");
   }
@@ -64,7 +72,7 @@ ResourceTable::ResourceTable(
     };
 
     for (uint32_t image : images) {
-      if (image >= textures.size()) {
+      if (image >= m_textureCount) {
         throw std::runtime_error("Material names a texture slot with no image");
       }
     }
@@ -78,13 +86,13 @@ ResourceTable::ResourceTable(
     };
 
     for (uint32_t index : used) {
-      if (index >= samplers.size()) {
+      if (index >= m_samplerCount) {
         throw std::runtime_error("Material names a sampler slot with none");
       }
     }
   }
 
-  m_group.write(0, 0, materials.data(), materials.size_bytes());
+  m_group.write(MATERIALS, 0, materials.data(), materials.size_bytes());
 }
 
 const VkDescriptorSet& ResourceTable::descriptorSet(

@@ -21,19 +21,32 @@ SampleBox affectedBox(
     return {};
   }
 
-  if (primitive.bounds.w <= 0.0f || primitive.shapeConfig.z == INTERSECTION) {
+  if (primitive.shapeConfig.z == INTERSECTION) {
     return {glm::uvec3(0u), field.resolution};
   }
 
-  const glm::vec3 centre(primitive.bounds);
-  const glm::vec3 reach(primitive.bounds.w);
+  const std::optional<Aabb> tight = primitiveBox(primitive);
+
+  const bool usable =
+    tight.has_value()
+    && glm::all(glm::greaterThan(tight->maximum, tight->minimum));
+
+  if (!usable && primitive.bounds.w <= 0.0f) {
+    return {glm::uvec3(0u), field.resolution};
+  }
+
+  const glm::vec3 low =
+    usable ? tight->minimum
+           : glm::vec3(primitive.bounds) - glm::vec3(primitive.bounds.w);
+
+  const glm::vec3 high =
+    usable ? tight->maximum
+           : glm::vec3(primitive.bounds) + glm::vec3(primitive.bounds.w);
 
   const glm::vec3 pad(static_cast<float>(marginVoxels));
 
-  const glm::vec3 lowest =
-    (centre - reach - field.origin) / field.voxelSize - pad;
-  const glm::vec3 highest =
-    (centre + reach - field.origin) / field.voxelSize + pad;
+  const glm::vec3 lowest = (low - field.origin) / field.voxelSize - pad;
+  const glm::vec3 highest = (high - field.origin) / field.voxelSize + pad;
 
   const glm::vec3 last = glm::vec3(field.resolution - glm::uvec3(1u));
 

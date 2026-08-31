@@ -29,7 +29,8 @@ struct VolumeKey {
 
 VolumeKey volumeKey(
   std::span<const dunya::field::Primitive> primitives,
-  const glm::uvec3& resolution
+  const glm::uvec3& resolution,
+  float margin
 );
 
 class VolumePool {

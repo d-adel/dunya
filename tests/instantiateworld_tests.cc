@@ -5,7 +5,9 @@
 #include <dunya/objectmodel/component/deformable/deformable.h>
 #include <dunya/objectmodel/instantiate/instantiate.h>
 #include <dunya/objectmodel/component/staticbody/staticbody.h>
+#include <dunya/objectmodel/component/lens/lens.h>
 #include <dunya/objectmodel/world/world.h>
+#include <dunya/objectmodel/worldcontents/worldcontents.h>
 
 #include <cstdint>
 
@@ -292,4 +294,37 @@ TEST_CASE("the runtime shares the authored lattice", "[instantiate]") {
 
   REQUIRE(runtime.sampledSdf(entity) == authored.sampledSdf(entity));
   REQUIRE(authored.sampledSdfUsers(entity) == 2);
+}
+
+TEST_CASE(
+  "an entity that is neither a grid nor a mesh survives",
+  "[instantiate]"
+) {
+  using dunya::objectmodel::Lens;
+
+  World authored;
+
+  const Entity eye = authored.createAuthored();
+
+  Pose seat{};
+  seat.position = glm::vec3(13.0f, 10.0f, 25.0f);
+
+  Lens lens{};
+  lens.verticalFov = 55.0f;
+
+  authored.emplaceAuthored(eye, seat);
+  authored.emplaceAuthored(eye, lens);
+
+  World runtime;
+
+  dunya::objectmodel::instantiateWorld(authored, runtime);
+
+  REQUIRE(
+    dunya::objectmodel::liveEntities(runtime).size()
+    == dunya::objectmodel::liveEntities(authored).size()
+  );
+
+  REQUIRE(runtime.registry().all_of<Lens>(eye));
+  REQUIRE(runtime.registry().get<Lens>(eye).verticalFov == 55.0f);
+  REQUIRE(runtime.registry().get<Pose>(eye).position == seat.position);
 }

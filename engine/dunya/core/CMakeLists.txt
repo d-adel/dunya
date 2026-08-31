@@ -1,5 +1,4 @@
 add_library(dunya_core STATIC
-    panels/panels.cc
     event/event.cc
     asset/asset.cc
     nametable/nametable.cc
@@ -22,7 +21,9 @@ target_compile_definitions(dunya_core PUBLIC
     DUNYA_SAMPLER_NEAREST_CLAMP=${DUNYA_SAMPLER_NEAREST_CLAMP}
 )
 if (MSVC)
-    target_compile_options(dunya_core PRIVATE /W4 /WX /w15038 /Zc:__cplusplus)
+    target_compile_options(dunya_core PRIVATE /W4 /WX /w15038 /w14062 /Zc:__cplusplus)
 else()
     target_compile_options(dunya_core PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
+
+dunya_module(dunya_core Runtime)

@@ -1,0 +1,16 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Dunya.Editor.Panels.ProjectPanel">
+  <DockPanel Margin="6">
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="0,0,0,6">
+      <Button Name="RefreshButton" Content="Refresh" />
+      <Button Name="NewWorldButton" Content="New world" />
+      <Button Name="ImportButton" Content="Import asset" />
+    </StackPanel>
+
+    <TextBlock Name="Root" DockPanel.Dock="Top" Text="" TextWrapping="Wrap"
+               Margin="0,0,0,6" Opacity="0.7" />
+
+    <TreeDataGrid Name="Contents" />
+  </DockPanel>
+</UserControl>

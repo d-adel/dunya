@@ -1,5 +1,7 @@
 #include "instantiate.h"
 
+#include <dunya/objectmodel/worldcontents/worldcontents.h>
+
 #include <dunya/objectmodel/trait/authoredcomponents/authoredcomponents.h>
 #include <dunya/objectmodel/component/deformed/deformed.h>
 #include <dunya/objectmodel/component/sharedfield/sharedfield.h>

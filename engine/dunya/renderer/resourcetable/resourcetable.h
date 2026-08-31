@@ -13,6 +13,10 @@ namespace dunya::renderer {
 
 class ResourceTable {
 public:
+  static constexpr uint32_t MATERIALS = 0;
+  static constexpr uint32_t TEXTURES = 1;
+  static constexpr uint32_t SAMPLERS = 2;
+
   ResourceTable(
     const dunya::gpu::Device& device,
     std::span<const dunya::gpu::Texture> textures,
@@ -27,11 +31,15 @@ public:
 
   ~ResourceTable() = default;
 
+  void refresh(std::span<const dunya::renderer::MaterialRecord> materials);
+
   const VkDescriptorSet& descriptorSet(uint32_t frame) const noexcept;
   const VkDescriptorSetLayout& setLayout() const noexcept;
 
 private:
   dunya::gpu::DescriptorGroup m_group;
+  uint32_t m_textureCount;
+  uint32_t m_samplerCount;
 };
 
 }

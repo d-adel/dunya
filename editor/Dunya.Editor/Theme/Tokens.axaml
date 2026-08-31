@@ -37,6 +37,11 @@
       <SolidColorBrush x:Key="EditorAxisY" Color="#4CC38A" />
       <SolidColorBrush x:Key="EditorAxisZ" Color="#5B8DEF" />
       <SolidColorBrush x:Key="EditorAxisW" Color="#A78BFA" />
+      <Color x:Key="SystemListLowColor">#1AFFFFFF</Color>
+      <Color x:Key="SystemListMediumColor">#26FFFFFF</Color>
+      <Color x:Key="SystemAccentColor">#4C8DF6</Color>
+      <Color x:Key="SystemAccentColorLight1">#6FA6F8</Color>
+      <Color x:Key="SystemAccentColorDark1">#3673D4</Color>
     </ResourceDictionary>
     <ResourceDictionary x:Key="Default">
       <SolidColorBrush x:Key="EditorWindowBackground" Color="#F4F4F5" />
@@ -52,6 +57,11 @@
       <SolidColorBrush x:Key="EditorAxisY" Color="#2F8F5B" />
       <SolidColorBrush x:Key="EditorAxisZ" Color="#3557C4" />
       <SolidColorBrush x:Key="EditorAxisW" Color="#7C5BD6" />
+      <Color x:Key="SystemListLowColor">#12000000</Color>
+      <Color x:Key="SystemListMediumColor">#1F000000</Color>
+      <Color x:Key="SystemAccentColor">#2563EB</Color>
+      <Color x:Key="SystemAccentColorLight1">#4F86F0</Color>
+      <Color x:Key="SystemAccentColorDark1">#1D4FBF</Color>
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>
 

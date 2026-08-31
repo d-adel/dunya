@@ -2,7 +2,7 @@
 
 namespace dunya::gpu {
 
-SwapChainSupportDetails querySwapChainSupport(
+std::optional<SwapChainSupportDetails> trySwapChainSupport(
   VkPhysicalDevice device,
   VkSurfaceKHR surface
 ) {
@@ -16,7 +16,7 @@ SwapChainSupportDetails querySwapChainSupport(
     )
     != VK_SUCCESS
   ) {
-    throw std::runtime_error("Failed to query surface capabilities");
+    return std::nullopt;
   }
 
   uint32_t formatCount;
@@ -24,7 +24,7 @@ SwapChainSupportDetails querySwapChainSupport(
     vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr)
     != VK_SUCCESS
   ) {
-    throw std::runtime_error("Failed to count surface formats");
+    return std::nullopt;
   }
 
   if (formatCount != 0) {
@@ -39,7 +39,7 @@ SwapChainSupportDetails querySwapChainSupport(
       )
       != VK_SUCCESS
     ) {
-      throw std::runtime_error("Failed to enumerate surface formats");
+      return std::nullopt;
     }
   }
 
@@ -53,7 +53,7 @@ SwapChainSupportDetails querySwapChainSupport(
     )
     != VK_SUCCESS
   ) {
-    throw std::runtime_error("Failed to count surface present modes");
+    return std::nullopt;
   }
 
   if (presentModeCount != 0) {
@@ -68,11 +68,27 @@ SwapChainSupportDetails querySwapChainSupport(
       )
       != VK_SUCCESS
     ) {
-      throw std::runtime_error("Failed to enumerate surface present modes");
+      return std::nullopt;
     }
   }
 
   return details;
+}
+
+SwapChainSupportDetails querySwapChainSupport(
+  VkPhysicalDevice device,
+  VkSurfaceKHR surface
+) {
+  std::optional<SwapChainSupportDetails> details =
+    trySwapChainSupport(device, surface);
+
+  if (!details.has_value()) {
+    throw std::runtime_error(
+      "The chosen device cannot present to this surface"
+    );
+  }
+
+  return *details;
 }
 
 QueueFamilyIndices findQueueFamilies(
@@ -209,10 +225,11 @@ void Device::pickPhysicalDevice(VkSurfaceKHR surface) {
     bool swapChainAdequate = false;
 
     if (extensionsSupported && featuresSupported) {
-      SwapChainSupportDetails swapChainSupport =
-        querySwapChainSupport(device, surface);
-      swapChainAdequate = !swapChainSupport.formats.empty()
-                          && !swapChainSupport.presentModes.empty();
+      const std::optional<SwapChainSupportDetails> support =
+        trySwapChainSupport(device, surface);
+
+      swapChainAdequate = support.has_value() && !support->formats.empty()
+                          && !support->presentModes.empty();
     }
 
     if (

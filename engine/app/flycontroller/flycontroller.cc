@@ -6,11 +6,11 @@ FlyController::FlyController(
 )
     : m_input(input), m_window(window) {}
 
-FlyCamera& FlyController::camera() noexcept {
+dunya::viewport::Camera& FlyController::camera() noexcept {
   return m_camera;
 }
 
-const FlyCamera& FlyController::camera() const noexcept {
+const dunya::viewport::Camera& FlyController::camera() const noexcept {
   return m_camera;
 }
 

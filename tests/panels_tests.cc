@@ -1,10 +1,10 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include <dunya/core/panels/panels.h>
+#include <dunya/debugui/panels/panels.h>
 
-using dunya::core::Panel;
-using dunya::core::Panels;
-using dunya::core::WidgetKind;
+using dunya::debugui::Panel;
+using dunya::debugui::Panels;
+using dunya::debugui::WidgetKind;
 
 TEST_CASE("naming a panel twice returns the same one", "[panels]") {
   Panels registry;

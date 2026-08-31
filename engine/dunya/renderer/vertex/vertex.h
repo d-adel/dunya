@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/hash.hpp>
 #include <array>
+#include <cstddef>
 
 namespace dunya::renderer {
 
@@ -54,6 +55,27 @@ struct Vertex {
     return attributeDescriptions;
   }
 };
+
+static_assert(
+  offsetof(Vertex, pos) == 0,
+  "Vertex must keep the stride the mesh pipeline binds"
+);
+static_assert(
+  offsetof(Vertex, color) == 16,
+  "Vertex must keep the stride the mesh pipeline binds"
+);
+static_assert(
+  offsetof(Vertex, texCoord) == 32,
+  "Vertex must keep the stride the mesh pipeline binds"
+);
+static_assert(
+  offsetof(Vertex, normal) == 48,
+  "Vertex must keep the stride the mesh pipeline binds"
+);
+static_assert(
+  sizeof(Vertex) == 64,
+  "Vertex must keep the stride the mesh pipeline binds"
+);
 
 template<typename T>
 void hashHelper(std::size_t& seed, const T& value) {

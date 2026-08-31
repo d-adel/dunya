@@ -24,6 +24,12 @@ float sdBox(vec3 p, vec3 center, vec3 halfSize)
     return outsideDistance + insideDistance;
 }
 
+float sdCylinder(vec3 p, float radius, float halfHeight) {
+    vec2 d = vec2(length(p.xz) - radius, abs(p.y) - halfHeight);
+
+    return min(max(d.x, d.y), 0.0) + length(max(d, vec2(0.0)));
+}
+
 vec2 minMat(vec2 a, vec2 b) {
   return a.x < b.x ? a : b;
 }
@@ -31,12 +37,14 @@ vec2 minMat(vec2 a, vec2 b) {
 float primitiveDistance(vec3 p, Primitive prim) {
   vec3 local = ((prim.inverseModel) * vec4(p, 1.0)).xyz;
   switch(prim.shapeConfig.x) {
-    case 0u:
+    case DUNYA_SHAPE_SPHERE:
       return length(local) - prim.shape.x;
-    case 1u:
+    case DUNYA_SHAPE_BOX:
       return sdBox(local, vec3(0), prim.shape.xyz);
-    case 2u:
+    case DUNYA_SHAPE_PLANE:
       return local.y;
+    case DUNYA_SHAPE_CYLINDER:
+      return sdCylinder(local, prim.shape.x, prim.shape.y);
     default:
       return 1e9;
   }
@@ -50,11 +58,11 @@ bool skippable(vec3 p, Primitive prim, float acc) {
   float bound = length(p - prim.bounds.xyz) - prim.bounds.w;
 
   switch (prim.shapeConfig.z) {
-    case 0u:
-    case 1u:
+    case DUNYA_CSG_UNION:
+    case DUNYA_CSG_SMOOTH_UNION:
       return bound > acc;
-    case 3u:
-    case 4u:
+    case DUNYA_CSG_SUBTRACTION:
+    case DUNYA_CSG_SMOOTH_SUBTRACTION:
       return bound >= -acc;
     default:
       return false;
@@ -77,19 +85,19 @@ vec2 foldDistance(vec3 p, uint count, bool unboundedOnly) {
     vec2 cur = vec2(primitiveDistance(p, prim), float(prim.shapeConfig.y));
 
     switch(prim.shapeConfig.z) {
-      case 1u:
+      case DUNYA_CSG_SMOOTH_UNION:
         {
           float k = prim.shape.w;
           acc = vec2(smin(acc.x, cur.x, k), acc.x < cur.x ? acc.y : cur.y);
         }
         break;
-      case 2u:
+      case DUNYA_CSG_INTERSECTION:
         acc = acc.x > cur.x ? acc : cur;
         break;
-      case 3u:
+      case DUNYA_CSG_SUBTRACTION:
         acc = vec2(max(acc.x, -cur.x), acc.y);
         break;
-      case 4u:
+      case DUNYA_CSG_SMOOTH_SUBTRACTION:
         acc = vec2(-smin(-acc.x, cur.x, prim.shape.w), acc.y);
         break;
       default:

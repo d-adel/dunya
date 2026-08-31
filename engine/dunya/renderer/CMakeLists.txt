@@ -1,5 +1,7 @@
 add_library(dunya_renderer STATIC
     renderer.cc
+    bindgroups/bindgroups.cc
+    rendererstorage/rendererstorage.cc
     sdfbaker/sdfbaker.cc
     sdfrecordpacker/sdfrecordpacker.cc
     framepacker/framepacker.cc
@@ -14,6 +16,7 @@ add_library(dunya_renderer STATIC
     vertex/vertex.cc
     shadowgrid/shadowgrid.cc
     sdfresidency/sdfresidency.cc
+    scenetarget/scenetarget.cc
     volumepool/volumepool.cc
 )
 add_library(dunya::renderer ALIAS dunya_renderer)
@@ -33,7 +36,9 @@ target_compile_definitions(dunya_renderer PUBLIC
     DUNYA_SHADOW_SHARPNESS=${DUNYA_SHADOW_SHARPNESS}
 )
 if (MSVC)
-    target_compile_options(dunya_renderer PRIVATE /W4 /WX /w15038 /Zc:__cplusplus)
+    target_compile_options(dunya_renderer PRIVATE /W4 /WX /w15038 /w14062 /Zc:__cplusplus)
 else()
     target_compile_options(dunya_renderer PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
+
+dunya_module(dunya_renderer Runtime)

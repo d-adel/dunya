@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "entities": [{
+    "pose": {
+      "position": [0, -2, 0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [33, 33, 33]
+    },
+    "staticBody": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [4, 0.3, 4, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 5.6648035]
+      },
+      "material": 7934708211294929061
+    }]
+  }, {
+    "pose": {
+      "position": [0, 0, 0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [65, 65, 65]
+    },
+    "staticBody": {
+      
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [1.2, 1.2, 1.2, 0],
+        "shapeConfig": [1, 0, 0, 0],
+        "bounds": [0, 0, -0, 2.078461]
+      },
+      "material": 7934708211294929061
+    }, {
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.55, 0, 0, 0],
+        "shapeConfig": [0, 0, 3, 0],
+        "bounds": [0, 0, -0, 0.55]
+      },
+      "material": 7934708211294929061
+    }]
+  }, {
+    "pose": {
+      "position": [0, 0, 0],
+      "rotation": [1, 0, 0, 0]
+    },
+    "grid": {
+      "resolution": [33, 33, 33]
+    },
+    "deformable": {
+      
+    },
+    "primitives": [{
+      "primitive": {
+        "inverseModel": [1, -0, 0, -0, -0, 1, -0, 0, 0, -0, 1, -0, -0, 0, -0, 1],
+        "shape": [0.4, 0, 0, 0],
+        "shapeConfig": [0, 0, 0, 0],
+        "bounds": [0, 0, -0, 0.4]
+      },
+      "material": 7934708211294929061
+    }]
+  }]
+}

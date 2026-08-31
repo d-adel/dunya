@@ -230,7 +230,7 @@ TEST_CASE(
 
   history.undo(world);
 
-  REQUIRE(world.destroySdfGrid(id));
+  REQUIRE(world.destroy(id));
 
   history.redo(world);
 
@@ -251,7 +251,7 @@ TEST_CASE(
     history.execute(dunya::editor::AddPrimitiveCommand{id, 1, marker(9)}, world)
   );
 
-  REQUIRE(world.destroySdfGrid(id));
+  REQUIRE(world.destroy(id));
 
   history.undo(world);
 

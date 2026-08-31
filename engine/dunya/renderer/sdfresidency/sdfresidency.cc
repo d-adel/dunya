@@ -131,4 +131,17 @@ void SdfResidency::upload(
   m_uploader.submit();
 }
 
+void SdfResidency::flush(
+  objectmodel::World& world,
+  core::Telemetry& telemetry
+) {
+  if (world.sdfDirty().empty()) {
+    return;
+  }
+
+  upload(world, world.sdfDirty(), telemetry);
+
+  world.clearSdfDirty();
+}
+
 }

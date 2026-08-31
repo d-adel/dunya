@@ -55,6 +55,14 @@ struct RecordBounds {
 };
 
 static_assert(
+  offsetof(RecordBounds, minimum) == 0,
+  "RecordBounds must match its block in sdf-shader.frag"
+);
+static_assert(
+  offsetof(RecordBounds, maximum) == 16,
+  "RecordBounds must match its block in sdf-shader.frag"
+);
+static_assert(
   sizeof(RecordBounds) == 32,
   "RecordBounds must match its block in sdf-shader.frag"
 );

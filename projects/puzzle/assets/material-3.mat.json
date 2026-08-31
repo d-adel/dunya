@@ -1,0 +1,41 @@
+{
+   "version": 1,
+   "baseColor": [
+      0.92,
+      0.72,
+      0.24,
+      1
+   ],
+   "emissive": [
+      0,
+      0,
+      0,
+      1
+   ],
+   "metallic": 1,
+   "roughness": 0.25,
+   "normalScale": 1,
+   "occlusionStrength": 1,
+   "alphaCutoff": 0.5,
+   "flags": 0,
+   "baseColorTexture": {
+      "texture": 0,
+      "sampler": 0
+   },
+   "metallicRoughnessTexture": {
+      "texture": 0,
+      "sampler": 0
+   },
+   "normalTexture": {
+      "texture": 0,
+      "sampler": 0
+   },
+   "occlusionTexture": {
+      "texture": 0,
+      "sampler": 0
+   },
+   "emissiveTexture": {
+      "texture": 0,
+      "sampler": 0
+   }
+}

@@ -4,12 +4,15 @@
 #include <dunya/renderer/frameglobals/frameglobals.h>
 #include <dunya/renderer/meshbuffers/meshbuffers.h>
 #include <dunya/gpu/pipeline/pipeline.h>
+#include <dunya/renderer/drawmode/drawmode.h>
 #include <dunya/field/field.h>
 #include <dunya/renderer/meshrecord/meshrecord.h>
 #include <dunya/objectmodel/component/directionallight/directionallight.h>
+#include <dunya/objectmodel/component/environment/environment.h>
 #include <dunya/objectmodel/component/sdfgrid/sdfgrid.h>
 
 #include <glm/glm.hpp>
+#include <optional>
 #include <span>
 
 namespace dunya::renderer {
@@ -24,11 +27,13 @@ struct Frame {
   uint32_t sdfRecordCount = 0;
   std::span<const dunya::field::Primitive> primitives = {};
 
-  dunya::gpu::PipelineType mode = dunya::gpu::PipelineType::Both;
+  DrawMode mode = DrawMode::Both;
 
   uint32_t fieldRepresentation = dunya::core::FIELD_SAMPLED;
 
   dunya::objectmodel::DirectionalLight light{};
+
+  std::optional<dunya::objectmodel::Environment> environment{};
 
   MarchParams march{
     DUNYA_MARCH_EPSILON,

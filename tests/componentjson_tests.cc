@@ -53,7 +53,7 @@ TEST_CASE("a grid reads only its authored field", "[componentjson]") {
   std::string json;
 
   REQUIRE(readComponent(world, placed(world), "SdfGrid", json));
-  REQUIRE(json == R"({"resolution":[8,8,8]})");
+  REQUIRE(json == R"({"resolution":[8,8,8],"margin":0.5})");
 }
 
 TEST_CASE("an empty component reads as an empty object", "[componentjson]") {
@@ -93,7 +93,7 @@ TEST_CASE(
 TEST_CASE("every authored component is named once", "[componentjson]") {
   const auto names = authoredComponentNames();
 
-  REQUIRE(names.size() == 8);
+  REQUIRE(names.size() == 10);
 
   auto sorted = names;
 
@@ -109,6 +109,8 @@ TEST_CASE("every authored component is named once", "[componentjson]") {
   REQUIRE(has("SdfGrid"));
   REQUIRE(has("Material"));
   REQUIRE(has("Deformable"));
+  REQUIRE(has("DirectionalLight"));
+  REQUIRE(has("Environment"));
 }
 
 TEST_CASE(

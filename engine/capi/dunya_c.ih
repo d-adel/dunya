@@ -1,14 +1,22 @@
 #include "dunya_c.h"
 
+#include <dunya/script/api/api.h>
+
 #include <capi/session/session.h>
 #include <capi/win32windowsystem/win32windowsystem.h>
 
 #include <dunya/objectmodel/worldcontents/worldcontents.h>
 #include <dunya/serialize/componentjson/componentjson.h>
+#include <dunya/serialize/materialfile/materialfile.h>
+#include <dunya/serialize/project/project.h>
+#include <dunya/serialize/textfile/textfile.h>
 
 #include <algorithm>
 #include <cstring>
 #include <exception>
+#include <stdexcept>
 #include <memory>
+#include <filesystem>
+#include <optional>
 #include <string>
 #include <vector>

@@ -263,7 +263,7 @@ bool Runtime::despawn(objectmodel::Entity entity) {
     m_physicsWorld.bodies().DestroyBody(id);
   }
 
-  return m_world.destroySdfGrid(entity);
+  return m_world.destroy(entity);
 }
 
 void Runtime::step() {

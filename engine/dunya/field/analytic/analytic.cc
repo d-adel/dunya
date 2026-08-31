@@ -21,20 +21,32 @@ float boxDistance(const glm::vec3& point, const glm::vec3& halfExtents) {
   return outside + inside;
 }
 
+float cylinderDistance(const glm::vec3& point, float radius, float halfHeight) {
+  const glm::vec2 d(
+    glm::length(glm::vec2(point.x, point.z)) - radius,
+    std::abs(point.y) - halfHeight
+  );
+
+  return std::min(std::max(d.x, d.y), 0.0f)
+         + glm::length(glm::max(d, glm::vec2(0.0f)));
+}
+
 float primitiveDistance(const Primitive& primitive, const glm::vec3& point) {
   const glm::vec3 local =
     glm::vec3(primitive.inverseModel * glm::vec4(point, 1.0f));
 
-  switch (primitive.shapeConfig.x) {
-    case 0u:
+  switch (shapeKindOf(primitive.shapeConfig.x)) {
+    case ShapeKind::Sphere:
       return glm::length(local) - primitive.shape.x;
-    case 1u:
+    case ShapeKind::Box:
       return boxDistance(local, glm::vec3(primitive.shape));
-    case 2u:
+    case ShapeKind::Plane:
       return local.y;
-    default:
-      return FAR_DISTANCE;
+    case ShapeKind::Cylinder:
+      return cylinderDistance(local, primitive.shape.x, primitive.shape.y);
   }
+
+  return FAR_DISTANCE;
 }
 
 bool skippable(
@@ -49,27 +61,29 @@ bool skippable(
   const float bound =
     glm::length(point - glm::vec3(primitive.bounds)) - primitive.bounds.w;
 
-  switch (primitive.shapeConfig.z) {
-    case 0u:
-    case 1u:
+  switch (operationOf(primitive.shapeConfig.z)) {
+    case CsgOperation::Union:
+    case CsgOperation::SmoothUnion:
       return bound > accumulated;
 
-    case 3u:
-    case 4u:
+    case CsgOperation::Subtraction:
+    case CsgOperation::SmoothSubtraction:
       return bound >= -accumulated;
 
-    default:
+    case CsgOperation::Intersection:
       return false;
   }
+
+  return false;
 }
 
 bool addsMaterial(uint32_t operation) {
-  return operation != 2u && operation != 3u && operation != 4u;
+  return dunya::field::addsMaterial(operationOf(operation));
 }
 
-glm::vec3 halfExtent(const Primitive& primitive) {
+glm::vec3 halfExtent(const Primitive& primitive, bool& bounded) {
   glm::vec3 extent(0.0f);
-  bool bounded = true;
+  bounded = true;
 
   switch (primitive.shapeConfig.x) {
     case 0u:
@@ -85,6 +99,20 @@ glm::vec3 halfExtent(const Primitive& primitive) {
       absolute[2] = glm::abs(model[2]);
 
       extent = absolute * glm::vec3(primitive.shape);
+      break;
+    }
+
+    case 3u: {
+      const glm::mat3 model = glm::mat3(glm::inverse(primitive.inverseModel));
+
+      glm::mat3 absolute;
+      absolute[0] = glm::abs(model[0]);
+      absolute[1] = glm::abs(model[1]);
+      absolute[2] = glm::abs(model[2]);
+
+      extent =
+        absolute
+        * glm::vec3(primitive.shape.x, primitive.shape.y, primitive.shape.x);
       break;
     }
 
@@ -104,22 +132,40 @@ glm::vec3 halfExtent(const Primitive& primitive) {
 
 }
 
+std::optional<Aabb> primitiveBox(const Primitive& primitive) {
+  bool bounded = true;
+
+  const glm::vec3 extent = halfExtent(primitive, bounded);
+
+  if (!bounded) {
+    return std::nullopt;
+  }
+
+  const glm::vec3 centre = glm::vec3(glm::inverse(primitive.inverseModel)[3]);
+
+  return Aabb{centre - extent, centre + extent};
+}
+
 void updateBounds(Primitive& primitive) {
   const glm::mat4 model = glm::inverse(primitive.inverseModel);
   const glm::vec3 centre = glm::vec3(model[3]);
 
   float radius = 0.0f;
 
-  switch (primitive.shapeConfig.x) {
-    case 0u:
+  switch (shapeKindOf(primitive.shapeConfig.x)) {
+    case ShapeKind::Sphere:
       radius = primitive.shape.x;
       break;
 
-    case 1u:
+    case ShapeKind::Box:
       radius = glm::length(glm::vec3(primitive.shape));
       break;
 
-    default:
+    case ShapeKind::Cylinder:
+      radius = glm::length(glm::vec2(primitive.shape.x, primitive.shape.y));
+      break;
+
+    case ShapeKind::Plane:
       radius = 0.0f;
       break;
   }
@@ -144,7 +190,8 @@ std::optional<Aabb> boundedExtent(std::span<const Primitive> primitives) {
     }
 
     const glm::vec3 centre = glm::vec3(primitive.bounds);
-    const glm::vec3 reach = halfExtent(primitive);
+    bool bounded = true;
+    const glm::vec3 reach = halfExtent(primitive, bounded);
 
     if (!any) {
       extent = {centre - reach, centre + reach};

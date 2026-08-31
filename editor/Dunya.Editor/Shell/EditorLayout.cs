@@ -36,18 +36,23 @@ public sealed class EditorLayout
         Control entities,
         Control viewport,
         Control inspector,
-        Control console)
+        Control console,
+        Control create,
+        Control project)
     {
         Tool entitiesTool = Panel("Entities", entities);
         Tool viewportTool = Panel("Viewport", viewport);
         Tool inspectorTool = Panel("Inspector", inspector);
         Tool consoleTool = Panel("Console", console);
+        Tool createTool = Panel("Create", create);
+        Tool projectTool = Panel("Project", project);
 
 
         ToolDock left = Holder(factory, "EntitiesDock", Alignment.Left, 0.18, entitiesTool);
         ToolDock centre = Holder(factory, "ViewportDock", Alignment.Unset, double.NaN, viewportTool);
-        ToolDock bottom = Holder(factory, "ConsoleDock", Alignment.Bottom, 0.28, consoleTool);
-        ToolDock right = Holder(factory, "InspectorDock", Alignment.Right, 0.22, inspectorTool);
+        ToolDock bottom =
+            Holder(factory, "ConsoleDock", Alignment.Bottom, 0.28, consoleTool, projectTool);
+        ToolDock right = Holder(factory, "InspectorDock", Alignment.Right, 0.22, inspectorTool, createTool);
 
         var middle = new ProportionalDock
         {
@@ -99,7 +104,7 @@ public sealed class EditorLayout
         string id,
         Alignment alignment,
         double proportion,
-        Tool tool)
+        params Tool[] tools)
     {
         return new ToolDock
         {
@@ -107,8 +112,8 @@ public sealed class EditorLayout
             Title = id,
             Alignment = alignment,
             Proportion = proportion,
-            VisibleDockables = factory.CreateList<IDockable>(tool),
-            ActiveDockable = tool
+            VisibleDockables = factory.CreateList<IDockable>(tools),
+            ActiveDockable = tools[0]
         };
     }
 }

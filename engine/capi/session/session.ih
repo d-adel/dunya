@@ -2,12 +2,27 @@
 
 #include <dunya/objectmodel/component/lens/lens.h>
 #include <dunya/objectmodel/worldquery/worldquery.h>
+#include <dunya/renderer/bindgroups/bindgroups.h>
 #include <dunya/renderer/vertex/vertex.h>
+#include <dunya/core/telemetry/telemetry.h>
+#include <dunya/objectmodel/component/pose/pose.h>
+#include <dunya/serialize/materialfile/materialfile.h>
 #include <dunya/serialize/project/project.h>
+#include <dunya/serialize/textfile/textfile.h>
 #include <dunya/serialize/worldfile/worldfile.h>
 
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/quaternion.hpp>
 
+#include <array>
+#include <cmath>
+
+#include <optional>
+#include <exception>
+#include <iostream>
 #include <stdexcept>
+#include <string>
+#include <algorithm>
+#include <system_error>
 #include <utility>
 #include <vector>

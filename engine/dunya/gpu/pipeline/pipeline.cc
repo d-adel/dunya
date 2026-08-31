@@ -13,6 +13,64 @@ static bool compileShader(
   return std::system(command.c_str()) == 0;
 }
 
+PipelineShaders pipelineShaders(PipelineType type) {
+  switch (type) {
+    case PipelineType::Mesh:
+      return {
+        SHADER_SOURCE_DIR "/mesh-shader.vert",
+        SHADER_SOURCE_DIR "/mesh-shader.frag",
+        "shaders/mesh-shader.vert.spv",
+        "shaders/mesh-shader.frag.spv"
+      };
+    case PipelineType::Sdf:
+      return {
+        SHADER_SOURCE_DIR "/sdf-shader.vert",
+        SHADER_SOURCE_DIR "/sdf-shader.frag",
+        "shaders/sdf-shader.vert.spv",
+        "shaders/sdf-shader.frag.spv"
+      };
+    case PipelineType::Grid:
+      return {
+        SHADER_SOURCE_DIR "/grid-shader.vert",
+        SHADER_SOURCE_DIR "/grid-shader.frag",
+        "shaders/grid-shader.vert.spv",
+        "shaders/grid-shader.frag.spv"
+      };
+    case PipelineType::Sky:
+      return {
+        SHADER_SOURCE_DIR "/sky-shader.vert",
+        SHADER_SOURCE_DIR "/sky-shader.frag",
+        "shaders/sky-shader.vert.spv",
+        "shaders/sky-shader.frag.spv"
+      };
+  }
+
+  return {};
+}
+
+std::vector<VkPushConstantRange> pushConstantRanges(PipelineType type) {
+  VkPushConstantRange range{};
+  range.offset = 0;
+  range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+
+  switch (type) {
+    case PipelineType::Mesh:
+    case PipelineType::Sdf:
+      range.size = offsetof(PushConstants, recordIndex)
+                   + sizeof(PushConstants::recordIndex);
+
+      return {range};
+    case PipelineType::Grid:
+      range.size = sizeof(GridPush);
+
+      return {range};
+    case PipelineType::Sky:
+      return {};
+  }
+
+  return {};
+}
+
 Pipeline::Pipeline(
   PipelineType type,
   const VkDevice& device,
@@ -63,52 +121,44 @@ const VkPipelineLayout& Pipeline::pipelineLayout() const noexcept {
 }
 
 void Pipeline::makeConfig() {
-  VkPushConstantRange pushConstant{};
+  const PipelineShaders shaders = pipelineShaders(m_type);
 
-  m_config.pushConstantRanges.clear();
+  m_config.vert = shaders.vertexSource;
+  m_config.frag = shaders.fragmentSource;
+  m_config.vertexShader = shaders.vertexSpirv;
+  m_config.fragmentShader = shaders.fragmentSpirv;
+
+  m_config.setLayouts = m_setLayouts;
+  m_config.pushConstantRanges = pushConstantRanges(m_type);
 
   switch (m_type) {
-    case PipelineType::Mesh: {
-      m_config.vert = SHADER_SOURCE_DIR "/mesh-shader.vert";
-      m_config.frag = SHADER_SOURCE_DIR "/mesh-shader.frag";
-      m_config.vertexShader = "shaders/mesh-shader.vert.spv";
-      m_config.fragmentShader = "shaders/mesh-shader.frag.spv";
+    case PipelineType::Mesh:
       m_config.bindingDescriptions = m_bindingDescriptions;
       m_config.attributeDescriptions = m_attributeDescriptions;
       m_config.cullMode = VK_CULL_MODE_BACK_BIT;
       m_config.depthTestEnable = VK_TRUE;
       m_config.depthWriteEnable = VK_TRUE;
-      m_config.setLayouts = m_setLayouts;
-
-      pushConstant.offset = 0;
-      pushConstant.size = offsetof(PushConstants, recordIndex)
-                          + sizeof(PushConstants::recordIndex);
-      pushConstant.stageFlags =
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-
-      m_config.pushConstantRanges.push_back(pushConstant);
       break;
-    }
     case PipelineType::Sdf:
-      m_config.vert = SHADER_SOURCE_DIR "/sdf-shader.vert";
-      m_config.frag = SHADER_SOURCE_DIR "/sdf-shader.frag";
-      m_config.vertexShader = "shaders/sdf-shader.vert.spv";
-      m_config.fragmentShader = "shaders/sdf-shader.frag.spv";
       m_config.cullMode = VK_CULL_MODE_FRONT_BIT;
       m_config.depthTestEnable = VK_TRUE;
       m_config.depthWriteEnable = VK_TRUE;
-      m_config.setLayouts = m_setLayouts;
-
-      pushConstant.offset = 0;
-      pushConstant.size = offsetof(PushConstants, recordIndex)
-                          + sizeof(PushConstants::recordIndex);
-      pushConstant.stageFlags =
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-
-      m_config.pushConstantRanges.push_back(pushConstant);
       break;
-    default:
-      throw std::invalid_argument("Unknown pipeline type");
+    case PipelineType::Grid:
+      m_config.bindingDescriptions = m_bindingDescriptions;
+      m_config.attributeDescriptions = m_attributeDescriptions;
+      m_config.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+      m_config.cullMode = VK_CULL_MODE_NONE;
+      m_config.depthTestEnable = VK_TRUE;
+      m_config.depthWriteEnable = VK_FALSE;
+      m_config.blendEnable = VK_TRUE;
+      break;
+    case PipelineType::Sky:
+      m_config.cullMode = VK_CULL_MODE_NONE;
+      m_config.depthTestEnable = VK_FALSE;
+      m_config.depthWriteEnable = VK_FALSE;
+      m_config.blendEnable = VK_FALSE;
+      break;
   }
 }
 
@@ -278,7 +328,7 @@ VkPipeline Pipeline::buildPipeline() {
   VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
   inputAssembly.sType =
     VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-  inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+  inputAssembly.topology = m_config.topology;
   inputAssembly.primitiveRestartEnable = VK_FALSE;
 
   VkPipelineViewportStateCreateInfo viewportState{};
@@ -312,9 +362,10 @@ VkPipeline Pipeline::buildPipeline() {
   colorBlendAttachment.colorWriteMask =
     VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT
     | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-  colorBlendAttachment.blendEnable = VK_FALSE;
-  colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-  colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+  colorBlendAttachment.blendEnable = m_config.blendEnable;
+  colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+  colorBlendAttachment.dstColorBlendFactor =
+    VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
   colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
   colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
   colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;

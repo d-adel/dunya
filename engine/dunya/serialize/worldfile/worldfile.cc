@@ -12,7 +12,7 @@ struct WorldOptions : glz::opts {
 };
 
 bool carriesAnything(const StoredEntity& kept) {
-  if (!kept.primitives.empty()) {
+  if (!kept.primitives.empty() || !kept.dynamic.empty()) {
     return true;
   }
 
@@ -77,6 +77,83 @@ bool putBack(
 
 }
 
+namespace {
+
+void readLanes(
+  const std::byte* at,
+  dunya::objectmodel::FieldKind kind,
+  std::vector<double>& into
+) {
+  const uint32_t lanes = dunya::objectmodel::fieldLanes(kind);
+
+  for (uint32_t lane = 0u; lane < lanes; ++lane) {
+    switch (kind) {
+      case dunya::objectmodel::FieldKind::Int: {
+        int32_t held = 0;
+        std::memcpy(&held, at + lane * 4u, 4u);
+        into.push_back(static_cast<double>(held));
+        break;
+      }
+      case dunya::objectmodel::FieldKind::UInt: {
+        uint32_t held = 0u;
+        std::memcpy(&held, at + lane * 4u, 4u);
+        into.push_back(static_cast<double>(held));
+        break;
+      }
+      case dunya::objectmodel::FieldKind::Bool: {
+        uint8_t held = 0u;
+        std::memcpy(&held, at + lane, 1u);
+        into.push_back(held == 0u ? 0.0 : 1.0);
+        break;
+      }
+      default: {
+        float held = 0.0f;
+        std::memcpy(&held, at + lane * 4u, 4u);
+        into.push_back(static_cast<double>(held));
+        break;
+      }
+    }
+  }
+}
+
+void writeLanes(
+  std::byte* at,
+  dunya::objectmodel::FieldKind kind,
+  const std::vector<double>& from,
+  size_t& cursor
+) {
+  const uint32_t lanes = dunya::objectmodel::fieldLanes(kind);
+
+  for (uint32_t lane = 0u; lane < lanes && cursor < from.size(); ++lane) {
+    const double held = from[cursor++];
+
+    switch (kind) {
+      case dunya::objectmodel::FieldKind::Int: {
+        const int32_t value = static_cast<int32_t>(held);
+        std::memcpy(at + lane * 4u, &value, 4u);
+        break;
+      }
+      case dunya::objectmodel::FieldKind::UInt: {
+        const uint32_t value = static_cast<uint32_t>(held);
+        std::memcpy(at + lane * 4u, &value, 4u);
+        break;
+      }
+      case dunya::objectmodel::FieldKind::Bool: {
+        const uint8_t value = held == 0.0 ? 0u : 1u;
+        std::memcpy(at + lane, &value, 1u);
+        break;
+      }
+      default: {
+        const float value = static_cast<float>(held);
+        std::memcpy(at + lane * 4u, &value, 4u);
+        break;
+      }
+    }
+  }
+}
+
+}
+
 StoredWorld captureWorld(
   const dunya::objectmodel::World& world,
   const dunya::core::AssetDatabase& assets
@@ -132,11 +209,51 @@ StoredWorld captureWorld(
       }
     }
 
+    const dunya::objectmodel::DynamicComponents& dynamic = world.dynamic();
+
+    for (dunya::objectmodel::ComponentType type = 0u; type < dynamic.types();
+         ++type) {
+      const std::byte* at = dynamic.get(type, entity);
+
+      if (at == nullptr) {
+        continue;
+      }
+
+      const dunya::objectmodel::ComponentSpec* spec = dynamic.spec(type);
+
+      StoredDynamic held{};
+      held.type = spec->name;
+
+      for (const dunya::objectmodel::FieldSpec& field : spec->fields) {
+        readLanes(at + field.offset, field.kind, held.values);
+      }
+
+      kept.dynamic.push_back(std::move(held));
+    }
+
     if (!carriesAnything(kept)) {
       continue;
     }
 
     stored.entities.push_back(std::move(kept));
+  }
+
+  for (dunya::objectmodel::ComponentType type = 0u;
+       type < world.dynamic().types();
+       ++type) {
+    const dunya::objectmodel::ComponentSpec* spec = world.dynamic().spec(type);
+
+    StoredComponentType described{};
+    described.name = spec->name;
+    described.size = spec->size;
+
+    for (const dunya::objectmodel::FieldSpec& field : spec->fields) {
+      described.fields.push_back(
+        StoredField{field.name, static_cast<uint32_t>(field.kind), field.offset}
+      );
+    }
+
+    stored.componentTypes.push_back(std::move(described));
   }
 
   return stored;
@@ -149,6 +266,29 @@ bool restoreWorld(
 ) {
   if (stored.version > WORLD_VERSION) {
     return false;
+  }
+
+  for (const StoredComponentType& described : stored.componentTypes) {
+    dunya::objectmodel::ComponentSpec spec{};
+    spec.name = described.name;
+    spec.size = described.size;
+
+    for (const StoredField& field : described.fields) {
+      spec.fields.push_back(
+        dunya::objectmodel::FieldSpec{
+          field.name,
+          static_cast<dunya::objectmodel::FieldKind>(field.kind),
+          field.offset
+        }
+      );
+    }
+
+    if (
+      world.dynamic().declare(spec)
+      == dunya::objectmodel::INVALID_COMPONENT_TYPE
+    ) {
+      return false;
+    }
   }
 
   for (const StoredEntity& kept : stored.entities) {
@@ -187,6 +327,35 @@ bool restoreWorld(
       primitive.shapeConfig[MATERIAL_LANE] = index;
 
       if (!world.addPrimitive(entity, primitive)) {
+        return false;
+      }
+    }
+
+    for (const StoredDynamic& held : kept.dynamic) {
+      const dunya::objectmodel::ComponentType type =
+        world.dynamic().find(held.type);
+
+      const dunya::objectmodel::ComponentSpec* spec =
+        world.dynamic().spec(type);
+
+      if (spec == nullptr) {
+        return false;
+      }
+
+      std::vector<std::byte> bytes(spec->size, std::byte{0});
+
+      size_t cursor = 0u;
+
+      for (const dunya::objectmodel::FieldSpec& field : spec->fields) {
+        writeLanes(
+          bytes.data() + field.offset,
+          field.kind,
+          held.values,
+          cursor
+        );
+      }
+
+      if (!world.dynamic().emplace(type, entity, bytes)) {
         return false;
       }
     }

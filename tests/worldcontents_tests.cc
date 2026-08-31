@@ -8,6 +8,8 @@
 #include <dunya/objectmodel/world/world.h>
 
 #include <algorithm>
+#include <array>
+#include <cstddef>
 #include <string>
 #include <vector>
 
@@ -57,7 +59,7 @@ TEST_CASE("a destroyed entity leaves the listing", "[contents]") {
   const Entity kept = world.createSdfGrid(Pose{}, blank());
   const Entity gone = world.createSdfGrid(Pose{}, blank());
 
-  REQUIRE(world.destroySdfGrid(gone));
+  REQUIRE(world.destroy(gone));
 
   const auto listed = liveEntities(world);
 
@@ -111,7 +113,53 @@ TEST_CASE("an entity that is not live reports nothing", "[contents]") {
 
   const Entity entity = world.createSdfGrid(Pose{}, blank());
 
-  REQUIRE(world.destroySdfGrid(entity));
+  REQUIRE(world.destroy(entity));
 
   REQUIRE(componentNames(world, entity).empty());
+}
+
+TEST_CASE(
+  "a runtime-declared component is listed like any other",
+  "[worldcontents]"
+) {
+  World world;
+
+  const Entity entity = world.createSdfGrid({}, {});
+
+  const dunya::objectmodel::ComponentType type =
+    world.dynamic().declare(dunya::objectmodel::ComponentSpec{"Wager", 4u, {}});
+
+  REQUIRE(type != dunya::objectmodel::INVALID_COMPONENT_TYPE);
+
+  const std::array<std::byte, 4> value{};
+
+  REQUIRE(world.dynamic().emplace(type, entity, value));
+
+  const std::vector<std::string> names =
+    dunya::objectmodel::componentNames(world, entity);
+
+  REQUIRE(std::find(names.begin(), names.end(), "Wager") != names.end());
+  REQUIRE(std::find(names.begin(), names.end(), "Pose") != names.end());
+}
+
+TEST_CASE(
+  "an entity without the declared component does not list it",
+  "[worldcontents]"
+) {
+  World world;
+
+  const Entity carrier = world.createSdfGrid({}, {});
+  const Entity bare = world.createSdfGrid({}, {});
+
+  const dunya::objectmodel::ComponentType type =
+    world.dynamic().declare(dunya::objectmodel::ComponentSpec{"Wager", 4u, {}});
+
+  const std::array<std::byte, 4> value{};
+
+  REQUIRE(world.dynamic().emplace(type, carrier, value));
+
+  const std::vector<std::string> names =
+    dunya::objectmodel::componentNames(world, bare);
+
+  REQUIRE(std::find(names.begin(), names.end(), "Wager") == names.end());
 }

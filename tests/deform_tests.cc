@@ -268,3 +268,107 @@ TEST_CASE("an operation only the general form can express", "[deform]") {
   REQUIRE(after.has_value());
   REQUIRE_THAT(*after, WithinAbs(0.6f, VOXEL));
 }
+
+TEST_CASE(
+  "a box tool reaches its own box, not its bounding sphere",
+  "[deform]"
+) {
+  SampledSdf field = unitSphere();
+
+  Primitive slab = dunya::field::makeBox(
+    glm::vec3(0.0f),
+    glm::vec3(1.5f, 0.1f, 0.1f),
+    0.0f,
+    glm::vec3(0.0f, 1.0f, 0.0f),
+    7u,
+    dunya::core::FIELD_OP_SUBTRACTION,
+    0.0f
+  );
+
+  dunya::field::updateBounds(slab);
+
+  const dunya::field::SampleBox box =
+    dunya::field::affectedBox(field, slab, 0u);
+
+  const glm::vec3 lowest =
+    field.origin + field.voxelSize * glm::vec3(box.minimum);
+  const glm::vec3 highest =
+    field.origin
+    + field.voxelSize * glm::vec3(box.minimum + box.extent - glm::uvec3(1u));
+
+  REQUIRE(highest.x - lowest.x > 2.0f);
+  REQUIRE(highest.y - lowest.y < 0.5f);
+  REQUIRE(highest.z - lowest.z < 0.5f);
+
+  REQUIRE(slab.bounds.w > 1.5f);
+}
+
+TEST_CASE("a sphere tool reaches exactly what it used to", "[deform]") {
+  SampledSdf field = unitSphere();
+
+  const Primitive cutter = carver(glm::vec3(0.25f, 0.0f, 0.0f), 0.4f);
+
+  const dunya::field::SampleBox box =
+    dunya::field::affectedBox(field, cutter, 0u);
+
+  const glm::vec3 centre(cutter.bounds);
+  const glm::vec3 reach(cutter.bounds.w);
+
+  const glm::vec3 lowest =
+    glm::floor((centre - reach - field.origin) / field.voxelSize);
+  const glm::vec3 highest =
+    glm::ceil((centre + reach - field.origin) / field.voxelSize);
+
+  REQUIRE(box.minimum == glm::uvec3(glm::max(lowest, glm::vec3(0.0f))));
+  REQUIRE(box.minimum + box.extent == glm::uvec3(highest) + glm::uvec3(1u));
+}
+
+TEST_CASE("a cylinder tool no longer sweeps the whole grid", "[deform]") {
+  SampledSdf field = unitSphere();
+
+  Primitive drill = dunya::field::makeCylinder(
+    glm::vec3(0.0f),
+    0.15f,
+    0.2f,
+    0.0f,
+    glm::vec3(0.0f, 1.0f, 0.0f),
+    7u,
+    dunya::core::FIELD_OP_SUBTRACTION,
+    0.0f
+  );
+
+  dunya::field::updateBounds(drill);
+
+  REQUIRE_THAT(
+    drill.bounds.w,
+    Catch::Matchers::WithinAbs(std::sqrt(0.15f * 0.15f + 0.2f * 0.2f), 1e-6)
+  );
+
+  const dunya::field::SampleBox box =
+    dunya::field::affectedBox(field, drill, 0u);
+
+  REQUIRE(box.extent.x < field.resolution.x / 2u);
+  REQUIRE(box.extent.y < field.resolution.y / 2u);
+  REQUIRE(box.extent.z < field.resolution.z / 2u);
+}
+
+TEST_CASE("a cylinder is not culled by its own bound", "[deform]") {
+  Primitive drill = dunya::field::makeCylinder(
+    glm::vec3(0.0f),
+    0.15f,
+    0.2f,
+    0.0f,
+    glm::vec3(0.0f, 1.0f, 0.0f),
+    7u,
+    dunya::core::FIELD_OP_SUBTRACTION,
+    0.0f
+  );
+
+  dunya::field::updateBounds(drill);
+
+  const glm::vec3 onTheRim(0.15f, 0.2f, 0.0f);
+
+  REQUIRE(
+    drill.bounds.w >= glm::length(onTheRim - glm::vec3(drill.bounds)) - 1e-6f
+  );
+}

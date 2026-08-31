@@ -1,25 +1,9 @@
 #version 450
 #extension GL_GOOGLE_include_directive : require
 
-#include "sdf-types.glsl"
-
-layout(std140, set = 0, binding = 0) uniform CameraUniform {
-  mat4 view;
-  mat4 proj;
-  mat4 viewProj;
-  mat4 inverseViewProj;
-  vec4 position;
-} camera;
-
-layout(std140, set = 2, binding = 0) readonly buffer SdfRecordTable {
-  SdfRecordShared records[];
-} sdfRecordTable;
-
-layout(push_constant) uniform PushConstants {
-  mat4 model;
-  uint materialIndex;
-  uint recordIndex;
-} push;
+#include "frame-globals.glsl"
+#include "sdf-records.glsl"
+#include "push-constants.glsl"
 
 layout(location = 0) out vec4 clipPosition;
 layout(location = 1) flat out uint recordIndex;

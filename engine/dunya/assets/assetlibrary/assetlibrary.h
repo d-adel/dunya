@@ -44,6 +44,11 @@ public:
 
   [[nodiscard]] uint32_t materialIndex(dunya::core::AssetId id) const;
 
+  uint32_t addMaterial(
+    dunya::core::AssetId id,
+    const dunya::serialize::StoredMaterial& stored
+  );
+
 private:
   void loadProject(
     const dunya::gpu::Device& device,
@@ -60,11 +65,6 @@ private:
     const dunya::gpu::Device& device,
     dunya::core::AssetId id,
     const char* path
-  );
-
-  uint32_t addMaterial(
-    dunya::core::AssetId id,
-    const dunya::serialize::StoredMaterial& stored
   );
 
   static std::vector<dunya::gpu::Texture> createTextures(
