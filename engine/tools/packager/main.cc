@@ -11,7 +11,7 @@ int main(int argc, char** argv) {
     const std::span<char*> arguments(argv, argc);
 
     if (arguments.size() < 5) {
-      std::cerr << "Usage: DunyaPackager RUNTIME PROJECT OUTPUT WORLD...\n";
+      std::cerr << "Usage: DunyaPackager PLAYER PROJECT OUTPUT WORLD...\n";
 
       return 1;
     }

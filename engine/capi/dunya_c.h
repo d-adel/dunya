@@ -172,6 +172,8 @@ DUNYA_C_API void dunya_session_set_supersample(
   float scale
 );
 
+DUNYA_C_API float dunya_session_supersample(const DunyaSession* session);
+
 DUNYA_C_API void dunya_session_show_grid(
   DunyaSession* session,
   int32_t visible

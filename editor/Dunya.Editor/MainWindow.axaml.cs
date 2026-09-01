@@ -141,9 +141,12 @@ public partial class MainWindow : Window
         Wire("ExitItem", Close);
         Wire("FrameAllItem", () => Author()?.FocusCamera(null));
         Wire("AlignToCameraItem", () => Author()?.AlignToSceneCamera());
-        Wire("Quality1Item", () => Author()?.SetSupersample(1.0f));
-        Wire("Quality15Item", () => Author()?.SetSupersample(1.5f));
-        Wire("Quality2Item", () => Author()?.SetSupersample(2.0f));
+        Wire("Quality1Item", () => SetQuality(1.0f));
+        Wire("Quality15Item", () => SetQuality(1.5f));
+        Wire("Quality2Item", () => SetQuality(2.0f));
+
+        this.FindControl<MenuItem>("QualityMenuItem")!.SubmenuOpened +=
+            (_, _) => ShowQuality();
 
         MenuItem grid = this.FindControl<MenuItem>("ShowGridItem")!;
 
@@ -539,6 +542,26 @@ public partial class MainWindow : Window
     private void Wire(string name, Action action)
     {
         this.FindControl<MenuItem>(name)!.Click += (_, _) => action();
+    }
+
+    private void SetQuality(float scale)
+    {
+        Author()?.SetSupersample(scale);
+
+        ShowQuality();
+    }
+
+    private void ShowQuality()
+    {
+        IntPtr session = m_viewport.SessionHandle;
+
+        float scale = session == IntPtr.Zero
+            ? 0.0f
+            : new Authoring(session).Supersample();
+
+        this.FindControl<MenuItem>("Quality1Item")!.IsChecked = scale == 1.0f;
+        this.FindControl<MenuItem>("Quality15Item")!.IsChecked = scale == 1.5f;
+        this.FindControl<MenuItem>("Quality2Item")!.IsChecked = scale == 2.0f;
     }
 
     private Authoring? Author()

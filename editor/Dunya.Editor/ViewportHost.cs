@@ -113,7 +113,7 @@ public sealed class ViewportHost : NativeControlHost
             SetFocus(Handle);
         }
     }
-    private DispatcherTimer? m_frames;
+    private bool m_rendering;
     private bool m_renderFailed;
     private IntPtr m_previous;
     private WindowProc? m_hook;
@@ -187,8 +187,7 @@ public sealed class ViewportHost : NativeControlHost
     {
         m_surfaceLive = false;
 
-        m_frames?.Stop();
-        m_frames = null;
+        m_rendering = false;
 
         if (m_previous != IntPtr.Zero)
         {
@@ -268,8 +267,7 @@ public sealed class ViewportHost : NativeControlHost
 
         m_surfaceLive = false;
 
-        m_frames?.Stop();
-        m_frames = null;
+        m_rendering = false;
 
         DunyaNative.dunya_session_destroy(m_session);
         m_session = IntPtr.Zero;
@@ -279,22 +277,55 @@ public sealed class ViewportHost : NativeControlHost
 
     private void StartRendering()
     {
-        m_frames?.Stop();
-
-        m_frames = new DispatcherTimer(DispatcherPriority.Render)
+        if (m_rendering)
         {
-            Interval = TimeSpan.FromMilliseconds(16)
-        };
+            return;
+        }
 
-        m_frames.Tick += (_, _) => RenderOnce();
-        m_frames.Start();
+        m_rendering = true;
+
+        RequestFrame();
     }
 
-    private void RenderOnce()
+    private void RequestFrame()
+    {
+        if (!m_rendering)
+        {
+            return;
+        }
+
+        Dispatcher.UIThread.Post(
+            () =>
+            {
+                if (RenderOnce())
+                {
+                    RequestFrame();
+
+                    return;
+                }
+
+                DispatcherTimer.RunOnce(RequestFrame, TimeSpan.FromMilliseconds(100));
+            },
+            DispatcherPriority.Background
+        );
+    }
+
+    private bool Idle()
     {
         if (m_session == IntPtr.Zero || m_renderFailed || !m_surfaceLive)
         {
-            return;
+            return true;
+        }
+
+        return TopLevel.GetTopLevel(this) is Window window
+               && window.WindowState == WindowState.Minimized;
+    }
+
+    private bool RenderOnce()
+    {
+        if (Idle())
+        {
+            return false;
         }
 
         if (DunyaNative.dunya_session_render(m_session) != 0)
@@ -302,7 +333,11 @@ public sealed class ViewportHost : NativeControlHost
             m_renderFailed = true;
 
             Report($"render FAILED: {DunyaNative.LastError()}");
+
+            return false;
         }
+
+        return true;
     }
 
     public IReadOnlyList<WorldEntity> Contents()

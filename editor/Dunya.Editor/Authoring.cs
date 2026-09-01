@@ -108,6 +108,8 @@ public sealed class Authoring
     public void SetSupersample(float scale)
         => DunyaNative.dunya_session_set_supersample(m_session, scale);
 
+    public float Supersample() => DunyaNative.dunya_session_supersample(m_session);
+
     public void ShowGrid(bool visible)
         => DunyaNative.dunya_session_show_grid(m_session, visible ? 1 : 0);
 

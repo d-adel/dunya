@@ -40,10 +40,13 @@
         <MenuItem Name="FrameAllItem" Header="_Frame All" />
         <MenuItem Name="AlignToCameraItem" Header="Align View to _Scene Camera" />
         <Separator />
-        <MenuItem Header="_Quality">
-          <MenuItem Name="Quality1Item" Header="Off (1x)" />
-          <MenuItem Name="Quality15Item" Header="Good (1.5x)" />
-          <MenuItem Name="Quality2Item" Header="Best (2x)" />
+        <MenuItem Name="QualityMenuItem" Header="_Quality">
+          <MenuItem Name="Quality1Item" Header="Off (1x)"
+                    ToggleType="Radio" GroupName="ViewportQuality" />
+          <MenuItem Name="Quality15Item" Header="Good (1.5x)"
+                    ToggleType="Radio" GroupName="ViewportQuality" />
+          <MenuItem Name="Quality2Item" Header="Best (2x)"
+                    ToggleType="Radio" GroupName="ViewportQuality" />
         </MenuItem>
       </MenuItem>
       <MenuItem Header="_Window">

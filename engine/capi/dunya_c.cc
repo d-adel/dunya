@@ -724,6 +724,10 @@ void dunya_session_set_supersample(DunyaSession* session, float scale) {
   }
 }
 
+float dunya_session_supersample(const DunyaSession* session) {
+  return session == nullptr ? 1.0f : asSession(session)->supersample();
+}
+
 void dunya_session_show_grid(DunyaSession* session, int32_t visible) {
   if (session != nullptr) {
     asSession(session)->showGrid(visible != 0);

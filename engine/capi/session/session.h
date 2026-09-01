@@ -10,6 +10,7 @@
 #include <dunya/renderer/scenetarget/scenetarget.h>
 #include <dunya/viewport/grid/grid.h>
 
+#include <chrono>
 #include <filesystem>
 #include <memory>
 #include <optional>
@@ -168,6 +169,9 @@ private:
   dunya::renderer::SceneTarget m_sceneTarget;
 
   dunya::viewport::Grid m_grid;
+
+  std::chrono::steady_clock::time_point m_lastFrame =
+    std::chrono::steady_clock::now();
 
   bool m_gridVisible = true;
 };

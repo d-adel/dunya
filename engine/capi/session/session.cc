@@ -13,7 +13,6 @@ dunya::gpu::WindowSystem& require(
 
   return *windowSystem;
 }
-
 }
 
 Session::Session(
@@ -28,7 +27,7 @@ Session::Session(
         m_engine.context().device(),
         m_engine.swapChain().imageFormat(),
         m_engine.swapChain().extent(),
-        2.0f
+        1.0f
       ),
       m_grid(
         m_engine.context().device(),
@@ -236,11 +235,16 @@ void Session::render() {
     static_cast<float>(m_engine.swapChain().extent().height)
   );
 
-  constexpr float STEP = 1.0f / 60.0f;
+  const auto frameAt = std::chrono::steady_clock::now();
+
+  const float elapsed =
+    std::chrono::duration<float>(frameAt - m_lastFrame).count();
+
+  m_lastFrame = frameAt;
 
   dunya::core::Telemetry ignored;
 
-  m_engine.tick(STEP, ignored);
+  m_engine.tick(elapsed, ignored);
   m_engine.endFrame();
 
   m_engine.flushVolumes(ignored);

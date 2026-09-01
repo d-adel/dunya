@@ -12,6 +12,9 @@ internal static class DunyaNative
     internal static extern void dunya_session_set_supersample(IntPtr session, float scale);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern float dunya_session_supersample(IntPtr session);
+
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
     internal static extern void dunya_session_show_grid(IntPtr session, int visible);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]

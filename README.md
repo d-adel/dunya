@@ -43,17 +43,18 @@ it. Meshes are still supported and run on their own pipeline.
 ### System
 
 - C++23, `/W4 /WX`, zero warnings
-- Eleven libraries, each its own target, each depending only on the ones below it
+- Sixteen libraries, each its own target, each depending only on the ones below it
 - EnTT object model; worlds, materials and assets are JSON on disk
-- Editor and runtime are separate executables, and the runtime links no editor
-  code
-- Dear ImGui panels for inspecting and changing things while running
+- Every target declares a tier, Runtime or Developer or Editor, and the configure
+  fails if one links above itself
+- Game code is C# living in the project, loaded over a C ABI, so a game is written
+  without touching the engine
 
 ## Layout
 
 | | |
 | --- | --- |
-| `engine/` | the C++ engine: the `dunya::` libraries, the shared app shell, both executables |
+| `engine/` | the C++ engine: the `dunya::` libraries, the C ABI the editor loads, the player |
 | `editor/` | the C# editor, Avalonia on .NET 10 (in progress) |
 | `projects/` | engine data: worlds, materials, meshes, textures |
 | `shaders/` | GLSL, compiled by `glslc` as a build step |
@@ -71,14 +72,20 @@ The libraries, bottom to top:
 | `dunya::objectmodel` | what exists in a world and where it is |
 | `dunya::serialize` | the on-disk format for projects, worlds and materials |
 | `dunya::physics` | Jolt, the field collision shape, impacts |
-| `dunya::editor` | the operations that change a world, each one undoable |
+| `dunya::systems` | input state, and the ordered list of systems a frame runs |
+| `dunya::script` | the C ABI game code is written against, and the .NET host behind it |
 | `dunya::renderer` | worlds into frames: marching, mesh drawing, volume residency, shadows |
+| `dunya::assets` | meshes, textures and materials, loaded once and shared |
 | `dunya::runtime` | play mode: instantiation, bodies, deformation |
+| `dunya::engine` | one frame of all of it, driven by the player and by the editor |
+| `dunya::editor` | the operations that change a world, each one undoable |
+| `dunya::viewport` | the editor's own camera and grid |
 
 `dunya::gpu` does not know what a field is and `dunya::objectmodel` does not
 know how anything is drawn, which is what keeps the renderer, the editor and the
 physics able to read and write the same world without knowing about each other.
-The application is the only place all of it meets.
+`dunya::engine` is the only place all of it meets, and the player and the editor
+drive the same one rather than each having their own.
 
 ## Building
 
@@ -115,18 +122,10 @@ ever come from.
 
 ## Running
 
-Two executables build from the same application shell:
 
-- `DunyaDevHost`, the development host: fly camera, ImGui panels, editing
-- `DunyaRuntime`, the runtime, with no editor code on its link line
-
-Both open `projects/demo` by default.
-
-```
-Click to fire at the wall, F to fire at its middle
-Hold right mouse to look and fly (WASD/QE)
-G resets the wall, F5 stops the simulation
-Alt + click carves by hand once stopped
+```sh
+cmake --build --preset dev
+dotnet run --project editor/Dunya.Editor
 ```
 
 | | |
@@ -134,8 +133,11 @@ Alt + click carves by hand once stopped
 | `--project DIR` | project to open, default `projects/demo` |
 | `--world NAME` | world to load, default `main` |
 | `--analytic` | march the analytic field instead of the sampled one |
-| `--demo FRAMES --demo-rate PER_SEC` | fire on a timer and exit, for measurement |
-| `--export-project DIR` | write the live world back out |
+| `--screenshot PATH` | render one frame to a file and exit |
+| `--golden PATH` | render one frame and compare it against a reference |
+| `--capture DIR` | write every frame, at a fixed timestep |
+| `--verify-bake` | check the GPU bake against the CPU one |
+| `-- ARGS` | everything after this goes to the scripts |
 
 ## Why I am building it
 
