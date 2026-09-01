@@ -27,7 +27,10 @@ void FieldEditor::edit(uint32_t operation, const dunya::field::Ray& ray) {
 
     const dunya::field::Aabb box = dunya::objectmodel::gridBox(
       primitives,
-      registry.get<dunya::objectmodel::SdfGrid>(entity).margin
+      dunya::objectmodel::gridMargin(
+        registry.get<dunya::objectmodel::SdfGrid>(entity),
+        primitives
+      )
     );
 
     const auto tOpt = dunya::field::intersect(box, curRay);

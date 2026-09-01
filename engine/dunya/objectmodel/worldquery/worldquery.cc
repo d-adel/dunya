@@ -146,7 +146,10 @@ WorldHit raycastWorld(
 
     const dunya::field::Aabb box = dunya::objectmodel::gridBox(
       primitives,
-      registry.get<dunya::objectmodel::SdfGrid>(entity).margin
+      dunya::objectmodel::gridMargin(
+        registry.get<dunya::objectmodel::SdfGrid>(entity),
+        primitives
+      )
     );
 
     if (!dunya::field::intersect(box, local).has_value()) {

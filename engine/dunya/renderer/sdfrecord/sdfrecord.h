@@ -67,7 +67,10 @@ static_assert(
   "RecordBounds must match its block in sdf-shader.frag"
 );
 
-RecordBounds makeRecordBounds(const SdfRecord& record);
+RecordBounds makeRecordBounds(
+  const dunya::field::Aabb& localBox,
+  const glm::mat4& model
+);
 
 SdfRecord makeSdfRecord(
   const dunya::objectmodel::Pose& pose,
@@ -75,7 +78,8 @@ SdfRecord makeSdfRecord(
   const dunya::objectmodel::BakedVolume& volume,
   uint32_t primitiveOffset,
   uint32_t primitiveCount,
-  uint32_t fieldRepresentation
+  uint32_t fieldRepresentation,
+  float gridMargin
 );
 
 }

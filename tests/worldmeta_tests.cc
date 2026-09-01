@@ -43,13 +43,16 @@ TEST_CASE("a grid stores only what an author chose", "[worldmeta]") {
   dunya::objectmodel::SdfGrid grid{};
   grid.resolution = glm::uvec3(65u, 66u, 67u);
   grid.margin = 0.25f;
+  grid.shadowCullMargin = 1.5f;
   grid.voxelSize = glm::vec3(0.125f);
   grid.origin = glm::vec4(9.0f);
 
   std::string out;
   REQUIRE(!glz::write_json(grid, out));
 
-  REQUIRE(out == R"({"resolution":[65,66,67],"margin":0.25})");
+  REQUIRE(
+    out == R"({"resolution":[65,66,67],"margin":0.25,"shadowCullMargin":1.5})"
+  );
 }
 
 TEST_CASE("a grid read back leaves the derived halves default", "[worldmeta]") {
@@ -58,7 +61,9 @@ TEST_CASE("a grid read back leaves the derived halves default", "[worldmeta]") {
 
   REQUIRE(back.has_value());
   REQUIRE(back->resolution == glm::uvec3(65u));
-  REQUIRE(back->margin == dunya::core::FIELD_GRID_MARGIN);
+  REQUIRE(!back->margin.has_value());
+  REQUIRE(!back->shadowCullMargin.has_value());
+
   REQUIRE(back->origin == glm::vec4(0.0f));
 }
 

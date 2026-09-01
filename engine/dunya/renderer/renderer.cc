@@ -333,7 +333,7 @@ void Renderer::recordCommandBuffer(
     );
     m_recordTable.updatePrimitives(m_currentFrame, frameContext.primitives);
 
-    for (uint32_t slot : m_recordTable.bakeList()) {
+    for (uint32_t slot : m_recordTable.bakeDispatch()) {
       const SdfRecord& gpu = m_recordTable.record(slot);
 
       const uint32_t volumeIndex = gpu.resolutionVolumeIndex.w;

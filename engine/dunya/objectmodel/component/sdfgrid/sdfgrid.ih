@@ -1,5 +1,6 @@
 #include "sdfgrid.h"
 
+#include <algorithm>
 #include <dunya/core/config/config.h>
 #include <dunya/field/sampledsdf/sampledsdf.h>
 

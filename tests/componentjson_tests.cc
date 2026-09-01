@@ -53,7 +53,7 @@ TEST_CASE("a grid reads only its authored field", "[componentjson]") {
   std::string json;
 
   REQUIRE(readComponent(world, placed(world), "SdfGrid", json));
-  REQUIRE(json == R"({"resolution":[8,8,8],"margin":0.5})");
+  REQUIRE(json == R"({"resolution":[8,8,8]})");
 }
 
 TEST_CASE("an empty component reads as an empty object", "[componentjson]") {

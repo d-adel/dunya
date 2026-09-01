@@ -47,7 +47,11 @@ uint32_t SdfRecordPacker::pack(
       const VolumeKey key =
         registry.all_of<dunya::objectmodel::Deformed>(entity)
           ? VolumeKey{}
-          : volumeKey(primitives, grid.resolution, grid.margin);
+          : volumeKey(
+              primitives,
+              grid.resolution,
+              dunya::objectmodel::gridMargin(grid, primitives)
+            );
 
       uint32_t index = reusable ? UINT32_MAX : m_volumePool.acquire(key);
 
@@ -64,8 +68,10 @@ uint32_t SdfRecordPacker::pack(
       dunya::field::SampledSdf baked;
 
       if (!reusable && donor == dunya::objectmodel::INVALID_ENTITY) {
-        const dunya::field::Aabb box =
-          dunya::objectmodel::gridBox(primitives, grid.margin);
+        const dunya::field::Aabb box = dunya::objectmodel::gridBox(
+          primitives,
+          dunya::objectmodel::gridMargin(grid, primitives)
+        );
 
         baked = dunya::field::bake(
           primitives,
@@ -127,7 +133,8 @@ uint32_t SdfRecordPacker::pack(
       dunya::objectmodel::drawnPose(registry, entity),
       grid,
       registry.get<dunya::objectmodel::BakedVolume>(entity),
-      fieldRepresentation
+      fieldRepresentation,
+      world.primitives(entity)
     );
 
     if (world.needsBake(entity)) {
@@ -142,8 +149,10 @@ uint32_t SdfRecordPacker::pack(
              dunya::objectmodel::RigidBody,
              dunya::objectmodel::SharedSdf>(entity)
         ) {
-          const dunya::field::Aabb refit =
-            dunya::objectmodel::gridBox(world.primitives(entity), grid.margin);
+          const dunya::field::Aabb refit = dunya::objectmodel::gridBox(
+            world.primitives(entity),
+            dunya::objectmodel::gridMargin(grid, world.primitives(entity))
+          );
 
           world.setSampledSdf(
             entity,

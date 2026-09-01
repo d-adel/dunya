@@ -56,7 +56,8 @@
         "${workspaceFolder}/build-dev/builds/demo",
         "main",
         "golden",
-        "wall-big"
+        "wall-big",
+        "rain"
       ],
       "options": { "cwd": "${workspaceFolder}" },
       "dependsOn": ["engine: build (dev)"],

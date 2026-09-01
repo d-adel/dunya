@@ -65,4 +65,8 @@ static_assert(
 );
 constexpr float FIELD_GRID_MARGIN = 0.5f;
 
+constexpr uint32_t FIELD_GRID_MARGIN_CELLS = 4u;
+
+constexpr float SHADOW_CULL_MARGIN = 0.5f;
+
 }

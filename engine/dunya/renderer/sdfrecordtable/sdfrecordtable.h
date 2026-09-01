@@ -53,7 +53,8 @@ public:
     const dunya::objectmodel::Pose& pose,
     const dunya::objectmodel::SdfGrid& grid,
     const dunya::objectmodel::BakedVolume& volume,
-    uint32_t fieldRepresentation
+    uint32_t fieldRepresentation,
+    std::span<const dunya::field::Primitive> primitives
   );
 
   void update(uint32_t frame, uint32_t liveRecords, const glm::vec3& toLight);
@@ -69,6 +70,7 @@ public:
 
   std::span<const SdfRecord> records() const noexcept;
   std::span<const uint32_t> bakeList() const noexcept;
+  std::span<const uint32_t> bakeDispatch() const noexcept;
 
   const SdfRecord& record(uint32_t recordIndex) const;
 
@@ -106,6 +108,8 @@ private:
 
   ShadowGrid m_shadowGrid;
   std::vector<uint32_t> m_bakeList;
+  std::vector<uint32_t> m_bakeDispatch;
+  std::vector<uint8_t> m_bakeQueued;
   dunya::gpu::DescriptorGroup m_group;
 
   dunya::gpu::Buffer m_brickBounds;

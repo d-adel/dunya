@@ -386,8 +386,10 @@ void SdfBaker::verifyBake(
   std::span<const dunya::field::Primitive> primitives,
   VolumeImages images
 ) const {
-  const dunya::field::Aabb box =
-    dunya::objectmodel::gridBox(primitives, grid.margin);
+  const dunya::field::Aabb box = dunya::objectmodel::gridBox(
+    primitives,
+    dunya::objectmodel::gridMargin(grid, primitives)
+  );
 
   const SampledSdf reference =
     dunya::field::bake(primitives, box.minimum, box.maximum, grid.resolution);

@@ -185,9 +185,9 @@ int EngineLoop::start(const StartupOptions& options) {
       / static_cast<float>(m_engine.swapChain().extent().height)
     );
 
-    m_engine.packFrame();
-
     m_engine.flushVolumes(m_telemetry);
+
+    m_engine.packFrame();
 
     std::vector<dunya::renderer::ScenePass> passes;
 

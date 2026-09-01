@@ -53,6 +53,12 @@ template<>
 struct glz::meta<dunya::objectmodel::SdfGrid> {
   using T = dunya::objectmodel::SdfGrid;
 
-  static constexpr auto value =
-    glz::object("resolution", &T::resolution, "margin", &T::margin);
+  static constexpr auto value = glz::object(
+    "resolution",
+    &T::resolution,
+    "margin",
+    &T::margin,
+    "shadowCullMargin",
+    &T::shadowCullMargin
+  );
 };

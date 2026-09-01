@@ -4,10 +4,10 @@ namespace {
 
 constexpr uint MAX_BODIES = 65536;
 constexpr uint NUM_BODY_MUTEXES = 0;
-constexpr uint MAX_BODY_PAIRS = 65536;
-constexpr uint MAX_CONTACT_CONSTRAINTS = 65536;
+constexpr uint MAX_BODY_PAIRS = 262144;
+constexpr uint MAX_CONTACT_CONSTRAINTS = 262144;
 
-constexpr uint TEMP_ALLOCATOR_SIZE = 64 * 1024 * 1024;
+constexpr uint TEMP_ALLOCATOR_SIZE = 256 * 1024 * 1024;
 
 constexpr float IMPACT_THRESHOLD = 3.0f;
 

@@ -227,7 +227,8 @@ TEST_CASE(
 
   REQUIRE(world.needsBake(entity));
 
-  const float expected = -(1.0f + dunya::core::FIELD_GRID_MARGIN);
+  const float expected =
+    -(1.0f + dunya::objectmodel::gridMargin(grid, world.primitives(entity)));
 
   REQUIRE_THAT(grid.origin.x, WithinAbs(expected, ANALYTIC_TOLERANCE));
   REQUIRE(grid.voxelSize.x > 0.0f);

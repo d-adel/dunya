@@ -11,6 +11,7 @@ add_executable(unit_tests
     asset_tests.cc
     assetdatabase_tests.cc
     boundedextent_tests.cc
+    recordbounds_tests.cc
     capi_tests.cc
     commandhistory_tests.cc
     crack_tests.cc

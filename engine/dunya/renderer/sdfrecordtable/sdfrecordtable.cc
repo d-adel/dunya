@@ -73,6 +73,7 @@ SdfRecordTable::SdfRecordTable(const dunya::gpu::Device& device)
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
       ) {
   m_records.resize(dunya::core::MAX_SDF_RECORDS);
+  m_bakeQueued.resize(dunya::core::MAX_SDF_VOLUMES, 0u);
   m_recordBounds.resize(dunya::core::MAX_SDF_RECORDS);
 
   m_group.writeBuffer(BRICK_BOUNDS, m_brickBounds.buffer(), BRICK_BOUNDS_BYTES);
@@ -222,11 +223,25 @@ const dunya::gpu::Buffer& SdfRecordTable::brickBounds() const noexcept {
 }
 
 void SdfRecordTable::newFrame() {
+  for (const uint32_t slot : m_bakeDispatch) {
+    m_bakeQueued[m_records[slot].resolutionVolumeIndex.w] = 0u;
+  }
+
   m_bakeList.clear();
+  m_bakeDispatch.clear();
 }
 
 void SdfRecordTable::appendToBakeList(uint32_t slot) {
   m_bakeList.push_back(slot);
+
+  const uint32_t volume = m_records.at(slot).resolutionVolumeIndex.w;
+
+  if (volume >= m_bakeQueued.size() || m_bakeQueued[volume] != 0u) {
+    return;
+  }
+
+  m_bakeQueued[volume] = 1u;
+  m_bakeDispatch.push_back(slot);
 }
 
 void SdfRecordTable::setRecord(
@@ -236,7 +251,8 @@ void SdfRecordTable::setRecord(
   const dunya::objectmodel::Pose& pose,
   const dunya::objectmodel::SdfGrid& grid,
   const dunya::objectmodel::BakedVolume& volume,
-  uint32_t fieldRepresentation
+  uint32_t fieldRepresentation,
+  std::span<const dunya::field::Primitive> primitives
 ) {
   m_records[recordIndex] = makeSdfRecord(
     pose,
@@ -244,10 +260,14 @@ void SdfRecordTable::setRecord(
     volume,
     primitiveOffset,
     primitiveCount,
-    fieldRepresentation
+    fieldRepresentation,
+    dunya::objectmodel::gridMargin(grid, primitives)
   );
 
-  m_recordBounds[recordIndex] = makeRecordBounds(m_records[recordIndex]);
+  m_recordBounds[recordIndex] = makeRecordBounds(
+    dunya::objectmodel::casterBox(primitives, grid),
+    m_records[recordIndex].model
+  );
 }
 
 void SdfRecordTable::update(
@@ -309,6 +329,10 @@ std::span<const SdfRecord> SdfRecordTable::records() const noexcept {
 
 std::span<const uint32_t> SdfRecordTable::bakeList() const noexcept {
   return m_bakeList;
+}
+
+std::span<const uint32_t> SdfRecordTable::bakeDispatch() const noexcept {
+  return m_bakeDispatch;
 }
 
 const SdfRecord& SdfRecordTable::record(uint32_t recordIndex) const {
