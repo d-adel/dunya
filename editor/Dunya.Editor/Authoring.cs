@@ -45,6 +45,12 @@ public sealed class Authoring
         );
     }
 
+    public uint MainCamera()
+        => DunyaNative.dunya_session_main_camera(m_session);
+
+    public bool SetMainCamera(uint entity)
+        => DunyaNative.dunya_session_set_main_camera(m_session, entity) == 0;
+
     public uint CreateLight()
         => DunyaNative.dunya_session_create_light(m_session);
 

@@ -662,6 +662,9 @@ TEST_CASE("an authored camera is the world's active camera", "[worldquery]") {
   world.emplaceAuthored(eye, seat);
   world.emplaceAuthored(eye, lens);
 
+  REQUIRE_FALSE(activeCamera(world, 1.5f).has_value());
+  REQUIRE(world.setMainCamera(eye));
+
   const auto resolved = activeCamera(world, 1.5f);
 
   REQUIRE(resolved.has_value());

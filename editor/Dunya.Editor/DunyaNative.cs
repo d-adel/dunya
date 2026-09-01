@@ -233,6 +233,12 @@ internal static class DunyaNative
     internal static extern uint dunya_session_create_light(IntPtr session);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern uint dunya_session_main_camera(IntPtr session);
+
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int dunya_session_set_main_camera(IntPtr session, uint entity);
+
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
     internal static extern uint dunya_session_create_environment(IntPtr session);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]

@@ -351,6 +351,8 @@ internal static unsafe class Native
     public static bool ShareSdf(void* world, uint donor, uint taker)
         => s_api.ShareSdf(world, donor, taker) != 0;
 
+    public static uint MainCamera(void* world) => s_api.MainCamera(world);
+
     public static bool SetRigidBody(void* world, uint entity, float mass)
         => s_api.SetRigidBody(world, entity, mass) != 0;
 

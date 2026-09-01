@@ -7,6 +7,7 @@
 #include <dunya/objectmodel/component/deformable/deformable.h>
 #include <dunya/objectmodel/component/directionallight/directionallight.h>
 #include <dunya/objectmodel/component/lens/lens.h>
+#include <dunya/objectmodel/component/maincamera/maincamera.h>
 #include <dunya/objectmodel/component/massscale/massscale.h>
 #include <dunya/objectmodel/component/material/material.h>
 #include <dunya/objectmodel/component/mesh/mesh.h>
@@ -58,6 +59,7 @@ struct StoredEntity {
   std::optional<dunya::objectmodel::Pose> pose;
   std::optional<dunya::objectmodel::SdfGrid> grid;
   std::optional<dunya::objectmodel::Lens> lens;
+  std::optional<dunya::objectmodel::MainCamera> mainCamera;
   std::optional<dunya::objectmodel::MassScale> massScale;
   std::optional<dunya::objectmodel::StaticBody> staticBody;
   std::optional<dunya::objectmodel::Deformable> deformable;
@@ -84,6 +86,7 @@ inline constexpr auto PORTABLE_COMPONENTS = std::tuple{
   PortableComponent<dunya::objectmodel::Pose>{&StoredEntity::pose},
   PortableComponent<dunya::objectmodel::SdfGrid>{&StoredEntity::grid},
   PortableComponent<dunya::objectmodel::Lens>{&StoredEntity::lens},
+  PortableComponent<dunya::objectmodel::MainCamera>{&StoredEntity::mainCamera},
   PortableComponent<dunya::objectmodel::MassScale>{&StoredEntity::massScale},
   PortableComponent<dunya::objectmodel::StaticBody>{&StoredEntity::staticBody},
   PortableComponent<dunya::objectmodel::Deformable>{&StoredEntity::deformable},

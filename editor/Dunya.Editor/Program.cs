@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Avalonia;
 using Avalonia.Logging;
 using Dunya.Editor.Diagnostics;
@@ -8,6 +9,8 @@ namespace Dunya.Editor;
 internal static class Program
 {
     public static string ProjectRoot { get; private set; } = "projects/demo";
+
+    public static bool ProjectGiven { get; private set; }
 
     public static string World { get; private set; } = "main";
 
@@ -54,6 +57,22 @@ internal static class Program
             if (args[index] == "--author" && index + 1 < args.Length)
             {
                 AuthorPath = args[index + 1];
+            }
+        }
+
+        if (!ProjectGiven)
+        {
+            EditorSettings remembered = EditorSettings.Load();
+
+            if (remembered.ProjectRoot != null
+                && Directory.Exists(remembered.ProjectRoot))
+            {
+                ProjectRoot = remembered.ProjectRoot;
+
+                if (remembered.World != null)
+                {
+                    World = remembered.World;
+                }
             }
         }
 

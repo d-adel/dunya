@@ -123,7 +123,7 @@ bool Session::package(
 
 void Session::frameCameraOnWorld() {
   const dunya::objectmodel::WorldExtent whole =
-    dunya::objectmodel::dynamicExtent(m_engine.world());
+    dunya::objectmodel::sceneExtent(m_engine.world());
 
   if (whole.empty) {
     m_camera.frame(glm::vec3(0.0f), 4.0f);
@@ -146,7 +146,7 @@ void Session::alignToSceneCamera() {
     m_engine.world().registry().get<dunya::objectmodel::Pose>(eye);
 
   const dunya::objectmodel::WorldExtent whole =
-    dunya::objectmodel::dynamicExtent(m_engine.world());
+    dunya::objectmodel::sceneExtent(m_engine.world());
 
   const float reach =
     whole.empty ? 10.0f : glm::length(whole.centre() - seat.position);
@@ -388,10 +388,17 @@ dunya::objectmodel::Entity Session::createCamera(
   dunya::objectmodel::Lens lens{};
   lens.verticalFov = verticalFov;
 
+  const bool first = dunya::objectmodel::mainCamera(m_engine.world())
+                     == dunya::objectmodel::INVALID_ENTITY;
+
   const dunya::objectmodel::Entity entity = m_engine.world().createAuthored();
 
   m_engine.world().emplaceOrReplace<dunya::objectmodel::Pose>(entity, seat);
   m_engine.world().emplaceOrReplace<dunya::objectmodel::Lens>(entity, lens);
+
+  if (first && !m_engine.world().setMainCamera(entity)) {
+    throw std::runtime_error("A new camera could not become the main camera");
+  }
 
   return entity;
 }

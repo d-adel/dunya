@@ -48,10 +48,6 @@ WorldExtent extentOf(const dunya::objectmodel::World& world) {
   WorldExtent extent;
 
   for (const dunya::objectmodel::Entity entity : world.fields()) {
-    if (registry.all_of<dunya::objectmodel::StaticBody>(entity)) {
-      continue;
-    }
-
     absorbSolid(
       extent,
       registry.get<dunya::objectmodel::Pose>(entity),
@@ -76,7 +72,24 @@ dunya::objectmodel::Entity firstLens(const dunya::objectmodel::World& world) {
   return firstWith<dunya::objectmodel::Lens, dunya::objectmodel::Pose>(world);
 }
 
-WorldExtent dynamicExtent(const dunya::objectmodel::World& world) {
+dunya::objectmodel::Entity mainCamera(const dunya::objectmodel::World& world) {
+  const entt::registry& registry = world.registry();
+
+  for (const dunya::objectmodel::Entity tagged :
+       registry.view<const dunya::objectmodel::MainCamera>()) {
+    if (
+      registry.all_of<dunya::objectmodel::Lens, dunya::objectmodel::Pose>(
+        tagged
+      )
+    ) {
+      return tagged;
+    }
+  }
+
+  return dunya::objectmodel::INVALID_ENTITY;
+}
+
+WorldExtent sceneExtent(const dunya::objectmodel::World& world) {
   return extentOf(world);
 }
 
@@ -228,7 +241,7 @@ std::optional<CameraView> activeCamera(
   const dunya::objectmodel::World& world,
   float aspect
 ) {
-  const dunya::objectmodel::Entity eye = firstLens(world);
+  const dunya::objectmodel::Entity eye = mainCamera(world);
 
   if (eye == dunya::objectmodel::INVALID_ENTITY) {
     return std::nullopt;
@@ -275,7 +288,7 @@ std::optional<dunya::field::Ray> screenPointToRay(
 }
 
 CameraView framingCamera(const dunya::objectmodel::World& world, float aspect) {
-  const WorldExtent target = dynamicExtent(world);
+  const WorldExtent target = sceneExtent(world);
 
   if (target.empty) {
     return cameraView(Pose{}, Lens{}, aspect);

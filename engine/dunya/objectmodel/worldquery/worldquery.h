@@ -22,7 +22,7 @@ struct WorldExtent {
   [[nodiscard]] glm::vec3 span() const noexcept;
 };
 
-[[nodiscard]] WorldExtent dynamicExtent(const dunya::objectmodel::World& world);
+[[nodiscard]] WorldExtent sceneExtent(const dunya::objectmodel::World& world);
 
 [[nodiscard]] WorldExtent entityExtent(
   const dunya::objectmodel::World& world,
@@ -48,6 +48,10 @@ template<typename... Ts>
 
   return found;
 }
+
+[[nodiscard]] dunya::objectmodel::Entity mainCamera(
+  const dunya::objectmodel::World& world
+);
 
 [[nodiscard]] dunya::objectmodel::Entity firstLens(
   const dunya::objectmodel::World& world

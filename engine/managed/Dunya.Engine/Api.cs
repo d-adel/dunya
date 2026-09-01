@@ -26,7 +26,7 @@ internal unsafe struct FieldDescriptor
 [StructLayout(LayoutKind.Sequential)]
 internal unsafe struct ApiTable
 {
-    public const uint ExpectedVersion = 5;
+    public const uint ExpectedVersion = 6;
 
     public uint Size;
     public uint Version;
@@ -59,6 +59,7 @@ internal unsafe struct ApiTable
     public delegate* unmanaged<void*, uint, int> Destroy;
     public delegate* unmanaged<void*, uint, SdfEditDescriptor*, int> AddPrimitive;
     public delegate* unmanaged<void*, uint, uint, int> ShareSdf;
+    public delegate* unmanaged<void*, uint> MainCamera;
     public delegate* unmanaged<void*, uint, float, int> SetRigidBody;
     public delegate* unmanaged<void*, uint, float*, int> SetVelocity;
     public delegate* unmanaged<void*, uint, float*, float*, float*, int> ScreenPointToRay;

@@ -150,6 +150,16 @@ public readonly unsafe struct World
     public bool ShareSdf(Entity donor, Entity taker)
         => Native.ShareSdf(m_handle, donor.Id, taker.Id);
 
+    public Entity MainCamera
+    {
+        get
+        {
+            uint id = Native.MainCamera(m_handle);
+
+            return id == uint.MaxValue ? Entity.None : new Entity(id);
+        }
+    }
+
     public bool SetRigidBody(Entity entity, float mass)
         => Native.SetRigidBody(m_handle, entity.Id, mass);
 

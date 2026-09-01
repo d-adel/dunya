@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
@@ -23,6 +24,15 @@ public partial class MainWindow : Window
         ProjectRoot = Program.ProjectRoot,
         World = Program.World
     };
+    private readonly TextBlock m_sceneGaps = new()
+    {
+        IsVisible = false,
+        Padding = new Avalonia.Thickness(10, 6),
+        TextWrapping = Avalonia.Media.TextWrapping.Wrap
+    };
+
+    private readonly DockPanel m_viewportPanel = new();
+
     private readonly EntitiesPanel m_entities = new();
     private readonly InspectorPanel m_inspector = new();
     private readonly ConsolePanel m_console = new();
@@ -59,6 +69,10 @@ public partial class MainWindow : Window
                     ShowContents();
                     ShowMaterials(ready);
                 }
+
+                ReportSceneGaps();
+                ShowTitle();
+                RememberProject();
             }
 
             if (Program.AutoPlay)
@@ -107,6 +121,13 @@ public partial class MainWindow : Window
             }
         };
 
+        Wire("AddCameraItem", AddCamera);
+        Wire("AddLightItem", () => AddFixture("light", a => a.CreateLight()));
+        Wire(
+            "AddEnvironmentItem",
+            () => AddFixture("environment", a => a.CreateEnvironment())
+        );
+        Wire("MakeMainCameraItem", MakeMainCamera);
         Wire("AddBoxItem", () => AddSolid(Authoring.Box));
         Wire("AddSphereItem", () => AddSolid(Authoring.Sphere));
         Wire("SubtractSphereItem", SubtractFromSelected);
@@ -129,6 +150,9 @@ public partial class MainWindow : Window
 
             ShowContents();
             ShowProject();
+            ReportSceneGaps();
+            MarkSaved();
+            RememberProject();
         };
 
         m_project.NewWorld += () => AskNewWorld();
@@ -157,12 +181,35 @@ public partial class MainWindow : Window
             Author()?.ShowGrid(m_gridVisible);
         };
 
-        Wire("SaveWorldItem", () => Report(Author()?.Save() == true ? "world saved" : "world NOT saved"));
+        Wire("SaveWorldItem", () => SaveWorld());
         Wire("BuildItem", () => Build());
         Wire("PlayItem", () => Play());
         Wire("StopItem", () => Stop());
 
-        Closing += (_, _) => m_viewport.Shutdown();
+        Closing += (_, closing) =>
+        {
+            if (m_closing)
+            {
+                RememberProject();
+                m_viewport.Shutdown();
+
+                return;
+            }
+
+            closing.Cancel = true;
+
+            Dispatcher.UIThread.Post(async () =>
+            {
+                if (!await AllowedToClose())
+                {
+                    return;
+                }
+
+                m_closing = true;
+
+                Close();
+            });
+        };
 
         Opened += (_, _) =>
         {
@@ -188,10 +235,18 @@ public partial class MainWindow : Window
 
     private void BuildLayout()
     {
+        if (m_viewportPanel.Children.Count == 0)
+        {
+            m_sceneGaps.Classes.Add("Warning");
+            DockPanel.SetDock(m_sceneGaps, Avalonia.Controls.Dock.Top);
+            m_viewportPanel.Children.Add(m_sceneGaps);
+            m_viewportPanel.Children.Add(m_viewport);
+        }
+
         m_layout = EditorLayout.Build(
             m_factory,
             m_entities,
-            m_viewport,
+            m_viewportPanel,
             m_inspector,
             m_console,
             m_project
@@ -578,6 +633,81 @@ public partial class MainWindow : Window
         return new Authoring(session);
     }
 
+    private bool SaveWorld()
+    {
+        bool ok = Author()?.Save() == true;
+
+        Report(ok ? "world saved" : "world NOT saved");
+
+        if (ok)
+        {
+            MarkSaved();
+        }
+
+        return ok;
+    }
+
+    private async Task<bool> AllowedToClose()
+    {
+        if (!m_dirty)
+        {
+            return true;
+        }
+
+        string? choice = await Prompts.Choose(
+            this,
+            "Unsaved changes",
+            $"Save changes to '{m_viewport.World}' before closing?",
+            "Save", "Don't Save", "Cancel"
+        );
+
+        if (choice == "Save")
+        {
+            return SaveWorld();
+        }
+
+        return choice == "Don't Save";
+    }
+
+    private bool m_dirty;
+
+    private bool m_closing;
+
+    private void MarkDirty()
+    {
+        if (m_dirty)
+        {
+            return;
+        }
+
+        m_dirty = true;
+
+        ShowTitle();
+    }
+
+    private void MarkSaved()
+    {
+        m_dirty = false;
+
+        ShowTitle();
+    }
+
+    private void ShowTitle()
+    {
+        Title =
+            $"dunya editor  -  {Program.ProjectRoot}  /  {m_viewport.World}"
+            + (m_dirty ? "*" : string.Empty);
+    }
+
+    private void RememberProject()
+    {
+        new EditorSettings
+        {
+            ProjectRoot = Program.ProjectRoot,
+            World = m_viewport.World
+        }.Save();
+    }
+
     private void OnSelected(Func<Authoring, bool> action)
     {
         Authoring? authoring = Author();
@@ -596,6 +726,143 @@ public partial class MainWindow : Window
 
         Append(action(authoring) ? "done" : "refused: " + DunyaNative.LastError());
 
+        MarkDirty();
+        ShowContents();
+    }
+
+    private void ReportSceneGaps()
+    {
+        if (m_viewport.SessionHandle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        var missing = new List<string>();
+
+        bool camera = false;
+        bool light = false;
+        bool environment = false;
+
+        foreach (WorldEntity entity in m_viewport.Contents())
+        {
+            camera |= entity.Components.Contains("Lens");
+            light |= entity.Components.Contains("DirectionalLight");
+            environment |= entity.Components.Contains("Environment");
+        }
+
+        if (!camera)
+        {
+            missing.Add("camera");
+        }
+
+        if (!light)
+        {
+            missing.Add("light");
+        }
+
+        if (!environment)
+        {
+            missing.Add("environment");
+        }
+
+        if (missing.Count == 0)
+        {
+            m_sceneGaps.IsVisible = false;
+
+            return;
+        }
+
+        string what = string.Join(", no ", missing);
+
+        m_sceneGaps.Text =
+            $"This world has no {what}. Add one from the Entity menu.";
+        m_sceneGaps.IsVisible = true;
+
+        Append($"world '{m_viewport.World}' has no {what}");
+
+        if (!camera)
+        {
+            Append("nothing will render when you play until a camera exists");
+        }
+    }
+
+    private void AddFixture(string what, Func<Authoring, uint> create)
+    {
+        Authoring? authoring = Author();
+
+        if (authoring == null)
+        {
+            return;
+        }
+
+        uint entity = create(authoring);
+
+        if (entity == uint.MaxValue)
+        {
+            Append($"the {what} was refused");
+
+            return;
+        }
+
+        Append($"added a {what} as entity {entity}");
+
+        MarkDirty();
+        ShowContents();
+        ReportSceneGaps();
+    }
+
+    private void AddCamera()
+    {
+        Authoring? authoring = Author();
+
+        if (authoring == null)
+        {
+            return;
+        }
+
+        bool wasFirst = authoring.MainCamera() == uint.MaxValue;
+
+        uint entity = authoring.CreateCamera(
+            0.0f, 2.5f, 8.0f, 0.0f, 0.0f, 0.0f, 70.0f
+        );
+
+        if (entity == uint.MaxValue)
+        {
+            Append("the camera was refused");
+
+            return;
+        }
+
+        Append(wasFirst
+            ? $"added camera {entity}, and it is the main camera"
+            : $"added camera {entity}");
+
+        MarkDirty();
+        ShowContents();
+        ReportSceneGaps();
+    }
+
+    private void MakeMainCamera()
+    {
+        Authoring? authoring = Author();
+
+        if (authoring == null)
+        {
+            return;
+        }
+
+        if (m_selected == null)
+        {
+            Append("select a camera first");
+
+            return;
+        }
+
+        Append(authoring.SetMainCamera(m_selected.Value)
+            ? $"entity {m_selected.Value} is the main camera"
+            : $"entity {m_selected.Value} has no camera to make main");
+
+        MarkDirty();
         ShowContents();
     }
 
@@ -624,6 +891,7 @@ public partial class MainWindow : Window
 
         Append(ok ? $"created entity {entity}" : "the primitive was refused");
 
+        MarkDirty();
         ShowContents();
     }
 

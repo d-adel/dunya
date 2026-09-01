@@ -624,6 +624,20 @@ int32_t addPrimitive(
   }
 }
 
+uint32_t mainCamera(void* world) {
+  if (world == nullptr) {
+    return UINT32_MAX;
+  }
+
+  const dunya::objectmodel::Entity eye = dunya::objectmodel::mainCamera(
+    *static_cast<dunya::objectmodel::World*>(world)
+  );
+
+  return eye == dunya::objectmodel::INVALID_ENTITY
+           ? UINT32_MAX
+           : static_cast<uint32_t>(entt::to_integral(eye));
+}
+
 int32_t shareSdf(void* world, uint32_t donor, uint32_t taker) {
   World* target = worldOf(world);
 
@@ -789,6 +803,7 @@ constexpr Api TABLE{
   &destroy,
   &addPrimitive,
   &shareSdf,
+  &mainCamera,
   &setRigidBody,
   &setVelocity,
   &screenPointToRay,

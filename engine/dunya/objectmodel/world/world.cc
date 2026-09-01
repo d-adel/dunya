@@ -143,6 +143,17 @@ void World::addStaticBody(Entity entity) {
   m_registry.emplace_or_replace<StaticBody>(entity);
 }
 
+bool World::setMainCamera(Entity entity) {
+  if (!m_registry.valid(entity) || !m_registry.all_of<Lens>(entity)) {
+    return false;
+  }
+
+  m_registry.clear<MainCamera>();
+  m_registry.emplace<MainCamera>(entity);
+
+  return true;
+}
+
 std::span<const dunya::field::Primitive> World::primitives(
   Entity entity
 ) const {

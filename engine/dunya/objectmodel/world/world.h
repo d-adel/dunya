@@ -96,6 +96,9 @@ public:
 
   void addStaticBody(Entity entity);
 
+  [[nodiscard]]
+  bool setMainCamera(Entity entity);
+
   std::span<const dunya::field::Primitive> primitives(Entity entity) const;
 
   uint32_t primitiveCount(Entity entity) const;

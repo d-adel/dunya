@@ -24,6 +24,11 @@
         <MenuItem Name="AddBoxItem" Header="Add _Box" />
         <MenuItem Name="AddSphereItem" Header="Add _Sphere" />
         <Separator />
+        <MenuItem Name="AddCameraItem" Header="Add _Camera" />
+        <MenuItem Name="AddLightItem" Header="Add _Light" />
+        <MenuItem Name="AddEnvironmentItem" Header="Add _Environment" />
+        <MenuItem Name="MakeMainCameraItem" Header="Make _Main Camera" />
+        <Separator />
         <MenuItem Name="SubtractSphereItem" Header="S_ubtract Sphere" />
         <Separator />
         <MenuItem Name="MakeStaticItem" Header="Make S_tatic" />

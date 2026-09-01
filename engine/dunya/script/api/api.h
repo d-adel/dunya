@@ -13,7 +13,7 @@ namespace dunya::script {
 
 extern "C" {
 
-inline constexpr uint32_t API_VERSION = 5u;
+inline constexpr uint32_t API_VERSION = 6u;
 
 struct FieldDescriptor {
   const char* name;
@@ -162,6 +162,8 @@ struct Api {
   );
 
   int32_t (*shareSdf)(void* world, uint32_t donor, uint32_t taker);
+
+  uint32_t (*mainCamera)(void* world);
 
   int32_t (*setRigidBody)(void* world, uint32_t entity, float mass);
 

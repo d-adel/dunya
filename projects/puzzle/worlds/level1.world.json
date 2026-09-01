@@ -10,6 +10,7 @@
       "nearPlane": 0.1,
       "farPlane": 10000
     },
+    "mainCamera": {},
     "primitives": [],
     "dynamic": []
   }, {

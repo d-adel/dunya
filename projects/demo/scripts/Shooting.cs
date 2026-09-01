@@ -25,7 +25,7 @@ public sealed class ShootingSystem : ScriptSystem
             return;
         }
 
-        Entity eye = Camera(world);
+        Entity eye = world.MainCamera;
 
         if (!eye.Valid)
         {
@@ -52,19 +52,6 @@ public sealed class ShootingSystem : ScriptSystem
         );
 
         Fire(world, from, new Vector3(aim.X * Speed, aim.Y * Speed, aim.Z * Speed));
-    }
-
-    private static Entity Camera(World world)
-    {
-        foreach (Entity entity in world.All())
-        {
-            if (world.Has(entity, "Lens"))
-            {
-                return entity;
-            }
-        }
-
-        return Entity.None;
     }
 
     private static void Fire(World world, Vector3 from, Vector3 velocity)

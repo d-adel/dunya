@@ -1,5 +1,7 @@
 #include "dunya_c.ih"
 
+#include <dunya/objectmodel/worldquery/worldquery.h>
+
 namespace {
 
 thread_local std::string g_lastError;
@@ -498,6 +500,33 @@ void dunya_session_set_cursor(DunyaSession* session, float x, float y) {
   if (session != nullptr) {
     asSession(session)->setCursor(x, y);
   }
+}
+
+uint32_t dunya_session_main_camera(const DunyaSession* session) {
+  if (session == nullptr) {
+    return UINT32_MAX;
+  }
+
+  const dunya::objectmodel::Entity eye =
+    dunya::objectmodel::mainCamera(asSession(session)->activeWorld());
+
+  return eye == dunya::objectmodel::INVALID_ENTITY
+           ? UINT32_MAX
+           : static_cast<uint32_t>(entt::to_integral(eye));
+}
+
+int32_t dunya_session_set_main_camera(DunyaSession* session, uint32_t entity) {
+  return guard([&] {
+    if (session == nullptr) {
+      throw std::runtime_error("No session");
+    }
+
+    if (!asSession(session)->world().setMainCamera(
+          static_cast<dunya::objectmodel::Entity>(entity)
+        )) {
+      throw std::runtime_error("That entity has no camera to make main");
+    }
+  });
 }
 
 uint32_t dunya_session_create_light(DunyaSession* session) {

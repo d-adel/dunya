@@ -4,6 +4,7 @@
 #include <dunya/objectmodel/component/deformable/deformable.h>
 #include <dunya/objectmodel/component/directionallight/directionallight.h>
 #include <dunya/objectmodel/component/lens/lens.h>
+#include <dunya/objectmodel/component/maincamera/maincamera.h>
 #include <dunya/objectmodel/component/massscale/massscale.h>
 #include <dunya/objectmodel/component/material/material.h>
 #include <dunya/objectmodel/component/mesh/mesh.h>
@@ -26,6 +27,7 @@ using AuthoredComponents = ComponentList<
   Pose,
   SdfGrid,
   Lens,
+  MainCamera,
   MassScale,
   StaticBody,
   Deformable,

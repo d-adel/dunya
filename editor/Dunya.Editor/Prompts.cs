@@ -9,6 +9,63 @@ namespace Dunya.Editor;
 
 public static class Prompts
 {
+    public static async Task<string?> Choose(
+        Window owner,
+        string title,
+        string question,
+        params string[] choices)
+    {
+        string? answer = null;
+
+        var buttons = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Spacing = 6
+        };
+
+        var dialog = new Window
+        {
+            Title = title,
+            Width = 420,
+            SizeToContent = SizeToContent.Height,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            CanResize = false
+        };
+
+        foreach (string choice in choices)
+        {
+            var button = new Button { Content = choice, MinWidth = 96 };
+
+            button.Click += (_, _) =>
+            {
+                answer = choice;
+                dialog.Close();
+            };
+
+            buttons.Children.Add(button);
+        }
+
+        dialog.Content = new StackPanel
+        {
+            Margin = new Avalonia.Thickness(16),
+            Spacing = 16,
+            Children =
+            {
+                new TextBlock
+                {
+                    Text = question,
+                    TextWrapping = Avalonia.Media.TextWrapping.Wrap
+                },
+                buttons
+            }
+        };
+
+        await dialog.ShowDialog(owner);
+
+        return answer;
+    }
+
     public static async Task<string?> Text(Window owner, string title, string initial)
     {
         var box = new TextBox { Text = initial, Width = 320 };

@@ -12,6 +12,12 @@ void addDefaultEntities(World& world) {
   world.emplaceAuthored<Pose>(camera, seat);
   world.emplaceAuthored<Lens>(camera, Lens{});
 
+  if (!world.setMainCamera(camera)) {
+    throw std::runtime_error(
+      "The default camera could not become the main one"
+    );
+  }
+
   const Entity sun = world.createAuthored();
 
   world.emplaceAuthored<Pose>(sun, Pose{});

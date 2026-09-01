@@ -1,4 +1,5 @@
 #include "defaultworld.h"
+#include <stdexcept>
 
 #include <dunya/objectmodel/component/directionallight/directionallight.h>
 #include <dunya/objectmodel/component/environment/environment.h>

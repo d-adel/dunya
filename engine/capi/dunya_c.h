@@ -112,6 +112,11 @@ DUNYA_C_API void dunya_session_set_cursor(
   float y
 );
 
+DUNYA_C_API uint32_t dunya_session_main_camera(const DunyaSession* session);
+
+DUNYA_C_API int32_t
+dunya_session_set_main_camera(DunyaSession* session, uint32_t entity);
+
 DUNYA_C_API uint32_t dunya_session_create_light(DunyaSession* session);
 
 DUNYA_C_API uint32_t dunya_session_create_environment(DunyaSession* session);
