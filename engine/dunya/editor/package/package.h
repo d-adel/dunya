@@ -7,7 +7,7 @@
 namespace dunya::editor {
 
 struct PackageSpec {
-  std::filesystem::path runtimeExecutable;
+  std::filesystem::path playerExecutable;
   std::filesystem::path projectRoot;
   std::filesystem::path output;
 

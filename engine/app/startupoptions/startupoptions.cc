@@ -45,9 +45,7 @@ StartupOptions::StartupOptions(std::span<char*> arguments) {
       break;
     }
 
-    if (argument == "--grid") {
-      grid = true;
-    } else if (argument == "--analytic") {
+    if (argument == "--analytic") {
       analytic = true;
     } else if (argument == "--verify-bake") {
       verifyBake = true;
@@ -59,35 +57,14 @@ StartupOptions::StartupOptions(std::span<char*> arguments) {
       project = valueFor(arguments, i, argument);
     } else if (argument == "--world") {
       world = valueFor(arguments, i, argument);
-    } else if (argument == "--export-project") {
-      exportProject = valueFor(arguments, i, argument);
-    } else if (argument == "--dent-log") {
-      dentLog = valueFor(arguments, i, argument);
-    } else if (argument == "--dents") {
-      const std::string count = valueFor(arguments, i, argument);
-
-      if (count.find_first_not_of("0123456789") != std::string::npos) {
-        throw std::runtime_error("--dents needs a count, got: " + count);
-      }
-
-      dents = static_cast<uint32_t>(std::stoul(count));
-    } else if (argument == "--carves") {
-      const std::string count = valueFor(arguments, i, argument);
-
-      if (count.find_first_not_of("0123456789") != std::string::npos) {
-        throw std::runtime_error("--carves needs a count, got: " + count);
-      }
-
-      carves = static_cast<uint32_t>(std::stoul(count));
     } else if (argument == "--capture") {
       capture = valueFor(arguments, i, argument);
     } else {
       throw std::runtime_error(
         "Unknown argument: " + argument
-        + "\nUsage: dunya [--analytic] [--carves N] [--verify-bake]"
-          " [--screenshot PATH] [--golden PATH] [--dents N] [--dent-log PATH]"
-          " [--capture DIR] [--project DIR] [--world NAME]"
-          " [--export-project DIR] [-- ARGS FOR THE SCRIPTS]"
+        + "\nUsage: dunya [--analytic] [--verify-bake] [--screenshot PATH]"
+          " [--golden PATH] [--capture DIR] [--project DIR] [--world NAME]"
+          " [-- ARGS FOR THE SCRIPTS]"
       );
     }
   }

@@ -35,7 +35,14 @@ public static unsafe class Boot
             return 0;
         }
 
-        return RegisterSystems(assembly) ? 1 : 0;
+        if (!RegisterSystems(assembly))
+        {
+            return 0;
+        }
+
+        Native.Log($"registered {s_systems.Count} script system(s)");
+
+        return 1;
     }
 
     [UnmanagedCallersOnly]
@@ -150,7 +157,7 @@ public static unsafe class Boot
     }
 
     [UnmanagedCallersOnly]
-    private static void Run(void* user, void* world, float deltaSeconds, uint frame)
+    private static void Run(void* user, void* world, void* input, float deltaSeconds, uint frame)
     {
         int index = (int)(nint)user;
 
@@ -159,6 +166,6 @@ public static unsafe class Boot
             return;
         }
 
-        s_systems[index].Run(new World(world, deltaSeconds, frame));
+        s_systems[index].Run(new World(world, deltaSeconds, frame), new Input(input));
     }
 }

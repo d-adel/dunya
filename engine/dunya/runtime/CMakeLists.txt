@@ -1,5 +1,4 @@
 add_library(dunya_runtime STATIC
-    deformation/deformation.cc
     runtime/runtime.cc
 )
 add_library(dunya::runtime ALIAS dunya_runtime)

@@ -1,38 +1,15 @@
 #pragma once
 
 #include <dunya/core/event/event.h>
+#include <dunya/platform/keyevent/keyevent.h>
 
 #include <GLFW/glfw3.h>
 #include <array>
 #include <cstdint>
+#include <optional>
 #include <unordered_map>
 
 namespace dunya::platform {
-
-enum class KeyEventType {
-  Pressed,
-  Released,
-  SinglePressed,
-  DoublePressed,
-  Hold,
-  Repeat
-};
-
-struct KeyEvent {
-  int key;
-  KeyEventType type;
-};
-
-enum class MouseButtonEventType {
-  Pressed,
-  Released
-};
-
-struct MouseButtonEvent {
-  int button;
-  MouseButtonEventType type;
-  int mods;
-};
 
 struct KeyTiming {
   uint64_t doubleWindowMs = 250;

@@ -1,5 +1,7 @@
 #include "dunya_c.h"
 
+#include <capi/win32keys/win32keys.h>
+
 #include <dunya/script/api/api.h>
 
 #include <capi/session/session.h>

@@ -12,6 +12,10 @@ public readonly unsafe struct Entity : IEquatable<Entity>
 
     public uint Id { get; }
 
+    public static Entity None => new(uint.MaxValue);
+
+    public bool Valid => Id != uint.MaxValue;
+
     public bool Equals(Entity other) => Id == other.Id;
 
     public override bool Equals(object? other) => other is Entity e && Equals(e);
@@ -129,6 +133,38 @@ public readonly unsafe struct World
             m_handle, entity.Id, ref descriptor, materials
         );
     }
+
+    public Entity CreateSdfGrid(Pose pose, uint resolution, float margin = 0.0f)
+        => new Entity(Native.CreateSdfGrid(m_handle, pose, resolution, margin));
+
+    public bool Destroy(Entity entity)
+        => Native.Destroy(m_handle, entity.Id);
+
+    public bool AddPrimitive(Entity entity, in SdfEdit shape)
+    {
+        SdfEditDescriptor descriptor = shape.ToDescriptor();
+
+        return Native.AddPrimitive(m_handle, entity.Id, ref descriptor);
+    }
+
+    public bool ShareSdf(Entity donor, Entity taker)
+        => Native.ShareSdf(m_handle, donor.Id, taker.Id);
+
+    public bool SetRigidBody(Entity entity, float mass)
+        => Native.SetRigidBody(m_handle, entity.Id, mass);
+
+    public bool ScreenPointToRay(
+        Entity camera,
+        Vector2 screen,
+        Vector2 viewport,
+        out Ray ray
+    )
+        => Native.ScreenPointToRay(
+            m_handle, camera.Id, screen, viewport, out ray
+        );
+
+    public bool SetVelocity(Entity entity, Vector3 velocity)
+        => Native.SetVelocity(m_handle, entity.Id, velocity);
 
     public bool Has(Entity entity, string component)
         => Native.HasComponent(m_handle, entity.Id, component);

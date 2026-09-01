@@ -1,4 +1,5 @@
 add_library(dunya_systems STATIC
+    input/input.cc
     schedule/schedule.cc
 )
 

@@ -1,35 +1,14 @@
 #pragma once
 
-#include <dunya/assets/assetlibrary/assetlibrary.h>
+#include <dunya/engine/engine/engine.h>
 #include <dunya/viewport/camera/camera.h>
 
-#include <dunya/gpu/context/context.h>
-#include <dunya/gpu/pipeline/pipeline.h>
-#include <dunya/gpu/swapchain/swapchain.h>
-#include <dunya/gpu/uploader/uploader.h>
 #include <dunya/gpu/windowsystem/windowsystem.h>
-#include <dunya/objectmodel/world/world.h>
-#include <dunya/renderer/frame/frame.h>
-#include <dunya/renderer/frameglobals/frameglobals.h>
 #include <dunya/field/field.h>
-#include <dunya/objectmodel/component/deformable/deformable.h>
 #include <dunya/objectmodel/component/pose/pose.h>
-#include <dunya/objectmodel/component/material/material.h>
 #include <dunya/objectmodel/component/sdfgrid/sdfgrid.h>
-#include <dunya/renderer/framepacker/framepacker.h>
-#include <dunya/renderer/rendererstorage/rendererstorage.h>
-#include <dunya/renderer/renderer.h>
-#include <dunya/renderer/resourcetable/resourcetable.h>
 #include <dunya/renderer/scenetarget/scenetarget.h>
 #include <dunya/viewport/grid/grid.h>
-#include <dunya/renderer/sdfbaker/sdfbaker.h>
-#include <dunya/renderer/sdfrecordtable/sdfrecordtable.h>
-#include <dunya/renderer/sdfresidency/sdfresidency.h>
-#include <dunya/physics/joltlibrary/joltlibrary.h>
-#include <dunya/renderer/volumepool/volumepool.h>
-#include <dunya/runtime/runtime/runtime.h>
-#include <dunya/script/api/api.h>
-#include <dunya/systems/schedule/schedule.h>
 
 #include <filesystem>
 #include <memory>
@@ -70,11 +49,6 @@ public:
 
   void play();
 
-  static void onDeform(
-    void* host,
-    uint32_t entity,
-    const dunya::script::SdfDeformSummary* summary
-  );
   void stop();
 
   [[nodiscard]] bool playing() const noexcept;
@@ -95,8 +69,14 @@ public:
 
   [[nodiscard]] bool viewsThroughScene() const noexcept;
 
+  void setKey(uint32_t key, bool down) noexcept;
+
+  void setMouseButton(uint32_t button, bool down) noexcept;
+
+  void setCursor(float x, float y) noexcept;
+
   [[nodiscard]] bool package(
-    const std::string& runtimeExecutable,
+    const std::string& playerExecutable,
     const std::string& output,
     const std::vector<std::string>& worlds,
     std::string& result
@@ -174,53 +154,22 @@ public:
   );
 
 private:
-  void loadWorld(
-    const std::filesystem::path& projectRoot,
-    const std::string& world
-  );
-
   void lookAtWorld(float aspect);
 
   void frameCameraOnWorld();
 
-  std::unique_ptr<dunya::gpu::WindowSystem> m_windowSystem;
-  dunya::gpu::Context m_context;
-  dunya::gpu::SwapChain m_swapChain;
+  dunya::engine::Engine m_engine;
 
-  dunya::assets::AssetLibrary m_assetLibrary;
-
-  std::filesystem::path m_projectRoot;
   std::string m_worldName;
-  dunya::objectmodel::World m_world;
-
-  dunya::physics::JoltLibrary m_jolt;
-  std::optional<dunya::runtime::Runtime> m_runtime;
-
-  dunya::script::SdfDeformScope m_deformScope;
-
-  dunya::systems::Schedule m_schedule;
-
   dunya::viewport::Camera m_camera;
 
   bool m_viewsThroughScene = false;
-
-  uint32_t m_frameIndex = 0;
-
-  dunya::renderer::RendererStorage m_storage;
-
-  dunya::gpu::Pipeline m_meshPipeline;
-  dunya::gpu::Pipeline m_sdfPipeline;
-  dunya::gpu::Pipeline m_gridPipeline;
-  dunya::gpu::Pipeline m_skyPipeline;
 
   dunya::renderer::SceneTarget m_sceneTarget;
 
   dunya::viewport::Grid m_grid;
 
   bool m_gridVisible = true;
-  dunya::renderer::Renderer m_renderer;
-
-  dunya::renderer::Frame m_frame;
 };
 
 }

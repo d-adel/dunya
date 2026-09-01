@@ -93,12 +93,6 @@ FetchContent_Declare(
     GIT_TAG         e60d33385e2e4f7fa891513150f2532b5bbcb093
     SOURCE_SUBDIR  cmake_disabled
 )
-FetchContent_Declare(
-    imgui
-    GIT_REPOSITORY  https://github.com/ocornut/imgui
-    GIT_TAG         v1.91.9b
-    SOURCE_SUBDIR   cmake_disabled
-)
 set(USE_STATIC_MSVC_RUNTIME_LIBRARY OFF)
 set(USE_ASSERTS ON)
 set(OVERRIDE_CXX_FLAGS OFF)
@@ -119,7 +113,7 @@ FetchContent_Declare(
     GIT_REPOSITORY  https://github.com/stephenberry/glaze
     GIT_TAG         v8.3.0
 )
-FetchContent_MakeAvailable(glfw glm stb tinyobjloader imgui JoltPhysics EnTT glaze)
+FetchContent_MakeAvailable(glfw glm stb tinyobjloader JoltPhysics EnTT glaze)
 
 target_compile_definitions(glm INTERFACE
     GLM_FORCE_RADIANS
@@ -130,22 +124,6 @@ target_compile_definitions(glm INTERFACE
 
 find_package(Vulkan REQUIRED)
 
-add_library(imgui STATIC
-    "${imgui_SOURCE_DIR}/imgui.cpp"
-    "${imgui_SOURCE_DIR}/imgui_draw.cpp"
-    "${imgui_SOURCE_DIR}/imgui_tables.cpp"
-    "${imgui_SOURCE_DIR}/imgui_widgets.cpp"
-    "${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp"
-    "${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp"
-    "${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp"
-)
-target_include_directories(imgui SYSTEM PUBLIC
-    "${imgui_SOURCE_DIR}"
-    "${imgui_SOURCE_DIR}/backends"
-    "${imgui_SOURCE_DIR}/misc/cpp"
-)
-target_link_libraries(imgui PUBLIC glfw Vulkan::Vulkan)
-target_compile_features(imgui PUBLIC cxx_std_20)
 add_subdirectory(engine/dunya/core)
 add_subdirectory(engine/dunya/objectmodel)
 add_subdirectory(engine/dunya/editor)
@@ -158,21 +136,8 @@ add_subdirectory(engine/dunya/runtime)
 add_subdirectory(engine/dunya/systems)
 add_subdirectory(engine/dunya/script)
 add_subdirectory(engine/dunya/stb)
-add_subdirectory(engine/dunya/debugui)
 add_subdirectory(engine/dunya/imagecompare)
 enable_testing()
-add_executable(DunyaDevHost
-    engine/devhost/main.cc
-    engine/app/capture/capture.cc
-    engine/devhost/imguidebugui/imguidebugui.cc
-    engine/app/startupoptions/startupoptions.cc
-    engine/app/framecheck/framecheck.cc
-
-    engine/app/glfwwindowsystem/glfwwindowsystem.cc
-    engine/app/projectile/projectile.cc
-    engine/app/flycontroller/flycontroller.cc
-    engine/app/application/application.cc
-)
 find_program(
     GLSLC_EXECUTABLE
     NAMES glslc
@@ -184,14 +149,9 @@ find_program(
 add_subdirectory(engine/dunya/gpu)
 add_subdirectory(engine/dunya/renderer)
 add_subdirectory(engine/dunya/assets)
+add_subdirectory(engine/dunya/engine)
 add_subdirectory(engine/capi)
 add_subdirectory(editor)
-target_compile_definitions(DunyaDevHost PRIVATE
-    SHADER_SOURCE_DIR=\"${SHADER_SOURCE_DIR}\"
-    GLSLC_PATH=\"${GLSLC_EXECUTABLE}\"
-    GLSLC_DEFINES=\"${SHADER_DEFINES_ARGS}\"
-    GLSLC_INCLUDE_DIR=\"${SHADER_SOURCE_DIR}\"
-)
 file(
     GLOB SHADER_SOURCES
     CONFIGURE_DEPENDS
@@ -232,27 +192,24 @@ add_custom_target(
     DEPENDS ${SHADER_OUTPUTS}
 )
 
-add_dependencies(DunyaDevHost SHADER_TARGET)
-add_executable(DunyaRuntime
-    engine/runtime/main.cc
+add_executable(DunyaPlayer
+    engine/player/main.cc
     engine/app/capture/capture.cc
     engine/app/startupoptions/startupoptions.cc
     engine/app/framecheck/framecheck.cc
+    engine/app/inputbridge/inputbridge.cc
     engine/app/glfwwindowsystem/glfwwindowsystem.cc
-    engine/app/projectile/projectile.cc
-    engine/app/flycontroller/flycontroller.cc
-    engine/app/application/application.cc
+    engine/app/engineloop/engineloop.cc
 )
-add_dependencies(DunyaRuntime SHADER_TARGET)
+add_dependencies(DunyaPlayer SHADER_TARGET)
 if (MSVC)
-    target_compile_options(DunyaRuntime PRIVATE /W4 /WX /w15038 /w14062 /Zc:__cplusplus)
+    target_compile_options(DunyaPlayer PRIVATE /W4 /WX /w15038 /w14062 /Zc:__cplusplus)
 else()
-    target_compile_options(DunyaRuntime PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    target_compile_options(DunyaPlayer PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
-target_link_libraries(DunyaRuntime PRIVATE
+target_link_libraries(DunyaPlayer PRIVATE
     dunya::assets
-    dunya::debugui
-    dunya::viewport
+    dunya::engine
     dunya::serialize
     glfw
     Vulkan::Vulkan
@@ -270,47 +227,16 @@ target_link_libraries(DunyaRuntime PRIVATE
     dunya::imagecompare
 )
 
-target_include_directories(DunyaRuntime PRIVATE engine ${stb_SOURCE_DIR} ${tinyobjloader_SOURCE_DIR})
-if (MSVC)
-    target_compile_options(DunyaDevHost PRIVATE /W4 /WX /w15038 /w14062 /Zc:__cplusplus)
-else()
-    target_compile_options(DunyaDevHost PRIVATE -Wall -Wextra -Wpedantic -Werror)
-endif()
-target_link_libraries(DunyaDevHost PRIVATE
-    dunya::assets
-    dunya::debugui
-    dunya::viewport
-    dunya::serialize
-    glfw
-    Vulkan::Vulkan
-    glm::glm
-    dunya::core
-    dunya::objectmodel
-    dunya::editor
-    dunya::platform
-    dunya::gpu
-    dunya::renderer
-    dunya::field
-    dunya::physics
-    dunya::runtime
-    dunya::script
-    dunya::systems
-    dunya::imagecompare
-    imgui
-)
-target_include_directories(DunyaDevHost PRIVATE engine ${stb_SOURCE_DIR} ${tinyobjloader_SOURCE_DIR})
-
+target_include_directories(DunyaPlayer PRIVATE engine ${stb_SOURCE_DIR} ${tinyobjloader_SOURCE_DIR})
 add_custom_target(DUNYA_CONTENT ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${SHADER_OUTPUT_DIR} $<TARGET_FILE_DIR:DunyaDevHost>/shaders
+            ${SHADER_OUTPUT_DIR} $<TARGET_FILE_DIR:DunyaPlayer>/shaders
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${PROJECT_SOURCE_DIR}/projects $<TARGET_FILE_DIR:DunyaDevHost>/projects
+            ${PROJECT_SOURCE_DIR}/projects $<TARGET_FILE_DIR:DunyaPlayer>/projects
     COMMENT "Copying shaders and projects"
     VERBATIM
 )
-add_dependencies(DUNYA_CONTENT DunyaDevHost DunyaRuntime SHADER_TARGET)
-dunya_module(imgui Developer)
-dunya_module(DunyaDevHost Editor)
+add_dependencies(DUNYA_CONTENT DunyaPlayer SHADER_TARGET)
 add_executable(DunyaPackager
     engine/tools/packager/main.cc
 )
@@ -322,7 +248,7 @@ else()
 endif()
 
 dunya_module(DunyaPackager Editor)
-dunya_module(DunyaRuntime Developer)
+dunya_module(DunyaPlayer Developer)
 
 add_subdirectory(tests)
 

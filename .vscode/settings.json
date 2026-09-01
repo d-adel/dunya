@@ -14,8 +14,6 @@
   // compile_commands.json (the Visual Studio generator never does, whatever
   // CMAKE_EXPORT_COMPILE_COMMANDS says), which is what stops IntelliSense
   // inventing include paths; and it rebuilds this project faster than MSBuild.
-  // The VS-generator tree in build/ stays as-is -- that is the path the README
-  // documents and the one verification builds use.
   "cmake.generator": "Ninja",
   "cmake.buildDirectory": "${workspaceFolder}/build-dev",
   // Fallback for files the provider cannot place (a new .cc not yet in any
@@ -60,12 +58,21 @@
     "DUNYA_MAX_TEXTURES": "16",
     "DUNYA_MAX_SAMPLERS": "8",
     "DUNYA_MAX_MATERIALS": "64",
-    "DUNYA_MAX_FIELD_RECORDS": "1280",
-    "DUNYA_MAX_FIELD_VOLUMES": "1280",
+    "DUNYA_MAX_SDF_RECORDS": "1280",
+    "DUNYA_MAX_SDF_VOLUMES": "1280",
     "DUNYA_BRICK_CELLS": "8",
     "DUNYA_SAMPLER_LINEAR_REPEAT": "0",
     "DUNYA_SAMPLER_LINEAR_CLAMP": "1",
-    "DUNYA_SAMPLER_NEAREST_CLAMP": "2"
+    "DUNYA_SAMPLER_NEAREST_CLAMP": "2",
+    "DUNYA_SHAPE_SPHERE": "0",
+    "DUNYA_SHAPE_BOX": "1",
+    "DUNYA_SHAPE_PLANE": "2",
+    "DUNYA_SHAPE_CYLINDER": "3",
+    "DUNYA_CSG_UNION": "0",
+    "DUNYA_CSG_SMOOTH_UNION": "1",
+    "DUNYA_CSG_INTERSECTION": "2",
+    "DUNYA_CSG_SUBTRACTION": "3",
+    "DUNYA_CSG_SMOOTH_SUBTRACTION": "4"
   },
   // No inline code suggestions in this repo -- every line here is written by
   // hand on purpose, and ghost text works against that.

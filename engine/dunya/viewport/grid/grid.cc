@@ -43,10 +43,24 @@ std::vector<VkVertexInputAttributeDescription> GridVertex::
 
 Grid::Grid(
   const dunya::gpu::Device& device,
+  const dunya::gpu::SwapChain& swapChain,
+  std::vector<VkDescriptorSetLayout> setLayouts,
   const GridPlane& plane,
   const GridStyle& style
 )
-    : m_device(device), m_plane(plane), m_style(style) {
+    : m_device(device),
+      m_plane(plane),
+      m_style(style),
+      m_pipeline(
+        dunya::gpu::PipelineType::Grid,
+        device.vkDevice(),
+        std::move(setLayouts),
+        swapChain,
+        std::vector<VkVertexInputBindingDescription>{
+          GridVertex::bindingDescription()
+        },
+        GridVertex::attributeDescriptions()
+      ) {
   m_capacity = static_cast<uint32_t>(4 * (2 * m_style.size + 1));
 
   m_vertices = dunya::gpu::Buffer(
@@ -162,7 +176,30 @@ void Grid::rebuild() {
   m_vertices.fill(vertices);
 }
 
-void Grid::draw(VkCommandBuffer commands, VkPipelineLayout layout) const {
+void Grid::record(VkCommandBuffer commands, VkDescriptorSet globals) const {
+  if (m_vertexCount == 0) {
+    return;
+  }
+
+  vkCmdBindPipeline(
+    commands,
+    VK_PIPELINE_BIND_POINT_GRAPHICS,
+    m_pipeline.pipeline()
+  );
+
+  vkCmdBindDescriptorSets(
+    commands,
+    VK_PIPELINE_BIND_POINT_GRAPHICS,
+    m_pipeline.pipelineLayout(),
+    0,
+    1,
+    &globals,
+    0,
+    nullptr
+  );
+
+  const VkPipelineLayout layout = m_pipeline.pipelineLayout();
+
   if (m_vertexCount == 0) {
     return;
   }

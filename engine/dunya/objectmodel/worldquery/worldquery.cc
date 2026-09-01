@@ -240,6 +240,37 @@ std::optional<CameraView> activeCamera(
   );
 }
 
+std::optional<dunya::field::Ray> screenPointToRay(
+  const dunya::objectmodel::World& world,
+  dunya::objectmodel::Entity camera,
+  const glm::vec2& screen,
+  const glm::vec2& viewport
+) {
+  if (viewport.x <= 0.0f || viewport.y <= 0.0f) {
+    return std::nullopt;
+  }
+
+  const entt::registry& registry = world.registry();
+
+  if (!registry.valid(camera) || !registry.all_of<Pose, Lens>(camera)) {
+    return std::nullopt;
+  }
+
+  const CameraView seat = cameraView(
+    registry.get<const Pose>(camera),
+    registry.get<const Lens>(camera),
+    viewport.x / viewport.y
+  );
+
+  const glm::vec2 ndc = 2.0f * screen / viewport - 1.0f;
+
+  return dunya::field::screenPointToRay(
+    glm::inverse(seat.projection * seat.view),
+    seat.position,
+    ndc
+  );
+}
+
 CameraView framingCamera(const dunya::objectmodel::World& world, float aspect) {
   const WorldExtent target = dynamicExtent(world);
 

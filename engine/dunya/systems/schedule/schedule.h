@@ -1,6 +1,7 @@
 #pragma once
 
 #include <dunya/objectmodel/world/world.h>
+#include <dunya/systems/input/input.h>
 
 #include <cstdint>
 #include <functional>
@@ -13,6 +14,7 @@ namespace dunya::systems {
 
 struct Context {
   dunya::objectmodel::World& world;
+  const InputState& input;
   float deltaSeconds = 0.0f;
   uint32_t frameIndex = 0;
 };

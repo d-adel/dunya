@@ -63,7 +63,7 @@ public partial class MainWindow : Window
 
             if (Program.AutoPlay)
             {
-                Append(Author()?.Play() == true ? "playing" : "play FAILED");
+                Play();
             }
 
         });
@@ -78,6 +78,20 @@ public partial class MainWindow : Window
         m_inspector.Focused += id => m_selected = id;
 
         m_viewport.Picked += id => Dispatcher.UIThread.Post(() => m_entities.Select(id));
+
+        m_viewport.PlayToggleRequested += () => Dispatcher.UIThread.Post(
+            () =>
+            {
+                if (Author()?.Playing() == true)
+                {
+                    Stop();
+                }
+                else
+                {
+                    Play();
+                }
+            }
+        );
 
         m_viewport.FocusRequested += () => Dispatcher.UIThread.Post(
             () => Author()?.FocusCamera(m_selected)
@@ -656,7 +670,7 @@ public partial class MainWindow : Window
 
         EnterPlayMode(true);
 
-        m_console.AppendGame("playing");
+        Report("playing");
     }
 
     private void Stop()
@@ -683,6 +697,13 @@ public partial class MainWindow : Window
     private void EnterPlayMode(bool playing)
     {
         m_console.ShowGame(playing);
+
+        m_viewport.Playing = playing;
+
+        if (playing)
+        {
+            m_viewport.TakeFocus();
+        }
 
         m_entities.IsEnabled = !playing;
         m_inspector.IsEnabled = !playing;

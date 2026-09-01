@@ -295,8 +295,8 @@ size_t indexOf(
          + static_cast<size_t>(py) * field.resolution.x + px;
 }
 
-SdfDeformNotify g_notify = nullptr;
-void* g_notifyHost = nullptr;
+const PhysicsVerbs* g_physics = nullptr;
+void* g_physicsHost = nullptr;
 
 }
 
@@ -459,9 +459,7 @@ int32_t deformSdf(
     *result = filled;
   }
 
-  if (g_notify != nullptr) {
-    g_notify(g_notifyHost, entity, &filled);
-  }
+  target->markSdfDirty(subject, report.samples);
 
   return 1;
 }
@@ -546,10 +544,218 @@ int32_t addSystem(
   }
 
   const auto run = [callback, user](dunya::systems::Context& context) {
-    callback(user, &context.world, context.deltaSeconds, context.frameIndex);
+    callback(
+      user,
+      &context.world,
+      const_cast<dunya::systems::InputState*>(&context.input),
+      context.deltaSeconds,
+      context.frameIndex
+    );
   };
 
   return target->add(order, name, run) ? 1 : 0;
+}
+
+uint32_t createSdfGrid(
+  void* world,
+  const float* pose,
+  const uint32_t* resolution,
+  float margin
+) {
+  World* target = worldOf(world);
+
+  if (target == nullptr || pose == nullptr || resolution == nullptr) {
+    return UINT32_MAX;
+  }
+
+  dunya::objectmodel::Pose seat{};
+  seat.position = glm::vec3(pose[0], pose[1], pose[2]);
+  seat.rotation = glm::quat(pose[6], pose[3], pose[4], pose[5]);
+
+  dunya::objectmodel::SdfGrid grid{};
+  grid.resolution = glm::uvec3(resolution[0], resolution[1], resolution[2]);
+
+  if (margin > 0.0f) {
+    grid.margin = margin;
+  }
+
+  try {
+    return static_cast<uint32_t>(
+      entt::to_integral(target->createSdfGrid(seat, grid))
+    );
+  } catch (const std::exception&) {
+    return UINT32_MAX;
+  }
+}
+
+int32_t destroy(void* world, uint32_t entity) {
+  if (g_physics != nullptr && g_physics->destroy != nullptr) {
+    return g_physics->destroy(g_physicsHost, world, entity);
+  }
+
+  World* target = worldOf(world);
+
+  return target != nullptr && target->destroy(entityOf(entity)) ? 1 : 0;
+}
+
+int32_t addPrimitive(
+  void* world,
+  uint32_t entity,
+  const SdfEditDescriptor* shape
+) {
+  World* target = worldOf(world);
+
+  if (target == nullptr || shape == nullptr) {
+    return 0;
+  }
+
+  const Entity subject = entityOf(entity);
+
+  if (!target->registry().all_of<dunya::objectmodel::Pose>(subject)) {
+    return 0;
+  }
+
+  try {
+    return target->addPrimitive(subject, primitiveFor(*target, subject, *shape))
+             ? 1
+             : 0;
+  } catch (const std::exception&) {
+    return 0;
+  }
+}
+
+int32_t shareSdf(void* world, uint32_t donor, uint32_t taker) {
+  World* target = worldOf(world);
+
+  if (target == nullptr) {
+    return 0;
+  }
+
+  try {
+    target->shareSampledSdf(entityOf(donor), entityOf(taker));
+  } catch (const std::exception&) {
+    return 0;
+  }
+
+  return 1;
+}
+
+int32_t setRigidBody(void* world, uint32_t entity, float mass) {
+  if (g_physics == nullptr || g_physics->setRigidBody == nullptr) {
+    return 0;
+  }
+
+  return g_physics->setRigidBody(g_physicsHost, world, entity, mass);
+}
+
+int32_t setVelocity(void* world, uint32_t entity, const float* velocity) {
+  if (
+    g_physics == nullptr || g_physics->setVelocity == nullptr
+    || velocity == nullptr
+  ) {
+    return 0;
+  }
+
+  return g_physics->setVelocity(g_physicsHost, world, entity, velocity);
+}
+
+int32_t screenPointToRay(
+  void* world,
+  uint32_t camera,
+  const float* screen,
+  const float* viewport,
+  float* ray
+) {
+  World* target = worldOf(world);
+
+  if (
+    target == nullptr || screen == nullptr || viewport == nullptr
+    || ray == nullptr
+  ) {
+    return 0;
+  }
+
+  const std::optional<dunya::field::Ray> found =
+    dunya::objectmodel::screenPointToRay(
+      *target,
+      entityOf(camera),
+      glm::vec2(screen[0], screen[1]),
+      glm::vec2(viewport[0], viewport[1])
+    );
+
+  if (!found.has_value()) {
+    return 0;
+  }
+
+  ray[0] = found->origin.x;
+  ray[1] = found->origin.y;
+  ray[2] = found->origin.z;
+  ray[3] = found->direction.x;
+  ray[4] = found->direction.y;
+  ray[5] = found->direction.z;
+
+  return 1;
+}
+
+const dunya::systems::InputState* asInput(void* input) {
+  return static_cast<const dunya::systems::InputState*>(input);
+}
+
+int32_t keyHeld(void* input, uint32_t key) {
+  return input != nullptr
+             && asInput(input)->held(static_cast<dunya::systems::Key>(key))
+           ? 1
+           : 0;
+}
+
+int32_t keyPressed(void* input, uint32_t key) {
+  return input != nullptr
+             && asInput(input)->pressed(static_cast<dunya::systems::Key>(key))
+           ? 1
+           : 0;
+}
+
+int32_t keyReleased(void* input, uint32_t key) {
+  return input != nullptr
+             && asInput(input)->released(static_cast<dunya::systems::Key>(key))
+           ? 1
+           : 0;
+}
+
+int32_t mouseHeld(void* input, uint32_t button) {
+  return input != nullptr
+             && asInput(input)->held(
+               static_cast<dunya::systems::MouseButton>(button)
+             )
+           ? 1
+           : 0;
+}
+
+int32_t mousePressed(void* input, uint32_t button) {
+  return input != nullptr
+             && asInput(input)->pressed(
+               static_cast<dunya::systems::MouseButton>(button)
+             )
+           ? 1
+           : 0;
+}
+
+void cursor(void* input, float* xy) {
+  if (input == nullptr || xy == nullptr) {
+    return;
+  }
+
+  xy[0] = asInput(input)->cursorX();
+  xy[1] = asInput(input)->cursorY();
+}
+
+void viewport(void* input, float* wh) {
+  if (input == nullptr || wh == nullptr) {
+    return;
+  }
+
+  wh[0] = asInput(input)->viewportWidth();
+  wh[1] = asInput(input)->viewportHeight();
 }
 
 constexpr Api TABLE{
@@ -572,37 +778,43 @@ constexpr Api TABLE{
   &hasComponent,
   &bounds,
   &logMessage,
-  &addSystem
+  &addSystem,
+  &keyHeld,
+  &keyPressed,
+  &keyReleased,
+  &mouseHeld,
+  &mousePressed,
+  &cursor,
+  &createSdfGrid,
+  &destroy,
+  &addPrimitive,
+  &shareSdf,
+  &setRigidBody,
+  &setVelocity,
+  &screenPointToRay,
+  &viewport
 };
 
 }
 
-void setSdfDeformNotify(SdfDeformNotify notify, void* host) noexcept {
-  g_notify = notify;
-  g_notifyHost = host;
+void setPhysicsVerbs(const PhysicsVerbs* verbs, void* host) noexcept {
+  g_physics = verbs;
+  g_physicsHost = host;
 }
 
-SdfDeformNotify sdfDeformNotify() noexcept {
-  return g_notify;
+PhysicsScope::PhysicsScope(const PhysicsVerbs* verbs, void* host) noexcept
+    : m_previous(g_physics), m_previousHost(g_physicsHost), m_active(true) {
+  setPhysicsVerbs(verbs, host);
 }
 
-void* sdfDeformHost() noexcept {
-  return g_notifyHost;
-}
-
-SdfDeformScope::SdfDeformScope(SdfDeformNotify notify, void* host) noexcept
-    : m_previous(g_notify), m_previousHost(g_notifyHost), m_active(true) {
-  setSdfDeformNotify(notify, host);
-}
-
-SdfDeformScope::SdfDeformScope(SdfDeformScope&& other) noexcept
+PhysicsScope::PhysicsScope(PhysicsScope&& other) noexcept
     : m_previous(other.m_previous),
       m_previousHost(other.m_previousHost),
       m_active(other.m_active) {
   other.m_active = false;
 }
 
-SdfDeformScope& SdfDeformScope::operator=(SdfDeformScope&& other) noexcept {
+PhysicsScope& PhysicsScope::operator=(PhysicsScope&& other) noexcept {
   if (this == &other) {
     return *this;
   }
@@ -618,16 +830,16 @@ SdfDeformScope& SdfDeformScope::operator=(SdfDeformScope&& other) noexcept {
   return *this;
 }
 
-SdfDeformScope::~SdfDeformScope() {
+PhysicsScope::~PhysicsScope() {
   restore();
 }
 
-void SdfDeformScope::restore() noexcept {
+void PhysicsScope::restore() noexcept {
   if (!m_active) {
     return;
   }
 
-  setSdfDeformNotify(m_previous, m_previousHost);
+  setPhysicsVerbs(m_previous, m_previousHost);
 
   m_active = false;
 }

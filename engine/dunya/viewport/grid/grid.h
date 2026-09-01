@@ -3,6 +3,7 @@
 #include <dunya/gpu/buffer/buffer.h>
 #include <dunya/gpu/device/device.h>
 #include <dunya/gpu/pipeline/pipeline.h>
+#include <dunya/gpu/swapchain/swapchain.h>
 
 #include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
@@ -59,6 +60,8 @@ class Grid {
 public:
   Grid(
     const dunya::gpu::Device& device,
+    const dunya::gpu::SwapChain& swapChain,
+    std::vector<VkDescriptorSetLayout> setLayouts,
     const GridPlane& plane = {},
     const GridStyle& style = {}
   );
@@ -68,7 +71,7 @@ public:
 
   void update(const glm::vec3& cameraPosition);
 
-  void draw(VkCommandBuffer commands, VkPipelineLayout layout) const;
+  void record(VkCommandBuffer commands, VkDescriptorSet globals) const;
 
 private:
   void rebuild();
@@ -79,6 +82,8 @@ private:
 
   GridPlane m_plane;
   GridStyle m_style;
+
+  dunya::gpu::Pipeline m_pipeline;
 
   dunya::gpu::Buffer m_vertices;
 

@@ -21,129 +21,32 @@ Session::Session(
   const std::filesystem::path& projectRoot,
   const std::string& world
 )
-    : m_windowSystem(std::move(windowSystem)),
-      m_context(require(m_windowSystem)),
-      m_swapChain(m_context),
-      m_assetLibrary(m_context, projectRoot),
-      m_projectRoot(projectRoot),
+    : m_engine(std::move(windowSystem), projectRoot),
       m_worldName(world),
-      m_storage(
-        m_context.device(),
-        m_assetLibrary.textures(),
-        m_assetLibrary.samplers(),
-        m_assetLibrary.materials()
-      ),
-      m_meshPipeline(
-        dunya::gpu::PipelineType::Mesh,
-        m_context.device().vkDevice(),
-        dunya::renderer::pipelineSetLayouts(
-          dunya::gpu::PipelineType::Mesh,
-          m_storage.frameGlobals(),
-          m_storage.resourceTable(),
-          m_storage.recordTable()
-        ),
-        m_swapChain,
-        std::vector<VkVertexInputBindingDescription>{
-          dunya::renderer::Vertex::getBindingDescription()
-        },
-        dunya::renderer::Vertex::getAttributeDescriptions()
-      ),
-      m_sdfPipeline(
-        dunya::gpu::PipelineType::Sdf,
-        m_context.device().vkDevice(),
-        dunya::renderer::pipelineSetLayouts(
-          dunya::gpu::PipelineType::Sdf,
-          m_storage.frameGlobals(),
-          m_storage.resourceTable(),
-          m_storage.recordTable()
-        ),
-        m_swapChain
-      ),
-      m_gridPipeline(
-        dunya::gpu::PipelineType::Grid,
-        m_context.device().vkDevice(),
-        dunya::renderer::pipelineSetLayouts(
-          dunya::gpu::PipelineType::Grid,
-          m_storage.frameGlobals(),
-          m_storage.resourceTable(),
-          m_storage.recordTable()
-        ),
-        m_swapChain,
-        std::vector<VkVertexInputBindingDescription>{
-          dunya::viewport::GridVertex::bindingDescription()
-        },
-        dunya::viewport::GridVertex::attributeDescriptions()
-      ),
-      m_skyPipeline(
-        dunya::gpu::PipelineType::Sky,
-        m_context.device().vkDevice(),
-        dunya::renderer::pipelineSetLayouts(
-          dunya::gpu::PipelineType::Sky,
-          m_storage.frameGlobals(),
-          m_storage.resourceTable(),
-          m_storage.recordTable()
-        ),
-        m_swapChain
-      ),
+
       m_sceneTarget(
-        m_context.device(),
-        m_swapChain.imageFormat(),
-        m_swapChain.extent(),
+        m_engine.context().device(),
+        m_engine.swapChain().imageFormat(),
+        m_engine.swapChain().extent(),
         2.0f
       ),
-      m_grid(m_context.device()),
-      m_renderer(
-        m_context.device(),
-        m_storage.recordTable(),
-        m_storage.sdfBaker(),
-        m_storage.volumePool(),
-        m_storage.frameGlobals(),
-        m_meshPipeline,
-        m_sdfPipeline,
-        m_storage.resourceTable(),
-        m_context.surface().handle(),
-        m_swapChain.imageCount()
+      m_grid(
+        m_engine.context().device(),
+        m_engine.swapChain(),
+        m_engine.setLayouts(dunya::gpu::PipelineType::Grid)
       ) {
-  m_storage.residency().attach(m_world);
+  m_engine.renderer().useTarget(&m_sceneTarget);
 
-  m_renderer.useTarget(&m_sceneTarget);
-
-  loadWorld(projectRoot, world);
+  m_engine.loadWorld(world);
 }
 
 Session::~Session() {
-  m_context.device().waitIdle();
+  m_engine.context().device().waitIdle();
 
   try {
     stop();
   } catch (const std::exception& failure) {
     std::cerr << "Session teardown: " << failure.what() << std::endl;
-  }
-}
-
-void Session::loadWorld(
-  const std::filesystem::path& projectRoot,
-  const std::string& world
-) {
-  std::optional<dunya::serialize::Project> project =
-    dunya::serialize::Project::open(projectRoot);
-
-  if (!project.has_value()) {
-    throw std::runtime_error("No project at " + projectRoot.string());
-  }
-
-  dunya::serialize::StoredWorld stored;
-
-  if (!project->loadWorld(world, stored)) {
-    throw std::runtime_error("No world named " + world);
-  }
-
-  if (!dunya::serialize::restoreWorld(
-        stored,
-        m_world,
-        m_assetLibrary.assets()
-      )) {
-    throw std::runtime_error("The world " + world + " did not load");
   }
 }
 
@@ -153,28 +56,45 @@ void Session::lookAtWorld(float aspect) {
       dunya::objectmodel::activeCamera(activeWorld(), aspect);
 
     if (scene.has_value()) {
-      m_frame.proj = scene->projection;
-      m_frame.view = scene->view;
-      m_frame.cameraPos = glm::vec4(scene->position, scene->nearPlane);
-      m_frame.mode = dunya::renderer::DrawMode::Both;
+      m_engine.frame().proj = scene->projection;
+      m_engine.frame().view = scene->view;
+      m_engine.frame().cameraPos = glm::vec4(scene->position, scene->nearPlane);
+      m_engine.frame().mode = dunya::renderer::DrawMode::Both;
 
       return;
     }
 
-    m_frame.mode = dunya::renderer::DrawMode::Nothing;
+    m_engine.frame().mode = dunya::renderer::DrawMode::Nothing;
 
     return;
   }
 
-  m_frame.mode = dunya::renderer::DrawMode::Both;
+  m_engine.frame().mode = dunya::renderer::DrawMode::Both;
 
   if (!m_camera.placed()) {
     frameCameraOnWorld();
   }
 
-  m_frame.proj = dunya::objectmodel::projection(m_camera.lens(), aspect);
-  m_frame.view = m_camera.viewMatrix();
-  m_frame.cameraPos = glm::vec4(m_camera.eye(), m_camera.lens().nearPlane);
+  m_engine.frame().proj =
+    dunya::objectmodel::projection(m_camera.lens(), aspect);
+  m_engine.frame().view = m_camera.viewMatrix();
+  m_engine.frame().cameraPos =
+    glm::vec4(m_camera.eye(), m_camera.lens().nearPlane);
+}
+
+void Session::setKey(uint32_t key, bool down) noexcept {
+  m_engine.input().setKey(static_cast<dunya::systems::Key>(key), down);
+}
+
+void Session::setMouseButton(uint32_t button, bool down) noexcept {
+  m_engine.input().setMouseButton(
+    static_cast<dunya::systems::MouseButton>(button),
+    down
+  );
+}
+
+void Session::setCursor(float x, float y) noexcept {
+  m_engine.input().setCursor(x, y);
 }
 
 bool Session::viewsThroughScene() const noexcept {
@@ -182,14 +102,14 @@ bool Session::viewsThroughScene() const noexcept {
 }
 
 bool Session::package(
-  const std::string& runtimeExecutable,
+  const std::string& playerExecutable,
   const std::string& output,
   const std::vector<std::string>& worlds,
   std::string& result
 ) const {
   dunya::editor::PackageSpec spec{};
-  spec.runtimeExecutable = runtimeExecutable;
-  spec.projectRoot = m_projectRoot;
+  spec.playerExecutable = playerExecutable;
+  spec.projectRoot = m_engine.projectRoot();
   spec.output = output;
   spec.worlds = worlds.empty() ? std::vector<std::string>{m_worldName} : worlds;
 
@@ -204,7 +124,7 @@ bool Session::package(
 
 void Session::frameCameraOnWorld() {
   const dunya::objectmodel::WorldExtent whole =
-    dunya::objectmodel::dynamicExtent(m_world);
+    dunya::objectmodel::dynamicExtent(m_engine.world());
 
   if (whole.empty) {
     m_camera.frame(glm::vec3(0.0f), 4.0f);
@@ -216,17 +136,18 @@ void Session::frameCameraOnWorld() {
 }
 
 void Session::alignToSceneCamera() {
-  const dunya::objectmodel::Entity eye = dunya::objectmodel::firstLens(m_world);
+  const dunya::objectmodel::Entity eye =
+    dunya::objectmodel::firstLens(m_engine.world());
 
   if (eye == dunya::objectmodel::INVALID_ENTITY) {
     return;
   }
 
   const dunya::objectmodel::Pose& seat =
-    m_world.registry().get<dunya::objectmodel::Pose>(eye);
+    m_engine.world().registry().get<dunya::objectmodel::Pose>(eye);
 
   const dunya::objectmodel::WorldExtent whole =
-    dunya::objectmodel::dynamicExtent(m_world);
+    dunya::objectmodel::dynamicExtent(m_engine.world());
 
   const float reach =
     whole.empty ? 10.0f : glm::length(whole.centre() - seat.position);
@@ -264,7 +185,7 @@ void Session::focusCamera(dunya::objectmodel::Entity entity) {
 }
 
 dunya::objectmodel::Entity Session::pick(float x, float y) {
-  const VkExtent2D size = m_swapChain.extent();
+  const VkExtent2D size = m_engine.swapChain().extent();
 
   if (size.width == 0u || size.height == 0u) {
     return dunya::objectmodel::INVALID_ENTITY;
@@ -275,85 +196,60 @@ dunya::objectmodel::Entity Session::pick(float x, float y) {
     2.0f * y / static_cast<float>(size.height) - 1.0f
   );
 
-  const glm::mat4 inverseViewProjection =
-    glm::inverse(m_frame.proj * m_frame.view);
-
-  const glm::vec4 near = inverseViewProjection * glm::vec4(ndc, 0.0f, 1.0f);
-  const glm::vec4 far = inverseViewProjection * glm::vec4(ndc, 1.0f, 1.0f);
-
-  if (near.w == 0.0f || far.w == 0.0f) {
-    return dunya::objectmodel::INVALID_ENTITY;
-  }
-
-  const glm::vec3 from = glm::vec3(near) / near.w;
-  const glm::vec3 to = glm::vec3(far) / far.w;
-
-  const dunya::field::Ray ray{from, glm::normalize(to - from)};
+  const dunya::field::Ray ray = dunya::field::screenPointToRay(
+    glm::inverse(m_engine.frame().proj * m_engine.frame().view),
+    glm::vec3(m_engine.frame().cameraPos),
+    ndc
+  );
 
   return dunya::objectmodel::raycastWorld(activeWorld(), ray).entity;
 }
 
 void Session::resize() {
-  const VkExtent2D current = m_windowSystem->framebufferExtent();
+  const VkExtent2D current = m_engine.windowSystem().framebufferExtent();
 
   if (current.width == 0 || current.height == 0) {
     return;
   }
 
-  m_swapChain.recreate();
+  m_engine.swapChain().recreate();
 
-  m_sceneTarget.resize(m_swapChain.extent());
+  m_sceneTarget.resize(m_engine.swapChain().extent());
 }
 
 void Session::render() {
-  const VkExtent2D current = m_windowSystem->framebufferExtent();
+  const VkExtent2D current = m_engine.windowSystem().framebufferExtent();
 
   if (current.width == 0 || current.height == 0) {
     return;
   }
 
-  m_storage.uploader().retire();
+  m_engine.storage().uploader().retire();
 
   lookAtWorld(
-    static_cast<float>(m_swapChain.extent().width)
-    / static_cast<float>(m_swapChain.extent().height)
+    static_cast<float>(m_engine.swapChain().extent().width)
+    / static_cast<float>(m_engine.swapChain().extent().height)
   );
 
-  ++m_frameIndex;
+  m_engine.input().setViewport(
+    static_cast<float>(m_engine.swapChain().extent().width),
+    static_cast<float>(m_engine.swapChain().extent().height)
+  );
 
-  if (m_runtime) {
-    m_runtime->step();
-    m_runtime->syncPoses(1.0f);
-  }
-
-  dunya::systems::Context systemContext{
-    activeWorld(),
-    1.0f / 60.0f,
-    m_frameIndex
-  };
-  m_schedule.run(systemContext);
+  constexpr float STEP = 1.0f / 60.0f;
 
   dunya::core::Telemetry ignored;
 
-  m_storage.residency().flush(activeWorld(), ignored);
+  m_engine.tick(STEP, ignored);
+  m_engine.endFrame();
 
-  m_frame.environment.reset();
+  m_engine.flushVolumes(ignored);
 
-  m_storage.framePacker().pack(
-    m_frame,
-    activeWorld(),
-    activeWorld().sdfGrids(),
-    m_assetLibrary.meshBuffers(),
-    [this](dunya::objectmodel::Entity entity) {
-      if (m_runtime) {
-        m_runtime->refreshBody(entity);
-      }
-    }
-  );
+  m_engine.packFrame();
 
   std::vector<dunya::renderer::ScenePass> passes;
 
-  if (m_frame.environment.has_value()) {
+  if (m_engine.frame().environment.has_value()) {
     passes.push_back(
       {dunya::renderer::PassOrder::BeforeScene,
        [this](VkCommandBuffer commands) { drawSky(commands); }}
@@ -369,150 +265,85 @@ void Session::render() {
     );
   }
 
-  if (m_renderer.drawFrame(m_swapChain, m_frame, passes)) {
-    m_swapChain.recreate();
+  if (
+    m_engine.renderer().drawFrame(
+      m_engine.swapChain(),
+      m_engine.frame(),
+      passes
+    )
+  ) {
+    m_engine.swapChain().recreate();
 
-    m_sceneTarget.resize(m_swapChain.extent());
+    m_sceneTarget.resize(m_engine.swapChain().extent());
 
     return;
   }
 
-  m_storage.framePacker().commitBakes();
+  m_engine.storage().framePacker().commitBakes();
 }
 
 void Session::retarget(std::unique_ptr<dunya::gpu::WindowSystem> windowSystem) {
-  if (windowSystem == nullptr) {
-    throw std::runtime_error("A session needs a window system");
-  }
+  m_engine.retarget(std::move(windowSystem));
 
-  m_swapChain.release();
-
-  m_windowSystem = std::move(windowSystem);
-
-  m_context.retarget(*m_windowSystem);
-
-  m_swapChain.recreate();
-
-  m_sceneTarget.resize(m_swapChain.extent());
+  m_sceneTarget.resize(m_engine.swapChain().extent());
 }
 
 VkExtent2D Session::extent() const noexcept {
-  return m_swapChain.extent();
+  return m_engine.swapChain().extent();
 }
 
 const dunya::objectmodel::World& Session::world() const noexcept {
-  return m_world;
+  return m_engine.world();
 }
 
 dunya::objectmodel::World& Session::world() noexcept {
-  return m_world;
+  return m_engine.world();
 }
 
 dunya::systems::Schedule& Session::schedule() noexcept {
-  return m_schedule;
-}
-
-void Session::onDeform(
-  void* host,
-  uint32_t entity,
-  const dunya::script::SdfDeformSummary* summary
-) {
-  auto* session = static_cast<Session*>(host);
-
-  if (session == nullptr || summary == nullptr || !session->m_runtime) {
-    return;
-  }
-
-  const auto subject =
-    static_cast<dunya::objectmodel::Entity>(entt::entity{entity});
-
-  session->m_runtime->reshapeAfterDeform(
-    subject,
-    glm::uvec3(
-      summary->brickBegin[0],
-      summary->brickBegin[1],
-      summary->brickBegin[2]
-    ),
-    glm::uvec3(summary->brickEnd[0], summary->brickEnd[1], summary->brickEnd[2])
-  );
-
-  dunya::field::SampleBox touched{};
-  touched.minimum = glm::uvec3(
-    summary->sampleMinimum[0],
-    summary->sampleMinimum[1],
-    summary->sampleMinimum[2]
-  );
-  touched.extent = glm::uvec3(
-    summary->sampleExtent[0],
-    summary->sampleExtent[1],
-    summary->sampleExtent[2]
-  );
-
-  session->activeWorld().markSdfDirty(subject, touched);
-
-  dunya::objectmodel::World& world = session->m_runtime->world();
-
-  if (world.registry().all_of<dunya::objectmodel::Pose>(subject)) {
-    const glm::vec3 at = glm::vec3(
-      dunya::objectmodel::model(
-        world.registry().get<dunya::objectmodel::Pose>(subject)
-      )[3]
-    );
-
-    session->m_runtime->wake(at - glm::vec3(8.0f), at + glm::vec3(8.0f));
-  }
+  return m_engine.schedule();
 }
 
 void Session::play() {
-  if (m_runtime) {
+  if (m_engine.playing()) {
     return;
   }
 
-  m_storage.residency().releaseAll(m_world);
-
-  m_runtime.emplace(m_world, m_jolt);
-
-  m_storage.residency().attach(m_runtime->world());
-
-  m_deformScope = dunya::script::SdfDeformScope(&Session::onDeform, this);
+  m_engine.play();
 
   m_viewsThroughScene = true;
 }
 
 void Session::stop() {
-  if (!m_runtime) {
+  if (!m_engine.playing()) {
     return;
   }
 
-  m_storage.residency().releaseAll(m_runtime->world());
-
-  m_deformScope = {};
+  m_engine.stop();
 
   m_viewsThroughScene = false;
-
-  m_runtime.reset();
 }
 
 bool Session::playing() const noexcept {
-  return m_runtime.has_value();
+  return m_engine.playing();
 }
 
 dunya::objectmodel::World& Session::activeWorld() noexcept {
-  return m_runtime ? m_runtime->world() : m_world;
+  return m_engine.activeWorld();
 }
 
 const dunya::objectmodel::World& Session::activeWorld() const noexcept {
-  return m_runtime ? m_runtime->world() : m_world;
+  return m_engine.activeWorld();
 }
 
 dunya::objectmodel::Entity Session::createLight() {
-  const dunya::objectmodel::Entity entity = m_world.createAuthored();
+  const dunya::objectmodel::Entity entity = m_engine.world().createAuthored();
 
-  m_world.emplaceOrReplace<dunya::objectmodel::Pose>(
+  m_engine.world().emplaceOrReplace<dunya::objectmodel::Pose>(
     entity,
     dunya::objectmodel::Pose{}
   );
-  m_world.emplaceOrReplace<dunya::objectmodel::DirectionalLight>(
+  m_engine.world().emplaceOrReplace<dunya::objectmodel::DirectionalLight>(
     entity,
     dunya::objectmodel::DirectionalLight{}
   );
@@ -521,13 +352,13 @@ dunya::objectmodel::Entity Session::createLight() {
 }
 
 dunya::objectmodel::Entity Session::createEnvironment() {
-  const dunya::objectmodel::Entity entity = m_world.createAuthored();
+  const dunya::objectmodel::Entity entity = m_engine.world().createAuthored();
 
-  m_world.emplaceOrReplace<dunya::objectmodel::Pose>(
+  m_engine.world().emplaceOrReplace<dunya::objectmodel::Pose>(
     entity,
     dunya::objectmodel::Pose{}
   );
-  m_world.emplaceOrReplace<dunya::objectmodel::Environment>(
+  m_engine.world().emplaceOrReplace<dunya::objectmodel::Environment>(
     entity,
     dunya::objectmodel::Environment{}
   );
@@ -553,10 +384,10 @@ dunya::objectmodel::Entity Session::createCamera(
   dunya::objectmodel::Lens lens{};
   lens.verticalFov = verticalFov;
 
-  const dunya::objectmodel::Entity entity = m_world.createAuthored();
+  const dunya::objectmodel::Entity entity = m_engine.world().createAuthored();
 
-  m_world.emplaceOrReplace<dunya::objectmodel::Pose>(entity, seat);
-  m_world.emplaceOrReplace<dunya::objectmodel::Lens>(entity, lens);
+  m_engine.world().emplaceOrReplace<dunya::objectmodel::Pose>(entity, seat);
+  m_engine.world().emplaceOrReplace<dunya::objectmodel::Lens>(entity, lens);
 
   return entity;
 }
@@ -570,34 +401,34 @@ dunya::objectmodel::Entity Session::createSdf(
   grid.resolution = resolution;
   grid.margin = margin;
 
-  return m_world.createSdfGrid(pose, grid);
+  return m_engine.world().createSdfGrid(pose, grid);
 }
 
 bool Session::addPrimitive(
   dunya::objectmodel::Entity entity,
   const dunya::field::Primitive& primitive
 ) {
-  return m_world.addPrimitive(entity, primitive);
+  return m_engine.world().addPrimitive(entity, primitive);
 }
 
 void Session::setStatic(dunya::objectmodel::Entity entity) {
-  m_world.addStaticBody(entity);
+  m_engine.world().addStaticBody(entity);
 }
 
 void Session::setDeformable(dunya::objectmodel::Entity entity) {
-  m_world.emplaceOrReplace<dunya::objectmodel::Deformable>(
+  m_engine.world().emplaceOrReplace<dunya::objectmodel::Deformable>(
     entity,
     dunya::objectmodel::Deformable{}
   );
 }
 
 bool Session::destroyEntity(dunya::objectmodel::Entity entity) {
-  return m_world.destroy(entity);
+  return m_engine.world().destroy(entity);
 }
 
 bool Session::save() const {
   std::optional<dunya::serialize::Project> project =
-    dunya::serialize::Project::open(m_projectRoot);
+    dunya::serialize::Project::open(m_engine.projectRoot());
 
   if (!project.has_value()) {
     return false;
@@ -605,21 +436,21 @@ bool Session::save() const {
 
   return project->saveWorld(
     m_worldName,
-    dunya::serialize::captureWorld(m_world, m_assetLibrary.assets())
+    dunya::serialize::captureWorld(m_engine.world(), m_engine.assets().assets())
   );
 }
 
 size_t Session::materialCount() const noexcept {
-  return m_assetLibrary.assets().of<dunya::objectmodel::Material>().size();
+  return m_engine.assets().assets().of<dunya::objectmodel::Material>().size();
 }
 
 dunya::core::AssetId Session::materialAt(uint32_t index) const noexcept {
-  return m_assetLibrary.assets().id<dunya::objectmodel::Material>(index);
+  return m_engine.assets().assets().id<dunya::objectmodel::Material>(index);
 }
 
 bool Session::openWorld(const std::string& name) {
   std::optional<dunya::serialize::Project> project =
-    dunya::serialize::Project::open(m_projectRoot);
+    dunya::serialize::Project::open(m_engine.projectRoot());
 
   if (!project.has_value()) {
     return false;
@@ -633,16 +464,16 @@ bool Session::openWorld(const std::string& name) {
 
   stop();
 
-  m_context.device().waitIdle();
+  m_engine.context().device().waitIdle();
 
-  m_storage.residency().releaseAll(m_world);
+  m_engine.storage().residency().releaseAll(m_engine.world());
 
-  m_world.clear();
+  m_engine.world().clear();
 
   if (!dunya::serialize::restoreWorld(
         stored,
-        m_world,
-        m_assetLibrary.assets()
+        m_engine.world(),
+        m_engine.assets().assets()
       )) {
     return false;
   }
@@ -655,7 +486,7 @@ bool Session::openWorld(const std::string& name) {
 
 bool Session::newWorld(const std::string& name) {
   std::optional<dunya::serialize::Project> project =
-    dunya::serialize::Project::open(m_projectRoot);
+    dunya::serialize::Project::open(m_engine.projectRoot());
 
   if (!project.has_value()) {
     return false;
@@ -667,7 +498,7 @@ bool Session::newWorld(const std::string& name) {
 
   if (!project->saveWorld(
         name,
-        dunya::serialize::captureWorld(fresh, m_assetLibrary.assets())
+        dunya::serialize::captureWorld(fresh, m_engine.assets().assets())
       )) {
     return false;
   }
@@ -677,7 +508,7 @@ bool Session::newWorld(const std::string& name) {
 
 bool Session::saveAs(const std::string& name) {
   std::optional<dunya::serialize::Project> project =
-    dunya::serialize::Project::open(m_projectRoot);
+    dunya::serialize::Project::open(m_engine.projectRoot());
 
   if (!project.has_value()) {
     return false;
@@ -685,7 +516,10 @@ bool Session::saveAs(const std::string& name) {
 
   if (!project->saveWorld(
         name,
-        dunya::serialize::captureWorld(m_world, m_assetLibrary.assets())
+        dunya::serialize::captureWorld(
+          m_engine.world(),
+          m_engine.assets().assets()
+        )
       )) {
     return false;
   }
@@ -697,7 +531,7 @@ bool Session::saveAs(const std::string& name) {
 
 std::string Session::worldNames() const {
   const std::filesystem::path folder =
-    m_projectRoot / dunya::serialize::WORLD_FOLDER;
+    m_engine.projectRoot() / dunya::serialize::WORLD_FOLDER;
 
   std::vector<std::string> names;
 
@@ -731,7 +565,7 @@ std::string Session::worldNames() const {
 
 std::string Session::assetLines() const {
   std::optional<dunya::serialize::Project> project =
-    dunya::serialize::Project::open(m_projectRoot);
+    dunya::serialize::Project::open(m_engine.projectRoot());
 
   if (!project.has_value()) {
     return {};
@@ -755,7 +589,7 @@ dunya::core::AssetId Session::importAsset(
   const std::string& type
 ) {
   std::optional<dunya::serialize::Project> project =
-    dunya::serialize::Project::open(m_projectRoot);
+    dunya::serialize::Project::open(m_engine.projectRoot());
 
   if (!project.has_value()) {
     throw std::runtime_error("The session has no project to import into");
@@ -775,37 +609,13 @@ dunya::core::AssetId Session::importAsset(
 }
 
 void Session::setSupersample(float scale) {
-  m_context.device().waitIdle();
+  m_engine.context().device().waitIdle();
 
   m_sceneTarget.setScale(scale);
 }
 
 float Session::supersample() const noexcept {
   return m_sceneTarget.scale();
-}
-
-void Session::drawSky(VkCommandBuffer commands) const {
-  vkCmdBindPipeline(
-    commands,
-    VK_PIPELINE_BIND_POINT_GRAPHICS,
-    m_skyPipeline.pipeline()
-  );
-
-  const VkDescriptorSet& globals =
-    m_storage.frameGlobals().descriptorSet(m_renderer.currentFrame());
-
-  vkCmdBindDescriptorSets(
-    commands,
-    VK_PIPELINE_BIND_POINT_GRAPHICS,
-    m_skyPipeline.pipelineLayout(),
-    0,
-    1,
-    &globals,
-    0,
-    nullptr
-  );
-
-  vkCmdDraw(commands, 3, 1, 0, 0);
 }
 
 void Session::showGrid(bool visible) noexcept {
@@ -816,32 +626,16 @@ bool Session::gridVisible() const noexcept {
   return m_gridVisible;
 }
 
+void Session::drawSky(VkCommandBuffer commands) const {
+  m_engine.drawSky(commands);
+}
+
 void Session::drawGrid(VkCommandBuffer commands) const {
   if (!m_gridVisible) {
     return;
   }
 
-  vkCmdBindPipeline(
-    commands,
-    VK_PIPELINE_BIND_POINT_GRAPHICS,
-    m_gridPipeline.pipeline()
-  );
-
-  const VkDescriptorSet& globals =
-    m_storage.frameGlobals().descriptorSet(m_renderer.currentFrame());
-
-  vkCmdBindDescriptorSets(
-    commands,
-    VK_PIPELINE_BIND_POINT_GRAPHICS,
-    m_gridPipeline.pipelineLayout(),
-    0,
-    1,
-    &globals,
-    0,
-    nullptr
-  );
-
-  m_grid.draw(commands, m_gridPipeline.pipelineLayout());
+  m_grid.record(commands, m_engine.globals());
 }
 
 const std::string& Session::worldName() const noexcept {
@@ -849,7 +643,7 @@ const std::string& Session::worldName() const noexcept {
 }
 
 uint32_t Session::materialIndex(dunya::core::AssetId id) const noexcept {
-  return m_assetLibrary.assets().index<dunya::objectmodel::Material>(id);
+  return m_engine.assets().assets().index<dunya::objectmodel::Material>(id);
 }
 
 dunya::core::AssetId Session::addMaterial(
@@ -858,7 +652,7 @@ dunya::core::AssetId Session::addMaterial(
   float roughness
 ) {
   std::optional<dunya::serialize::Project> project =
-    dunya::serialize::Project::open(m_projectRoot);
+    dunya::serialize::Project::open(m_engine.projectRoot());
 
   if (!project.has_value()) {
     throw std::runtime_error("The session has no project to add a material to");
@@ -893,10 +687,10 @@ dunya::core::AssetId Session::addMaterial(
     throw std::runtime_error("The project manifest could not be saved");
   }
 
-  static_cast<void>(m_assetLibrary.addMaterial(minted, stored));
+  static_cast<void>(m_engine.assets().addMaterial(minted, stored));
 
-  m_context.device().waitIdle();
-  m_storage.resourceTable().refresh(m_assetLibrary.materials());
+  m_engine.context().device().waitIdle();
+  m_engine.storage().resourceTable().refresh(m_engine.assets().materials());
 
   return minted;
 }

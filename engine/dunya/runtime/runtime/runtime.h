@@ -5,10 +5,12 @@
 
 #include <dunya/objectmodel/component/renderpose/renderpose.h>
 #include <dunya/objectmodel/world/world.h>
+#include <dunya/physics/impact/impact.h>
 #include <dunya/physics/physicsworld/physicsworld.h>
 #include <dunya/physics/joltlibrary/joltlibrary.h>
 
 #include <memory>
+#include <span>
 #include <unordered_map>
 
 namespace dunya::runtime {
@@ -37,11 +39,43 @@ public:
 
   void wake(const glm::vec3& minimum, const glm::vec3& maximum);
 
+  struct Damage {
+    float threshold = 3.0f;
+
+    float depthPerImpulse = 0.0002f;
+    float minimumDepth = 0.03f;
+    float maximumDepth = 0.25f;
+
+    float radiusPerDepth = 2.5f;
+
+    uint32_t perFrame = 3u;
+
+    float widestFraction = 0.25f;
+  };
+
+  struct Crater {
+    objectmodel::Entity entity{};
+    float impulse = 0.0f;
+    float depth = 0.0f;
+    float radius = 0.0f;
+  };
+
+  [[nodiscard]] Damage& damage() noexcept;
+  [[nodiscard]] const Damage& damage() const noexcept;
+
+  void carve(objectmodel::Entity entity, const field::Primitive& cutter);
+
+  void applyImpacts();
+
+  [[nodiscard]] std::span<const Crater> cratersThisFrame() const noexcept;
+
+  void refreshDeformedBodies();
+
   void setBodyShape(objectmodel::Entity entity, const JPH::ShapeRefC& shape);
 
-  void launch(objectmodel::Entity entity, const glm::vec3& velocity);
+  void setLinearVelocity(objectmodel::Entity entity, const glm::vec3& velocity);
 
-  bool despawn(objectmodel::Entity entity);
+  bool destroy(objectmodel::Entity entity);
 
   void setMass(objectmodel::Entity entity, float mass);
 
@@ -52,6 +86,19 @@ public:
   void syncPoses(float alpha);
 
 private:
+  struct PendingCrater {
+    objectmodel::Entity entity{};
+    glm::vec3 point{0.0f};
+    glm::vec3 outward{0.0f};
+    float impulse = 0.0f;
+  };
+
+  Damage m_damage;
+
+  std::vector<physics::Impact> m_impacts;
+  std::vector<PendingCrater> m_pending;
+  std::vector<Crater> m_carved;
+
   void applyMassScale(objectmodel::Entity entity);
 
   struct SharedShape {

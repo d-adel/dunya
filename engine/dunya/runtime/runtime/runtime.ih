@@ -16,5 +16,18 @@
 #include <dunya/objectmodel/instantiate/instantiate.h>
 #include <dunya/physics/fieldshape/fieldshape.h>
 
+#include <dunya/core/config/config.h>
+#include <dunya/field/analytic/analytic.h>
+#include <dunya/field/deform/deform.h>
+#include <dunya/objectmodel/component/deformable/deformable.h>
+#include <dunya/objectmodel/component/sharedfield/sharedfield.h>
+
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/component_wise.hpp>
+
+#include <algorithm>
+#include <optional>
+
+#include <limits>
 #include <stdexcept>
 #include <iostream>

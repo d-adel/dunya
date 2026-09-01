@@ -25,7 +25,7 @@ public static class CreateDialog
 
     public static async Task<string?> Ask(Window owner)
     {
-        var search = new TextBox { Watermark = "Search", Width = 380 };
+        var search = new TextBox { PlaceholderText = "Search", Width = 380 };
 
         var shown = new ObservableCollection<CreatableKind>(Kinds);
 

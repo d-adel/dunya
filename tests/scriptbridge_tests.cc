@@ -9,6 +9,7 @@
 #include <dunya/objectmodel/world/world.h>
 #include <dunya/script/api/api.h>
 #include <dunya/script/runner/runner.h>
+#include <dunya/systems/input/input.h>
 #include <dunya/systems/schedule/schedule.h>
 
 #include <algorithm>
@@ -23,6 +24,17 @@ using dunya::objectmodel::INVALID_COMPONENT_TYPE;
 using dunya::objectmodel::World;
 using dunya::script::Runner;
 using dunya::systems::Context;
+
+namespace {
+
+const dunya::systems::InputState& noInput() {
+  static const dunya::systems::InputState idle;
+
+  return idle;
+}
+
+}
+
 using dunya::systems::Schedule;
 
 namespace {
@@ -184,7 +196,7 @@ TEST_CASE("a script system carves the engine's field", "[scriptbridge]") {
     carveRequest(0u, {0.9f, 0.0f, 0.0f}, {0.5f, 0.5f, 0.5f})
   ));
 
-  Context context{world, 0.016f, 1u};
+  Context context{world, noInput(), 0.016f, 1u};
   schedule.run(context);
 
   REQUIRE(solidCells(world, entity) < before);
@@ -215,7 +227,7 @@ TEST_CASE(
     carveRequest(0u, {0.9f, 0.0f, 0.0f}, {0.5f, 0.5f, 0.5f})
   ));
 
-  Context context{world, 0.016f, 1u};
+  Context context{world, noInput(), 0.016f, 1u};
   schedule.run(context);
 
   REQUIRE(solidCells(world, spared) == before);
@@ -246,7 +258,7 @@ TEST_CASE(
       carveRequest(tool, {0.6f, 0.0f, 0.0f}, {0.4f, 0.4f, 0.4f})
     ));
 
-    Context context{world, 0.016f, 1u};
+    Context context{world, noInput(), 0.016f, 1u};
     schedule.run(context);
 
     REQUIRE(solidCells(world, entity) < before);
@@ -354,62 +366,67 @@ TEST_CASE(
   );
 }
 
-namespace {
+TEST_CASE(
+  "a deform records the samples it touched on the world",
+  "[scriptbridge]"
+) {
+  World world;
 
-void noopDeform(void*, uint32_t, const dunya::script::SdfDeformSummary*) {}
+  const Entity entity = deformableSphere(world, 1.0f);
 
+  REQUIRE(world.sdfDirty().empty());
+
+  dunya::script::SdfEditDescriptor cut{};
+  cut.kind = 0u;
+  cut.operation = dunya::core::FIELD_OP_SUBTRACTION;
+  cut.size[0] = 0.3f;
+  cut.rotation[3] = 1.0f;
+
+  REQUIRE(
+    dunya::script::api().deformSdf(&world, idOf(entity), &cut, nullptr) == 1
+  );
+
+  REQUIRE(world.sdfDirty().size() == 1u);
+  REQUIRE(world.sdfDirty()[0].first == entity);
+
+  const dunya::field::SampleBox& touched = world.sdfDirty()[0].second;
+
+  REQUIRE(touched.extent.x > 0u);
+  REQUIRE(touched.extent.y > 0u);
+  REQUIRE(touched.extent.z > 0u);
 }
 
 TEST_CASE(
-  "a deform scope clears the global slot it installed",
-  "[deformscope]"
+  "the bricks a deform reports are the bricks its samples reach",
+  "[scriptbridge]"
 ) {
-  int host = 0;
+  World world;
 
-  REQUIRE(dunya::script::sdfDeformNotify() == nullptr);
+  const Entity entity = deformableSphere(world, 1.0f);
 
-  {
-    const dunya::script::SdfDeformScope scope(&noopDeform, &host);
+  dunya::script::SdfEditDescriptor cut{};
+  cut.kind = 0u;
+  cut.operation = dunya::core::FIELD_OP_SUBTRACTION;
+  cut.size[0] = 0.3f;
+  cut.rotation[3] = 1.0f;
 
-    REQUIRE(dunya::script::sdfDeformNotify() == &noopDeform);
-    REQUIRE(dunya::script::sdfDeformHost() == &host);
-  }
+  dunya::script::SdfDeformSummary summary{};
 
-  REQUIRE(dunya::script::sdfDeformNotify() == nullptr);
-  REQUIRE(dunya::script::sdfDeformHost() == nullptr);
-}
+  REQUIRE(
+    dunya::script::api().deformSdf(&world, idOf(entity), &cut, &summary) == 1
+  );
 
-TEST_CASE("a deform scope restores the one it displaced", "[deformscope]") {
-  int outer = 0;
-  int inner = 0;
+  const dunya::field::SampledSdf* lattice = world.sampledSdf(entity);
 
-  {
-    const dunya::script::SdfDeformScope first(&noopDeform, &outer);
+  REQUIRE(lattice != nullptr);
 
-    {
-      const dunya::script::SdfDeformScope second(&noopDeform, &inner);
+  const dunya::field::BrickRange derived =
+    dunya::field::brickRange(*lattice, world.sdfDirty()[0].second);
 
-      REQUIRE(dunya::script::sdfDeformHost() == &inner);
-    }
-
-    REQUIRE(dunya::script::sdfDeformHost() == &outer);
-  }
-
-  REQUIRE(dunya::script::sdfDeformNotify() == nullptr);
-}
-
-TEST_CASE(
-  "assigning a deform scope releases the old registration",
-  "[deformscope]"
-) {
-  int host = 0;
-
-  dunya::script::SdfDeformScope scope(&noopDeform, &host);
-
-  REQUIRE(dunya::script::sdfDeformHost() == &host);
-
-  scope = {};
-
-  REQUIRE(dunya::script::sdfDeformNotify() == nullptr);
-  REQUIRE(dunya::script::sdfDeformHost() == nullptr);
+  REQUIRE(derived.begin.x == summary.brickBegin[0]);
+  REQUIRE(derived.begin.y == summary.brickBegin[1]);
+  REQUIRE(derived.begin.z == summary.brickBegin[2]);
+  REQUIRE(derived.end.x == summary.brickEnd[0]);
+  REQUIRE(derived.end.y == summary.brickEnd[1]);
+  REQUIRE(derived.end.z == summary.brickEnd[2]);
 }

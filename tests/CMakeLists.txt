@@ -14,10 +14,11 @@ add_executable(unit_tests
     capi_tests.cc
     commandhistory_tests.cc
     crack_tests.cc
-    panels_tests.cc
     deform_tests.cc
     dynamiccomponents_tests.cc
     entt_tests.cc
+    input_tests.cc
+    ../engine/capi/win32keys/win32keys.cc
     field_tests.cc
     glmmeta_tests.cc
     worldmeta_tests.cc
@@ -36,6 +37,8 @@ add_executable(unit_tests
     redistance_tests.cc
     runtime_tests.cc
     schedule_tests.cc
+    screenray_tests.cc
+    scriptverbs_tests.cc
     scriptbridge_tests.cc
     scripthost_tests.cc
     sdfprimitivestore_tests.cc
@@ -48,7 +51,7 @@ add_executable(unit_tests
 
 target_include_directories(unit_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 
-target_link_libraries(unit_tests PRIVATE dunya::debugui dunya::script dunya::core dunya::editor dunya::field dunya::objectmodel dunya::physics dunya::runtime dunya::serialize dunya::systems Catch2::Catch2WithMain)
+target_link_libraries(unit_tests PRIVATE dunya::script dunya::core dunya::editor dunya::field dunya::objectmodel dunya::physics dunya::runtime dunya::serialize dunya::systems Catch2::Catch2WithMain)
 
 if (MSVC)
     target_compile_options(unit_tests PRIVATE /W4 /WX /w15038 /w14062 /Zc:__cplusplus)
@@ -98,10 +101,11 @@ set(GOLDEN_GAME_DIR "${CMAKE_BINARY_DIR}/builds/demo")
 add_test(
     NAME "package demo"
     COMMAND DunyaPackager
-            $<TARGET_FILE:DunyaRuntime>
+            $<TARGET_FILE:DunyaPlayer>
             "${CMAKE_BINARY_DIR}/projects/demo"
             "${GOLDEN_GAME_DIR}"
             main
+            golden
             wall-big
 )
 set_tests_properties("package demo" PROPERTIES FIXTURES_SETUP packaged_demo)
@@ -117,8 +121,8 @@ function(add_golden_test name)
         "golden ${name}" PROPERTIES FIXTURES_REQUIRED packaged_demo
     )
 endfunction()
-add_golden_test(field-sampled --carves 6)
-add_golden_test(field-analytic --carves 6 --analytic)
+add_golden_test(field-sampled --world golden)
+add_golden_test(field-analytic --world golden --analytic)
 
 add_dependencies(unit_tests DUNYA_MANAGED DUNYA_SCRIPTS_puzzle)
 target_compile_definitions(unit_tests PRIVATE DUNYA_CAPI_DIR="${PROJECT_SOURCE_DIR}/engine/capi" DUNYA_MANAGED_DIR="${CMAKE_BINARY_DIR}/managed" DUNYA_SCRIPTS_DIR="${CMAKE_BINARY_DIR}/projects/puzzle/scripts")

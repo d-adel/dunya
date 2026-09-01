@@ -1,4 +1,5 @@
 add_library(dunya_c SHARED
+    win32keys/win32keys.cc
     dunya_c.cc
     session/session.cc
     win32windowsystem/win32windowsystem.cc
@@ -12,6 +13,7 @@ target_link_libraries(dunya_c PRIVATE
     dunya::assets
     dunya::core
     dunya::editor
+    dunya::engine
     dunya::field
     dunya::gpu
     dunya::objectmodel

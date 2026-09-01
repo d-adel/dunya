@@ -47,6 +47,23 @@
       "group": "test"
     },
     {
+      "label": "game: package (demo)",
+      "type": "shell",
+      "command": "${workspaceFolder}/build-dev/DunyaPackager.exe",
+      "args": [
+        "${workspaceFolder}/build-dev/DunyaPlayer.exe",
+        "${workspaceFolder}/build-dev/projects/demo",
+        "${workspaceFolder}/build-dev/builds/demo",
+        "main",
+        "golden",
+        "wall-big"
+      ],
+      "options": { "cwd": "${workspaceFolder}" },
+      "dependsOn": ["engine: build (dev)"],
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
       "label": "editor: build",
       "type": "shell",
       "command": "dotnet",

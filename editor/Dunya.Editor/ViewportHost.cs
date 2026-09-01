@@ -28,6 +28,8 @@ public sealed class ViewportHost : NativeControlHost
     private const long MK_ALT_HELD = 0x0020;
     private const long VK_F = 0x46;
 
+    private const uint WM_KEYUP = 0x0101;
+
     private const float OrbitRate = 0.008f;
     private const float PanRate = 0.0016f;
 
@@ -51,6 +53,9 @@ public sealed class ViewportHost : NativeControlHost
     private static extern IntPtr SetFocus(IntPtr window);
 
     [DllImport("user32.dll")]
+    private static extern short GetKeyState(int virtualKey);
+
+    [DllImport("user32.dll")]
     private static extern IntPtr SetCapture(IntPtr window);
 
     [DllImport("user32.dll")]
@@ -72,6 +77,42 @@ public sealed class ViewportHost : NativeControlHost
 
     private bool m_surfaceLive;
     private IntPtr m_session;
+
+    public bool Playing { get; set; }
+
+    public event Action? PlayToggleRequested;
+
+    private bool Reserved(long virtualKey)
+    {
+        const long VK_ESCAPE = 0x1B;
+        const long VK_P = 0x50;
+        const long VK_CONTROL = 0x11;
+
+        if (virtualKey == VK_CONTROL)
+        {
+            return true;
+        }
+
+        bool control = (GetKeyState((int)VK_CONTROL) & 0x8000) != 0;
+
+        if ((control && virtualKey == VK_P)
+            || (Playing && virtualKey == VK_ESCAPE))
+        {
+            PlayToggleRequested?.Invoke();
+
+            return true;
+        }
+
+        return false;
+    }
+
+    public void TakeFocus()
+    {
+        if (Handle != IntPtr.Zero)
+        {
+            SetFocus(Handle);
+        }
+    }
     private DispatcherTimer? m_frames;
     private bool m_renderFailed;
     private IntPtr m_previous;
@@ -333,7 +374,14 @@ public sealed class ViewportHost : NativeControlHost
                 break;
 
             case WM_LBUTTONDOWN:
+                Button(0u, true);
                 SetFocus(window);
+
+                if (Playing)
+                {
+                    break;
+                }
+
                 m_dragX = Low(lParam);
                 m_dragY = High(lParam);
                 m_dragged = false;
@@ -350,7 +398,14 @@ public sealed class ViewportHost : NativeControlHost
                 break;
 
             case WM_RBUTTONDOWN:
+                Button(1u, true);
                 SetFocus(window);
+
+                if (Playing)
+                {
+                    break;
+                }
+
                 m_dragX = Low(lParam);
                 m_dragY = High(lParam);
                 m_drag = Drag.Orbit;
@@ -366,6 +421,12 @@ public sealed class ViewportHost : NativeControlHost
                 break;
 
             case WM_MOUSEMOVE:
+                if (m_session != IntPtr.Zero)
+                {
+                    DunyaNative.dunya_session_set_cursor(
+                        m_session, Low(lParam), High(lParam));
+                }
+
             {
                 if (m_drag == Drag.None || m_session == IntPtr.Zero)
                 {
@@ -404,7 +465,13 @@ public sealed class ViewportHost : NativeControlHost
             case WM_LBUTTONUP:
             case WM_RBUTTONUP:
             case WM_MBUTTONUP:
-                if (m_drag == Drag.Select && !m_dragged && m_session != IntPtr.Zero)
+                Button(
+                    message == WM_LBUTTONUP ? 0u
+                        : message == WM_RBUTTONUP ? 1u
+                        : 2u,
+                    false);
+                if (!Playing && m_drag == Drag.Select && !m_dragged
+                    && m_session != IntPtr.Zero)
                 {
                     uint hit = DunyaNative.dunya_session_pick(
                         m_session, Low(lParam), High(lParam)
@@ -422,7 +489,7 @@ public sealed class ViewportHost : NativeControlHost
                 break;
 
             case WM_MOUSEWHEEL:
-                if (m_session != IntPtr.Zero)
+                if (!Playing && m_session != IntPtr.Zero)
                 {
                     DunyaNative.dunya_session_camera_zoom(
                         m_session, (short)(wParam.ToInt64() >> 16) / 120.0f
@@ -431,15 +498,47 @@ public sealed class ViewportHost : NativeControlHost
                 break;
 
             case WM_KEYDOWN:
-                if (m_session != IntPtr.Zero && wParam.ToInt64() == VK_F)
+                if (Reserved(wParam.ToInt64()))
+                {
+                    break;
+                }
+
+                Key(wParam.ToInt64(), true);
+
+                if (!Playing && m_session != IntPtr.Zero && wParam.ToInt64() == VK_F)
                 {
                     FocusRequested?.Invoke();
                 }
                 break;
+
+            case WM_KEYUP:
+                Key(wParam.ToInt64(), false);
+                break;
+
         }
 
         return CallWindowProc(m_previous, window, message, wParam, lParam);
     }
+    private void Key(long virtualKey, bool down)
+    {
+        if (m_session == IntPtr.Zero)
+        {
+            return;
+        }
+
+        DunyaNative.dunya_session_set_key(
+            m_session, (uint)virtualKey, down ? 1 : 0);
+    }
+
+    private void Button(uint button, bool down)
+    {
+        if (m_session != IntPtr.Zero)
+        {
+            DunyaNative.dunya_session_set_mouse_button(
+                m_session, button, down ? 1 : 0);
+        }
+    }
+
     private static int Low(IntPtr value) => (short)(value.ToInt64() & 0xFFFF);
 
     private static int High(IntPtr value) => (short)((value.ToInt64() >> 16) & 0xFFFF);

@@ -471,6 +471,35 @@ uint32_t dunya_session_pick(DunyaSession* session, float x, float y) {
            : static_cast<uint32_t>(entt::to_integral(found));
 }
 
+void dunya_session_set_key(
+  DunyaSession* session,
+  uint32_t virtualKey,
+  int32_t down
+) {
+  if (session != nullptr) {
+    asSession(session)->setKey(
+      static_cast<uint32_t>(dunya::capi::keyFromWin32(virtualKey)),
+      down != 0
+    );
+  }
+}
+
+void dunya_session_set_mouse_button(
+  DunyaSession* session,
+  uint32_t button,
+  int32_t down
+) {
+  if (session != nullptr) {
+    asSession(session)->setMouseButton(button, down != 0);
+  }
+}
+
+void dunya_session_set_cursor(DunyaSession* session, float x, float y) {
+  if (session != nullptr) {
+    asSession(session)->setCursor(x, y);
+  }
+}
+
 uint32_t dunya_session_create_light(DunyaSession* session) {
   if (session == nullptr) {
     return UINT32_MAX;
@@ -739,7 +768,7 @@ int32_t dunya_session_save_as(DunyaSession* session, const char* name) {
 
 int32_t dunya_session_package(
   DunyaSession* session,
-  const char* runtimeExecutable,
+  const char* playerExecutable,
   const char* output,
   const char* worlds,
   char* executable,
@@ -749,7 +778,7 @@ int32_t dunya_session_package(
   clearError();
 
   if (
-    session == nullptr || runtimeExecutable == nullptr || output == nullptr
+    session == nullptr || playerExecutable == nullptr || output == nullptr
     || worlds == nullptr || length == nullptr
   ) {
     recordError("dunya_session_package was given a null argument");
@@ -761,7 +790,7 @@ int32_t dunya_session_package(
     std::string packaged;
 
     if (!asSession(session)->package(
-          runtimeExecutable,
+          playerExecutable,
           output,
           splitLines(worlds),
           packaged

@@ -6,5 +6,9 @@ public abstract class ScriptSystem
 
     public virtual string Name => GetType().Name;
 
-    public abstract void Run(World world);
+    public virtual void Run(World world)
+    {
+    }
+
+    public virtual void Run(World world, Input input) => Run(world);
 }

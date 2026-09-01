@@ -93,14 +93,14 @@ bool copyProjectWithoutWorlds(
 std::filesystem::path packagedExecutable(const PackageSpec& spec) {
   return spec.output
          / (projectName(spec.projectRoot)
-            + spec.runtimeExecutable.extension().string());
+            + spec.playerExecutable.extension().string());
 }
 
 bool packageProject(const PackageSpec& spec, std::string& failure) {
   std::error_code ec;
 
-  if (!std::filesystem::exists(spec.runtimeExecutable)) {
-    failure = "no runtime executable at " + spec.runtimeExecutable.string();
+  if (!std::filesystem::exists(spec.playerExecutable)) {
+    failure = "no player executable at " + spec.playerExecutable.string();
 
     return false;
   }
@@ -128,7 +128,7 @@ bool packageProject(const PackageSpec& spec, std::string& failure) {
     return false;
   }
 
-  const std::filesystem::path staging = spec.runtimeExecutable.parent_path();
+  const std::filesystem::path staging = spec.playerExecutable.parent_path();
   const std::string name = projectName(spec.projectRoot);
   const std::filesystem::path packaged = spec.output / "projects" / name;
 
@@ -140,7 +140,7 @@ bool packageProject(const PackageSpec& spec, std::string& failure) {
     return false;
   }
 
-  if (!copyOne(spec.runtimeExecutable, packagedExecutable(spec), failure)) {
+  if (!copyOne(spec.playerExecutable, packagedExecutable(spec), failure)) {
     return false;
   }
 

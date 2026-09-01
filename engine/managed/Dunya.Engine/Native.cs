@@ -292,11 +292,125 @@ internal static unsafe class Native
         }
     }
 
+    public static bool KeyHeld(void* input, uint key)
+        => s_api.KeyHeld(input, key) != 0;
+
+    public static bool KeyPressed(void* input, uint key)
+        => s_api.KeyPressed(input, key) != 0;
+
+    public static bool KeyReleased(void* input, uint key)
+        => s_api.KeyReleased(input, key) != 0;
+
+    public static bool MouseHeld(void* input, uint button)
+        => s_api.MouseHeld(input, button) != 0;
+
+    public static bool MousePressed(void* input, uint button)
+        => s_api.MousePressed(input, button) != 0;
+
+    public static Vector2 Cursor(void* input)
+    {
+        float* xy = stackalloc float[2];
+
+        s_api.Cursor(input, xy);
+
+        return new Vector2(xy[0], xy[1]);
+    }
+
+    public static uint CreateSdfGrid(void* world, Pose pose, uint resolution, float margin)
+    {
+        float* seat = stackalloc float[7];
+
+        seat[0] = pose.Position.X;
+        seat[1] = pose.Position.Y;
+        seat[2] = pose.Position.Z;
+        seat[3] = pose.Rotation.X;
+        seat[4] = pose.Rotation.Y;
+        seat[5] = pose.Rotation.Z;
+        seat[6] = pose.Rotation.W;
+
+        uint* cells = stackalloc uint[3];
+
+        cells[0] = resolution;
+        cells[1] = resolution;
+        cells[2] = resolution;
+
+        return s_api.CreateSdfGrid(world, seat, cells, margin);
+    }
+
+    public static bool Destroy(void* world, uint entity)
+        => s_api.Destroy(world, entity) != 0;
+
+    public static bool AddPrimitive(void* world, uint entity, ref SdfEditDescriptor shape)
+    {
+        fixed (SdfEditDescriptor* described = &shape)
+        {
+            return s_api.AddPrimitive(world, entity, described) != 0;
+        }
+    }
+
+    public static bool ShareSdf(void* world, uint donor, uint taker)
+        => s_api.ShareSdf(world, donor, taker) != 0;
+
+    public static bool SetRigidBody(void* world, uint entity, float mass)
+        => s_api.SetRigidBody(world, entity, mass) != 0;
+
+    public static bool ScreenPointToRay(
+        void* world,
+        uint camera,
+        Vector2 screen,
+        Vector2 viewport,
+        out Ray ray
+    )
+    {
+        float* point = stackalloc float[2];
+        float* size = stackalloc float[2];
+        float* found = stackalloc float[6];
+
+        point[0] = screen.X;
+        point[1] = screen.Y;
+        size[0] = viewport.X;
+        size[1] = viewport.Y;
+
+        if (s_api.ScreenPointToRay(world, camera, point, size, found) == 0)
+        {
+            ray = default;
+
+            return false;
+        }
+
+        ray = new Ray(
+            new Vector3(found[0], found[1], found[2]),
+            new Vector3(found[3], found[4], found[5])
+        );
+
+        return true;
+    }
+
+    public static Vector2 Viewport(void* input)
+    {
+        float* wh = stackalloc float[2];
+
+        s_api.Viewport(input, wh);
+
+        return new Vector2(wh[0], wh[1]);
+    }
+
+    public static bool SetVelocity(void* world, uint entity, Vector3 velocity)
+    {
+        float* value = stackalloc float[3];
+
+        value[0] = velocity.X;
+        value[1] = velocity.Y;
+        value[2] = velocity.Z;
+
+        return s_api.SetVelocity(world, entity, value) != 0;
+    }
+
     public static bool AddSystem(
         void* schedule,
         int order,
         string name,
-        delegate* unmanaged<void*, void*, float, uint, void> callback,
+        delegate* unmanaged<void*, void*, void*, float, uint, void> callback,
         void* user
     )
     {

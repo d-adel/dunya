@@ -38,11 +38,18 @@ struct SampleBox {
 
 SampleBox merge(const SampleBox& first, const SampleBox& second);
 
+struct BrickRange {
+  glm::uvec3 begin{0u};
+  glm::uvec3 end{0u};
+};
+
 struct WriteReport {
   SampleBox samples;
   glm::uvec3 brickBegin{0u};
   glm::uvec3 brickEnd{0u};
 };
+
+BrickRange brickRange(const SampledSdf& field, const SampleBox& box);
 
 glm::vec3 voxelSize(
   const glm::vec3& minimum,

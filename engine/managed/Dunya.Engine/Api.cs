@@ -26,7 +26,7 @@ internal unsafe struct FieldDescriptor
 [StructLayout(LayoutKind.Sequential)]
 internal unsafe struct ApiTable
 {
-    public const uint ExpectedVersion = 1;
+    public const uint ExpectedVersion = 5;
 
     public uint Size;
     public uint Version;
@@ -48,7 +48,21 @@ internal unsafe struct ApiTable
     public delegate* unmanaged<void*, uint, byte*, int> HasComponent;
     public delegate* unmanaged<void*, uint, float*, float*, int> Bounds;
     public delegate* unmanaged<byte*, void> Log;
-    public delegate* unmanaged<void*, int, byte*, delegate* unmanaged<void*, void*, float, uint, void>, void*, int> AddSystem;
+    public delegate* unmanaged<void*, int, byte*, delegate* unmanaged<void*, void*, void*, float, uint, void>, void*, int> AddSystem;
+    public delegate* unmanaged<void*, uint, int> KeyHeld;
+    public delegate* unmanaged<void*, uint, int> KeyPressed;
+    public delegate* unmanaged<void*, uint, int> KeyReleased;
+    public delegate* unmanaged<void*, uint, int> MouseHeld;
+    public delegate* unmanaged<void*, uint, int> MousePressed;
+    public delegate* unmanaged<void*, float*, void> Cursor;
+    public delegate* unmanaged<void*, float*, uint*, float, uint> CreateSdfGrid;
+    public delegate* unmanaged<void*, uint, int> Destroy;
+    public delegate* unmanaged<void*, uint, SdfEditDescriptor*, int> AddPrimitive;
+    public delegate* unmanaged<void*, uint, uint, int> ShareSdf;
+    public delegate* unmanaged<void*, uint, float, int> SetRigidBody;
+    public delegate* unmanaged<void*, uint, float*, int> SetVelocity;
+    public delegate* unmanaged<void*, uint, float*, float*, float*, int> ScreenPointToRay;
+    public delegate* unmanaged<void*, float*, void> Viewport;
 }
 
 public enum Shape : uint

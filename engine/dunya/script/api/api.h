@@ -13,7 +13,7 @@ namespace dunya::script {
 
 extern "C" {
 
-inline constexpr uint32_t API_VERSION = 1u;
+inline constexpr uint32_t API_VERSION = 5u;
 
 struct FieldDescriptor {
   const char* name;
@@ -40,11 +40,26 @@ struct SdfDeformSummary {
   uint32_t sampleExtent[3];
 };
 
-using SdfDeformNotify =
-  void (*)(void* host, uint32_t entity, const SdfDeformSummary* result);
+struct PhysicsVerbs {
+  int32_t (*setRigidBody)(void* host, void* world, uint32_t entity, float mass);
 
-using SystemCallback =
-  void (*)(void* user, void* world, float deltaSeconds, uint32_t frame);
+  int32_t (*setVelocity)(
+    void* host,
+    void* world,
+    uint32_t entity,
+    const float* velocity
+  );
+
+  int32_t (*destroy)(void* host, void* world, uint32_t entity);
+};
+
+using SystemCallback = void (*)(
+  void* user,
+  void* world,
+  void* input,
+  float deltaSeconds,
+  uint32_t frame
+);
 
 struct Api {
   uint32_t size;
@@ -118,6 +133,49 @@ struct Api {
     SystemCallback callback,
     void* user
   );
+
+  int32_t (*keyHeld)(void* input, uint32_t key);
+
+  int32_t (*keyPressed)(void* input, uint32_t key);
+
+  int32_t (*keyReleased)(void* input, uint32_t key);
+
+  int32_t (*mouseHeld)(void* input, uint32_t button);
+
+  int32_t (*mousePressed)(void* input, uint32_t button);
+
+  void (*cursor)(void* input, float* xy);
+
+  uint32_t (*createSdfGrid)(
+    void* world,
+    const float* pose,
+    const uint32_t* resolution,
+    float margin
+  );
+
+  int32_t (*destroy)(void* world, uint32_t entity);
+
+  int32_t (*addPrimitive)(
+    void* world,
+    uint32_t entity,
+    const SdfEditDescriptor* shape
+  );
+
+  int32_t (*shareSdf)(void* world, uint32_t donor, uint32_t taker);
+
+  int32_t (*setRigidBody)(void* world, uint32_t entity, float mass);
+
+  int32_t (*setVelocity)(void* world, uint32_t entity, const float* velocity);
+
+  int32_t (*screenPointToRay)(
+    void* world,
+    uint32_t camera,
+    const float* screen,
+    const float* viewport,
+    float* ray
+  );
+
+  void (*viewport)(void* input, float* wh);
 };
 }
 
@@ -125,30 +183,26 @@ using LogSink = void (*)(const char* message);
 
 void setLogSink(LogSink sink) noexcept;
 
-void setSdfDeformNotify(SdfDeformNotify notify, void* host) noexcept;
+void setPhysicsVerbs(const PhysicsVerbs* verbs, void* host) noexcept;
 
-[[nodiscard]] SdfDeformNotify sdfDeformNotify() noexcept;
-
-[[nodiscard]] void* sdfDeformHost() noexcept;
-
-class SdfDeformScope {
+class PhysicsScope {
 public:
-  SdfDeformScope() noexcept = default;
+  PhysicsScope() noexcept = default;
 
-  SdfDeformScope(SdfDeformNotify notify, void* host) noexcept;
+  PhysicsScope(const PhysicsVerbs* verbs, void* host) noexcept;
 
-  SdfDeformScope(const SdfDeformScope&) = delete;
-  SdfDeformScope& operator=(const SdfDeformScope&) = delete;
+  PhysicsScope(const PhysicsScope&) = delete;
+  PhysicsScope& operator=(const PhysicsScope&) = delete;
 
-  SdfDeformScope(SdfDeformScope&& other) noexcept;
-  SdfDeformScope& operator=(SdfDeformScope&& other) noexcept;
+  PhysicsScope(PhysicsScope&& other) noexcept;
+  PhysicsScope& operator=(PhysicsScope&& other) noexcept;
 
-  ~SdfDeformScope();
+  ~PhysicsScope();
 
 private:
   void restore() noexcept;
 
-  SdfDeformNotify m_previous = nullptr;
+  const PhysicsVerbs* m_previous = nullptr;
   void* m_previousHost = nullptr;
   bool m_active = false;
 };

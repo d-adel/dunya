@@ -35,7 +35,7 @@ internal static class DunyaNative
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
     private static extern int dunya_session_package(
         IntPtr session,
-        [MarshalAs(UnmanagedType.LPUTF8Str)] string runtimeExecutable,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string playerExecutable,
         [MarshalAs(UnmanagedType.LPUTF8Str)] string output,
         [MarshalAs(UnmanagedType.LPUTF8Str)] string worlds,
         [Out] byte[]? executable,
@@ -43,12 +43,12 @@ internal static class DunyaNative
         out uint length);
 
     internal static string Package(
-        IntPtr session, string runtimeExecutable, string output, string[] worlds)
+        IntPtr session, string playerExecutable, string output, string[] worlds)
     {
         string joined = string.Join("\n", worlds);
 
         if (dunya_session_package(
-                session, runtimeExecutable, output, joined, null, 0, out uint length) != 0)
+                session, playerExecutable, output, joined, null, 0, out uint length) != 0)
         {
             throw new InvalidOperationException(LastError());
         }
@@ -56,7 +56,7 @@ internal static class DunyaNative
         byte[] buffer = new byte[length + 1];
 
         if (dunya_session_package(
-                session, runtimeExecutable, output, joined,
+                session, playerExecutable, output, joined,
                 buffer, (uint)buffer.Length, out _) != 0)
         {
             throw new InvalidOperationException(LastError());
@@ -213,6 +213,18 @@ internal static class DunyaNative
     internal static extern ulong dunya_session_add_material(
         IntPtr session, float[] baseColor, float metallic, float roughness
     );
+
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern void dunya_session_set_key(
+        IntPtr session, uint key, int down);
+
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern void dunya_session_set_mouse_button(
+        IntPtr session, uint button, int down);
+
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern void dunya_session_set_cursor(
+        IntPtr session, float x, float y);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
     internal static extern uint dunya_session_create_light(IntPtr session);

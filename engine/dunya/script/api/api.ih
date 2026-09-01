@@ -3,6 +3,7 @@
 #include <dunya/field/deform/deform.h>
 #include <dunya/field/field.h>
 #include <dunya/objectmodel/component/pose/pose.h>
+#include <dunya/objectmodel/component/sdfgrid/sdfgrid.h>
 #include <dunya/objectmodel/world/world.h>
 #include <dunya/objectmodel/worldcontents/worldcontents.h>
 #include <dunya/objectmodel/worldquery/worldquery.h>

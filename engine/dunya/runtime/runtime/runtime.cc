@@ -98,6 +98,55 @@ size_t Runtime::shapeCount() const noexcept {
   return m_shapes.size();
 }
 
+void Runtime::refreshDeformedBodies() {
+  for (const auto& [entity, box] : m_world.sdfDirty()) {
+    const auto* held =
+      m_world.registry().try_get<objectmodel::SharedSdf>(entity);
+
+    if (held == nullptr || held->field == nullptr) {
+      continue;
+    }
+
+    const field::SampledSdf& lattice = *held->field;
+
+    const field::BrickRange bricks = field::brickRange(lattice, box);
+
+    reshapeAfterDeform(entity, bricks.begin, bricks.end);
+
+    if (!m_world.registry().all_of<objectmodel::Pose>(entity)) {
+      continue;
+    }
+
+    const glm::vec3 low =
+      lattice.origin + glm::vec3(box.minimum) * lattice.voxelSize;
+    const glm::vec3 high =
+      lattice.origin + glm::vec3(box.minimum + box.extent) * lattice.voxelSize;
+
+    const glm::mat4 model =
+      objectmodel::model(m_world.registry().get<objectmodel::Pose>(entity));
+
+    glm::vec3 minimum(std::numeric_limits<float>::max());
+    glm::vec3 maximum(std::numeric_limits<float>::lowest());
+
+    for (uint32_t corner = 0u; corner != 8u; ++corner) {
+      const glm::vec3 pick(
+        (corner & 1u) != 0u ? high.x : low.x,
+        (corner & 2u) != 0u ? high.y : low.y,
+        (corner & 4u) != 0u ? high.z : low.z
+      );
+
+      const glm::vec3 at = glm::vec3(model * glm::vec4(pick, 1.0f));
+
+      minimum = glm::min(minimum, at);
+      maximum = glm::max(maximum, at);
+    }
+
+    const glm::vec3 slack(glm::compMax(lattice.voxelSize) * 4.0f);
+
+    wake(minimum - slack, maximum + slack);
+  }
+}
+
 void Runtime::wake(const glm::vec3& minimum, const glm::vec3& maximum) {
   m_physicsWorld.bodies().ActivateBodiesInAABox(
     JPH::AABox(
@@ -178,7 +227,10 @@ void Runtime::setBodyShape(
   m_broadPhaseStale = true;
 }
 
-void Runtime::launch(objectmodel::Entity entity, const glm::vec3& velocity) {
+void Runtime::setLinearVelocity(
+  objectmodel::Entity entity,
+  const glm::vec3& velocity
+) {
   const auto* body = m_world.registry().try_get<objectmodel::RigidBody>(entity);
 
   if (body == nullptr) {
@@ -252,7 +304,7 @@ void Runtime::applyMassScale(objectmodel::Entity entity) {
   }
 }
 
-bool Runtime::despawn(objectmodel::Entity entity) {
+bool Runtime::destroy(objectmodel::Entity entity) {
   if (
     const auto* body =
       m_world.registry().try_get<objectmodel::RigidBody>(entity)
@@ -343,6 +395,133 @@ void Runtime::syncPoses(float alpha) {
       drawn.second
     );
   }
+}
+
+Runtime::Damage& Runtime::damage() noexcept {
+  return m_damage;
+}
+
+const Runtime::Damage& Runtime::damage() const noexcept {
+  return m_damage;
+}
+
+std::span<const Runtime::Crater> Runtime::cratersThisFrame() const noexcept {
+  return m_carved;
+}
+
+void Runtime::carve(
+  objectmodel::Entity entity,
+  const field::Primitive& cutter
+) {
+  objectmodel::World& world = m_world;
+
+  field::WriteReport report{};
+
+  world.patchSampledSdf(entity, [&](field::SampledSdf& field) {
+    report = field::deformAndRepair(field, cutter).write;
+  });
+
+  world.markSdfDirty(entity, report.samples);
+}
+
+void Runtime::applyImpacts() {
+  m_carved.clear();
+
+  m_physicsWorld.impacts().drain(m_impacts);
+
+  const entt::registry& registry = m_world.registry();
+
+  for (const physics::Impact& impact : m_impacts) {
+    const objectmodel::Entity entity{impact.entity};
+
+    if (
+      !registry.valid(entity)
+      || !registry.all_of<objectmodel::Deformable, objectmodel::SharedSdf>(
+        entity
+      )
+    ) {
+      continue;
+    }
+
+    const glm::mat4 inverseModel =
+      glm::inverse(objectmodel::model(registry.get<objectmodel::Pose>(entity)));
+
+    m_pending.push_back(
+      {entity,
+       glm::vec3(inverseModel * glm::vec4(impact.point, 1.0f)),
+
+       glm::normalize(
+         glm::vec3(inverseModel * glm::vec4(impact.outward, 0.0f))
+       ),
+       impact.impulse}
+    );
+  }
+
+  if (m_pending.empty()) {
+    return;
+  }
+
+  std::sort(
+    m_pending.begin(),
+    m_pending.end(),
+    [](const PendingCrater& a, const PendingCrater& b) {
+      if (a.impulse != b.impulse) {
+        return a.impulse > b.impulse;
+      }
+
+      return static_cast<uint32_t>(a.entity) < static_cast<uint32_t>(b.entity);
+    }
+  );
+
+  const size_t budget = std::min<size_t>(m_damage.perFrame, m_pending.size());
+
+  for (size_t i = 0; i != budget; ++i) {
+    const PendingCrater& pending = m_pending[i];
+    const objectmodel::Entity entity = pending.entity;
+
+    if (
+      !registry.valid(entity)
+      || !registry.all_of<objectmodel::Deformable, objectmodel::SharedSdf>(
+        entity
+      )
+    ) {
+      continue;
+    }
+
+    const std::optional<field::Aabb> extent =
+      field::boundedExtent(m_world.primitives(entity));
+
+    const glm::vec3 span =
+      extent.has_value() ? extent->maximum - extent->minimum : glm::vec3(1.0f);
+
+    const float widest =
+      m_damage.widestFraction * std::min({span.x, span.y, span.z});
+
+    const float radius = std::min(
+      m_damage.radiusPerDepth
+        * std::clamp(
+          m_damage.depthPerImpulse * pending.impulse,
+          m_damage.minimumDepth,
+          m_damage.maximumDepth
+        ),
+      widest
+    );
+
+    const float depth = radius / m_damage.radiusPerDepth;
+
+    const glm::vec3 centre = pending.point - pending.outward * (radius - depth);
+
+    field::Primitive cutter =
+      field::makeSphere(centre, radius, 1u, core::FIELD_OP_SUBTRACTION);
+
+    field::updateBounds(cutter);
+
+    carve(entity, cutter);
+
+    m_carved.push_back({entity, pending.impulse, depth, radius});
+  }
+
+  m_pending.clear();
 }
 
 }

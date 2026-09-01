@@ -11,6 +11,7 @@
 #include <dunya/objectmodel/component/lens/lens.h>
 
 #include <array>
+#include <cmath>
 #include <cstring>
 #include <vector>
 
@@ -481,4 +482,110 @@ TEST_CASE(
   REQUIRE(readAt[1] == -2.5f);
   REQUIRE(readAt[2] == 3.25f);
   REQUIRE(readReady == 1u);
+}
+
+TEST_CASE(
+  "a float reaches the file and comes back bit for bit",
+  "[worldfile]"
+) {
+  World authored;
+
+  const dunya::objectmodel::Entity box = authorBox(authored, 0u);
+
+  const glm::vec3 awkward(
+    1.0f / 3.0f,
+    2.40485382f,
+    std::nextafter(6.24189568f, 100.0f)
+  );
+
+  const glm::quat turn(0.98480773f, -0.173648179f, 1.0f / 7.0f, 1.0e-8f);
+
+  authored.patch<dunya::objectmodel::Pose>(box, [&](auto& pose) {
+    pose.position = awkward;
+    pose.rotation = turn;
+  });
+
+  authored.emplaceOrReplace<dunya::objectmodel::Lens>(
+    box,
+    dunya::objectmodel::Lens{69.999992f, 0.10000001f, 9999.9990f}
+  );
+
+  const AssetDatabase assets = inOrder();
+
+  StoredWorld stored{};
+  REQUIRE(readWorld(writeWorld(captureWorld(authored, assets)), stored));
+
+  World loaded;
+  REQUIRE(restoreWorld(stored, loaded, assets));
+
+  REQUIRE(loaded.sdfGrids().size() == 1);
+
+  const entt::registry& registry = loaded.registry();
+  const dunya::objectmodel::Entity back = loaded.sdfGrids()[0];
+
+  const dunya::objectmodel::Pose& pose =
+    registry.get<dunya::objectmodel::Pose>(back);
+
+  const auto same = [](float wrote, float read) {
+    return std::memcmp(&wrote, &read, sizeof(float)) == 0;
+  };
+
+  REQUIRE(same(awkward.x, pose.position.x));
+  REQUIRE(same(awkward.y, pose.position.y));
+  REQUIRE(same(awkward.z, pose.position.z));
+
+  REQUIRE(same(turn.w, pose.rotation.w));
+  REQUIRE(same(turn.x, pose.rotation.x));
+  REQUIRE(same(turn.y, pose.rotation.y));
+  REQUIRE(same(turn.z, pose.rotation.z));
+
+  const dunya::objectmodel::Lens& lens =
+    registry.get<dunya::objectmodel::Lens>(back);
+
+  REQUIRE(same(69.999992f, lens.verticalFov));
+  REQUIRE(same(0.10000001f, lens.nearPlane));
+  REQUIRE(same(9999.9990f, lens.farPlane));
+}
+
+TEST_CASE(
+  "a spelling with spare digits reads as the float it names",
+  "[worldfile]"
+) {
+  const std::string longer =
+    R"({"version":1,"entities":[{"pose":{"position":[0,2.40485382,6.24189568],)"
+    R"("rotation":[0.98480773,-0.173648179,0,0]},"primitives":[]}]})";
+
+  const std::string shorter =
+    R"({"version":1,"entities":[{"pose":{"position":[0,2.4048538,6.2418957],)"
+    R"("rotation":[0.9848077,-0.17364818,0,0]},"primitives":[]}]})";
+
+  StoredWorld first{};
+  StoredWorld second{};
+
+  REQUIRE(readWorld(longer, first));
+  REQUIRE(readWorld(shorter, second));
+
+  const AssetDatabase assets = inOrder();
+
+  World a;
+  World b;
+
+  REQUIRE(restoreWorld(first, a, assets));
+  REQUIRE(restoreWorld(second, b, assets));
+
+  const auto poseOf = [](const World& world) {
+    const entt::registry& registry = world.registry();
+
+    for (const dunya::objectmodel::Entity entity :
+         registry.view<const dunya::objectmodel::Pose>()) {
+      return registry.get<const dunya::objectmodel::Pose>(entity);
+    }
+
+    return dunya::objectmodel::Pose{};
+  };
+
+  const dunya::objectmodel::Pose left = poseOf(a);
+  const dunya::objectmodel::Pose right = poseOf(b);
+
+  REQUIRE(std::memcmp(&left, &right, sizeof(dunya::objectmodel::Pose)) == 0);
 }

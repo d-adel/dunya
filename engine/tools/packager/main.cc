@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
     }
 
     dunya::editor::PackageSpec spec{};
-    spec.runtimeExecutable = arguments[1];
+    spec.playerExecutable = arguments[1];
     spec.projectRoot = arguments[2];
     spec.output = arguments[3];
 

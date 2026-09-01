@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <dunya/systems/input/input.h>
 #include <dunya/systems/schedule/schedule.h>
 
 #include <string>
@@ -7,6 +8,17 @@
 
 using dunya::objectmodel::World;
 using dunya::systems::Context;
+
+namespace {
+
+const dunya::systems::InputState& noInput() {
+  static const dunya::systems::InputState idle;
+
+  return idle;
+}
+
+}
+
 using dunya::systems::Entry;
 
 using dunya::systems::Schedule;
@@ -16,7 +28,7 @@ namespace {
 std::vector<std::string> runOrder(Schedule& schedule, World& world) {
   std::vector<std::string> seen;
 
-  Context context{world, 0.016f, 1u};
+  Context context{world, noInput(), 0.016f, 1u};
 
   schedule.run(context);
 
@@ -45,7 +57,7 @@ TEST_CASE("systems run in ascending order, not insertion order", "[schedule]") {
     ran.emplace_back("budget");
   }));
 
-  Context context{world, 0.016f, 0u};
+  Context context{world, noInput(), 0.016f, 0u};
   schedule.run(context);
 
   REQUIRE(ran == std::vector<std::string>{"intent", "budget", "win"});
@@ -63,7 +75,7 @@ TEST_CASE("insertion order is kept within one order key", "[schedule]") {
     }));
   }
 
-  Context context{world, 0.016f, 0u};
+  Context context{world, noInput(), 0.016f, 0u};
   schedule.run(context);
 
   REQUIRE(ran == std::vector<std::string>{"first", "second", "third"});
@@ -82,7 +94,7 @@ TEST_CASE("a system sees the world it was handed", "[schedule]") {
   world.createSdfGrid({}, {});
   world.createSdfGrid({}, {});
 
-  Context context{world, 0.016f, 0u};
+  Context context{world, noInput(), 0.016f, 0u};
   schedule.run(context);
 
   REQUIRE(counted == 2u);
@@ -106,7 +118,7 @@ TEST_CASE(
 
   REQUIRE(schedule.size() == 1u);
 
-  Context context{world, 0.016f, 0u};
+  Context context{world, noInput(), 0.016f, 0u};
   schedule.run(context);
 
   REQUIRE(ran == std::vector<std::string>{"original"});
@@ -133,7 +145,7 @@ TEST_CASE("a disabled system keeps its place but does not run", "[schedule]") {
   REQUIRE(schedule.enable("b", false));
   REQUIRE_FALSE(schedule.enabled("b"));
 
-  Context context{world, 0.016f, 0u};
+  Context context{world, noInput(), 0.016f, 0u};
   schedule.run(context);
 
   REQUIRE(ran == std::vector<std::string>{"a"});
@@ -174,7 +186,7 @@ TEST_CASE(
 
   REQUIRE(schedule.remove("b"));
 
-  Context context{world, 0.016f, 0u};
+  Context context{world, noInput(), 0.016f, 0u};
   schedule.run(context);
 
   REQUIRE(ran == std::vector<std::string>{"a", "c"});
@@ -186,7 +198,7 @@ TEST_CASE("clear empties the schedule and its timing", "[schedule]") {
 
   REQUIRE(schedule.add(0, "a", [](Context&) {}));
 
-  Context context{world, 0.016f, 0u};
+  Context context{world, noInput(), 0.016f, 0u};
   schedule.run(context);
 
   schedule.clear();
@@ -212,7 +224,7 @@ TEST_CASE(
 
   REQUIRE(schedule.add(0, "busy", busy));
 
-  Context context{world, 0.016f, 0u};
+  Context context{world, noInput(), 0.016f, 0u};
   schedule.run(context);
 
   REQUIRE(schedule.systems()[0].lastMilliseconds > 0.0);
@@ -237,7 +249,7 @@ TEST_CASE("the context carries the frame it was built for", "[schedule]") {
     seenDelta = context.deltaSeconds;
   }));
 
-  Context context{world, 0.25f, 77u};
+  Context context{world, noInput(), 0.25f, 77u};
   schedule.run(context);
 
   REQUIRE(seenFrame == 77u);

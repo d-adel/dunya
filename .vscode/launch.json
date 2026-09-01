@@ -13,23 +13,13 @@
       "stopAtEntry": false
     },
     {
-      "name": "Dev host",
+      "name": "Game (packaged demo)",
       "type": "cppvsdbg",
       "request": "launch",
-      "preLaunchTask": "engine: build (dev)",
-      "program": "${workspaceFolder}/build-dev/DunyaDevHost.exe",
+      "preLaunchTask": "game: package (demo)",
+      "program": "${workspaceFolder}/build-dev/builds/demo/demo.exe",
       "args": [],
-      "cwd": "${workspaceFolder}/build-dev",
-      "console": "integratedTerminal"
-    },
-    {
-      "name": "Runtime",
-      "type": "cppvsdbg",
-      "request": "launch",
-      "preLaunchTask": "engine: build (dev)",
-      "program": "${workspaceFolder}/build-dev/DunyaRuntime.exe",
-      "args": [],
-      "cwd": "${workspaceFolder}/build-dev",
+      "cwd": "${workspaceFolder}/build-dev/builds/demo",
       "console": "integratedTerminal"
     }
   ]

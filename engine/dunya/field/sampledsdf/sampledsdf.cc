@@ -67,10 +67,25 @@ float cellLipschitz(const SampledSdf& field, const glm::uvec3& cell) {
   return glm::length(slope / field.voxelSize);
 }
 
-struct BrickRange {
-  glm::uvec3 begin{0u};
-  glm::uvec3 end{0u};
+struct CellReach {
+  glm::uvec3 minimum{0u};
+  glm::uvec3 maximum{0u};
 };
+
+CellReach reachOf(const SampledSdf& field, const SampleBox& box) {
+  const glm::uvec3 cells = cellCounts(field);
+  const glm::uvec3 end = box.minimum + box.extent;
+
+  const glm::uvec3 cellMinimum =
+    glm::max(box.minimum, glm::uvec3(1u)) - glm::uvec3(1u);
+  const glm::uvec3 cellMaximum =
+    glm::min(end - glm::uvec3(1u), cells - glm::uvec3(1u));
+
+  return {
+    glm::max(cellMinimum, glm::uvec3(1u)) - glm::uvec3(1u),
+    glm::min(cellMaximum + glm::uvec3(1u), cells - glm::uvec3(1u))
+  };
+}
 
 BrickRange rebuildBricks(
   SampledSdf& field,
@@ -410,6 +425,15 @@ bool brickHoldsSurface(const SampledSdf& field, uint32_t brick) {
   return field.brickMinimum[brick] <= 0.0f && field.brickMaximum[brick] >= 0.0f;
 }
 
+BrickRange brickRange(const SampledSdf& field, const SampleBox& box) {
+  const CellReach reach = reachOf(field, box);
+
+  return {
+    reach.minimum / glm::uvec3(BRICK_CELLS),
+    reach.maximum / glm::uvec3(BRICK_CELLS) + glm::uvec3(1u)
+  };
+}
+
 WriteReport write(
   SampledSdf& field,
   const SampleBox& box,
@@ -454,19 +478,9 @@ WriteReport write(
     }
   }
 
-  const glm::uvec3 cells = cellCounts(field);
+  const CellReach reach = reachOf(field, box);
 
-  const glm::uvec3 cellMinimum =
-    glm::max(box.minimum, glm::uvec3(1u)) - glm::uvec3(1u);
-  const glm::uvec3 cellMaximum =
-    glm::min(end - glm::uvec3(1u), cells - glm::uvec3(1u));
-
-  const glm::uvec3 reachMinimum =
-    glm::max(cellMinimum, glm::uvec3(1u)) - glm::uvec3(1u);
-  const glm::uvec3 reachMaximum =
-    glm::min(cellMaximum + glm::uvec3(1u), cells - glm::uvec3(1u));
-
-  const BrickRange bricks = rebuildBricks(field, reachMinimum, reachMaximum);
+  const BrickRange bricks = rebuildBricks(field, reach.minimum, reach.maximum);
 
   return {box, bricks.begin, bricks.end};
 }

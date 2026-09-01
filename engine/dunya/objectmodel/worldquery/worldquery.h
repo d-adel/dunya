@@ -97,6 +97,13 @@ struct CameraView {
   float aspect
 );
 
+[[nodiscard]] std::optional<dunya::field::Ray> screenPointToRay(
+  const dunya::objectmodel::World& world,
+  dunya::objectmodel::Entity camera,
+  const glm::vec2& screen,
+  const glm::vec2& viewport
+);
+
 [[nodiscard]] CameraView framingCamera(
   const dunya::objectmodel::World& world,
   float aspect
