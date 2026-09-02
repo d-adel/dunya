@@ -1,4 +1,4 @@
-#include <dunya/editor/package/package.h>
+#include <dunya/package/package.h>
 
 #include <exception>
 #include <iostream>
@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
       return 1;
     }
 
-    dunya::editor::PackageSpec spec{};
+    dunya::package::PackageSpec spec{};
     spec.playerExecutable = arguments[1];
     spec.projectRoot = arguments[2];
     spec.output = arguments[3];
@@ -27,13 +27,13 @@ int main(int argc, char** argv) {
 
     std::string failure;
 
-    if (!dunya::editor::packageProject(spec, failure)) {
+    if (!dunya::package::packageProject(spec, failure)) {
       std::cerr << failure << '\n';
 
       return 1;
     }
 
-    std::cout << dunya::editor::packagedExecutable(spec).string() << '\n';
+    std::cout << dunya::package::packagedExecutable(spec).string() << '\n';
 
     return 0;
   } catch (const std::exception& error) {

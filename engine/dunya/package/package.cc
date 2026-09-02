@@ -1,6 +1,6 @@
 #include "package.ih"
 
-namespace dunya::editor {
+namespace dunya::package {
 
 namespace {
 

@@ -76,12 +76,14 @@
   .readout b { font-family: var(--mono); }
   .readout .u { color: var(--uses); font-weight: 600; }
   .readout .d { color: var(--usedby); font-weight: 600; }
+  .readout .r { color: var(--borrow); font-weight: 600; }
 
   .key { margin-left: auto; display: flex; gap: 14px; font-size: 11.5px; color: var(--muted); }
   .key i { font-style: normal; display: flex; align-items: center; gap: 5px; }
   .key .sw { width: 11px; height: 11px; border-radius: 2px; border: 1.5px solid; }
   .key .sw.u { border-color: var(--uses); background: color-mix(in oklab, var(--uses) 16%, transparent); }
   .key .sw.d { border-color: var(--usedby); background: color-mix(in oklab, var(--usedby) 16%, transparent); }
+  .key .sw.r { border-color: var(--borrow); border-style: dashed; background: color-mix(in oklab, var(--borrow) 16%, transparent); }
 
   main { flex: 1; overflow: auto; padding: 22px 22px 90px; }
 
@@ -182,11 +184,27 @@
   .board.picked .box { opacity: 0.34; }
   .board.picked .box.on,
   .board.picked .box.uses,
-  .board.picked .box.usedby { opacity: 1; }
+  .board.picked .box.usedby,
+  .board.picked .box.runs,
+  .board.picked .box.runby { opacity: 1; }
 
   .box.on { border-color: var(--sel); border-width: 2px; background: var(--surface-2); }
   .box.uses { border-color: var(--uses); background: color-mix(in oklab, var(--uses) 8%, var(--surface)); }
   .box.usedby { border-color: var(--usedby); background: color-mix(in oklab, var(--usedby) 8%, var(--surface)); }
+
+  .box.runs,
+  .box.runby {
+    border-color: var(--borrow);
+    border-style: dashed;
+    background: color-mix(in oklab, var(--borrow) 8%, var(--surface));
+  }
+
+  .box .tested {
+    font-style: normal;
+    color: var(--borrow);
+    font-size: 11px;
+    flex: none;
+  }
 
   .hint { font-size: 12px; color: var(--muted); text-align: center; padding: 6px 0 0; }
 
@@ -303,6 +321,7 @@
   <span class="key">
     <i><span class="sw u"></span>it uses</i>
     <i><span class="sw d"></span>uses it</i>
+    <i><span class="sw r"></span>runs / run by</i>
   </span>
 </div>
 
@@ -441,6 +460,7 @@ for (let layer = maxDepth; layer >= 0; layer--) {
     btn.className = 'box tier-' + (target.tier || 'None').toLowerCase();
     btn.type = 'button';
     btn.innerHTML = '<span class="nm">' + shortName(key)
+      + (target.tested ? '<i class="tested">▷</i>' : '')
       + '<i class="tier">' + (target.tier || '?') + '</i></span>'
       + '<span class="holds">' + (NOTES[key] || '') + '</span>'
       + (n ? '<span class="count">' + n + ' types</span>' : '');
@@ -468,9 +488,16 @@ function usersOf(id) {
   return out;
 }
 
+function runnersOf(id) {
+  const out = [];
+  for (const [key, x] of ALL) if ((x.runs || []).includes(id)) out.push(key);
+  return out;
+}
+
 function paint() {
-  for (const el of els.values()) el.classList.remove('on', 'uses', 'usedby');
-  board.classList.toggle('picked', !!picked);
+  for (const el of els.values()) {
+    el.classList.remove('on', 'uses', 'usedby', 'runs', 'runby');
+  }
   board.classList.toggle('picked', !!picked);
 
   if (!picked) {
@@ -482,13 +509,20 @@ function paint() {
   const node = ALL.get(picked);
   const users = usersOf(picked);
 
+  const runners = runnersOf(picked);
+
   els.get(picked).classList.add('on');
   for (const d of node.deps) els.get(d) && els.get(d).classList.add('uses');
   for (const u of users) els.get(u) && els.get(u).classList.add('usedby');
+  for (const r of (node.runs || [])) els.get(r) && els.get(r).classList.add('runs');
+  for (const r of runners) els.get(r) && els.get(r).classList.add('runby');
+
+  const launched = (node.runs || []).length + runners.length;
 
   readout.innerHTML = '<b>' + shortName(node.name) + '</b> uses <span class="u">' + node.deps.length
     + '</span>, and <span class="d">' + users.length + '</span> '
-    + (users.length === 1 ? 'thing uses' : 'things use') + ' it.';
+    + (users.length === 1 ? 'thing uses' : 'things use') + ' it.'
+    + (launched ? ' <span class="r">' + launched + ' at run time.</span>' : '');
 
   renderDetail(node);
 }

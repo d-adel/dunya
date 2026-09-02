@@ -102,17 +102,17 @@ bool Session::package(
   const std::vector<std::string>& worlds,
   std::string& result
 ) const {
-  dunya::editor::PackageSpec spec{};
+  dunya::package::PackageSpec spec{};
   spec.playerExecutable = playerExecutable;
   spec.projectRoot = m_engine.projectRoot();
   spec.output = output;
   spec.worlds = worlds.empty() ? std::vector<std::string>{m_worldName} : worlds;
 
-  if (!dunya::editor::packageProject(spec, result)) {
+  if (!dunya::package::packageProject(spec, result)) {
     return false;
   }
 
-  result = dunya::editor::packagedExecutable(spec).string();
+  result = dunya::package::packagedExecutable(spec).string();
 
   return true;
 }

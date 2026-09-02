@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-namespace dunya::editor {
+namespace dunya::package {
 
 struct PackageSpec {
   std::filesystem::path playerExecutable;
