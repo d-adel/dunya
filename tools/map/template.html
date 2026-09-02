@@ -460,10 +460,7 @@ for (let layer = maxDepth; layer >= 0; layer--) {
     btn.className = 'box tier-' + (target.tier || 'None').toLowerCase();
     btn.type = 'button';
     btn.innerHTML = '<span class="nm">' + shortName(key)
-<<<<<<< HEAD
       + (target.tested ? '<i class="tested">▷</i>' : '')
-=======
->>>>>>> 05b63b97df57a7d38ceaf863abe1472188463129
       + '<i class="tier">' + (target.tier || '?') + '</i></span>'
       + '<span class="holds">' + (NOTES[key] || '') + '</span>'
       + (n ? '<span class="count">' + n + ' types</span>' : '');
@@ -521,11 +518,8 @@ function paint() {
   for (const r of (node.runs || [])) els.get(r) && els.get(r).classList.add('runs');
   for (const r of runners) els.get(r) && els.get(r).classList.add('runby');
 
-<<<<<<< HEAD
   const launched = (node.runs || []).length + runners.length;
 
-=======
->>>>>>> 05b63b97df57a7d38ceaf863abe1472188463129
   readout.innerHTML = '<b>' + shortName(node.name) + '</b> uses <span class="u">' + node.deps.length
     + '</span>, and <span class="d">' + users.length + '</span> '
     + (users.length === 1 ? 'thing uses' : 'things use') + ' it.'

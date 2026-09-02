@@ -101,13 +101,9 @@ var payload = new Dictionary<string, object>
         kv.Value.tier,
         kv.Value.kind,
         kv.Value.lib,
-<<<<<<< HEAD
         deps = kv.Value.deps.ToList(),
         runs = kv.Value.runs.ToList(),
         kv.Value.tested
-=======
-        deps = kv.Value.deps.ToList()
->>>>>>> 05b63b97df57a7d38ceaf863abe1472188463129
     }),
     ["types"] = types.ToDictionary(kv => kv.Key, kv => (object)new
     {
@@ -141,14 +137,11 @@ static Dictionary<string, BuildTarget> ReadBuildGraph(string root)
     var moduleRe = new Regex(@"dunya_module\(\s*([A-Za-z_]\w*)\s+([A-Za-z]+)\s*\)");
     var linkRe = new Regex(@"target_link_libraries\(\s*([A-Za-z_]\w*)([^)]*)\)", RegexOptions.Singleline);
     var aliasRe = new Regex(@"dunya::([a-z]\w*)");
-<<<<<<< HEAD
     var testRe = new Regex(
         "add_test\\(\\s*NAME\\s+\"?[^\"\\n]+\"?\\s+COMMAND\\s+([^\\s)]+)([^)]*)\\)",
         RegexOptions.Singleline
     );
     var targetFileRe = new Regex(@"TARGET_FILE:([A-Za-z_]\w*)");
-=======
->>>>>>> 05b63b97df57a7d38ceaf863abe1472188463129
 
     var found = new Dictionary<string, BuildTarget>();
 
@@ -179,7 +172,6 @@ static Dictionary<string, BuildTarget> ReadBuildGraph(string root)
             foreach (Match a in aliasRe.Matches(m.Groups[2].Value))
                 t.deps.Add("dunya_" + a.Groups[1].Value);
         }
-<<<<<<< HEAD
 
         foreach (Match m in testRe.Matches(text))
         {
@@ -196,8 +188,6 @@ static Dictionary<string, BuildTarget> ReadBuildGraph(string root)
                 }
             }
         }
-=======
->>>>>>> 05b63b97df57a7d38ceaf863abe1472188463129
     }
 
     foreach (var t in found.Values)
@@ -387,9 +377,6 @@ class BuildTarget
 {
     public string name = "", tier = "", kind = "", lib = "";
     public SortedSet<string> deps = new();
-<<<<<<< HEAD
     public SortedSet<string> runs = new();
     public bool tested;
-=======
->>>>>>> 05b63b97df57a7d38ceaf863abe1472188463129
 }
