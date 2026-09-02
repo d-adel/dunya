@@ -14,7 +14,6 @@ add_executable(unit_tests
     recordbounds_tests.cc
     maincamera_tests.cc
     capi_tests.cc
-    commandhistory_tests.cc
     crack_tests.cc
     deform_tests.cc
     dynamiccomponents_tests.cc
@@ -52,12 +51,13 @@ add_executable(unit_tests
     sampled_tests.cc
     worldcontents_tests.cc
     componentjson_tests.cc
+    undostack_tests.cc
     world_tests.cc
 )
 
 target_include_directories(unit_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 
-target_link_libraries(unit_tests PRIVATE dunya::view dunya::script dunya::core dunya::editor dunya::field dunya::objectmodel dunya::physics dunya::runtime dunya::serialize dunya::systems Catch2::Catch2WithMain)
+target_link_libraries(unit_tests PRIVATE dunya::view dunya::script dunya::core dunya::undo dunya::field dunya::objectmodel dunya::physics dunya::runtime dunya::serialize dunya::systems Catch2::Catch2WithMain)
 
 if (MSVC)
     target_compile_options(unit_tests PRIVATE /W4 /WX /w15038 /w14062 /Zc:__cplusplus)

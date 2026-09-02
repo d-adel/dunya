@@ -410,6 +410,42 @@ bool Session::destroyEntity(dunya::objectmodel::Entity entity) {
   return m_engine.world().destroy(entity);
 }
 
+void Session::record(std::string label) {
+  if (playing()) {
+    return;
+  }
+
+  m_history.record(m_engine.world(), std::move(label));
+}
+
+bool Session::undo() {
+  if (playing()) {
+    return false;
+  }
+
+  m_engine.context().device().waitIdle();
+
+  return m_history.undo(m_engine.world());
+}
+
+bool Session::redo() {
+  if (playing()) {
+    return false;
+  }
+
+  m_engine.context().device().waitIdle();
+
+  return m_history.redo(m_engine.world());
+}
+
+std::optional<std::string_view> Session::undoLabel() const noexcept {
+  return m_history.undoLabel();
+}
+
+std::optional<std::string_view> Session::redoLabel() const noexcept {
+  return m_history.redoLabel();
+}
+
 bool Session::save() const {
   std::optional<dunya::serialize::Project> project =
     dunya::serialize::Project::open(m_engine.projectRoot());
@@ -453,6 +489,8 @@ bool Session::openWorld(const std::string& name) {
   m_engine.storage().residency().releaseAll(m_engine.world());
 
   m_engine.world().clear();
+
+  m_history.clear();
 
   if (!dunya::serialize::restoreWorld(
         stored,

@@ -9,12 +9,15 @@
 #include <dunya/objectmodel/component/sdfgrid/sdfgrid.h>
 #include <dunya/renderer/scenetarget/scenetarget.h>
 #include <dunya/gizmos/grid/grid.h>
+#include <dunya/undo/undostack/undostack.h>
 
 #include <chrono>
+#include <cstddef>
 #include <filesystem>
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -111,6 +114,16 @@ public:
 
   [[nodiscard]] bool destroyEntity(dunya::objectmodel::Entity entity);
 
+  void record(std::string label);
+
+  [[nodiscard]] bool undo();
+
+  [[nodiscard]] bool redo();
+
+  [[nodiscard]] std::optional<std::string_view> undoLabel() const noexcept;
+
+  [[nodiscard]] std::optional<std::string_view> redoLabel() const noexcept;
+
   [[nodiscard]] bool save() const;
 
   [[nodiscard]] bool openWorld(const std::string& name);
@@ -149,11 +162,15 @@ public:
   );
 
 private:
+  static constexpr size_t UNDO_DEPTH = 32;
+
   void bindCamera();
 
   void frameCameraOnWorld();
 
   dunya::engine::Engine m_engine;
+
+  dunya::undo::UndoStack m_history{UNDO_DEPTH};
 
   std::string m_worldName;
   dunya::view::Camera m_camera;

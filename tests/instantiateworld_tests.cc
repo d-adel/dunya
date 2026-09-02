@@ -328,3 +328,47 @@ TEST_CASE(
   REQUIRE(runtime.registry().get<Lens>(eye).verticalFov == 55.0f);
   REQUIRE(runtime.registry().get<Pose>(eye).position == seat.position);
 }
+
+TEST_CASE("a cleared world takes back the ids it held", "[instantiate]") {
+  World live;
+
+  const Entity first = live.createSdfGrid(marked(10.0f), blank());
+  const Entity second = live.createSdfGrid(marked(11.0f), blank());
+
+  World kept;
+  dunya::objectmodel::instantiateWorld(live, kept);
+
+  live.clear();
+
+  REQUIRE(dunya::objectmodel::liveEntities(live).empty());
+
+  dunya::objectmodel::instantiateWorld(kept, live);
+
+  REQUIRE(live.registry().all_of<SdfGrid>(first));
+  REQUIRE(live.registry().all_of<SdfGrid>(second));
+  REQUIRE(markerAt(live, first) == 10.0f);
+  REQUIRE(markerAt(live, second) == 11.0f);
+}
+
+TEST_CASE("a recycled slot gives its id back", "[instantiate]") {
+  World live;
+
+  const Entity held = live.createSdfGrid(marked(10.0f), blank());
+
+  World kept;
+  dunya::objectmodel::instantiateWorld(live, kept);
+
+  REQUIRE(live.destroy(held));
+
+  const Entity recycled = live.createSdfGrid(marked(99.0f), blank());
+
+  REQUIRE(recycled != held);
+
+  live.clear();
+
+  dunya::objectmodel::instantiateWorld(kept, live);
+
+  REQUIRE(live.registry().all_of<SdfGrid>(held));
+  REQUIRE(markerAt(live, held) == 10.0f);
+  REQUIRE(dunya::objectmodel::liveEntities(live).size() == 1);
+}

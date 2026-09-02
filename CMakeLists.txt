@@ -126,7 +126,7 @@ find_package(Vulkan REQUIRED)
 
 add_subdirectory(engine/dunya/core)
 add_subdirectory(engine/dunya/objectmodel)
-add_subdirectory(engine/dunya/editor)
+add_subdirectory(engine/dunya/undo)
 add_subdirectory(engine/dunya/package)
 add_subdirectory(engine/dunya/view)
 add_subdirectory(engine/dunya/gizmos)

@@ -673,6 +673,90 @@ int32_t dunya_session_destroy_entity(DunyaSession* session, uint32_t entity) {
   });
 }
 
+int32_t dunya_session_record(DunyaSession* session, const char* label) {
+  return guard([&] {
+    if (session == nullptr || label == nullptr) {
+      throw std::runtime_error("dunya_session_record was given no session");
+    }
+
+    asSession(session)->record(label);
+  });
+}
+
+int32_t dunya_session_undo(DunyaSession* session) {
+  return guard([&] {
+    if (session == nullptr) {
+      throw std::runtime_error("No session");
+    }
+
+    static_cast<void>(asSession(session)->undo());
+  });
+}
+
+int32_t dunya_session_redo(DunyaSession* session) {
+  return guard([&] {
+    if (session == nullptr) {
+      throw std::runtime_error("No session");
+    }
+
+    static_cast<void>(asSession(session)->redo());
+  });
+}
+
+int32_t dunya_session_undo_label(
+  const DunyaSession* session,
+  char* buffer,
+  uint32_t capacity,
+  uint32_t* length
+) {
+  return guard([&] {
+    if (session == nullptr || length == nullptr) {
+      throw std::runtime_error("dunya_session_undo_label was given no session");
+    }
+
+    if (capacity > 0 && buffer == nullptr) {
+      throw std::runtime_error("dunya_session_undo_label was given no buffer");
+    }
+
+    const std::optional<std::string_view> label =
+      asSession(session)->undoLabel();
+
+    fill(
+      std::string{label.value_or(std::string_view{})},
+      buffer,
+      capacity,
+      length
+    );
+  });
+}
+
+int32_t dunya_session_redo_label(
+  const DunyaSession* session,
+  char* buffer,
+  uint32_t capacity,
+  uint32_t* length
+) {
+  return guard([&] {
+    if (session == nullptr || length == nullptr) {
+      throw std::runtime_error("dunya_session_redo_label was given no session");
+    }
+
+    if (capacity > 0 && buffer == nullptr) {
+      throw std::runtime_error("dunya_session_redo_label was given no buffer");
+    }
+
+    const std::optional<std::string_view> label =
+      asSession(session)->redoLabel();
+
+    fill(
+      std::string{label.value_or(std::string_view{})},
+      buffer,
+      capacity,
+      length
+    );
+  });
+}
+
 int32_t dunya_session_save(DunyaSession* session) {
   return guard([&] {
     if (session == nullptr) {

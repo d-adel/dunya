@@ -14,7 +14,7 @@ target_link_libraries(dunya_c PRIVATE
     dunya::package
     dunya::assets
     dunya::core
-    dunya::editor
+    dunya::undo
     dunya::engine
     dunya::field
     dunya::gpu

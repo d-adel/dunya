@@ -152,6 +152,27 @@ dunya_session_set_deformable(DunyaSession* session, uint32_t entity);
 DUNYA_C_API int32_t
 dunya_session_destroy_entity(DunyaSession* session, uint32_t entity);
 
+DUNYA_C_API int32_t
+dunya_session_record(DunyaSession* session, const char* label);
+
+DUNYA_C_API int32_t dunya_session_undo(DunyaSession* session);
+
+DUNYA_C_API int32_t dunya_session_redo(DunyaSession* session);
+
+DUNYA_C_API int32_t dunya_session_undo_label(
+  const DunyaSession* session,
+  char* buffer,
+  uint32_t capacity,
+  uint32_t* length
+);
+
+DUNYA_C_API int32_t dunya_session_redo_label(
+  const DunyaSession* session,
+  char* buffer,
+  uint32_t capacity,
+  uint32_t* length
+);
+
 DUNYA_C_API int32_t dunya_session_save(DunyaSession* session);
 
 DUNYA_C_API int32_t dunya_session_play(DunyaSession* session);
