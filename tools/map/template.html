@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dunya · map</title>
+<style>
+  :root {
+    --ground: #ECEFEE;
+    --surface: #FBFCFB;
+    --surface-2: #F2F5F4;
+    --ink: #14232A;
+    --ink-2: #4A5D65;
+    --muted: #78888E;
+    --line: #C9D3D2;
+    --line-soft: #DEE5E4;
+
+    --uses: #B93E58;
+    --usedby: #1E767B;
+    --sel: #14232A;
+
+    --owns: #1E767B;
+    --refs: #B93E58;
+    --borrow: #A9631A;
+    --shares: #6C55A8;
+
+    --band-host: rgba(108, 85, 168, 0.09);
+    --band-engine: rgba(30, 118, 123, 0.08);
+    --band-base: rgba(120, 136, 142, 0.10);
+
+    --mono: "Cascadia Mono", "Consolas", ui-monospace, monospace;
+    --sans: "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #0F1619; --surface: #171F24; --surface-2: #1E282D;
+      --ink: #E1EAEB; --ink-2: #A8B8BC; --muted: #7F9197;
+      --line: #2B373C; --line-soft: #222D32;
+      --uses: #E4657C; --usedby: #4FB3B4; --sel: #E1EAEB;
+      --owns: #4FB3B4; --refs: #E4657C; --borrow: #D89A4A; --shares: #A08BDC;
+      --band-host: rgba(160, 139, 220, 0.10);
+      --band-engine: rgba(79, 179, 180, 0.09);
+      --band-base: rgba(127, 145, 151, 0.10);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 14px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .bar {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    padding: 12px 22px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
+  .brand { font-family: var(--mono); font-weight: 600; font-size: 13px; }
+  .brand span { color: var(--muted); font-weight: 400; }
+
+  .readout { font-size: 12.5px; color: var(--ink-2); }
+  .readout b { font-family: var(--mono); }
+  .readout .u { color: var(--uses); font-weight: 600; }
+  .readout .d { color: var(--usedby); font-weight: 600; }
+
+  .key { margin-left: auto; display: flex; gap: 14px; font-size: 11.5px; color: var(--muted); }
+  .key i { font-style: normal; display: flex; align-items: center; gap: 5px; }
+  .key .sw { width: 11px; height: 11px; border-radius: 2px; border: 1.5px solid; }
+  .key .sw.u { border-color: var(--uses); background: color-mix(in oklab, var(--uses) 16%, transparent); }
+  .key .sw.d { border-color: var(--usedby); background: color-mix(in oklab, var(--usedby) 16%, transparent); }
+
+  main { flex: 1; overflow: auto; padding: 22px 22px 90px; }
+
+  .board { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+
+  /* ---------- level 1: the overview ---------- */
+
+  .band {
+    border: 1px solid var(--line-soft);
+    border-radius: 5px;
+    padding: 12px 14px 14px;
+  }
+  .band.host { background: var(--band-host); }
+  .band.engine { background: var(--band-engine); }
+  .band.base { background: var(--band-base); }
+
+  .band > h2 {
+    margin: 0 0 10px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .groups { display: flex; gap: 12px; flex-wrap: wrap; align-items: stretch; }
+
+  .group {
+    flex: 1 1 220px;
+    border: 1px dashed var(--line);
+    border-radius: 4px;
+    padding: 9px 10px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 200px;
+  }
+  .group > h3 {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .box {
+    appearance: none;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1.5px solid var(--line);
+    border-radius: 4px;
+    padding: 8px 11px 9px;
+    flex: 1 1 150px;
+    min-width: 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    transition: border-color 100ms ease, background 100ms ease, opacity 100ms ease;
+  }
+  .box:hover { border-color: var(--muted); }
+  .box:focus-visible { outline: 2px solid var(--sel); outline-offset: 2px; }
+
+  .box .nm { font-family: var(--mono); font-size: 12.5px; font-weight: 600; }
+  .box .holds { font-size: 11px; color: var(--muted); line-height: 1.35; }
+  .box .count { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+
+  .board.picked .box { opacity: 0.34; }
+  .board.picked .box.on,
+  .board.picked .box.uses,
+  .board.picked .box.usedby { opacity: 1; }
+
+  .box.on { border-color: var(--sel); border-width: 2px; background: var(--surface-2); }
+  .box.uses { border-color: var(--uses); background: color-mix(in oklab, var(--uses) 8%, var(--surface)); }
+  .box.usedby { border-color: var(--usedby); background: color-mix(in oklab, var(--usedby) 8%, var(--surface)); }
+
+  .hint { font-size: 12px; color: var(--muted); text-align: center; padding: 6px 0 0; }
+
+  /* ---------- level 2: one system ---------- */
+
+  .detail {
+    max-width: 1180px;
+    margin: 22px auto 0;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 16px 18px 20px;
+  }
+  .detail.hidden { display: none; }
+
+  .detail-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--line-soft);
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+  }
+  .detail-head h2 { margin: 0; font-family: var(--mono); font-size: 17px; font-weight: 600; }
+  .detail-head .sub { font-size: 12.5px; color: var(--muted); }
+  .detail-head .close {
+    margin-left: auto;
+    appearance: none;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 3px 9px;
+  }
+  .detail-head .close:hover { color: var(--ink); border-color: var(--muted); }
+
+  .picker { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 14px; }
+
+  .chip {
+    appearance: none;
+    font: inherit;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    cursor: pointer;
+    padding: 4px 9px;
+    border-radius: 3px;
+    border: 1px solid var(--line);
+    background: var(--ground);
+    color: var(--ink-2);
+  }
+  .chip:hover { border-color: var(--owns); color: var(--owns); }
+  .chip.on { background: color-mix(in oklab, var(--owns) 14%, var(--surface)); border-color: var(--owns); color: var(--owns); font-weight: 600; }
+
+  .lifetime {
+    font-size: 12.5px;
+    color: var(--ink-2);
+    background: var(--ground);
+    border-left: 3px solid var(--borrow);
+    border-radius: 3px;
+    padding: 9px 12px;
+    margin-bottom: 12px;
+  }
+  .lifetime b { font-family: var(--mono); color: var(--ink); }
+
+  .okey { display: flex; gap: 14px; font-size: 11px; font-family: var(--mono); color: var(--muted); margin-bottom: 10px; flex-wrap: wrap; }
+  .okey i { font-style: normal; }
+
+  .tree { font-family: var(--mono); font-size: 12.5px; }
+
+  .trow {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+  .trow:hover { background: var(--surface-2); }
+
+  .twist {
+    appearance: none; background: none; border: 0; font: inherit;
+    color: var(--muted); cursor: pointer; width: 14px; text-align: center;
+    padding: 0; flex: none;
+  }
+  .twist:hover { color: var(--ink); }
+  .twist.leaf { cursor: default; opacity: 0.3; }
+
+  .glyph { flex: none; width: 14px; text-align: center; font-weight: 600; }
+  .g-owns { color: var(--owns); }
+  .g-refs { color: var(--refs); }
+  .g-borrow { color: var(--borrow); }
+  .g-shares { color: var(--shares); }
+  .g-callback { color: var(--muted); }
+
+  .mname { font-weight: 600; flex: none; }
+  .mtype { color: var(--ink-2); word-break: break-word; }
+  .rel { color: var(--muted); font-size: 10.5px; margin-left: auto; flex: none; padding-left: 12px; }
+
+  .trow.root { font-size: 13.5px; padding: 5px 6px; }
+  .trow.root .mname { color: var(--owns); }
+
+  .kids { margin-left: 14px; padding-left: 13px; border-left: 1px solid var(--line-soft); }
+  .cycle { color: var(--muted); font-size: 10.5px; font-style: italic; }
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <span class="brand">dunya <span>map</span></span>
+  <span class="readout" id="readout">Click any box to see what it touches, and what is inside it.</span>
+  <span class="key">
+    <i><span class="sw u"></span>it uses</i>
+    <i><span class="sw d"></span>uses it</i>
+  </span>
+</div>
+
+<main>
+  <div class="board" id="board"></div>
+  <div class="hint">Position is layer &mdash; nothing depends on anything above it. No arrows: selecting tints what it touches.</div>
+
+  <section class="detail hidden" id="detail">
+    <div class="detail-head">
+      <h2 id="dName"></h2>
+      <span class="sub" id="dSub"></span>
+      <button class="close" id="dClose" type="button">close</button>
+    </div>
+
+    <div class="picker" id="dPicker"></div>
+    <div class="lifetime" id="dLife"></div>
+
+    <div class="okey">
+      <i><span class="g-owns">◆</span> owns</i>
+      <i><span class="g-owns">◇</span> owns, maybe</i>
+      <i><span class="g-shares">◈</span> shares</i>
+      <i><span class="g-refs">→</span> references</i>
+      <i><span class="g-borrow">⋯</span> borrows</i>
+    </div>
+
+    <div class="tree" id="dTree"></div>
+  </section>
+</main>
+
+<script>
+const DATA = /*DATA*/null;
+const TYPES = DATA.types;
+const BYLIB = DATA.byLib;
+
+const BANDS = [
+  {
+    cls: 'host', title: 'hosts — what you actually run',
+    groups: [
+      { title: 'front ends', boxes: [
+        { id: 'editorapp', lib: null, name: 'Dunya.Editor', holds: 'C# / Avalonia · viewport, hierarchy, inspector', deps: ['capi'] },
+        { id: 'player', lib: 'player', name: 'DunyaPlayer', holds: 'GLFW window · frame loop · golden capture',
+          deps: ['engine','assets','serialize','core','objectmodel','platform','gpu','renderer','field','physics','runtime','script','systems'] }
+      ]},
+      { title: 'seam', boxes: [
+        { id: 'capi', lib: 'capi', name: 'dunya_c', holds: 'C ABI · Session · Win32 window',
+          deps: ['engine','assets','core','editor','field','gpu','objectmodel','renderer','physics','runtime','serialize','script','systems','viewport'] }
+      ]}
+    ]
+  },
+  {
+    cls: 'engine', title: 'engine',
+    groups: [
+      { title: 'host core', boxes: [
+        { id: 'engine', lib: 'engine', name: 'engine', holds: 'owns the device, world, runtime and renderer · drives a frame',
+          deps: ['assets','core','field','gpu','objectmodel','physics','renderer','runtime','script','serialize','systems'] }
+      ]}
+    ]
+  },
+  {
+    cls: 'engine', title: 'subsystems',
+    groups: [
+      { title: 'content', boxes: [
+        { id: 'objectmodel', lib: 'objectmodel', name: 'objectmodel', holds: 'World · entities · components · primitive store', deps: ['core','field'] },
+        { id: 'field', lib: 'field', name: 'field', holds: 'SDF primitives · sampled lattices · capabilities', deps: [] },
+        { id: 'serialize', lib: 'serialize', name: 'serialize', holds: 'world and project JSON', deps: ['core','field','objectmodel'] },
+        { id: 'assets', lib: 'assets', name: 'assets', holds: 'project loading · mesh buffers', deps: ['core','gpu','objectmodel','renderer','serialize'] }
+      ]},
+      { title: 'simulation', boxes: [
+        { id: 'physics', lib: 'physics', name: 'physics', holds: 'Jolt bodies · FieldShape · contacts', deps: ['core','field','objectmodel'] },
+        { id: 'runtime', lib: 'runtime', name: 'runtime', holds: 'play mode · instantiated world · bodies', deps: ['core','field','objectmodel','physics'] },
+        { id: 'script', lib: 'script', name: 'script', holds: 'C# hosting · API table', deps: ['core','objectmodel','systems'] },
+        { id: 'systems', lib: 'systems', name: 'systems', holds: 'schedule · input state', deps: ['objectmodel'] }
+      ]},
+      { title: 'presentation & authoring', boxes: [
+        { id: 'renderer', lib: 'renderer', name: 'renderer', holds: 'records · baker · volume pool · Frame', deps: ['core','field','objectmodel','gpu'] },
+        { id: 'viewport', lib: 'viewport', name: 'viewport', holds: 'editor camera · grid', deps: ['core','objectmodel','gpu'] },
+        { id: 'editor', lib: 'editor', name: 'editor', holds: 'commands · history · field editing · packaging', deps: ['core','field','objectmodel'] }
+      ]}
+    ]
+  },
+  {
+    cls: 'base', title: 'foundation',
+    groups: [
+      { title: '', boxes: [
+        { id: 'gpu', lib: 'gpu', name: 'gpu', holds: 'Vulkan RHI · device, buffers, images, pipelines', deps: ['core'] },
+        { id: 'platform', lib: 'platform', name: 'platform', holds: 'GLFW window and input', deps: ['core'] },
+        { id: 'core', lib: 'core', name: 'core', holds: 'constants · event dispatcher', deps: [] }
+      ]}
+    ]
+  }
+];
+
+const ALL = new Map();
+for (const b of BANDS) for (const g of b.groups) for (const x of g.boxes) ALL.set(x.id, x);
+
+const board = document.getElementById('board');
+const readout = document.getElementById('readout');
+const detail = document.getElementById('detail');
+const els = new Map();
+
+let picked = null;
+let openType = null;
+const open = new Set();
+
+/* ---------- level 1 ---------- */
+
+for (const band of BANDS) {
+  const bandEl = document.createElement('section');
+  bandEl.className = 'band ' + band.cls;
+  bandEl.innerHTML = '<h2>' + band.title + '</h2>';
+
+  const groups = document.createElement('div');
+  groups.className = 'groups';
+
+  for (const g of band.groups) {
+    const gEl = document.createElement('div');
+    gEl.className = 'group';
+    if (g.title) gEl.innerHTML = '<h3>' + g.title + '</h3>';
+
+    const row = document.createElement('div');
+    row.className = 'row';
+
+    for (const x of g.boxes) {
+      const n = (x.lib && BYLIB[x.lib]) ? BYLIB[x.lib].length : 0;
+      const btn = document.createElement('button');
+      btn.className = 'box';
+      btn.type = 'button';
+      btn.innerHTML = '<span class="nm">' + x.name + '</span>'
+                    + '<span class="holds">' + x.holds + '</span>'
+                    + (n ? '<span class="count">' + n + ' types</span>' : '');
+      btn.addEventListener('click', () => {
+        picked = picked === x.id ? null : x.id;
+        openType = null;
+        open.clear();
+        paint();
+      });
+      row.appendChild(btn);
+      els.set(x.id, btn);
+    }
+
+    gEl.appendChild(row);
+    groups.appendChild(gEl);
+  }
+
+  bandEl.appendChild(groups);
+  board.appendChild(bandEl);
+}
+
+function usersOf(id) {
+  const out = [];
+  for (const [key, x] of ALL) if (x.deps.includes(id)) out.push(key);
+  return out;
+}
+
+function paint() {
+  for (const el of els.values()) el.classList.remove('on', 'uses', 'usedby');
+  board.classList.toggle('picked', !!picked);
+
+  if (!picked) {
+    readout.textContent = 'Click any box to see what it touches, and what is inside it.';
+    detail.classList.add('hidden');
+    return;
+  }
+
+  const node = ALL.get(picked);
+  const users = usersOf(picked);
+
+  els.get(picked).classList.add('on');
+  for (const d of node.deps) els.get(d) && els.get(d).classList.add('uses');
+  for (const u of users) els.get(u) && els.get(u).classList.add('usedby');
+
+  readout.innerHTML = '<b>' + node.name + '</b> uses <span class="u">' + node.deps.length
+    + '</span>, and <span class="d">' + users.length + '</span> '
+    + (users.length === 1 ? 'thing uses' : 'things use') + ' it.';
+
+  renderDetail(node);
+}
+
+/* ---------- level 2 ---------- */
+
+const GLYPH = {
+  'owns':       { g: '◆', cls: 'g-owns',     label: 'owns' },
+  'owns-many':  { g: '◆', cls: 'g-owns',     label: 'owns many' },
+  'owns-maybe': { g: '◇', cls: 'g-owns',     label: 'owns, maybe' },
+  'shares':     { g: '◈', cls: 'g-shares',   label: 'shares' },
+  'references': { g: '→', cls: 'g-refs',     label: 'references' },
+  'borrows':    { g: '⋯', cls: 'g-borrow',   label: 'borrows' },
+  'callback':   { g: '⌁', cls: 'g-callback', label: 'callback' }
+};
+
+function renderDetail(node) {
+  const names = (node.lib && BYLIB[node.lib]) ? BYLIB[node.lib] : [];
+
+  if (!names.length) {
+    detail.classList.remove('hidden');
+    document.getElementById('dName').textContent = node.name;
+    document.getElementById('dSub').textContent = 'no C++ types here';
+    document.getElementById('dPicker').innerHTML = '';
+    document.getElementById('dLife').textContent =
+      'This box has no C++ headers in the tree — it is a front end, not a library.';
+    document.getElementById('dTree').innerHTML = '';
+    return;
+  }
+
+  detail.classList.remove('hidden');
+  document.getElementById('dName').textContent = node.name;
+  document.getElementById('dSub').textContent = names.length + ' types with members · ' + node.holds;
+
+  if (!openType || !names.includes(openType)) {
+    openType = biggest(names);
+  }
+
+  const picker = document.getElementById('dPicker');
+  picker.innerHTML = '';
+
+  for (const n of names) {
+    const c = document.createElement('button');
+    c.className = 'chip' + (n === openType ? ' on' : '');
+    c.type = 'button';
+    c.textContent = n + ' (' + TYPES[n].members.length + ')';
+    c.addEventListener('click', () => {
+      openType = n;
+      open.clear();
+      renderDetail(node);
+    });
+    picker.appendChild(c);
+  }
+
+  const borrowed = countBorrowed(openType);
+  document.getElementById('dLife').innerHTML =
+    '<b>' + openType + '</b> and everything it owns holds <b>' + borrowed + '</b> '
+    + (borrowed === 1 ? 'handle' : 'handles') + ' on things it does not own. '
+    + 'Each one is a lifetime question.';
+
+  const tree = document.getElementById('dTree');
+  tree.innerHTML = '';
+  tree.appendChild(rowFor(
+    { name: openType, type: TYPES[openType].file, relation: 'owns', target: openType },
+    0, new Set(), true
+  ));
+}
+
+function biggest(names) {
+  let best = names[0];
+  for (const n of names) {
+    if (TYPES[n].members.length > TYPES[best].members.length) best = n;
+  }
+  return best;
+}
+
+function countBorrowed(name, seen = new Set()) {
+  if (seen.has(name)) return 0;
+  seen.add(name);
+
+  const t = TYPES[name];
+  if (!t) return 0;
+
+  let n = 0;
+  for (const m of t.members) {
+    if (m.relation === 'borrows' || m.relation === 'references') n++;
+    if (m.target && m.relation.startsWith('owns')) n += countBorrowed(m.target, seen);
+  }
+  return n;
+}
+
+function rowFor(member, depth, ancestors, isRoot) {
+  const wrap = document.createElement('div');
+  const line = document.createElement('div');
+  line.className = 'trow' + (isRoot ? ' root' : '');
+
+  const target = member.target;
+  const expandable = target && TYPES[target] && !ancestors.has(target);
+  const path = depth + ':' + member.name + ':' + (target || '');
+  const isOpen = isRoot || open.has(path);
+
+  const twist = document.createElement('button');
+  twist.className = 'twist' + (expandable ? '' : ' leaf');
+  twist.type = 'button';
+  twist.textContent = expandable ? (isOpen ? '▾' : '▸') : '·';
+
+  if (expandable) {
+    twist.addEventListener('click', () => {
+      if (open.has(path)) open.delete(path); else open.add(path);
+      const kids = wrap.querySelector(':scope > .kids');
+      const now = open.has(path);
+      twist.textContent = now ? '▾' : '▸';
+      if (kids) kids.style.display = now ? '' : 'none';
+    });
+  }
+
+  const info = GLYPH[member.relation] || GLYPH['owns'];
+
+  const glyph = document.createElement('span');
+  glyph.className = 'glyph ' + info.cls;
+  glyph.textContent = isRoot ? '' : info.g;
+
+  const nm = document.createElement('span');
+  nm.className = 'mname';
+  nm.textContent = member.name;
+
+  const ty = document.createElement('span');
+  ty.className = 'mtype';
+  ty.textContent = isRoot ? '' : member.type;
+
+  const rel = document.createElement('span');
+  rel.className = 'rel';
+  rel.textContent = isRoot ? member.type : info.label;
+
+  line.append(twist, glyph, nm, ty, rel);
+
+  if (!expandable && target && ancestors.has(target)) {
+    const c = document.createElement('span');
+    c.className = 'cycle';
+    c.textContent = '(already above)';
+    line.appendChild(c);
+  }
+
+  wrap.appendChild(line);
+
+  if (expandable) {
+    const kids = document.createElement('div');
+    kids.className = 'kids';
+    if (!isOpen) kids.style.display = 'none';
+
+    const next = new Set(ancestors);
+    next.add(target);
+
+    for (const m of TYPES[target].members) {
+      kids.appendChild(rowFor(m, depth + 1, next, false));
+    }
+
+    wrap.appendChild(kids);
+  }
+
+  return wrap;
+}
+
+document.getElementById('dClose').addEventListener('click', () => {
+  picked = null;
+  paint();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+</script>
+</body>
+</html>

@@ -249,8 +249,8 @@ void Renderer::recordCommandBuffer(
 
   runPasses(passes, PassOrder::BeforeScene);
 
-  const bool drawMeshes = drawsMeshes(frameContext.mode);
-  const bool drawSdf = drawsSdf(frameContext.mode);
+  const bool drawMeshes = frameContext.drawMeshes;
+  const bool drawSdf = frameContext.drawSdf;
 
   const std::array<VkDescriptorSet, 2> sharedSets = {
     m_frameGlobals.descriptorSet(m_currentFrame),

@@ -1,6 +1,6 @@
 #pragma once
 
-namespace dunya::renderer {
+namespace dunya::view {
 
 enum class DrawMode {
   Nothing,

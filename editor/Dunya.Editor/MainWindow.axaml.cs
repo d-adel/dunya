@@ -19,7 +19,7 @@ public partial class MainWindow : Window
     private readonly string m_logPath =
         Path.Combine(AppContext.BaseDirectory, "spike.log");
 
-    private readonly ViewportHost m_viewport = new()
+    private readonly ViewportSurface m_viewport = new()
     {
         ProjectRoot = Program.ProjectRoot,
         World = Program.World

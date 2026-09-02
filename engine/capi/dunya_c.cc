@@ -747,20 +747,38 @@ uint64_t dunya_session_add_material(
   }
 }
 
-void dunya_session_set_supersample(DunyaSession* session, float scale) {
-  if (session != nullptr) {
-    asSession(session)->setSupersample(scale);
+void dunya_session_view_settings(
+  const DunyaSession* session,
+  DunyaViewSettings* settings
+) {
+  if (session == nullptr || settings == nullptr) {
+    return;
   }
+
+  const dunya::view::Viewport port = asSession(session)->viewSettings();
+
+  settings->gridVisible = port.gridVisible ? 1 : 0;
+  settings->supersample = port.supersample;
+  settings->drawMode = static_cast<int32_t>(port.mode);
+  settings->fieldRepresentation = port.fieldRepresentation;
 }
 
-float dunya_session_supersample(const DunyaSession* session) {
-  return session == nullptr ? 1.0f : asSession(session)->supersample();
-}
-
-void dunya_session_show_grid(DunyaSession* session, int32_t visible) {
-  if (session != nullptr) {
-    asSession(session)->showGrid(visible != 0);
+void dunya_session_set_view_settings(
+  DunyaSession* session,
+  const DunyaViewSettings* settings
+) {
+  if (session == nullptr || settings == nullptr) {
+    return;
   }
+
+  dunya::view::Viewport port = asSession(session)->viewSettings();
+
+  port.gridVisible = settings->gridVisible != 0;
+  port.supersample = settings->supersample;
+  port.mode = static_cast<dunya::view::DrawMode>(settings->drawMode);
+  port.fieldRepresentation = settings->fieldRepresentation;
+
+  asSession(session)->setViewSettings(port);
 }
 
 int32_t dunya_session_open_world(DunyaSession* session, const char* name) {

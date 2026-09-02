@@ -10,7 +10,7 @@
 #include <dunya/renderer/materialrecord/materialrecord.h>
 #include <dunya/renderer/sdfbaker/sdfbaker.h>
 #include <dunya/renderer/vertex/vertex.h>
-#include <dunya/viewport/grid/grid.h>
+#include <dunya/gizmos/grid/grid.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -379,7 +379,7 @@ TEST_CASE(
   REQUIRE(grid.ok());
 
   const auto gridAttributes =
-    dunya::viewport::GridVertex::attributeDescriptions();
+    dunya::gizmos::GridVertex::attributeDescriptions();
 
   size_t gridInputs = 0;
 

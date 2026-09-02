@@ -1,6 +1,6 @@
 #include "grid.ih"
 
-namespace dunya::viewport {
+namespace dunya::gizmos {
 
 namespace {
 
@@ -45,8 +45,8 @@ Grid::Grid(
   const dunya::gpu::Device& device,
   const dunya::gpu::SwapChain& swapChain,
   std::vector<VkDescriptorSetLayout> setLayouts,
-  const GridPlane& plane,
-  const GridStyle& style
+  const dunya::view::GridPlane& plane,
+  const dunya::view::GridStyle& style
 )
     : m_device(device),
       m_plane(plane),

@@ -31,10 +31,6 @@ target_link_libraries(dunya_renderer PUBLIC
     dunya::objectmodel
     dunya::gpu
 )
-target_compile_definitions(dunya_renderer PUBLIC
-    DUNYA_SHADOW_MAX_DISTANCE=${DUNYA_SHADOW_MAX_DISTANCE}
-    DUNYA_SHADOW_SHARPNESS=${DUNYA_SHADOW_SHARPNESS}
-)
 if (MSVC)
     target_compile_options(dunya_renderer PRIVATE /W4 /WX /w15038 /w14062 /Zc:__cplusplus)
 else()

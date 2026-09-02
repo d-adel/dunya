@@ -9,13 +9,12 @@ internal static class DunyaNative
     private const string Library = "dunya_c";
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
-    internal static extern void dunya_session_set_supersample(IntPtr session, float scale);
+    internal static extern void dunya_session_view_settings(
+        IntPtr session, out ViewSettings settings);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
-    internal static extern float dunya_session_supersample(IntPtr session);
-
-    [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
-    internal static extern void dunya_session_show_grid(IntPtr session, int visible);
+    internal static extern void dunya_session_set_view_settings(
+        IntPtr session, ref ViewSettings settings);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
     internal static extern int dunya_session_open_world(

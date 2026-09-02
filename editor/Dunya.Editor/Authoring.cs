@@ -111,13 +111,33 @@ public sealed class Authoring
 
     public bool Save() => DunyaNative.dunya_session_save(m_session) == 0;
 
-    public void SetSupersample(float scale)
-        => DunyaNative.dunya_session_set_supersample(m_session, scale);
+    public ViewSettings View()
+    {
+        DunyaNative.dunya_session_view_settings(m_session, out ViewSettings settings);
 
-    public float Supersample() => DunyaNative.dunya_session_supersample(m_session);
+        return settings;
+    }
+
+    public void SetView(ViewSettings settings)
+        => DunyaNative.dunya_session_set_view_settings(m_session, ref settings);
+
+    public void SetSupersample(float scale)
+    {
+        ViewSettings settings = View();
+        settings.Supersample = scale;
+
+        SetView(settings);
+    }
+
+    public float Supersample() => View().Supersample;
 
     public void ShowGrid(bool visible)
-        => DunyaNative.dunya_session_show_grid(m_session, visible ? 1 : 0);
+    {
+        ViewSettings settings = View();
+        settings.GridVisible = visible ? 1 : 0;
+
+        SetView(settings);
+    }
 
     public bool OpenWorld(string name)
         => DunyaNative.dunya_session_open_world(m_session, name) == 0;

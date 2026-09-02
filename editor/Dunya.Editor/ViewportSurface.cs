@@ -9,7 +9,7 @@ using Avalonia.Threading;
 
 namespace Dunya.Editor;
 
-public sealed class ViewportHost : NativeControlHost
+public sealed class ViewportSurface : NativeControlHost
 {
     private const int GWLP_WNDPROC = -4;
 

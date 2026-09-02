@@ -15,14 +15,30 @@
 #include <dunya/script/api/api.h>
 #include <dunya/systems/input/input.h>
 #include <dunya/systems/schedule/schedule.h>
+#include <dunya/view/lookthrough/lookthrough.h>
+#include <dunya/view/viewportstore/viewportstore.h>
 
 #include <filesystem>
+#include <functional>
 #include <memory>
+#include <span>
 #include <optional>
 #include <string>
 #include <vector>
 
 namespace dunya::engine {
+
+struct FrameRequest {
+  dunya::view::ViewportId viewport = dunya::view::INVALID_VIEWPORT;
+
+  float deltaSeconds = 0.0f;
+
+  bool surfaceStale = false;
+
+  std::span<const dunya::renderer::ScenePass> passes = {};
+
+  std::function<void(VkImage)> capture{};
+};
 
 class Engine {
 public:
@@ -38,6 +54,19 @@ public:
   Engine& operator=(Engine&&) = delete;
 
   void loadWorld(const std::string& world);
+
+  [[nodiscard]] dunya::view::ViewportId createViewport();
+
+  [[nodiscard]] bool destroyViewport(dunya::view::ViewportId id);
+
+  [[nodiscard]] bool configureViewport(
+    dunya::view::ViewportId id,
+    const dunya::view::Viewport& config
+  );
+
+  [[nodiscard]] const dunya::view::Viewport* viewport(
+    dunya::view::ViewportId id
+  ) const;
 
   [[nodiscard]] const std::filesystem::path& projectRoot() const noexcept;
 
@@ -71,12 +100,6 @@ public:
   [[nodiscard]] dunya::renderer::Renderer& renderer() noexcept;
   [[nodiscard]] const dunya::renderer::Renderer& renderer() const noexcept;
 
-  [[nodiscard]] dunya::renderer::Frame& frame() noexcept;
-  [[nodiscard]] const dunya::renderer::Frame& frame() const noexcept;
-
-  [[nodiscard]] dunya::gpu::Pipeline& meshPipeline() noexcept;
-  [[nodiscard]] dunya::gpu::Pipeline& sdfPipeline() noexcept;
-
   [[nodiscard]] dunya::systems::Schedule& schedule() noexcept;
 
   [[nodiscard]] dunya::systems::InputState& input() noexcept;
@@ -86,15 +109,10 @@ public:
 
   [[nodiscard]] uint32_t frameIndex() const noexcept;
 
-  void tick(float deltaSeconds, dunya::core::Telemetry& telemetry);
-
-  void flushVolumes(dunya::core::Telemetry& telemetry);
-
-  void packFrame(bool holdBakes = false);
-
-  void endFrame() noexcept;
-
-  void drawSky(VkCommandBuffer commands) const;
+  [[nodiscard]] bool renderFrame(
+    const FrameRequest& request,
+    dunya::core::Telemetry& telemetry
+  );
 
   [[nodiscard]] VkDescriptorSet globals() const noexcept;
 
@@ -135,6 +153,18 @@ private:
 
   void applyPendingBodies();
 
+  void lookThroughViewport(dunya::view::ViewportId id, float aspect);
+
+  void tick(float deltaSeconds, dunya::core::Telemetry& telemetry);
+
+  void flushVolumes(dunya::core::Telemetry& telemetry);
+
+  void packFrame(bool holdBakes = false);
+
+  void endFrame() noexcept;
+
+  void drawSky(VkCommandBuffer commands) const;
+
   void stepPhysics(float deltaSeconds, dunya::core::Telemetry& telemetry);
 
   void runSystems(float deltaSeconds);
@@ -158,6 +188,8 @@ private:
 
   dunya::systems::Schedule m_schedule;
   dunya::systems::InputState m_input;
+
+  dunya::view::ViewportStore m_viewports;
 
   uint32_t m_frameIndex = 0;
 

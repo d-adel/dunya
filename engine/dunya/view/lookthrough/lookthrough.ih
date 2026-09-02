@@ -1,0 +1,4 @@
+#include "lookthrough.h"
+
+#include <dunya/objectmodel/component/lens/lens.h>
+#include <dunya/objectmodel/component/pose/pose.h>

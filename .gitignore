@@ -9,3 +9,5 @@ bin/
 obj/
 
 *.user
+
+tools/map/index.html

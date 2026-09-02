@@ -36,6 +36,10 @@ Session::Session(
       ) {
   m_engine.renderer().useTarget(&m_sceneTarget);
 
+  m_viewport = m_engine.createViewport();
+
+  m_port.gridVisible = true;
+
   m_engine.loadWorld(world);
 }
 
@@ -49,36 +53,28 @@ Session::~Session() {
   }
 }
 
-void Session::lookAtWorld(float aspect) {
+void Session::bindCamera() {
+  m_port.mode = dunya::view::DrawMode::Both;
+
   if (m_viewsThroughScene) {
-    const std::optional<dunya::objectmodel::CameraView> scene =
-      dunya::objectmodel::activeCamera(activeWorld(), aspect);
+    m_port.camera = dunya::objectmodel::mainCamera(activeWorld());
 
-    if (scene.has_value()) {
-      m_engine.frame().proj = scene->projection;
-      m_engine.frame().view = scene->view;
-      m_engine.frame().cameraPos = glm::vec4(scene->position, scene->nearPlane);
-      m_engine.frame().mode = dunya::renderer::DrawMode::Both;
-
-      return;
+    if (m_port.camera == dunya::objectmodel::INVALID_ENTITY) {
+      m_port.mode = dunya::view::DrawMode::Nothing;
+    }
+  } else {
+    if (!m_camera.placed()) {
+      frameCameraOnWorld();
     }
 
-    m_engine.frame().mode = dunya::renderer::DrawMode::Nothing;
-
-    return;
+    m_port.camera = dunya::objectmodel::INVALID_ENTITY;
+    m_port.pose = m_camera.pose();
+    m_port.lens = m_camera.lens();
   }
 
-  m_engine.frame().mode = dunya::renderer::DrawMode::Both;
-
-  if (!m_camera.placed()) {
-    frameCameraOnWorld();
+  if (!m_engine.configureViewport(m_viewport, m_port)) {
+    throw std::runtime_error("the session's viewport went missing");
   }
-
-  m_engine.frame().proj =
-    dunya::objectmodel::projection(m_camera.lens(), aspect);
-  m_engine.frame().view = m_camera.viewMatrix();
-  m_engine.frame().cameraPos =
-    glm::vec4(m_camera.eye(), m_camera.lens().nearPlane);
 }
 
 void Session::setKey(uint32_t key, bool down) noexcept {
@@ -195,9 +191,15 @@ dunya::objectmodel::Entity Session::pick(float x, float y) {
     2.0f * y / static_cast<float>(size.height) - 1.0f
   );
 
+  const dunya::objectmodel::CameraView seen = dunya::view::lookThrough(
+    m_port,
+    activeWorld(),
+    static_cast<float>(size.width) / static_cast<float>(size.height)
+  );
+
   const dunya::field::Ray ray = dunya::field::screenPointToRay(
-    glm::inverse(m_engine.frame().proj * m_engine.frame().view),
-    glm::vec3(m_engine.frame().cameraPos),
+    glm::inverse(seen.projection * seen.view),
+    seen.position,
     ndc
   );
 
@@ -223,18 +225,6 @@ void Session::render() {
     return;
   }
 
-  m_engine.storage().uploader().retire();
-
-  lookAtWorld(
-    static_cast<float>(m_engine.swapChain().extent().width)
-    / static_cast<float>(m_engine.swapChain().extent().height)
-  );
-
-  m_engine.input().setViewport(
-    static_cast<float>(m_engine.swapChain().extent().width),
-    static_cast<float>(m_engine.swapChain().extent().height)
-  );
-
   const auto frameAt = std::chrono::steady_clock::now();
 
   const float elapsed =
@@ -242,25 +232,11 @@ void Session::render() {
 
   m_lastFrame = frameAt;
 
-  dunya::core::Telemetry ignored;
-
-  m_engine.tick(elapsed, ignored);
-  m_engine.endFrame();
-
-  m_engine.flushVolumes(ignored);
-
-  m_engine.packFrame();
+  bindCamera();
 
   std::vector<dunya::renderer::ScenePass> passes;
 
-  if (m_engine.frame().environment.has_value()) {
-    passes.push_back(
-      {dunya::renderer::PassOrder::BeforeScene,
-       [this](VkCommandBuffer commands) { drawSky(commands); }}
-    );
-  }
-
-  if (!m_viewsThroughScene) {
+  if (m_port.gridVisible && !m_viewsThroughScene) {
     m_grid.update(m_camera.eye());
 
     passes.push_back(
@@ -269,21 +245,18 @@ void Session::render() {
     );
   }
 
-  if (
-    m_engine.renderer().drawFrame(
-      m_engine.swapChain(),
-      m_engine.frame(),
-      passes
-    )
-  ) {
+  dunya::core::Telemetry ignored;
+
+  dunya::engine::FrameRequest request;
+  request.viewport = m_viewport;
+  request.deltaSeconds = elapsed;
+  request.passes = passes;
+
+  if (m_engine.renderFrame(request, ignored)) {
     m_engine.swapChain().recreate();
 
     m_sceneTarget.resize(m_engine.swapChain().extent());
-
-    return;
   }
-
-  m_engine.storage().framePacker().commitBakes();
 }
 
 void Session::retarget(std::unique_ptr<dunya::gpu::WindowSystem> windowSystem) {
@@ -619,33 +592,27 @@ dunya::core::AssetId Session::importAsset(
   return minted;
 }
 
-void Session::setSupersample(float scale) {
-  m_engine.context().device().waitIdle();
-
-  m_sceneTarget.setScale(scale);
+dunya::view::Viewport Session::viewSettings() const noexcept {
+  return m_port;
 }
 
-float Session::supersample() const noexcept {
-  return m_sceneTarget.scale();
-}
+void Session::setViewSettings(const dunya::view::Viewport& settings) {
+  const bool scaleChanged = settings.supersample != m_port.supersample;
 
-void Session::showGrid(bool visible) noexcept {
-  m_gridVisible = visible;
-}
+  m_port.gridVisible = settings.gridVisible;
+  m_port.supersample = settings.supersample;
+  m_port.mode = settings.mode;
+  m_port.fieldRepresentation = settings.fieldRepresentation;
+  m_port.march = settings.march;
 
-bool Session::gridVisible() const noexcept {
-  return m_gridVisible;
-}
+  if (scaleChanged) {
+    m_engine.context().device().waitIdle();
 
-void Session::drawSky(VkCommandBuffer commands) const {
-  m_engine.drawSky(commands);
+    m_sceneTarget.setScale(m_port.supersample);
+  }
 }
 
 void Session::drawGrid(VkCommandBuffer commands) const {
-  if (!m_gridVisible) {
-    return;
-  }
-
   m_grid.record(commands, m_engine.globals());
 }
 

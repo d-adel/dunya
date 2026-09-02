@@ -26,6 +26,10 @@ add_executable(unit_tests
     worldmeta_tests.cc
     materialfile_tests.cc
     worldfile_tests.cc
+    viewport_tests.cc
+    viewportstore_tests.cc
+    lookthrough_tests.cc
+    camerapose_tests.cc
     fieldshape_tests.cc
     impact_tests.cc
     lens_tests.cc
@@ -53,7 +57,7 @@ add_executable(unit_tests
 
 target_include_directories(unit_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 
-target_link_libraries(unit_tests PRIVATE dunya::script dunya::core dunya::editor dunya::field dunya::objectmodel dunya::physics dunya::runtime dunya::serialize dunya::systems Catch2::Catch2WithMain)
+target_link_libraries(unit_tests PRIVATE dunya::view dunya::script dunya::core dunya::editor dunya::field dunya::objectmodel dunya::physics dunya::runtime dunya::serialize dunya::systems Catch2::Catch2WithMain)
 
 if (MSVC)
     target_compile_options(unit_tests PRIVATE /W4 /WX /w15038 /w14062 /Zc:__cplusplus)
@@ -71,7 +75,7 @@ add_executable(spirv_tests
     spirv_tests.cc
 )
 target_include_directories(spirv_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
-target_link_libraries(spirv_tests PRIVATE spirv_reflect dunya::renderer dunya::viewport dunya::field dunya::gpu Catch2::Catch2WithMain)
+target_link_libraries(spirv_tests PRIVATE dunya::gizmos spirv_reflect dunya::renderer dunya::view dunya::field dunya::gpu Catch2::Catch2WithMain)
 target_compile_definitions(spirv_tests PRIVATE DUNYA_SPIRV_DIR="${CMAKE_BINARY_DIR}/shaders")
 add_dependencies(spirv_tests SHADER_TARGET)
 if (MSVC)

@@ -1,6 +1,6 @@
-#include "camera.ih"
+﻿#include "camera.ih"
 
-namespace dunya::viewport {
+namespace dunya::view {
 
 namespace {
 
@@ -14,13 +14,12 @@ const glm::vec3 WORLD_UP(0.0f, 1.0f, 0.0f);
 
 }
 
-Camera::Camera() : m_position(glm::vec3(0, 0, 2)), m_velocity(glm::vec3(0.f)) {}
+Camera::Camera() : m_position(glm::vec3(0, 0, 2)) {}
 
 void Camera::place(const glm::vec3& position, float yaw, float pitch) {
   m_position = position;
   m_yaw = yaw;
   m_pitch = pitch;
-  m_velocity = glm::vec3(0.0f);
   m_placed = true;
 }
 
@@ -30,64 +29,33 @@ bool Camera::placed() const noexcept {
 
 void Camera::reset() noexcept {
   m_position = glm::vec3(0.0f, 0.0f, 2.0f);
-  m_velocity = glm::vec3(0.0f);
   m_yaw = 0.0f;
   m_pitch = 0.0f;
   m_distance = 10.0f;
   m_placed = false;
 }
 
-void Camera::update(float dt, FlyInput input) {
-  m_velocity.z = (float)(input.back - input.forward);
-  m_velocity.x = (float)(input.right - input.left);
-  m_velocity.y = (float)(input.up - input.down);
-  m_yaw += input.lookDx * m_lookSensitivity;
-  m_pitch = glm::clamp(
-    m_pitch - input.lookDy * m_lookSensitivity,
-    glm::radians(-PITCH_LIMIT),
-    glm::radians(PITCH_LIMIT)
-  );
-
-  glm::mat4 cameraRotation = rotationMatrix();
-  m_position +=
-    glm::vec3(cameraRotation * glm::vec4(m_velocity * 0.9f, 0.f)) * dt;
-}
-
-glm::mat4 Camera::viewMatrix() const {
-  glm::mat4 cameraTranslation = glm::translate(glm::mat4(1.f), m_position);
-  glm::mat4 cameraRotation = rotationMatrix();
-  return glm::inverse(cameraTranslation * cameraRotation);
-}
-
-glm::mat4 Camera::rotationMatrix() const {
+dunya::objectmodel::Pose Camera::pose() const {
   glm::quat pitchRotation = glm::angleAxis(m_pitch, glm::vec3{1.f, 0.f, 0.f});
   glm::quat yawRotation = glm::angleAxis(m_yaw, glm::vec3{0.f, -1.f, 0.f});
 
-  return glm::toMat4(yawRotation) * glm::toMat4(pitchRotation);
+  return {m_position, yawRotation * pitchRotation};
 }
 
 const dunya::objectmodel::Lens& Camera::lens() const noexcept {
   return m_lens;
 }
 
-glm::mat4 Camera::projectionMatrix(float aspect) const {
-  return dunya::objectmodel::projection(m_lens, aspect);
-}
-
-glm::vec4 Camera::position() const {
-  return glm::vec4(m_position, m_lens.nearPlane);
-}
-
 glm::vec3 Camera::forward() const noexcept {
-  return glm::vec3(rotationMatrix() * glm::vec4(0.0f, 0.0f, -1.0f, 0.0f));
-}
-
-glm::vec3 Camera::eye() const noexcept {
-  return m_position;
+  return pose().rotation * glm::vec3(0.0f, 0.0f, -1.0f);
 }
 
 glm::vec3 Camera::pivot() const noexcept {
   return m_position + forward() * m_distance;
+}
+
+glm::vec3 Camera::eye() const noexcept {
+  return m_position;
 }
 
 void Camera::placeFrom(const dunya::objectmodel::Pose& seat, float distance) {

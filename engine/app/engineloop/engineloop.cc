@@ -45,30 +45,26 @@ void EngineLoop::handleMouseButtonEvent(
   );
 }
 
-void EngineLoop::drawSky(VkCommandBuffer commands) const {
-  m_engine.drawSky(commands);
-}
+void EngineLoop::bindCamera() {
+  const dunya::objectmodel::Entity eye =
+    dunya::objectmodel::mainCamera(m_engine.activeWorld());
 
-void EngineLoop::lookThrough(float aspect) {
-  const std::optional<dunya::objectmodel::CameraView> scene =
-    dunya::objectmodel::activeCamera(m_engine.activeWorld(), aspect);
+  m_port.camera = eye;
+  m_port.mode = dunya::view::DrawMode::Both;
 
-  if (scene.has_value()) {
-    m_engine.frame().proj = scene->projection;
-    m_engine.frame().view = scene->view;
-    m_engine.frame().cameraPos = glm::vec4(scene->position, scene->nearPlane);
-    m_engine.frame().mode = dunya::renderer::DrawMode::Both;
+  if (eye == dunya::objectmodel::INVALID_ENTITY) {
+    m_port.mode = dunya::view::DrawMode::Nothing;
 
-    return;
+    if (!m_reportedMissingCamera) {
+      m_reportedMissingCamera = true;
+
+      std::cout << "no camera in this world, so it draws nothing\n";
+    }
   }
 
-  if (!m_reportedMissingCamera) {
-    m_reportedMissingCamera = true;
-
-    std::cout << "no camera in this world, so it draws nothing\n";
+  if (!m_engine.configureViewport(m_viewport, m_port)) {
+    throw std::runtime_error("the player's viewport went missing");
   }
-
-  m_engine.frame().mode = dunya::renderer::DrawMode::Nothing;
 }
 
 bool EngineLoop::verifyBakes() {
@@ -102,6 +98,8 @@ bool EngineLoop::verifyBakes() {
 }
 
 int EngineLoop::start(const StartupOptions& options) {
+  m_viewport = m_engine.createViewport();
+
   glfwSetInputMode(m_window.handle(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
   if (!m_script.load("managed")) {
@@ -121,7 +119,7 @@ int EngineLoop::start(const StartupOptions& options) {
   }
 
   if (options.analytic) {
-    m_engine.frame().fieldRepresentation = dunya::core::FIELD_ANALYTIC;
+    m_port.fieldRepresentation = dunya::core::FIELD_ANALYTIC;
   }
 
   bool bakeCheckPending = options.verifyBake;
@@ -160,13 +158,6 @@ int EngineLoop::start(const StartupOptions& options) {
       static_cast<float>(where.y)
     );
 
-    m_engine.input().setViewport(
-      static_cast<float>(m_engine.swapChain().extent().width),
-      static_cast<float>(m_engine.swapChain().extent().height)
-    );
-
-    m_engine.storage().uploader().retire();
-
     constexpr uint32_t FIRST_PLAY_FRAME = 4u;
 
     if (
@@ -176,40 +167,16 @@ int EngineLoop::start(const StartupOptions& options) {
       m_engine.play();
     }
 
-    m_engine.tick(dt, m_telemetry);
+    bindCamera();
 
-    m_engine.endFrame();
+    dunya::engine::FrameRequest request;
+    request.viewport = m_viewport;
+    request.deltaSeconds = dt;
+    request.surfaceStale = m_window.takeResized();
+    request.capture = captureHook;
 
-    lookThrough(
-      static_cast<float>(m_engine.swapChain().extent().width)
-      / static_cast<float>(m_engine.swapChain().extent().height)
-    );
-
-    m_engine.flushVolumes(m_telemetry);
-
-    m_engine.packFrame();
-
-    std::vector<dunya::renderer::ScenePass> passes;
-
-    if (m_engine.frame().environment.has_value()) {
-      passes.push_back(
-        {dunya::renderer::PassOrder::BeforeScene,
-         [this](VkCommandBuffer commands) { drawSky(commands); }}
-      );
-    }
-
-    const bool swapChainStale = m_window.takeResized()
-                                || m_engine.renderer().drawFrame(
-                                  m_engine.swapChain(),
-                                  m_engine.frame(),
-                                  passes,
-                                  captureHook
-                                );
-
-    if (swapChainStale) {
+    if (m_engine.renderFrame(request, m_telemetry)) {
       m_engine.resize();
-    } else {
-      m_engine.storage().framePacker().commitBakes();
     }
 
     if (bakeCheckPending) {

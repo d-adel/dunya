@@ -5,19 +5,7 @@
 
 #include <glm/glm.hpp>
 
-namespace dunya::viewport {
-
-struct FlyInput {
-  bool forward = false;
-  bool back = false;
-  bool left = false;
-  bool right = false;
-  bool up = false;
-  bool down = false;
-
-  float lookDx = 0.0f;
-  float lookDy = 0.0f;
-};
+namespace dunya::view {
 
 class Camera {
 public:
@@ -28,14 +16,7 @@ public:
 
   ~Camera() = default;
 
-  [[nodiscard]] glm::mat4 viewMatrix() const;
-  [[nodiscard]] glm::mat4 rotationMatrix() const;
-  [[nodiscard]] glm::mat4 projectionMatrix(float aspect) const;
-  [[nodiscard]] glm::vec4 position() const;
-
-  void update(float dt, FlyInput input);
-
-  void place(const glm::vec3& position, float yaw, float pitch);
+  [[nodiscard]] dunya::objectmodel::Pose pose() const;
 
   [[nodiscard]] bool placed() const noexcept;
 
@@ -53,23 +34,23 @@ public:
 
   [[nodiscard]] glm::vec3 eye() const noexcept;
 
-  [[nodiscard]] glm::vec3 pivot() const noexcept;
-
-  [[nodiscard]] glm::vec3 forward() const noexcept;
-
   [[nodiscard]] const dunya::objectmodel::Lens& lens() const noexcept;
 
 private:
+  void place(const glm::vec3& position, float yaw, float pitch);
+
+  [[nodiscard]] glm::vec3 forward() const noexcept;
+
+  [[nodiscard]] glm::vec3 pivot() const noexcept;
+
   void orbitAround(const glm::vec3& around);
 
   dunya::objectmodel::Lens m_lens{};
 
   glm::vec3 m_position;
-  glm::vec3 m_velocity;
 
   float m_pitch = 0.f;
   float m_yaw = 0.f;
-  float m_lookSensitivity = 1 / 200.f;
 
   float m_distance = 10.0f;
   bool m_placed = false;

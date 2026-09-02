@@ -18,6 +18,7 @@ target_link_libraries(dunya_engine PUBLIC
     dunya::script
     dunya::serialize
     dunya::systems
+    dunya::view
 )
 
 if (MSVC)

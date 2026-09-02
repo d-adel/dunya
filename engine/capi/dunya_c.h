@@ -172,16 +172,21 @@ DUNYA_C_API uint64_t dunya_session_add_material(
   float roughness
 );
 
-DUNYA_C_API void dunya_session_set_supersample(
-  DunyaSession* session,
-  float scale
+typedef struct DunyaViewSettings {
+  int32_t gridVisible;
+  float supersample;
+  int32_t drawMode;
+  uint32_t fieldRepresentation;
+} DunyaViewSettings;
+
+DUNYA_C_API void dunya_session_view_settings(
+  const DunyaSession* session,
+  DunyaViewSettings* settings
 );
 
-DUNYA_C_API float dunya_session_supersample(const DunyaSession* session);
-
-DUNYA_C_API void dunya_session_show_grid(
+DUNYA_C_API void dunya_session_set_view_settings(
   DunyaSession* session,
-  int32_t visible
+  const DunyaViewSettings* settings
 );
 
 DUNYA_C_API int32_t

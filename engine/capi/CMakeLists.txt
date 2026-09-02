@@ -10,6 +10,7 @@ target_include_directories(dunya_c PUBLIC "${PROJECT_SOURCE_DIR}/engine")
 target_compile_features(dunya_c PUBLIC cxx_std_23)
 
 target_link_libraries(dunya_c PRIVATE
+    dunya::gizmos
     dunya::assets
     dunya::core
     dunya::editor
@@ -23,7 +24,7 @@ target_link_libraries(dunya_c PRIVATE
     dunya::serialize
     dunya::script
     dunya::systems
-    dunya::viewport
+    dunya::view
 )
 
 if (MSVC)

@@ -106,6 +106,113 @@ const std::filesystem::path& Engine::projectRoot() const noexcept {
   return m_projectRoot;
 }
 
+bool Engine::renderFrame(
+  const FrameRequest& request,
+  dunya::core::Telemetry& telemetry
+) {
+  const VkExtent2D extent = m_swapChain.extent();
+
+  if (extent.width == 0 || extent.height == 0) {
+    return false;
+  }
+
+  m_storage.uploader().retire();
+
+  m_input.setViewport(
+    static_cast<float>(extent.width),
+    static_cast<float>(extent.height)
+  );
+
+  tick(request.deltaSeconds, telemetry);
+
+  endFrame();
+
+  lookThroughViewport(
+    request.viewport,
+    static_cast<float>(extent.width) / static_cast<float>(extent.height)
+  );
+
+  flushVolumes(telemetry);
+
+  packFrame();
+
+  if (request.surfaceStale) {
+    return true;
+  }
+
+  std::vector<dunya::renderer::ScenePass> passes;
+
+  if (m_frame.environment.has_value()) {
+    passes.push_back(
+      {dunya::renderer::PassOrder::BeforeScene,
+       [this](VkCommandBuffer commands) { drawSky(commands); }}
+    );
+  }
+
+  passes.insert(passes.end(), request.passes.begin(), request.passes.end());
+
+  const bool stale =
+    m_renderer.drawFrame(m_swapChain, m_frame, passes, request.capture);
+
+  if (!stale) {
+    m_storage.framePacker().commitBakes();
+  }
+
+  return stale;
+}
+
+void Engine::lookThroughViewport(dunya::view::ViewportId id, float aspect) {
+  const dunya::view::Viewport* port = m_viewports.find(id);
+
+  if (port == nullptr) {
+    m_frame.drawMeshes = false;
+    m_frame.drawSdf = false;
+
+    return;
+  }
+
+  const dunya::objectmodel::CameraView seen =
+    dunya::view::lookThrough(*port, activeWorld(), aspect);
+
+  m_frame.view = seen.view;
+  m_frame.proj = seen.projection;
+  m_frame.cameraPos = glm::vec4(seen.position, seen.nearPlane);
+
+  m_frame.drawMeshes = drawsMeshes(port->mode);
+  m_frame.drawSdf = drawsSdf(port->mode);
+
+  m_frame.fieldRepresentation = port->fieldRepresentation;
+
+  m_frame.march.epsilon = port->march.epsilon;
+  m_frame.march.maxDistance = port->march.maxDistance;
+  m_frame.march.omega = port->march.omega;
+  m_frame.march.gradientEpsilon = port->march.gradientEpsilon;
+  m_frame.march.shadowMaxDistance = port->march.shadowMaxDistance;
+  m_frame.march.shadowSharpness = port->march.shadowSharpness;
+  m_frame.march.maxIterations = port->march.maxIterations;
+}
+
+dunya::view::ViewportId Engine::createViewport() {
+  return m_viewports.create();
+}
+
+bool Engine::destroyViewport(dunya::view::ViewportId id) {
+  return m_viewports.destroy(id);
+}
+
+bool Engine::configureViewport(
+  dunya::view::ViewportId id,
+  const dunya::view::Viewport& config
+) {
+  return m_viewports.configure(id, config);
+}
+
+const dunya::view::Viewport* Engine::viewport(
+  dunya::view::ViewportId id
+) const {
+  return m_viewports.find(id);
+}
+
 void Engine::loadWorld(const std::string& world) {
   std::optional<dunya::serialize::Project> project =
     dunya::serialize::Project::open(m_projectRoot);
@@ -220,22 +327,6 @@ dunya::renderer::Renderer& Engine::renderer() noexcept {
 
 const dunya::renderer::Renderer& Engine::renderer() const noexcept {
   return m_renderer;
-}
-
-dunya::renderer::Frame& Engine::frame() noexcept {
-  return m_frame;
-}
-
-const dunya::renderer::Frame& Engine::frame() const noexcept {
-  return m_frame;
-}
-
-dunya::gpu::Pipeline& Engine::meshPipeline() noexcept {
-  return m_meshPipeline;
-}
-
-dunya::gpu::Pipeline& Engine::sdfPipeline() noexcept {
-  return m_sdfPipeline;
 }
 
 dunya::systems::Schedule& Engine::schedule() noexcept {

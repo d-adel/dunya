@@ -22,13 +22,11 @@ public:
   int start(const StartupOptions& options = {});
 
 private:
-  void lookThrough(float aspect);
+  void bindCamera();
 
   void handleKeyEvent(const dunya::platform::KeyEvent& event);
 
   void handleMouseButtonEvent(const dunya::platform::MouseButtonEvent& event);
-
-  void drawSky(VkCommandBuffer commands) const;
 
   [[nodiscard]] bool verifyBakes();
 
@@ -44,6 +42,10 @@ private:
   dunya::core::Telemetry m_telemetry;
 
   bool m_reportedMissingCamera = false;
+
+  dunya::view::ViewportId m_viewport = dunya::view::INVALID_VIEWPORT;
+
+  dunya::view::Viewport m_port{};
 
   dunya::core::EventDispatcher::SubscriptionId m_keySubscription{};
   dunya::core::EventDispatcher::SubscriptionId m_mouseSubscription{};

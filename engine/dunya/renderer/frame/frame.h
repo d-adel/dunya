@@ -4,7 +4,6 @@
 #include <dunya/renderer/frameglobals/frameglobals.h>
 #include <dunya/renderer/meshbuffers/meshbuffers.h>
 #include <dunya/gpu/pipeline/pipeline.h>
-#include <dunya/renderer/drawmode/drawmode.h>
 #include <dunya/field/field.h>
 #include <dunya/renderer/meshrecord/meshrecord.h>
 #include <dunya/objectmodel/component/directionallight/directionallight.h>
@@ -27,7 +26,8 @@ struct Frame {
   uint32_t sdfRecordCount = 0;
   std::span<const dunya::field::Primitive> primitives = {};
 
-  DrawMode mode = DrawMode::Both;
+  bool drawMeshes = true;
+  bool drawSdf = true;
 
   uint32_t fieldRepresentation = dunya::core::FIELD_SAMPLED;
 

@@ -1,14 +1,14 @@
 #pragma once
 
 #include <dunya/engine/engine/engine.h>
-#include <dunya/viewport/camera/camera.h>
+#include <dunya/view/camera/camera.h>
 
 #include <dunya/gpu/windowsystem/windowsystem.h>
 #include <dunya/field/field.h>
 #include <dunya/objectmodel/component/pose/pose.h>
 #include <dunya/objectmodel/component/sdfgrid/sdfgrid.h>
 #include <dunya/renderer/scenetarget/scenetarget.h>
-#include <dunya/viewport/grid/grid.h>
+#include <dunya/gizmos/grid/grid.h>
 
 #include <chrono>
 #include <filesystem>
@@ -130,17 +130,11 @@ public:
 
   [[nodiscard]] const std::string& worldName() const noexcept;
 
-  void showGrid(bool visible) noexcept;
+  [[nodiscard]] dunya::view::Viewport viewSettings() const noexcept;
 
-  [[nodiscard]] bool gridVisible() const noexcept;
+  void setViewSettings(const dunya::view::Viewport& settings);
 
   void drawGrid(VkCommandBuffer commands) const;
-
-  void drawSky(VkCommandBuffer commands) const;
-
-  void setSupersample(float scale);
-
-  [[nodiscard]] float supersample() const noexcept;
 
   [[nodiscard]] size_t materialCount() const noexcept;
 
@@ -155,25 +149,26 @@ public:
   );
 
 private:
-  void lookAtWorld(float aspect);
+  void bindCamera();
 
   void frameCameraOnWorld();
 
   dunya::engine::Engine m_engine;
 
   std::string m_worldName;
-  dunya::viewport::Camera m_camera;
+  dunya::view::Camera m_camera;
+
+  dunya::view::ViewportId m_viewport = dunya::view::INVALID_VIEWPORT;
+  dunya::view::Viewport m_port{};
 
   bool m_viewsThroughScene = false;
 
   dunya::renderer::SceneTarget m_sceneTarget;
 
-  dunya::viewport::Grid m_grid;
+  dunya::gizmos::Grid m_grid;
 
   std::chrono::steady_clock::time_point m_lastFrame =
     std::chrono::steady_clock::now();
-
-  bool m_gridVisible = true;
 };
 
 }
