@@ -91,8 +91,18 @@ foreach (var t in types.Values)
 
 var roots = types.Keys.Where(k => !owned.Contains(k)).OrderBy(k => k).ToList();
 
+var targets = ReadBuildGraph(root);
+
 var payload = new Dictionary<string, object>
 {
+    ["targets"] = targets.ToDictionary(kv => kv.Key, kv => (object)new
+    {
+        kv.Value.name,
+        kv.Value.tier,
+        kv.Value.kind,
+        kv.Value.lib,
+        deps = kv.Value.deps.ToList()
+    }),
     ["types"] = types.ToDictionary(kv => kv.Key, kv => (object)new
     {
         kv.Value.name,
@@ -115,6 +125,68 @@ File.WriteAllText(outPath, File.ReadAllText(viewerPath).Replace("/*DATA*/null", 
 Console.WriteLine($"{types.Count} types with members, {roots.Count} roots");
 Console.WriteLine($"wrote {outPath}");
 return 0;
+
+// ---------- the build graph ----------
+
+static Dictionary<string, BuildTarget> ReadBuildGraph(string root)
+{
+    var libRe = new Regex(@"add_library\(\s*([A-Za-z_]\w*)\s+(?!ALIAS)", RegexOptions.Multiline);
+    var exeRe = new Regex(@"add_executable\(\s*([A-Za-z_]\w*)", RegexOptions.Multiline);
+    var moduleRe = new Regex(@"dunya_module\(\s*([A-Za-z_]\w*)\s+([A-Za-z]+)\s*\)");
+    var linkRe = new Regex(@"target_link_libraries\(\s*([A-Za-z_]\w*)([^)]*)\)", RegexOptions.Singleline);
+    var aliasRe = new Regex(@"dunya::([a-z]\w*)");
+
+    var found = new Dictionary<string, BuildTarget>();
+
+    foreach (var file in Directory.EnumerateFiles(root, "CMakeLists.txt", SearchOption.AllDirectories))
+    {
+        var rel = Path.GetRelativePath(root, file).Replace('\\', '/');
+        if (rel.Contains("_deps/") || rel.StartsWith("build")) continue;
+
+        var text = File.ReadAllText(file);
+        var dir = Path.GetDirectoryName(rel)!.Replace('\\', '/');
+
+        foreach (Match m in libRe.Matches(text))
+            Ensure(found, m.Groups[1].Value, "library", dir);
+
+        foreach (Match m in exeRe.Matches(text))
+            Ensure(found, m.Groups[1].Value, "executable", dir);
+
+        foreach (Match m in moduleRe.Matches(text))
+        {
+            var t = Ensure(found, m.Groups[1].Value, "library", dir);
+            t.tier = m.Groups[2].Value;
+        }
+
+        foreach (Match m in linkRe.Matches(text))
+        {
+            var t = Ensure(found, m.Groups[1].Value, "library", dir);
+
+            foreach (Match a in aliasRe.Matches(m.Groups[2].Value))
+                t.deps.Add("dunya_" + a.Groups[1].Value);
+        }
+    }
+
+    foreach (var t in found.Values)
+        t.deps.RemoveWhere(d => !found.ContainsKey(d) || d == t.name);
+
+    return found;
+}
+
+static BuildTarget Ensure(Dictionary<string, BuildTarget> found, string name, string kind, string dir)
+{
+    if (!found.TryGetValue(name, out var target))
+    {
+        found[name] = target = new BuildTarget { name = name, kind = kind };
+    }
+
+    if (target.lib.Length == 0 && dir.StartsWith("engine/dunya/"))
+    {
+        target.lib = dir["engine/dunya/".Length..];
+    }
+
+    return target;
+}
 
 // ---------- member parsing ----------
 
@@ -276,4 +348,10 @@ class Member
 {
     public string name = "", type = "", relation = "", bare = "";
     public string? target;
+}
+
+class BuildTarget
+{
+    public string name = "", tier = "", kind = "", lib = "";
+    public SortedSet<string> deps = new();
 }

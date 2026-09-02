@@ -1,15 +1,19 @@
 #pragma once
 
 #include <dunya/gpu/context/context.h>
-#include <dunya/imagecompare/imagecompare.h>
 #include <app/startupoptions/startupoptions.h>
 #include <dunya/gpu/swapchain/swapchain.h>
 
 #include <vulkan/vulkan.h>
 
 #include <cstdint>
-#include <fstream>
-#include <string>
+
+#if DUNYA_TOOLS
+
+  #include <dunya/imagecompare/imagecompare.h>
+
+  #include <fstream>
+  #include <string>
 
 class FrameCheck {
 public:
@@ -59,3 +63,45 @@ private:
   bool m_ran = false;
   bool m_failed = false;
 };
+
+#else
+
+class FrameCheck {
+public:
+  FrameCheck(
+    const dunya::gpu::Context&,
+    const dunya::gpu::SwapChain&,
+    const StartupOptions&
+  ) {}
+
+  FrameCheck(const FrameCheck&) = delete;
+  FrameCheck& operator=(const FrameCheck&) = delete;
+  FrameCheck(FrameCheck&&) = delete;
+  FrameCheck& operator=(FrameCheck&&) = delete;
+
+  ~FrameCheck() = default;
+
+  bool wanted() const noexcept {
+    return false;
+  }
+
+  bool capturing() const noexcept {
+    return false;
+  }
+
+  double lastCaptureMs() const noexcept {
+    return 0.0;
+  }
+
+  void run(VkImage) {}
+
+  bool ran() const noexcept {
+    return false;
+  }
+
+  bool failed() const noexcept {
+    return false;
+  }
+};
+
+#endif

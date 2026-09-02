@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.28)
+﻿cmake_minimum_required(VERSION 3.28)
 
 project(Dunya VERSION 0.0 LANGUAGES CXX C)
 
@@ -193,15 +193,24 @@ add_custom_target(
     DEPENDS ${SHADER_OUTPUTS}
 )
 
+option(DUNYA_TOOLS "Build the player's developer tooling: goldens, capture, bake verification" ON)
+
 add_executable(DunyaPlayer
     engine/player/main.cc
-    engine/app/capture/capture.cc
     engine/app/startupoptions/startupoptions.cc
-    engine/app/framecheck/framecheck.cc
     engine/app/inputbridge/inputbridge.cc
     engine/app/glfwwindowsystem/glfwwindowsystem.cc
     engine/app/engineloop/engineloop.cc
 )
+
+if (DUNYA_TOOLS)
+    target_sources(DunyaPlayer PRIVATE
+        engine/app/capture/capture.cc
+        engine/app/framecheck/framecheck.cc
+    )
+endif()
+
+target_compile_definitions(DunyaPlayer PRIVATE DUNYA_TOOLS=$<BOOL:${DUNYA_TOOLS}>)
 add_dependencies(DunyaPlayer SHADER_TARGET)
 if (MSVC)
     target_compile_options(DunyaPlayer PRIVATE /W4 /WX /w15038 /w14062 /Zc:__cplusplus)
@@ -225,8 +234,11 @@ target_link_libraries(DunyaPlayer PRIVATE
     dunya::runtime
     dunya::script
     dunya::systems
-    dunya::imagecompare
 )
+
+if (DUNYA_TOOLS)
+    target_link_libraries(DunyaPlayer PRIVATE dunya::imagecompare)
+endif()
 
 target_include_directories(DunyaPlayer PRIVATE engine ${stb_SOURCE_DIR} ${tinyobjloader_SOURCE_DIR})
 add_custom_target(DUNYA_CONTENT ALL
@@ -249,7 +261,11 @@ else()
 endif()
 
 dunya_module(DunyaPackager Editor)
-dunya_module(DunyaPlayer Developer)
+if (DUNYA_TOOLS)
+    dunya_module(DunyaPlayer Developer)
+else()
+    dunya_module(DunyaPlayer Runtime)
+endif()
 
 add_subdirectory(tests)
 
