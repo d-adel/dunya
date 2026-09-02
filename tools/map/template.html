@@ -152,7 +152,30 @@
   .box:hover { border-color: var(--muted); }
   .box:focus-visible { outline: 2px solid var(--sel); outline-offset: 2px; }
 
-  .box .nm { font-family: var(--mono); font-size: 12.5px; font-weight: 600; }
+  .box .nm {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    font-weight: 600;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .box .tier {
+    font-style: normal;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 1px 5px;
+    border-radius: 2px;
+    flex: none;
+  }
+  .box.tier-runtime .tier { background: color-mix(in oklab, var(--usedby) 20%, transparent); color: var(--usedby); }
+  .box.tier-developer .tier { background: color-mix(in oklab, var(--borrow) 22%, transparent); color: var(--borrow); }
+  .box.tier-editor .tier { background: color-mix(in oklab, var(--shares) 22%, transparent); color: var(--shares); }
+
   .box .holds { font-size: 11px; color: var(--muted); line-height: 1.35; }
   .box .count { font-family: var(--mono); font-size: 10px; color: var(--muted); }
 
@@ -313,67 +336,32 @@
 const DATA = /*DATA*/null;
 const TYPES = DATA.types;
 const BYLIB = DATA.byLib;
+const TARGETS = DATA.targets;
 
-const BANDS = [
-  {
-    cls: 'host', title: 'hosts — what you actually run',
-    groups: [
-      { title: 'front ends', boxes: [
-        { id: 'editorapp', lib: null, name: 'Dunya.Editor', holds: 'C# / Avalonia · viewport, hierarchy, inspector', deps: ['capi'] },
-        { id: 'player', lib: 'player', name: 'DunyaPlayer', holds: 'GLFW window · frame loop · golden capture',
-          deps: ['engine','assets','serialize','core','objectmodel','platform','gpu','renderer','field','physics','runtime','script','systems'] }
-      ]},
-      { title: 'seam', boxes: [
-        { id: 'capi', lib: 'capi', name: 'dunya_c', holds: 'C ABI · Session · Win32 window',
-          deps: ['engine','assets','core','editor','field','gpu','objectmodel','renderer','physics','runtime','serialize','script','systems','viewport'] }
-      ]}
-    ]
-  },
-  {
-    cls: 'engine', title: 'engine',
-    groups: [
-      { title: 'host core', boxes: [
-        { id: 'engine', lib: 'engine', name: 'engine', holds: 'owns the device, world, runtime and renderer · drives a frame',
-          deps: ['assets','core','field','gpu','objectmodel','physics','renderer','runtime','script','serialize','systems'] }
-      ]}
-    ]
-  },
-  {
-    cls: 'engine', title: 'subsystems',
-    groups: [
-      { title: 'content', boxes: [
-        { id: 'objectmodel', lib: 'objectmodel', name: 'objectmodel', holds: 'World · entities · components · primitive store', deps: ['core','field'] },
-        { id: 'field', lib: 'field', name: 'field', holds: 'SDF primitives · sampled lattices · capabilities', deps: [] },
-        { id: 'serialize', lib: 'serialize', name: 'serialize', holds: 'world and project JSON', deps: ['core','field','objectmodel'] },
-        { id: 'assets', lib: 'assets', name: 'assets', holds: 'project loading · mesh buffers', deps: ['core','gpu','objectmodel','renderer','serialize'] }
-      ]},
-      { title: 'simulation', boxes: [
-        { id: 'physics', lib: 'physics', name: 'physics', holds: 'Jolt bodies · FieldShape · contacts', deps: ['core','field','objectmodel'] },
-        { id: 'runtime', lib: 'runtime', name: 'runtime', holds: 'play mode · instantiated world · bodies', deps: ['core','field','objectmodel','physics'] },
-        { id: 'script', lib: 'script', name: 'script', holds: 'C# hosting · API table', deps: ['core','objectmodel','systems'] },
-        { id: 'systems', lib: 'systems', name: 'systems', holds: 'schedule · input state', deps: ['objectmodel'] }
-      ]},
-      { title: 'presentation & authoring', boxes: [
-        { id: 'renderer', lib: 'renderer', name: 'renderer', holds: 'records · baker · volume pool · Frame', deps: ['core','field','objectmodel','gpu'] },
-        { id: 'viewport', lib: 'viewport', name: 'viewport', holds: 'editor camera · grid', deps: ['core','objectmodel','gpu'] },
-        { id: 'editor', lib: 'editor', name: 'editor', holds: 'commands · history · field editing · packaging', deps: ['core','field','objectmodel'] }
-      ]}
-    ]
-  },
-  {
-    cls: 'base', title: 'foundation',
-    groups: [
-      { title: '', boxes: [
-        { id: 'gpu', lib: 'gpu', name: 'gpu', holds: 'Vulkan RHI · device, buffers, images, pipelines', deps: ['core'] },
-        { id: 'platform', lib: 'platform', name: 'platform', holds: 'GLFW window and input', deps: ['core'] },
-        { id: 'core', lib: 'core', name: 'core', holds: 'constants · event dispatcher', deps: [] }
-      ]}
-    ]
-  }
-];
+const NOTES = {
+  dunya_core: 'constants · event dispatcher',
+  dunya_field: 'SDF primitives · sampled lattices · capabilities',
+  dunya_objectmodel: 'World · entities · components · primitive store',
+  dunya_gpu: 'Vulkan RHI · device, buffers, images, pipelines',
+  dunya_platform: 'GLFW window and input',
+  dunya_renderer: 'records · baker · volume pool · Frame',
+  dunya_view: 'Viewport · camera control · draw mode · grid style',
+  dunya_gizmos: 'editor-only draw passes · the grid',
+  dunya_editor: 'commands · history · field editing · packaging',
+  dunya_physics: 'Jolt bodies · FieldShape · contacts',
+  dunya_runtime: 'play mode · instantiated world · bodies',
+  dunya_script: 'C# hosting · API table',
+  dunya_systems: 'schedule · input state',
+  dunya_serialize: 'world and project JSON',
+  dunya_assets: 'project loading · mesh buffers',
+  dunya_imagecompare: 'golden diffing',
+  dunya_stb: 'vendored image IO',
+  dunya_c: 'C ABI · Session · Win32 window',
+  DunyaPlayer: 'GLFW window · frame loop · golden capture',
+  DunyaPackager: 'project packaging tool'
+};
 
-const ALL = new Map();
-for (const b of BANDS) for (const g of b.groups) for (const x of g.boxes) ALL.set(x.id, x);
+const ALL = new Map(Object.entries(TARGETS));
 
 const board = document.getElementById('board');
 const readout = document.getElementById('readout');
@@ -384,46 +372,92 @@ let picked = null;
 let openType = null;
 const open = new Set();
 
+/* Longest-path depth over the real link graph, cycle-safe. Position is the
+   whole layering claim: nothing sits above what it depends on. */
+function layers() {
+  const memo = new Map();
+  const onPath = new Set();
+
+  function depth(key) {
+    if (memo.has(key)) return memo.get(key);
+    if (onPath.has(key)) return 0;
+
+    onPath.add(key);
+
+    let best = 0;
+
+    for (const d of (TARGETS[key] ? TARGETS[key].deps : [])) {
+      if (!TARGETS[d] || d === key) continue;
+      best = Math.max(best, depth(d) + 1);
+    }
+
+    onPath.delete(key);
+    memo.set(key, best);
+
+    return best;
+  }
+
+  const out = new Map();
+  for (const key of Object.keys(TARGETS)) out.set(key, depth(key));
+
+  return out;
+}
+
+function shortName(key) {
+  return key.startsWith('dunya_') ? key.slice('dunya_'.length) : key;
+}
+
 /* ---------- level 1 ---------- */
 
-for (const band of BANDS) {
+const depthOf = layers();
+const maxDepth = Math.max(0, ...depthOf.values());
+
+for (let layer = maxDepth; layer >= 0; layer--) {
+  const here = Object.keys(TARGETS).filter(k => depthOf.get(k) === layer);
+  if (!here.length) continue;
+
+  here.sort((a, b) => shortName(a).localeCompare(shortName(b)));
+
   const bandEl = document.createElement('section');
-  bandEl.className = 'band ' + band.cls;
-  bandEl.innerHTML = '<h2>' + band.title + '</h2>';
+  bandEl.className = 'band ' + (layer === maxDepth ? 'host' : layer === 0 ? 'base' : 'engine');
+  bandEl.innerHTML = '<h2>layer ' + layer
+    + (layer === 0 ? ' — depends on nothing internal' : '')
+    + (layer === maxDepth ? ' — what you actually run' : '') + '</h2>';
 
   const groups = document.createElement('div');
   groups.className = 'groups';
 
-  for (const g of band.groups) {
-    const gEl = document.createElement('div');
-    gEl.className = 'group';
-    if (g.title) gEl.innerHTML = '<h3>' + g.title + '</h3>';
+  const gEl = document.createElement('div');
+  gEl.className = 'group';
 
-    const row = document.createElement('div');
-    row.className = 'row';
+  const row = document.createElement('div');
+  row.className = 'row';
 
-    for (const x of g.boxes) {
-      const n = (x.lib && BYLIB[x.lib]) ? BYLIB[x.lib].length : 0;
-      const btn = document.createElement('button');
-      btn.className = 'box';
-      btn.type = 'button';
-      btn.innerHTML = '<span class="nm">' + x.name + '</span>'
-                    + '<span class="holds">' + x.holds + '</span>'
-                    + (n ? '<span class="count">' + n + ' types</span>' : '');
-      btn.addEventListener('click', () => {
-        picked = picked === x.id ? null : x.id;
-        openType = null;
-        open.clear();
-        paint();
-      });
-      row.appendChild(btn);
-      els.set(x.id, btn);
-    }
+  for (const key of here) {
+    const target = TARGETS[key];
+    const n = (target.lib && BYLIB[target.lib]) ? BYLIB[target.lib].length : 0;
 
-    gEl.appendChild(row);
-    groups.appendChild(gEl);
+    const btn = document.createElement('button');
+    btn.className = 'box tier-' + (target.tier || 'None').toLowerCase();
+    btn.type = 'button';
+    btn.innerHTML = '<span class="nm">' + shortName(key)
+      + '<i class="tier">' + (target.tier || '?') + '</i></span>'
+      + '<span class="holds">' + (NOTES[key] || '') + '</span>'
+      + (n ? '<span class="count">' + n + ' types</span>' : '');
+
+    btn.addEventListener('click', () => {
+      picked = picked === key ? null : key;
+      openType = null;
+      open.clear();
+      paint();
+    });
+
+    row.appendChild(btn);
+    els.set(key, btn);
   }
 
+  gEl.appendChild(row);
+  groups.appendChild(gEl);
   bandEl.appendChild(groups);
   board.appendChild(bandEl);
 }
@@ -436,6 +470,7 @@ function usersOf(id) {
 
 function paint() {
   for (const el of els.values()) el.classList.remove('on', 'uses', 'usedby');
+  board.classList.toggle('picked', !!picked);
   board.classList.toggle('picked', !!picked);
 
   if (!picked) {
@@ -451,7 +486,7 @@ function paint() {
   for (const d of node.deps) els.get(d) && els.get(d).classList.add('uses');
   for (const u of users) els.get(u) && els.get(u).classList.add('usedby');
 
-  readout.innerHTML = '<b>' + node.name + '</b> uses <span class="u">' + node.deps.length
+  readout.innerHTML = '<b>' + shortName(node.name) + '</b> uses <span class="u">' + node.deps.length
     + '</span>, and <span class="d">' + users.length + '</span> '
     + (users.length === 1 ? 'thing uses' : 'things use') + ' it.';
 
@@ -475,7 +510,7 @@ function renderDetail(node) {
 
   if (!names.length) {
     detail.classList.remove('hidden');
-    document.getElementById('dName').textContent = node.name;
+    document.getElementById('dName').textContent = shortName(node.name);
     document.getElementById('dSub').textContent = 'no C++ types here';
     document.getElementById('dPicker').innerHTML = '';
     document.getElementById('dLife').textContent =
@@ -485,8 +520,8 @@ function renderDetail(node) {
   }
 
   detail.classList.remove('hidden');
-  document.getElementById('dName').textContent = node.name;
-  document.getElementById('dSub').textContent = names.length + ' types with members · ' + node.holds;
+  document.getElementById('dName').textContent = shortName(node.name);
+  document.getElementById('dSub').textContent = names.length + ' types · ' + (node.tier || '?') + ' tier · ' + (NOTES[node.name] || '');
 
   if (!openType || !names.includes(openType)) {
     openType = biggest(names);

@@ -45,7 +45,13 @@ StartupOptions::StartupOptions(std::span<char*> arguments) {
       break;
     }
 
-    if (argument == "--analytic") {
+    if (argument == "--project") {
+      project = valueFor(arguments, i, argument);
+    } else if (argument == "--world") {
+      world = valueFor(arguments, i, argument);
+    }
+#if DUNYA_TOOLS
+    else if (argument == "--analytic") {
       analytic = true;
     } else if (argument == "--verify-bake") {
       verifyBake = true;
@@ -53,18 +59,18 @@ StartupOptions::StartupOptions(std::span<char*> arguments) {
       screenshot = valueFor(arguments, i, argument);
     } else if (argument == "--golden") {
       golden = valueFor(arguments, i, argument);
-    } else if (argument == "--project") {
-      project = valueFor(arguments, i, argument);
-    } else if (argument == "--world") {
-      world = valueFor(arguments, i, argument);
     } else if (argument == "--capture") {
       capture = valueFor(arguments, i, argument);
-    } else {
+    }
+#endif
+    else {
       throw std::runtime_error(
-        "Unknown argument: " + argument
-        + "\nUsage: dunya [--analytic] [--verify-bake] [--screenshot PATH]"
-          " [--golden PATH] [--capture DIR] [--project DIR] [--world NAME]"
-          " [-- ARGS FOR THE SCRIPTS]"
+        "Unknown argument: " + argument + "\nUsage: dunya"
+#if DUNYA_TOOLS
+        " [--analytic] [--verify-bake] [--screenshot PATH]"
+        " [--golden PATH] [--capture DIR]"
+#endif
+        " [--project DIR] [--world NAME] [-- ARGS FOR THE SCRIPTS]"
       );
     }
   }
